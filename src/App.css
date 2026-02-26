@@ -1,42 +1,337 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL CSS VARIABLES (mirrors src/theme.ts)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --brand-lime: #C8E600;
+  --brand-lime-dark: #a8c100;
+  --brand-lime-light: #d8f200;
+  --brand-black: #0A0A0A;
+
+  --dark-bg: #111111;
+  --dark-card: #1C1C1C;
+  --dark-border: #2A2A2A;
+
+  --light-bg: #F5F7FA;
+  --light-border: #E5E7EB;
+
+  --white: #FFFFFF;
+  --alert-red: #E74C3C;
+  --warn-orange: #E67E22;
+  --text-secondary: #6B7280;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+/* ══════════════════════════════════════════════════════════════
+   BASE RESET
+   ══════════════════════════════════════════════════════════════ */
+@layer base {
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+  *,
+  *::before,
+  *::after {
+    @apply box-border;
   }
-  to {
-    transform: rotate(360deg);
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply antialiased bg-dark-bg text-white leading-relaxed overflow-x-hidden;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  ul {
+    @apply list-none m-0 p-0;
+  }
+
+  img {
+    @apply max-w-full h-auto;
+  }
+
+  /* Custom scrollbar for entire app */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--dark-bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--brand-lime);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-lime-dark);
+  }
+
+  ::selection {
+    background: var(--brand-lime);
+    color: var(--brand-black);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* ══════════════════════════════════════════════════════════════
+   REUSABLE COMPONENT LAYER
+   ══════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full font-semibold text-sm cursor-pointer bg-lime text-brand-black border-none overflow-hidden transition-all duration-300 hover:-translate-y-1;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 30px rgba(200, 230, 0, 0.4);
+  }
+
+  .btn-primary::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 scale-x-0 origin-left transition-transform duration-300;
+  }
+
+  .btn-primary:hover::before {
+    @apply scale-x-100;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full font-semibold text-sm cursor-pointer bg-transparent text-white border-2 border-white/40 transition-all duration-300 hover:border-lime hover:text-lime hover:-translate-y-1;
+  }
+
+  .btn-outline-lime {
+    @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-semibold text-sm cursor-pointer bg-transparent text-lime border-2 border-lime transition-all duration-300 hover:bg-lime hover:text-brand-black hover:-translate-y-0.5;
+  }
+
+  /* ── Section title ───────────────────────────────────────── */
+  .section-title {
+    @apply text-4xl md:text-5xl font-bold mb-6 relative;
+  }
+
+  .section-title::after {
+    content: '';
+    @apply absolute w-16 h-1 bg-lime -bottom-3 left-1/2 -translate-x-1/2 rounded-full;
+    display: block;
+  }
+
+  .section-title.left-aligned::after {
+    @apply left-0 translate-x-0;
+  }
+
+  /* ── Glass card ──────────────────────────────────────────── */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  .glass-lime {
+    @apply bg-lime/10 backdrop-blur-md border border-lime/20 rounded-2xl;
+  }
+
+  .glass-dark {
+    @apply bg-dark-card/80 backdrop-blur-md border border-dark-border rounded-2xl;
+  }
+
+  /* ── Gradient text ───────────────────────────────────────── */
+  .text-gradient-lime {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #C8E600, #d8f200, #a8c100);
+    background-size: 200% auto;
+    animation: shimmer 2.5s linear infinite;
+  }
+
+  /* ── Section wrapper ─────────────────────────────────────── */
+  .section-dark {
+    @apply py-24 bg-dark-bg;
+  }
+
+  .section-card {
+    @apply py-24 bg-dark-card;
+  }
+
+  .section-light {
+    @apply py-24 bg-light-bg;
+  }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider-lime {
+    @apply h-px bg-gradient-to-r from-transparent via-lime to-transparent opacity-30 my-1;
   }
 }
 
-.card {
-  padding: 2em;
+/* ══════════════════════════════════════════════════════════════
+   SCROLL-TRIGGER REVEAL ANIMATIONS
+   ══════════════════════════════════════════════════════════════ */
+@layer utilities {
+
+  /* Elements start hidden; JS adds .visible to trigger reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-50px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(50px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal-right.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.88);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal-scale.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Stagger delay helpers */
+  .delay-100 {
+    transition-delay: 0.1s;
+  }
+
+  .delay-200 {
+    transition-delay: 0.2s;
+  }
+
+  .delay-300 {
+    transition-delay: 0.3s;
+  }
+
+  .delay-400 {
+    transition-delay: 0.4s;
+  }
+
+  .delay-500 {
+    transition-delay: 0.5s;
+  }
+
+  .delay-600 {
+    transition-delay: 0.6s;
+  }
+
+  .delay-700 {
+    transition-delay: 0.7s;
+  }
+
+  .delay-800 {
+    transition-delay: 0.8s;
+  }
 }
 
-.read-the-docs {
-  color: #888;
+/* ══════════════════════════════════════════════════════════════
+   PARTICLE / NOISE OVERLAY  (hero background decoration)
+   ══════════════════════════════════════════════════════════════ */
+.hero-noise {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(200, 230, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(200, 230, 0, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(200, 230, 0, 0.04) 0%, transparent 35%);
+  pointer-events: none;
+}
+
+/* floating orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: floatY 6s ease-in-out infinite;
+}
+
+.orb-lime {
+  background: rgba(200, 230, 0, 0.15);
+}
+
+.orb-white {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CHATBOT WIDGET
+   ══════════════════════════════════════════════════════════════ */
+.chat-fab {
+  @apply fixed bottom-4 right-4 sm:bottom-6 sm:right-10 z-50 w-14 h-14 rounded-full bg-lime text-brand-black text-2xl flex items-center justify-center cursor-pointer border-none transition-all duration-300;
+  box-shadow: 0 8px 32px rgba(200, 230, 0, 0.4);
+  animation: pulseGlowLime 2.5s ease-in-out infinite;
+}
+
+.chat-fab:hover {
+  @apply scale-110 -translate-y-1;
+  box-shadow: 0 8px 40px rgba(200, 230, 0, 0.6);
+}
+
+.chat-window {
+  @apply fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-50 w-[calc(100%-2rem)] sm:w-96 rounded-2xl overflow-hidden border border-dark-border;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  max-width: 400px;
+  animation: chatSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.chat-message-bot {
+  @apply bg-dark-card text-white rounded-2xl rounded-tl-sm px-4 py-3 text-sm max-w-[85%] w-fit;
+}
+
+.chat-message-user {
+  @apply bg-lime text-brand-black rounded-2xl rounded-tr-sm px-4 py-3 text-sm max-w-[85%] w-fit ml-auto;
+}
+
+/* Typing dots */
+.typing-dot {
+  @apply w-2 h-2 rounded-full bg-lime inline-block;
+}
+
+.typing-dot:nth-child(1) {
+  animation: bounceDot 1.2s ease-in-out infinite 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation: bounceDot 1.2s ease-in-out infinite 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation: bounceDot 1.2s ease-in-out infinite 0.4s;
 }
