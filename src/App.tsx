@@ -1,8 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useScrollReveal } from './hooks/useScrollReveal';
-import LandingPage from './pages/LandingPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Sidebars
 import ExecutiveSidebar from './components/dashboard/sidebars/ExecutiveSidebar';
@@ -29,40 +29,54 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Customer Facing App */}
-        <Route path="/" element={<LandingPage />} />
-
         {/* Admin Login Gateway */}
         <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Admin Dashboards */}
-        <Route path="/admin/executive/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
-          <Route index element={<ExecutiveDashboard />} />
+        {/* Admin Dashboards - Protected */}
+        {/* allowedRoles must match the 'role' field in the JWT from the API */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
+            <Route index element={<ExecutiveDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
-          <Route index element={<OperationalAdminDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['operationaladmin']} />}>
+          <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
+            <Route index element={<OperationalAdminDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
-          <Route index element={<FinancialAdminDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['financialadmin']} />}>
+          <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
+            <Route index element={<FinancialAdminDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/country-manager/*" element={<DashboardLayout SidebarComponent={CountryManagerSidebar} />}>
-          <Route index element={<CountryManagerDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
+          <Route path="/admin/country-manager/*" element={<DashboardLayout SidebarComponent={CountryManagerSidebar} />}>
+            <Route index element={<CountryManagerDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/branch-manager/*" element={<DashboardLayout SidebarComponent={BranchManagerSidebar} />}>
-          <Route index element={<BranchManagerDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['branchmanager']} />}>
+          <Route path="/admin/branch-manager/*" element={<DashboardLayout SidebarComponent={BranchManagerSidebar} />}>
+            <Route index element={<BranchManagerDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
-          <Route index element={<BranchOpStaffDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['branchopstaff']} />}>
+          <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
+            <Route index element={<BranchOpStaffDashboard />} />
+          </Route>
         </Route>
 
-        <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
-          <Route index element={<BranchFinStaffDashboard />} />
+        <Route element={<ProtectedRoute allowedRoles={['branchfinstaff']} />}>
+          <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
+            <Route index element={<BranchFinStaffDashboard />} />
+          </Route>
         </Route>
+        {/* Redirect "/" and any unknown routes to login */}
+        <Route path="*" element={<Navigate to="/admin/login" replace />} />
 
       </Routes>
     </Router>

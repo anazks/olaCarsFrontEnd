@@ -1,0 +1,64 @@
+import { jwtDecode } from 'jwt-decode';
+
+export interface DecodedToken {
+    id?: string;
+    email?: string;
+    role: string;
+    exp?: number;
+    iat?: number;
+    [key: string]: any; // allow any extra fields the API may send
+}
+
+export const getToken = (): string | null => {
+    return localStorage.getItem('token');
+};
+
+export const setToken = (token: string): void => {
+    localStorage.setItem('token', token);
+};
+
+export const removeToken = (): void => {
+    localStorage.removeItem('token');
+};
+
+export const getDecodedToken = (): DecodedToken | null => {
+    const token = getToken();
+    if (!token) return null;
+
+    try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        // Debug: log decoded payload so we can see the exact role field name
+        console.log('[auth] decoded JWT payload:', decoded);
+        return decoded;
+    } catch (error) {
+        console.error('[auth] Invalid token format:', error);
+        return null;
+    }
+};
+
+export const isTokenValid = (): boolean => {
+    const decoded = getDecodedToken();
+    if (!decoded) return false;
+
+    // Only check expiry if the JWT actually contains an 'exp' field
+    if (decoded.exp) {
+        const currentTime = Date.now() / 1000; // exp is in seconds
+        if (decoded.exp < currentTime) {
+            console.warn('[auth] Token has expired');
+            return false;
+        }
+    }
+
+    // Token exists and is decodable (exp absent or still valid)
+    return true;
+};
+
+export const getUserRole = (): string | null => {
+    const decoded = getDecodedToken();
+    // Handle both 'role' and 'roles' fields, always normalize to lowercase
+    const role = decoded?.role ?? decoded?.roles ?? null;
+    const normalized = typeof role === 'string' ? role.toLowerCase() : null;
+    console.log('[auth] userRole from JWT:', role, '→ normalized:', normalized);
+    return normalized;
+};
+
