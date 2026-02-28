@@ -1,42 +1,78 @@
-import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, Settings } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, Settings, Menu, Globe } from 'lucide-react';
 
-const FinancialAdminSidebar = () => {
+interface FinancialAdminSidebarProps {
+    isSidebarCollapsed?: boolean;
+    toggleSidebar?: () => void;
+}
+
+const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: FinancialAdminSidebarProps) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+
+    const navItems = [
+        { icon: <LayoutDashboard size={20} />, label: 'Finance Dashboard', path: '/admin/financial-admin', exact: true },
+        { icon: <Globe size={20} />, label: 'Manage Country Managers', path: '/admin/financial-admin/manage-country-managers' },
+        { icon: <DollarSign size={20} />, label: 'Revenue Streams' },
+        { icon: <PieChart size={20} />, label: 'Collections' },
+        { icon: <Receipt size={20} />, label: 'Invoices & Billing' },
+        { icon: <FileText size={20} />, label: 'Audit Logs' },
+        { icon: <Banknote size={20} />, label: 'Deposit Reconciliations' },
+        { icon: <ShieldAlert size={20} />, label: 'Claims Processing' },
+    ];
+
     return (
-        <aside className="w-64 h-full flex flex-col flex-shrink-0" style={{ background: '#0A0A0A', borderRight: '1px solid #2A2A2A' }}>
-            <div className="h-20 flex items-center px-6 border-b" style={{ borderColor: '#2A2A2A' }}>
-                <span className="text-xl font-bold tracking-wide">OLA <span style={{ color: '#C8E600' }}>CARS</span></span>
+        <aside
+            className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out"
+            style={{ background: '#0A0A0A', borderRight: '1px solid #2A2A2A' }}
+        >
+            <div className={`h-20 flex items-center justify-between border-b ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-6'}`} style={{ borderColor: '#2A2A2A' }}>
+                {!isSidebarCollapsed && (
+                    <span className="text-xl font-bold tracking-wide">
+                        OLA <span style={{ color: '#C8E600' }}>CARS</span>
+                    </span>
+                )}
+
+                <button
+                    onClick={toggleSidebar}
+                    className={`p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer ${isSidebarCollapsed ? 'ml-4' : 'ml-2'}`}
+                >
+                    <Menu size={24} />
+                </button>
             </div>
 
-            <div className="px-5 py-4 text-xs font-bold text-gray-500 tracking-wider">L2: FIN ADMIN</div>
+            {!isSidebarCollapsed && <div className="px-5 py-4 text-xs font-bold text-gray-500 tracking-wider">L2: FIN ADMIN</div>}
 
-            <div className="flex-1 overflow-y-auto px-3">
-                {[
-                    { icon: <LayoutDashboard size={20} />, label: 'Finance Dashboard', active: true },
-                    { icon: <DollarSign size={20} />, label: 'Revenue Streams' },
-                    { icon: <PieChart size={20} />, label: 'Collections' },
-                    { icon: <Receipt size={20} />, label: 'Invoices & Billing' },
-                    { icon: <FileText size={20} />, label: 'Audit Logs' },
-                    { icon: <Banknote size={20} />, label: 'Deposit Reconciliations' },
-                    { icon: <ShieldAlert size={20} />, label: 'Claims Processing' },
-                ].map((item, i) => (
-                    <div
-                        key={i}
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-colors mb-1"
-                        style={{
-                            background: item.active ? 'rgba(200,230,0,0.1)' : 'transparent',
-                            color: item.active ? '#C8E600' : '#9ca3af',
-                        }}
-                    >
-                        <span>{item.icon}</span>
-                        <span className="font-medium text-sm">{item.label}</span>
-                    </div>
-                ))}
+            <div className="flex-1 overflow-y-auto px-3 mt-4">
+                {navItems.map((item, i) => {
+                    const active = item.path ? (item.exact ? location.pathname === item.path : isActive(item.path)) : false;
+                    return (
+                        <div
+                            key={i}
+                            onClick={item.path ? () => navigate(item.path) : undefined}
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all mb-1 ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                            title={isSidebarCollapsed ? item.label : ''}
+                            style={{
+                                background: active ? 'rgba(200,230,0,0.1)' : 'transparent',
+                                color: active ? '#C8E600' : '#9ca3af',
+                            }}
+                        >
+                            <span>{item.icon}</span>
+                            {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{item.label}</span>}
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="p-4 border-t" style={{ borderColor: '#2A2A2A' }}>
-                <div className="flex items-center gap-3 cursor-pointer text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5">
+                <div
+                    className={`flex items-center gap-3 cursor-pointer text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5 ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    title={isSidebarCollapsed ? "Finance Settings" : ""}
+                >
                     <Settings size={20} />
-                    <span className="text-sm font-medium">Finance Settings</span>
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">Finance Settings</span>}
                 </div>
             </div>
         </aside>

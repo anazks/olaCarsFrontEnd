@@ -1,6 +1,10 @@
 import { Bell, Search, Settings } from 'lucide-react';
 
-const TopBar = () => {
+interface TopBarProps {
+    toggleSidebar: () => void;
+}
+
+const TopBar = ({ }: TopBarProps) => {
     return (
         <header
             className="flex items-center justify-between px-6 py-4 h-20 flex-shrink-0"
@@ -9,20 +13,22 @@ const TopBar = () => {
                 borderBottom: '1px solid #2A2A2A'
             }}
         >
-            {/* Search Bar */}
-            <div className="flex-1 max-w-lg">
-                <div
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-                    style={{ background: '#111111', border: '1px solid #2A2A2A' }}
-                >
-                    <Search size={18} className="text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-gray-500"
-                    />
-                    <div className="flex items-center justify-center px-1.5 py-0.5 rounded textxs font-medium" style={{ background: '#1C1C1C', color: '#6B7280', border: '1px solid #2A2A2A' }}>
-                        ⌘K
+            <div className="flex items-center gap-4 flex-1">
+                {/* Search Bar */}
+                <div className="flex-1 max-w-lg">
+                    <div
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
+                        style={{ background: '#111111', border: '1px solid #2A2A2A' }}
+                    >
+                        <Search size={18} className="text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-gray-500"
+                        />
+                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded textxs font-medium" style={{ background: '#1C1C1C', color: '#6B7280', border: '1px solid #2A2A2A' }}>
+                            ⌘K
+                        </div>
                     </div>
                 </div>
             </div>

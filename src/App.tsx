@@ -22,6 +22,11 @@ import BranchManagerDashboard from './pages/dashboards/BranchManagerDashboard';
 import BranchOpStaffDashboard from './pages/dashboards/BranchOpStaffDashboard';
 import BranchFinStaffDashboard from './pages/dashboards/BranchFinStaffDashboard';
 
+// Admin Manage Pages
+import ManageOperationalAdmins from './pages/dashboards/admin/ManageOperationalAdmins';
+import ManageFinancialAdmins from './pages/dashboards/admin/ManageFinancialAdmins';
+import ManageCountryManagers from './pages/dashboards/shared/ManageCountryManagers';
+
 function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
@@ -37,18 +42,23 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
             <Route index element={<ExecutiveDashboard />} />
+            <Route path="manage-operational-admins" element={<ManageOperationalAdmins />} />
+            <Route path="manage-financial-admins" element={<ManageFinancialAdmins />} />
+            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['operationaladmin']} />}>
           <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
             <Route index element={<OperationalAdminDashboard />} />
+            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['financialadmin']} />}>
           <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
             <Route index element={<FinancialAdminDashboard />} />
+            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
           </Route>
         </Route>
 

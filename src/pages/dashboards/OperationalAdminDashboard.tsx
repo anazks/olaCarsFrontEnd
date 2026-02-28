@@ -4,13 +4,13 @@ import { StatCard, AlertCard } from '../../components/dashboard/widgets/StatusCa
 const OperationalAdminDashboard = () => {
     return (
         <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-end mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Operations Dashboard</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Operations Dashboard</h1>
                     <p className="text-gray-400 text-sm">Real-time fleet tracking and maintenance hub.</p>
                 </div>
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-dark-border rounded-lg text-sm text-lime border-lime cursor-pointer hover:bg-lime/10">
+                <div className="flex gap-3 w-full sm:w-auto">
+                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-dark-card border border-dark-border rounded-lg text-sm text-lime border-lime cursor-pointer hover:bg-lime/10">
                         <MapPin size={16} /> Open Fleet Map
                     </button>
                 </div>
