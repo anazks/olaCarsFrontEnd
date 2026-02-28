@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Car, Wrench, MapPin, Users, CalendarSync, Settings, Menu, Globe } from 'lucide-react';
+import { LayoutDashboard, Car, Wrench, MapPin, Users, CalendarSync, Settings, Menu, Globe, Building2 } from 'lucide-react';
 
 interface OperationalAdminSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -15,6 +15,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     const navItems = [
         { icon: <LayoutDashboard size={20} />, label: 'Ops Overview', path: '/admin/operational-admin', exact: true },
         { icon: <Globe size={20} />, label: 'Manage Country Managers', path: '/admin/operational-admin/manage-country-managers' },
+        { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/operational-admin/manage-branches' },
         { icon: <MapPin size={20} />, label: 'Live GPS Tracking' },
         { icon: <Car size={20} />, label: 'Fleet Inventory' },
         { icon: <Wrench size={20} />, label: 'Maintenance Hub' },
@@ -68,10 +69,10 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             <div className="p-4 border-t" style={{ borderColor: '#2A2A2A' }}>
                 <div
                     className={`flex items-center gap-3 cursor-pointer text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5 ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                    title={isSidebarCollapsed ? "Ops Settings" : ""}
+                    title={isSidebarCollapsed ? "Settings" : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Ops Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
                 </div>
             </div>
         </aside>

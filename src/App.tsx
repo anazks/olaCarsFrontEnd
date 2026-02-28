@@ -26,6 +26,7 @@ import BranchFinStaffDashboard from './pages/dashboards/BranchFinStaffDashboard'
 import ManageOperationalAdmins from './pages/dashboards/admin/ManageOperationalAdmins';
 import ManageFinancialAdmins from './pages/dashboards/admin/ManageFinancialAdmins';
 import ManageCountryManagers from './pages/dashboards/shared/ManageCountryManagers';
+import ManageBranches from './pages/dashboards/shared/ManageBranches';
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -45,6 +46,7 @@ function App() {
             <Route path="manage-operational-admins" element={<ManageOperationalAdmins />} />
             <Route path="manage-financial-admins" element={<ManageFinancialAdmins />} />
             <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+            <Route path="manage-branches" element={<ManageBranches />} />
           </Route>
         </Route>
 
@@ -52,6 +54,7 @@ function App() {
           <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
             <Route index element={<OperationalAdminDashboard />} />
             <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+            <Route path="manage-branches" element={<ManageBranches />} />
           </Route>
         </Route>
 
@@ -59,12 +62,14 @@ function App() {
           <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
             <Route index element={<FinancialAdminDashboard />} />
             <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+            <Route path="manage-branches" element={<ManageBranches />} />
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
           <Route path="/admin/country-manager/*" element={<DashboardLayout SidebarComponent={CountryManagerSidebar} />}>
             <Route index element={<CountryManagerDashboard />} />
+            <Route path="manage-branches" element={<ManageBranches />} />
           </Route>
         </Route>
 

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -23,6 +23,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Shield size={20} />, label: 'Operational Admins', path: '/admin/admin/manage-operational-admins' },
         { icon: <DollarSign size={20} />, label: 'Financial Admins', path: '/admin/admin/manage-financial-admins' },
         { icon: <Globe size={20} />, label: 'Country Managers', path: '/admin/admin/manage-country-managers' },
+        { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/admin/manage-branches' },
     ];
 
     const monitoringItems = [
