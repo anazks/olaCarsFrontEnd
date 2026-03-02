@@ -113,7 +113,7 @@ const ManageOperationStaff = () => {
                 await createOperationStaff(payload);
             } else if (modalMode === 'edit' && selectedStaff) {
                 const payload: UpdateOperationStaffPayload = {
-                    _id: selectedStaff._id,
+                    id: selectedStaff._id,
                     fullName: formData.fullName,
                     email: formData.email,
                     phone: formData.phone,

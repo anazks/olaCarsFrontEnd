@@ -86,7 +86,7 @@ const ManageFinancialAdmins = () => {
                 await createFinancialAdmin(payload);
             } else if (modalMode === 'edit' && selectedAdmin) {
                 const payload: UpdateFinancialAdminPayload = {
-                    _id: selectedAdmin._id,
+                    id: selectedAdmin._id,
                     fullName: formData.fullName,
                     email: formData.email,
                     status: formData.status as any,

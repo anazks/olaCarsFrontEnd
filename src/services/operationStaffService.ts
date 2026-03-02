@@ -22,7 +22,7 @@ export interface CreateOperationStaffPayload {
 }
 
 export interface UpdateOperationStaffPayload {
-    _id: string;
+    id: string;
     fullName?: string;
     email?: string;
     password?: string;

@@ -111,7 +111,7 @@ const ManageBranchManagers = () => {
                 await createBranchManager(payload);
             } else if (modalMode === 'edit' && selectedManager) {
                 const payload: UpdateBranchManagerPayload = {
-                    _id: selectedManager._id,
+                    id: selectedManager._id,
                     ...formData,
                 };
                 if (!payload.password) delete payload.password;

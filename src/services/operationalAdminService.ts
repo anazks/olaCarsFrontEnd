@@ -22,7 +22,7 @@ export interface CreateOperationalAdminPayload {
 }
 
 export interface UpdateOperationalAdminPayload {
-    _id: string;
+    id: string;
     fullName?: string;
     email?: string;
     password?: string;
@@ -50,6 +50,8 @@ export const updateOperationalAdmin = async (
     payload: UpdateOperationalAdminPayload
 ): Promise<OperationalAdmin> => {
     const response = await api.put('/api/operational-admin/update', payload);
+    console.log(response,'2w22');
+    
     return response.data;
 };
 

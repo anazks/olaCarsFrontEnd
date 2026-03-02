@@ -1,5 +1,6 @@
 import { Bell, Search, Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { getUser, getUserRole } from '../../utils/auth';
 
 interface TopBarProps {
     toggleSidebar: () => void;
@@ -7,6 +8,26 @@ interface TopBarProps {
 
 const TopBar = ({ }: TopBarProps) => {
     const { theme, toggleTheme } = useTheme();
+    const user = getUser();
+    const role = getUserRole();
+
+    const getFormattedRole = (roleStr: string | null) => {
+        if (!roleStr) return 'Access Panel';
+        return roleStr
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
+    const getInitials = (name: string | null) => {
+        if (!name) return '??';
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
 
     return (
         <header
@@ -69,14 +90,18 @@ const TopBar = ({ }: TopBarProps) => {
                 {/* User Profile */}
                 <div className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>Admin User</p>
-                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>System Access</p>
+                        <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>
+                            {user?.fullName || user?.email?.split('@')[0] || 'Admin User'}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                            {getFormattedRole(role)}
+                        </p>
                     </div>
                     <div
                         className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: '#C8E600' }}
                     >
-                        AU
+                        {getInitials(user?.fullName || user?.email?.split('@')[0] || 'Admin User')}
                     </div>
                 </div>
             </div>

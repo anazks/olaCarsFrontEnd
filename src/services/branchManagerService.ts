@@ -24,7 +24,7 @@ export interface CreateBranchManagerPayload {
 }
 
 export interface UpdateBranchManagerPayload extends Partial<CreateBranchManagerPayload> {
-    _id: string;
+    id: string;
 }
 
 // GET all branch managers
@@ -47,7 +47,7 @@ export const createBranchManager = async (payload: CreateBranchManagerPayload): 
 
 // PUT update branch manager
 export const updateBranchManager = async (payload: UpdateBranchManagerPayload): Promise<BranchManager> => {
-    const response = await api.put(`/api/branch-manager/${payload._id}`, payload);
+    const response = await api.put(`/api/branch-manager/${payload.id}`, payload);
     return response.data;
 };
 

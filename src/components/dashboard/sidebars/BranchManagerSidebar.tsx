@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Clock, ClipboardList, Wallet, BellRing, Settings, Menu, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, ClipboardList, Wallet, BellRing, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface BranchManagerSidebarProps {
@@ -19,15 +20,48 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
     };
 
     const navItems = [
-        { icon: <LayoutDashboard size={20} />, label: 'Branch Overview', path: '/admin/branch-manager', exact: true },
-        { icon: <Users size={20} />, label: 'My Team', path: '/admin/branch-manager/team' },
         { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/branch-manager/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/branch-manager/manage-operation-staff' },
+    ];
+
+    const branchOpsItems = [
+        { icon: <Users size={20} />, label: 'My Team', path: '/admin/branch-manager/team' },
         { icon: <Clock size={20} />, label: 'Shift Schedule' },
         { icon: <ClipboardList size={20} />, label: 'Task Assignments' },
         { icon: <Wallet size={20} />, label: 'Branch Revenue' },
         { icon: <BellRing size={20} />, label: 'Local Alerts' },
     ];
+
+    const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
+        const [isOpen, setIsOpen] = useState(true);
+
+        return (
+            <div className="mb-4">
+                {!isSidebarCollapsed && (
+                    <div
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="px-4 py-2 mb-1 flex items-center justify-between cursor-pointer group hover:bg-black/5 rounded-lg transition-all"
+                    >
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{title}</h4>
+                        <span style={{ color: 'var(--text-dim)' }} className="transition-transform duration-200">
+                            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                    </div>
+                )}
+                <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    {items.map((item, i) => (
+                        <SidebarItem
+                            key={i}
+                            icon={item.icon}
+                            label={item.label}
+                            active={item.path ? isActive(item.path) : false}
+                            onClick={item.path ? () => navigate(item.path) : undefined}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    };
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
         <div
@@ -52,7 +86,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         >
             <div className={`h-20 flex items-center justify-between border-b ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-6'}`} style={{ borderColor: 'var(--border-main)' }}>
                 {!isSidebarCollapsed && (
-                    <span className="text-xl font-bold tracking-wide transition-colors" style={{ color: 'var(--lime)' }}>
+                    <span className="text-xl font-bold tracking-wide transition-colors" style={{ color: 'var(--brand-lime)' }}>
                         OLA <span style={{ color: 'var(--text-main)' }}>CARS</span>
                     </span>
                 )}
@@ -68,18 +102,18 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 </button>
             </div>
 
-            {!isSidebarCollapsed && <div className="px-5 py-4 text-xs font-bold tracking-wider transition-colors" style={{ color: 'var(--text-main)' }}>L3: BRANCH MGR</div>}
+            <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
+                <SidebarItem
+                    icon={<LayoutDashboard size={20} />}
+                    label="Branch Overview"
+                    active={location.pathname === '/admin/branch-manager'}
+                    onClick={() => navigate('/admin/branch-manager')}
+                />
 
-            <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar">
-                {navItems.map((item, i) => (
-                    <SidebarItem
-                        key={i}
-                        icon={item.icon}
-                        label={item.label}
-                        active={item.path ? isActive(item.path) : false}
-                        onClick={item.path ? () => navigate(item.path) : undefined}
-                    />
-                ))}
+                <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
+
+                <SidebarSection title="Staff Management" items={navItems} />
+                <SidebarSection title="Local Operations" items={branchOpsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

@@ -28,7 +28,7 @@ export interface CreateCountryManagerPayload {
 }
 
 export interface UpdateCountryManagerPayload {
-    _id: string;
+    id: string;
     fullName?: string;
     email?: string;
     password?: string;

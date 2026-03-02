@@ -22,7 +22,7 @@ export interface CreateFinancialAdminPayload {
 }
 
 export interface UpdateFinancialAdminPayload {
-    _id: string;
+    id: string;
     fullName?: string;
     email?: string;
     password?: string;

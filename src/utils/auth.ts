@@ -19,6 +19,20 @@ export const setToken = (token: string): void => {
 
 export const removeToken = (): void => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+};
+
+export const setUser = (user: any): void => {
+    localStorage.setItem('user', JSON.stringify(user));
+};
+
+export const getUser = (): any | null => {
+    const user = localStorage.getItem('user');
+    try {
+        return user ? JSON.parse(user) : null;
+    } catch (e) {
+        return null;
+    }
 };
 
 export const getDecodedToken = (): DecodedToken | null => {

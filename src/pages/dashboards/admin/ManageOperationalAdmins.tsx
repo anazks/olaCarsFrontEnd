@@ -86,7 +86,7 @@ const ManageOperationalAdmins = () => {
                 await createOperationalAdmin(payload);
             } else if (modalMode === 'edit' && selectedAdmin) {
                 const payload: UpdateOperationalAdminPayload = {
-                    _id: selectedAdmin._id,
+                    id: selectedAdmin._id,
                     fullName: formData.fullName,
                     email: formData.email,
                     status: formData.status as any,

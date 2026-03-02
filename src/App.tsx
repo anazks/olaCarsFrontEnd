@@ -58,7 +58,7 @@ function App() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['operationaladmin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['operationadmin']} />}>
             <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
               <Route index element={<OperationalAdminDashboard />} />
               <Route path="manage-country-managers" element={<ManageCountryManagers />} />

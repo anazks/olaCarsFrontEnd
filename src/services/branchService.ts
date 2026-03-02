@@ -28,7 +28,7 @@ export interface CreateBranchPayload {
 }
 
 export interface UpdateBranchPayload extends Partial<CreateBranchPayload> {
-    _id: string;
+    id: string;
 }
 
 // GET all branches
@@ -52,7 +52,7 @@ export const createBranch = async (payload: CreateBranchPayload): Promise<Branch
 
 // PUT update branch
 export const updateBranch = async (payload: UpdateBranchPayload): Promise<Branch> => {
-    const response = await api.put('/api/branch/Updatebranch', payload);
+    const response = await api.put('/api/branch/', payload);
     return response.data;
 };
 

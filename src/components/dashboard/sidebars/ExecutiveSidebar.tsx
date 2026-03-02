@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -19,7 +20,6 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     };
 
     const navItems = [
-        { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin/admin' },
         { icon: <Shield size={20} />, label: 'Operational Admins', path: '/admin/admin/manage-operational-admins' },
         { icon: <DollarSign size={20} />, label: 'Financial Admins', path: '/admin/admin/manage-financial-admins' },
         { icon: <Globe size={20} />, label: 'Country Managers', path: '/admin/admin/manage-country-managers' },
@@ -69,27 +69,36 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         </div>
     );
 
-    const SidebarSection = ({ title, items }: { title: string; items: any[] }) => (
-        <div className="mb-6">
-            {!isSidebarCollapsed && (
-                <div className="px-4 mb-2 flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-main)' }}>{title}</h4>
-                    <span className="text-xs cursor-pointer transition-colors" style={{ color: 'var(--sidebar-text)' }}>›</span>
+    const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
+        const [isOpen, setIsOpen] = useState(true);
+
+        return (
+            <div className="mb-4">
+                {!isSidebarCollapsed && (
+                    <div
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="px-4 py-2 mb-1 flex items-center justify-between cursor-pointer group hover:bg-black/5 rounded-lg transition-all"
+                    >
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{title}</h4>
+                        <span style={{ color: 'var(--text-dim)' }} className="transition-transform duration-200">
+                            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                    </div>
+                )}
+                <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    {items.map((item, i) => (
+                        <SidebarItem
+                            key={i}
+                            icon={item.icon}
+                            label={item.label}
+                            active={item.path ? isActive(item.path) : false}
+                            onClick={item.path ? () => navigate(item.path) : undefined}
+                        />
+                    ))}
                 </div>
-            )}
-            <div className="space-y-1">
-                {items.map((item, i) => (
-                    <SidebarItem
-                        key={i}
-                        icon={item.icon}
-                        label={item.label}
-                        active={item.path ? isActive(item.path) : false}
-                        onClick={item.path ? () => navigate(item.path) : undefined}
-                    />
-                ))}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <aside
@@ -116,7 +125,16 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             </div>
 
             {/* Scrollable Nav Area */}
-            <div className="flex-1 overflow-y-auto py-6 custom-scrollbar px-3">
+            <div className="flex-1 overflow-y-auto pt-4 pb-10 custom-scrollbar px-3 overflow-x-hidden">
+                <SidebarItem
+                    icon={<LayoutDashboard size={20} />}
+                    label="Dashboard"
+                    active={isActive('/admin/admin')}
+                    onClick={() => navigate('/admin/admin')}
+                />
+
+                <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
+
                 <SidebarSection title="Staff Management" items={navItems} />
                 <SidebarSection title="Monitoring" items={monitoringItems} />
                 <SidebarSection title="Alert Center" items={alertItems} />

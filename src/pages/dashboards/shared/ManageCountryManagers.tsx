@@ -117,7 +117,7 @@ const ManageCountryManagers = () => {
                 await createCountryManager(payload);
             } else if (modalMode === 'edit' && selectedManager) {
                 const payload: UpdateCountryManagerPayload = {
-                    _id: selectedManager._id,
+                    id: selectedManager._id,
                     fullName: formData.fullName,
                     email: formData.email,
                     phone: formData.phone,

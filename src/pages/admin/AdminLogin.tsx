@@ -28,10 +28,21 @@ const AdminLogin = () => {
         setError(null);
 
         try {
-            const { token } = await loginByRole(role, { email, password });
+            const response = await loginByRole(role, { email, password });
+            const { token } = response;
 
             // Persist the token
             setToken(token);
+
+            // Store user info if available
+            if (response.user) {
+                const { setUser } = await import('../../utils/auth');
+                setUser(response.user);
+            } else {
+                // Fallback: store basic info if user object is missing
+                const { setUser } = await import('../../utils/auth');
+                setUser({ fullName: email.split('@')[0], email });
+            }
 
             // Decode to get the role from the JWT payload, normalize to lowercase
             const decoded = getDecodedToken();

@@ -112,7 +112,7 @@ const ManageBranches = () => {
                 await createBranch(payload);
             } else if (modalMode === 'edit' && selectedBranch) {
                 const payload: UpdateBranchPayload = {
-                    _id: selectedBranch._id,
+                    id: selectedBranch._id,
                     ...formData,
                     status: formData.status as any
                 };
@@ -291,178 +291,303 @@ const ManageBranches = () => {
 
             {/* Modals */}
             {modalMode && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3"
+                    style={{
+                        background: "rgba(0,0,0,0.8)",
+                        backdropFilter: "blur(8px)"
+                    }}
+                >
+
                     <div
-                        className="rounded-3xl p-8 max-w-2xl w-full mx-4 relative border animate-in fade-in zoom-in duration-300 transition-colors"
-                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                        onClick={e => e.stopPropagation()}
+                        className="rounded-2xl p-5 max-w-5xl w-full mx-2 relative border max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-300"
+                        style={{
+                            background: "var(--bg-card)",
+                            borderColor: "var(--border-main)"
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-                                {modalMode === 'create' ? 'Add New Branch' : 'Edit Branch Detail'}
+
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center mb-4">
+                            <h2
+                                className="text-xl font-semibold"
+                                style={{ color: "var(--text-main)" }}
+                            >
+                                {modalMode === "create"
+                                    ? "Add New Branch"
+                                    : "Edit Branch Detail"}
                             </h2>
-                            <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
-                                <X size={24} />
+
+                            <button
+                                onClick={closeModal}
+                                className="p-2 hover:bg-white/10 rounded-lg transition"
+                            >
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Branch Name</label>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+
+                            {/* GRID SECTION */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                {/* Branch Name */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        Branch Name
+                                    </label>
+
                                     <input
                                         type="text"
                                         required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
                                         value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Kochi Main Branch"
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, name: e.target.value })
+                                        }
+                                        placeholder="Kochi Main"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Branch Code</label>
+
+                                {/* Code */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        Branch Code
+                                    </label>
+
                                     <input
                                         type="text"
                                         required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
                                         value={formData.code}
-                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, code: e.target.value })
+                                        }
                                         placeholder="KOCHI01"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Full Address</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    value={formData.address}
-                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="123 Corporate Plaza, MG Road"
-                                />
-                            </div>
+                                {/* City */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        City
+                                    </label>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>City</label>
                                     <input
                                         type="text"
                                         required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
                                         value={formData.city}
-                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, city: e.target.value })
+                                        }
                                         placeholder="Kochi"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>State</label>
+
+                                {/* State */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        State
+                                    </label>
+
                                     <input
                                         type="text"
                                         required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
                                         value={formData.state}
-                                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, state: e.target.value })
+                                        }
                                         placeholder="Kerala"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Official Email</label>
+                                {/* Email */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        Official Email
+                                    </label>
+
                                     <input
                                         type="email"
                                         required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="kochi@olacars.com"
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, email: e.target.value })
+                                        }
+                                        placeholder="branch@olacars.com"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Phone Number</label>
+
+                                {/* Phone */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        Phone
+                                    </label>
+
                                     <PhoneInput
-                                        country={'in'}
+                                        country={"in"}
                                         value={formData.phone}
-                                        onChange={(phone) => setFormData({ ...formData, phone })}
-                                        containerStyle={{ width: '100%' }}
+                                        onChange={(phone) =>
+                                            setFormData({ ...formData, phone })
+                                        }
+                                        containerStyle={{ width: "100%" }}
                                         inputStyle={{
-                                            width: '100%',
-                                            height: '46px',
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            color: 'var(--text-main)',
-                                            borderRadius: '12px',
-                                            fontSize: '14px'
+                                            width: "100%",
+                                            height: "36px",
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)",
+                                            borderRadius: "8px",
+                                            fontSize: "14px"
                                         }}
                                         buttonStyle={{
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            borderRadius: '12px 0 0 12px'
-                                        }}
-                                        dropdownStyle={{
-                                            background: 'var(--bg-card)',
-                                            color: 'var(--text-main)',
-                                            border: '1px solid var(--border-main)'
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)"
                                         }}
                                     />
                                 </div>
+
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            {/* ADDRESS FULL WIDTH */}
+                            <div className="space-y-1">
+                                <label
+                                    className="text-xs font-medium"
+                                    style={{ color: "var(--text-dim)" }}>
+                                    Full Address
+                                </label>
+
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                    style={{
+                                        background: "var(--bg-input)",
+                                        border: "1px solid var(--border-main)",
+                                        color: "var(--text-main)"
+                                    }}
+                                    value={formData.address}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, address: e.target.value })
+                                    }
+                                    placeholder="MG Road"
+                                />
+                            </div>
+
+                            {/* STATUS */}
+                            <div className="space-y-1">
+                                <label
+                                    className="text-xs font-medium"
+                                    style={{ color: "var(--text-dim)" }}>
+                                    Status
+                                </label>
+
                                 <select
                                     value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, status: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                    style={{
+                                        background: "var(--bg-input)",
+                                        border: "1px solid var(--border-main)",
+                                        color: "var(--text-main)"
+                                    }}
                                 >
-                                    <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>ACTIVE</option>
-                                    <option value="INACTIVE" style={{ background: 'var(--bg-card)' }}>INACTIVE</option>
-                                    <option value="MAINTENANCE" style={{ background: 'var(--bg-card)' }}>MAINTENANCE</option>
+                                    <option>ACTIVE</option>
+                                    <option>INACTIVE</option>
+                                    <option>MAINTENANCE</option>
                                 </select>
                             </div>
 
+                            {/* ERROR */}
                             {formError && (
-                                <div className="p-4 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                                <div
+                                    className="p-3 rounded-lg text-sm"
+                                    style={{
+                                        background: "rgba(239,68,68,0.1)",
+                                        border: "1px solid rgba(239,68,68,0.3)",
+                                        color: "#ef4444"
+                                    }}
+                                >
                                     {formError}
                                 </div>
                             )}
 
-                            <div className="flex gap-4 pt-4">
+                            {/* ACTIONS */}
+                            <div className="flex gap-3 pt-2">
+
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="flex-1 py-4 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-                                    style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
+                                    className="flex-1 py-2.5 rounded-lg text-sm"
+                                    style={{
+                                        border: "1px solid var(--border-main)",
+                                        color: "var(--text-dim)"
+                                    }}
                                 >
                                     Cancel
                                 </button>
+
                                 <button
                                     type="submit"
                                     disabled={formLoading}
-                                    className="flex-1 py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center disabled:opacity-60"
-                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
+                                    className="flex-1 py-2.5 rounded-lg font-semibold flex justify-center items-center"
+                                    style={{
+                                        background: "#C8E600",
+                                        color: "#0A0A0A"
+                                    }}
                                 >
-                                    {formLoading
-                                        ? <div className="w-6 h-6 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
-                                        : modalMode === 'create' ? 'Create Branch' : 'Update Branch'
-                                    }
+                                    {formLoading ? (
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        modalMode === "create"
+                                            ? "Create Branch"
+                                            : "Update Branch"
+                                    )}
                                 </button>
+
                             </div>
+
                         </form>
                     </div>
                 </div>
             )}
-
             {/* Delete Confirmation Modal */}
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
