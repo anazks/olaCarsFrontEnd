@@ -33,30 +33,30 @@ export interface UpdateBranchPayload extends Partial<CreateBranchPayload> {
 
 // GET all branches
 export const getAllBranches = async (): Promise<Branch[]> => {
-    const response = await api.get('/api/branches/branch');
+    const response = await api.get('/api/branch');
     console.log(response,'e2323')
     return response.data.data;
 };
 
 // GET single branch
 export const getBranchById = async (id: string): Promise<Branch> => {
-    const response = await api.get(`/api/branches/branch/${id}`);
+    const response = await api.get(`/api/branch/${id}`);
     return response.data.data;
 };
 
 // POST create branch
 export const createBranch = async (payload: CreateBranchPayload): Promise<Branch> => {
-    const response = await api.post('/api/branches/branch', payload);
+    const response = await api.post('/api/branch', payload);
     return response.data;
 };
 
 // PUT update branch
 export const updateBranch = async (payload: UpdateBranchPayload): Promise<Branch> => {
-    const response = await api.put('/api/branches/Updatebranch', payload);
+    const response = await api.put('/api/branch/Updatebranch', payload);
     return response.data;
 };
 
 // DELETE branch
 export const deleteBranch = async (id: string): Promise<void> => {
-    await api.delete(`/api/branches/branch/${id}`);
+    await api.delete(`/api/branch/${id}`);
 };

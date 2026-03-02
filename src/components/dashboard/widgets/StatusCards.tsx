@@ -15,21 +15,21 @@ export const StatCard = ({
 }) => {
     return (
         <div
-            className="p-5 rounded-2xl border"
+            className="p-5 rounded-2xl border transition-colors duration-300"
             style={{
-                background: '#1C1C1C',
-                borderColor: '#2A2A2A',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                background: 'var(--bg-card)',
+                borderColor: 'var(--border-main)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
             }}
         >
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    {superTitle && <h4 className="text-white font-bold text-sm mb-1">{superTitle}</h4>}
+                    {superTitle && <h4 className="font-bold text-sm mb-1" style={{ color: 'var(--text-main)' }}>{superTitle}</h4>}
                 </div>
                 {icon && (
                     <div
                         className="px-2 py-1 flex items-center gap-1 rounded text-xs font-bold w-fit"
-                        style={{ background: 'rgba(255,255,255,0.1)', color: '#fff' }}
+                        style={{ background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)' }}
                     >
                         {icon}
                     </div>

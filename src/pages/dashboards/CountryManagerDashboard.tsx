@@ -6,8 +6,8 @@ const CountryManagerDashboard = () => {
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-end mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">National Overview</h1>
-                    <p className="text-gray-400 text-sm">Cross-region performance and critical national metrics.</p>
+                    <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>National Overview</h1>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Cross-region performance and critical national metrics.</p>
                 </div>
             </div>
 
@@ -41,22 +41,29 @@ const CountryManagerDashboard = () => {
             </div>
 
             {/* Region Map & Stats Placeholder */}
-            <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] shadow-lg p-6">
-                <h4 className="font-bold text-white mb-4">Regional Performance Grid</h4>
+            <div
+                className="rounded-2xl border shadow-lg p-6 transition-colors"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+            >
+                <h4 className="font-bold mb-4" style={{ color: 'var(--text-main)' }}>Regional Performance Grid</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {['North Region', 'South Region', 'West Region', 'East Region'].map((region, i) => (
-                        <div key={region} className="bg-[#111111] border border-[#2A2A2A] p-4 rounded-xl hover:border-lime transition-colors cursor-pointer">
-                            <h5 className="text-lime font-bold mb-3">{region}</h5>
-                            <div className="flex justify-between items-center bg-[#181818] p-2 rounded mb-1 text-sm">
-                                <span className="text-gray-400">Branches:</span>
-                                <span className="font-bold text-white">{4 + i * 2}</span>
+                        <div
+                            key={region}
+                            className="border p-4 rounded-xl hover:border-lime transition-all cursor-pointer group"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                        >
+                            <h5 className="font-bold mb-3 transition-colors" style={{ color: 'var(--lime)' }}>{region}</h5>
+                            <div className="flex justify-between items-center p-2 rounded mb-1 text-sm transition-colors" style={{ background: 'var(--bg-card)' }}>
+                                <span style={{ color: 'var(--text-dim)' }}>Branches:</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>{4 + i * 2}</span>
                             </div>
-                            <div className="flex justify-between items-center bg-[#181818] p-2 rounded mb-1 text-sm">
-                                <span className="text-gray-400">Yield:</span>
-                                <span className="font-bold text-white">${(112000 - i * 15000).toLocaleString()}</span>
+                            <div className="flex justify-between items-center p-2 rounded mb-1 text-sm transition-colors" style={{ background: 'var(--bg-card)' }}>
+                                <span style={{ color: 'var(--text-dim)' }}>Yield:</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>${(112000 - i * 15000).toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between items-center bg-[#181818] p-2 rounded text-sm">
-                                <span className="text-gray-400">Alerts:</span>
+                            <div className="flex justify-between items-center p-2 rounded text-sm transition-colors" style={{ background: 'var(--bg-card)' }}>
+                                <span style={{ color: 'var(--text-dim)' }}>Alerts:</span>
                                 <span className="font-bold text-red-500 flex items-center gap-1"><ShieldAlert size={12} /> {i}</span>
                             </div>
                         </div>

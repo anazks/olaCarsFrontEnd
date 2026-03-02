@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2 } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -24,6 +24,9 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <DollarSign size={20} />, label: 'Financial Admins', path: '/admin/admin/manage-financial-admins' },
         { icon: <Globe size={20} />, label: 'Country Managers', path: '/admin/admin/manage-country-managers' },
         { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/admin/manage-branches' },
+        { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/admin/manage-branch-managers' },
+        { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/admin/manage-finance-staff' },
+        { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/admin/manage-operation-staff' },
     ];
 
     const monitoringItems = [
@@ -55,13 +58,13 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all mb-1 ${isSidebarCollapsed ? 'justify-center' : ''}`}
             style={{
                 background: active ? 'rgba(200,230,0,0.1)' : 'transparent',
-                color: active ? '#C8E600' : '#9ca3af',
+                color: active ? 'var(--lime)' : 'var(--sidebar-text)',
             }}
-            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; }}
             onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
             title={isSidebarCollapsed ? label : ''}
         >
-            <span className={active ? 'text-lime' : 'text-gray-400'}>{icon}</span>
+            <span className={active ? 'text-lime' : ''} style={{ color: active ? 'var(--lime)' : 'inherit' }}>{icon}</span>
             {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span>}
         </div>
     );
@@ -70,8 +73,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         <div className="mb-6">
             {!isSidebarCollapsed && (
                 <div className="px-4 mb-2 flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">{title}</h4>
-                    <span className="text-gray-500 text-xs cursor-pointer">›</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-main)' }}>{title}</h4>
+                    <span className="text-xs cursor-pointer transition-colors" style={{ color: 'var(--sidebar-text)' }}>›</span>
                 </div>
             )}
             <div className="space-y-1">
@@ -91,19 +94,22 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     return (
         <aside
             className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out"
-            style={{ background: '#0A0A0A', borderRight: '1px solid #2A2A2A' }}
+            style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-main)' }}
         >
             {/* Logo & Toggle */}
-            <div className={`h-20 flex items-center justify-between border-b ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-6'}`} style={{ borderColor: '#2A2A2A' }}>
+            <div className={`h-20 flex items-center justify-between border-b ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-6'}`} style={{ borderColor: 'var(--border-main)' }}>
                 {!isSidebarCollapsed && (
-                    <span className="text-xl font-bold tracking-wide">
-                        OLA <span style={{ color: '#C8E600' }}>CARS</span>
+                    <span className="text-xl font-bold tracking-wide transition-colors" style={{ color: 'var(--brand-lime)' }}>
+                        OLA <span style={{ color: 'var(--text-main)' }}>CARS</span>
                     </span>
                 )}
 
                 <button
                     onClick={toggleSidebar}
-                    className={`p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer ${isSidebarCollapsed ? 'ml-4' : 'ml-2'}`}
+                    className={`p-2 rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? 'ml-4' : 'ml-2'}`}
+                    style={{ color: 'var(--sidebar-text)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--lime)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
                 >
                     <Menu size={24} />
                 </button>
@@ -119,9 +125,12 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t space-y-1" style={{ borderColor: '#2A2A2A' }}>
+            <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
                 <div
-                    className={`flex items-center gap-3 cursor-pointer text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5 ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    style={{ color: 'var(--sidebar-text)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--lime)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
                     title={isSidebarCollapsed ? "Dashboard Settings" : ""}
                 >
                     <Settings size={20} />
@@ -129,7 +138,10 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 </div>
                 <div
                     onClick={handleLogout}
-                    className={`flex items-center gap-3 cursor-pointer text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/5 ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    style={{ color: 'var(--sidebar-text)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
                     title={isSidebarCollapsed ? "Logout" : ""}
                 >
                     <LogOut size={20} />

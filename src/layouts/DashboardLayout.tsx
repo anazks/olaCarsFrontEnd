@@ -6,7 +6,7 @@ interface DashboardLayoutProps {
     SidebarComponent: React.ElementType;
 }
 
-const DashboardLayout = ({ SidebarComponent }: DashboardLayoutProps) => {
+const DashboardLayoutContent = ({ SidebarComponent }: DashboardLayoutProps) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const toggleSidebar = () => {
@@ -14,7 +14,7 @@ const DashboardLayout = ({ SidebarComponent }: DashboardLayoutProps) => {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden bg-dark-bg text-white" style={{ background: '#111111' }}>
+        <div className="flex h-screen overflow-hidden transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             {/* Sidebar - Dynamically rendered for each Role */}
             <div className={`
                 fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
@@ -42,6 +42,10 @@ const DashboardLayout = ({ SidebarComponent }: DashboardLayoutProps) => {
             </div>
         </div>
     );
+};
+
+const DashboardLayout = (props: DashboardLayoutProps) => {
+    return <DashboardLayoutContent {...props} />;
 };
 
 export default DashboardLayout;

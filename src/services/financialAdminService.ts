@@ -32,13 +32,13 @@ export interface UpdateFinancialAdminPayload {
 
 // GET all financial admins
 export const getAllFinancialAdmins = async (): Promise<FinancialAdmin[]> => {
-    const response = await api.get('/api/finance-staff');
-    return response.data;
+    const response = await api.get('/api/finance-admin');
+    return response.data.data;
 };
 
 // GET a financial admin by ID
 export const getFinancialAdminById = async (id: string): Promise<FinancialAdmin> => {
-    const response = await api.get(`/api/finance-staff/${id}`);
+    const response = await api.get(`/api/finance-admin/${id}`);
     return response.data;
 };
 
@@ -46,7 +46,7 @@ export const getFinancialAdminById = async (id: string): Promise<FinancialAdmin>
 export const createFinancialAdmin = async (
     payload: CreateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
-    const response = await api.post('/api/finance-staff', payload);
+    const response = await api.post('/api/finance-admin', payload);
     return response.data;
 };
 
@@ -54,7 +54,7 @@ export const createFinancialAdmin = async (
 export const updateFinancialAdmin = async (
     payload: UpdateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
-    const response = await api.put('/api/finance-staff/update', payload);
+    const response = await api.put('/api/finance-admin/update', payload);
     return response.data;
 };
 

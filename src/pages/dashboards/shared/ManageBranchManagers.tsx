@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, UserCheck, AlertTriangle, Building2, ShieldCheck, Mail, Phone } from 'lucide-react';
 import {
-    getAllBranches,
-    createBranch,
-    updateBranch,
-    deleteBranch,
-    type Branch,
-    type CreateBranchPayload,
-    type UpdateBranchPayload,
-} from '../../../services/branchService';
+    getAllBranchManagers,
+    createBranchManager,
+    updateBranchManager,
+    deleteBranchManager,
+    type BranchManager,
+    type CreateBranchManagerPayload,
+    type UpdateBranchManagerPayload,
+} from '../../../services/branchManagerService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
 type ModalMode = 'create' | 'edit' | null;
 
-const ManageBranches = () => {
+const ManageBranchManagers = () => {
+    const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,79 +24,77 @@ const ManageBranches = () => {
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
-    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+    const [selectedManager, setSelectedManager] = useState<BranchManager | null>(null);
     const [formData, setFormData] = useState({
-        name: '',
-        code: '',
-        address: '',
-        city: '',
-        state: '',
-        phone: '',
+        fullName: '',
         email: '',
-        managerId: '',
-        status: 'ACTIVE' as string
+        password: '',
+        phone: '',
+        branchId: '',
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+        twoFactorEnabled: true
     });
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
     // Delete confirmation
-    const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<BranchManager | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    const fetchBranches = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllBranches();
-            setBranches(Array.isArray(data) ? data : []);
+            const [managersData, branchesData] = await Promise.all([
+                getAllBranchManagers(),
+                getAllBranches()
+            ]);
+            setBranchManagers(Array.isArray(managersData) ? managersData : []);
+            setBranches(Array.isArray(branchesData) ? branchesData : []);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch branches');
+            setError(err.response?.data?.message || err.message || 'Failed to fetch data');
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchBranches();
-    }, [fetchBranches]);
+        fetchData();
+    }, [fetchData]);
 
     const openCreateModal = () => {
         setModalMode('create');
-        setSelectedBranch(null);
+        setSelectedManager(null);
         setFormData({
-            name: '',
-            code: '',
-            address: '',
-            city: '',
-            state: '',
-            phone: '',
+            fullName: '',
             email: '',
-            managerId: '',
-            status: 'ACTIVE'
+            password: '',
+            phone: '',
+            branchId: '',
+            status: 'ACTIVE',
+            twoFactorEnabled: true
         });
         setFormError(null);
     };
 
-    const openEditModal = (branch: Branch) => {
+    const openEditModal = (manager: BranchManager) => {
         setModalMode('edit');
-        setSelectedBranch(branch);
+        setSelectedManager(manager);
         setFormData({
-            name: branch.name,
-            code: branch.code,
-            address: branch.address,
-            city: branch.city,
-            state: branch.state,
-            phone: branch.phone || '',
-            email: branch.email,
-            managerId: branch.managerId || '',
-            status: branch.status
+            fullName: manager.fullName,
+            email: manager.email,
+            password: '',
+            phone: manager.phone || '',
+            branchId: manager.branchId,
+            status: manager.status,
+            twoFactorEnabled: manager.twoFactorEnabled
         });
         setFormError(null);
     };
 
     const closeModal = () => {
         setModalMode(null);
-        setSelectedBranch(null);
+        setSelectedManager(null);
         setFormError(null);
     };
 
@@ -105,21 +105,21 @@ const ManageBranches = () => {
 
         try {
             if (modalMode === 'create') {
-                const payload: CreateBranchPayload = {
+                const payload: CreateBranchManagerPayload = {
                     ...formData,
-                    status: formData.status as any
                 };
-                await createBranch(payload);
-            } else if (modalMode === 'edit' && selectedBranch) {
-                const payload: UpdateBranchPayload = {
-                    _id: selectedBranch._id,
+                await createBranchManager(payload);
+            } else if (modalMode === 'edit' && selectedManager) {
+                const payload: UpdateBranchManagerPayload = {
+                    _id: selectedManager._id,
                     ...formData,
-                    status: formData.status as any
                 };
-                await updateBranch(payload);
+                if (!payload.password) delete payload.password;
+
+                await updateBranchManager(payload);
             }
             closeModal();
-            fetchBranches();
+            fetchData();
         } catch (err: any) {
             setFormError(err.response?.data?.message || err.message || 'Operation failed');
         } finally {
@@ -131,9 +131,9 @@ const ManageBranches = () => {
         if (!deleteTarget) return;
         setDeleteLoading(true);
         try {
-            await deleteBranch(deleteTarget._id);
+            await deleteBranchManager(deleteTarget._id);
             setDeleteTarget(null);
-            fetchBranches();
+            fetchData();
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Delete failed');
             setDeleteTarget(null);
@@ -142,18 +142,22 @@ const ManageBranches = () => {
         }
     };
 
-    const filteredBranches = branches.filter(
-        (b) =>
-            b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.city.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredManagers = branchManagers.filter(
+        (m) =>
+            m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.phone.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const getBranchName = (branchId: string) => {
+        const branch = branches.find(b => b._id === branchId);
+        return branch ? branch.name : 'Unknown Branch';
+    };
 
     const statusColor = (s: string) => {
         switch (s) {
             case 'ACTIVE': return { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' };
             case 'INACTIVE': return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' };
-            case 'MAINTENANCE': return { bg: 'rgba(234,179,8,0.1)', text: '#eab308', border: 'rgba(234,179,8,0.3)' };
             default: return { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' };
         }
     };
@@ -164,14 +168,14 @@ const ManageBranches = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Building2 size={28} style={{ color: '#C8E600' }} />
-                        Manage Branches
+                        <UserCheck size={28} style={{ color: '#C8E600' }} />
+                        Manage Branch Managers
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Create and manage physical branch locations</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Create and manage accounts for branch managers</p>
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={fetchBranches}
+                        onClick={fetchData}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
                     >
@@ -182,7 +186,7 @@ const ManageBranches = () => {
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >
-                        <Plus size={18} /> Add Branch
+                        <Plus size={18} /> Add Manager
                     </button>
                 </div>
             </div>
@@ -192,10 +196,10 @@ const ManageBranches = () => {
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                     type="text"
-                    placeholder="Search by name, code, or city..."
+                    placeholder="Search by name, email, or phone..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                 />
             </div>
@@ -214,65 +218,81 @@ const ManageBranches = () => {
                         <div className="flex items-center justify-center py-20">
                             <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                         </div>
-                    ) : filteredBranches.length === 0 ? (
+                    ) : filteredManagers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
-                            <Building2 size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No branches found</p>
-                            <p className="text-sm mt-1">Click "Add Branch" to create one</p>
+                            <UserCheck size={48} className="mx-auto mb-4 opacity-30" />
+                            <p className="text-lg font-medium">No branch managers found</p>
+                            <p className="text-sm mt-1">Click "Add Manager" to create one</p>
                         </div>
                     ) : (
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch Info</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Location</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Manager Info</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>2FA</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredBranches.map((branch) => {
-                                    const sc = statusColor(branch.status);
+                                {filteredManagers.map((manager) => {
+                                    const sc = statusColor(manager.status);
                                     return (
                                         <tr
-                                            key={branch._id}
+                                            key={manager._id}
                                             className="border-b last:border-0 hover:bg-white/5 transition-colors"
                                             style={{ borderColor: 'var(--border-main)' }}
                                         >
                                             <td className="px-6 py-4">
-                                                <div className="font-bold font-medium" style={{ color: 'var(--text-main)' }}>{branch.name}</div>
-                                                <div className="text-xs" style={{ color: '#C8E600' }}>{branch.code}</div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold font-medium" style={{ color: 'var(--text-main)' }}>{manager.fullName}</span>
+                                                    {/* <span className="text-xs" style={{ color: '#C8E600' }}>Manager ID: {manager._id.slice(-6)}</span> */}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-start gap-2 max-w-[250px]">
-                                                    <MapPin size={14} className="mt-1 flex-shrink-0" style={{ color: 'var(--text-dim)' }} />
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm line-clamp-1" style={{ color: 'var(--text-main)' }}>{branch.address}</span>
-                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Building2 size={14} style={{ color: 'var(--text-dim)' }} />
+                                                    <span style={{ color: 'var(--text-main)' }}>{getBranchName(manager.branchId)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col space-y-1">
+                                                    <div className="flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                                        <Mail size={12} style={{ color: 'var(--text-dim)' }} />
+                                                        <span>{manager.email}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-dim)' }}>
+                                                        <Phone size={12} />
+                                                        <span>{manager.phone}</span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{branch.email}</div>
-                                                <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.phone}</div>
+                                                <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
+                                                    {manager.status}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
-                                                    {branch.status}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <ShieldCheck size={16} style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }} />
+                                                    <span className="text-sm" style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }}>
+                                                        {manager.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        onClick={() => openEditModal(branch)}
+                                                        onClick={() => openEditModal(manager)}
                                                         className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
                                                         style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
                                                     >
                                                         <Pencil size={15} />
                                                     </button>
                                                     <button
-                                                        onClick={() => setDeleteTarget(branch)}
+                                                        onClick={() => setDeleteTarget(manager)}
                                                         className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
                                                         style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
                                                     >
@@ -299,7 +319,7 @@ const ManageBranches = () => {
                     >
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-                                {modalMode === 'create' ? 'Add New Branch' : 'Edit Branch Detail'}
+                                {modalMode === 'create' ? 'Add Branch Manager' : 'Edit Branch Manager'}
                             </h2>
                             <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
                                 <X size={24} />
@@ -309,74 +329,19 @@ const ManageBranches = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Branch Name</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Full Name</label>
                                     <input
                                         type="text"
                                         required
                                         className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Kochi Main Branch"
+                                        value={formData.fullName}
+                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                        placeholder="John Doe"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Branch Code</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.code}
-                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                        placeholder="KOCHI01"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Full Address</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    value={formData.address}
-                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="123 Corporate Plaza, MG Road"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>City</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.city}
-                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        placeholder="Kochi"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>State</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.state}
-                                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                        placeholder="Kerala"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Official Email</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Email Address</label>
                                     <input
                                         type="email"
                                         required
@@ -384,7 +349,24 @@ const ManageBranches = () => {
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="kochi@olacars.com"
+                                        placeholder="john@olacars.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                        {modalMode === 'create' ? 'Password' : 'New Password (Optional)'}
+                                    </label>
+                                    <input
+                                        type="password"
+                                        required={modalMode === 'create'}
+                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        placeholder="••••••••"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -418,17 +400,51 @@ const ManageBranches = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Status</label>
+                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Assign Branch</label>
                                 <select
-                                    value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    required
+                                    value={formData.branchId}
+                                    onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>ACTIVE</option>
-                                    <option value="INACTIVE" style={{ background: 'var(--bg-card)' }}>INACTIVE</option>
-                                    <option value="MAINTENANCE" style={{ background: 'var(--bg-card)' }}>MAINTENANCE</option>
+                                    <option value="" style={{ background: 'var(--bg-card)' }}>Select a branch</option>
+                                    {branches.map((branch) => (
+                                        <option key={branch._id} value={branch._id} style={{ background: 'var(--bg-card)' }}>
+                                            {branch.name} ({branch.code})
+                                        </option>
+                                    ))}
                                 </select>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Status</label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>ACTIVE</option>
+                                        <option value="INACTIVE" style={{ background: 'var(--bg-card)' }}>INACTIVE</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-end pb-3">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only"
+                                                checked={formData.twoFactorEnabled}
+                                                onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
+                                            />
+                                            <div className={`w-12 h-6 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
+                                            <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                        </div>
+                                        <span className="text-sm font-medium group-hover:opacity-80 transition-opacity" style={{ color: 'var(--text-main)' }}>Two-Factor Authentication</span>
+                                    </label>
+                                </div>
                             </div>
 
                             {formError && (
@@ -454,7 +470,7 @@ const ManageBranches = () => {
                                 >
                                     {formLoading
                                         ? <div className="w-6 h-6 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
-                                        : modalMode === 'create' ? 'Create Branch' : 'Update Branch'
+                                        : modalMode === 'create' ? 'Create Manager' : 'Update Manager'
                                     }
                                 </button>
                             </div>
@@ -476,7 +492,7 @@ const ManageBranches = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>Confirm Deletion</h2>
                         <p className="text-center mb-8" style={{ color: 'var(--text-dim)' }}>
-                            Are you absolutely sure you want to delete <strong style={{ color: 'var(--text-main)' }}>{deleteTarget.name}</strong>? All associated data will be permanently removed.
+                            Are you absolutely sure you want to delete <strong style={{ color: 'var(--text-main)' }}>{deleteTarget.fullName}</strong>? This will permanently disable their access to the system.
                         </p>
                         <div className="flex gap-4">
                             <button
@@ -505,4 +521,4 @@ const ManageBranches = () => {
     );
 };
 
-export default ManageBranches;
+export default ManageBranchManagers;

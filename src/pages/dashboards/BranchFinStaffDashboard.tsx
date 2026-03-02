@@ -6,8 +6,8 @@ const BranchFinStaffDashboard = () => {
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-end mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Branch Finance</h1>
-                    <p className="text-gray-400 text-sm">Petty cash, deposit logging, and payment verification.</p>
+                    <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>Branch Finance</h1>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Petty cash, deposit logging, and payment verification.</p>
                 </div>
             </div>
 
@@ -43,29 +43,50 @@ const BranchFinStaffDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Deposit Actions */}
-                <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] shadow-lg overflow-hidden">
-                    <div className="p-5 border-b border-[#2A2A2A]">
-                        <h4 className="font-bold text-white">Register Cash Deposit</h4>
+                <div
+                    className="rounded-2xl border shadow-lg overflow-hidden transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="p-5 border-b transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Register Cash Deposit</h4>
                     </div>
                     <div className="p-6">
                         <form className="space-y-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-2">Deposit Amount ($)</label>
-                                <input type="number" placeholder="0.00" className="w-full bg-[#111111] border border-[#2A2A2A] rounded-xl px-4 py-3 text-white text-lg font-bold outline-none focus:border-lime" />
+                            <div className="space-y-2">
+                                <label className="block text-sm transition-colors" style={{ color: 'var(--text-dim)' }}>Deposit Amount ($)</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="w-full border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-lime transition-all"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
                             </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-2">Bank Reference / Notes</label>
-                                <input type="text" placeholder="e.g. Ref #1029384" className="w-full bg-[#111111] border border-[#2A2A2A] rounded-xl px-4 py-3 text-white outline-none focus:border-lime" />
+                            <div className="space-y-2">
+                                <label className="block text-sm transition-colors" style={{ color: 'var(--text-dim)' }}>Bank Reference / Notes</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Ref #1029384"
+                                    className="w-full border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-lime transition-all"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
                             </div>
-                            <button className="w-full bg-lime text-black font-bold py-3.5 rounded-xl mt-4 hover:shadow-[0_4px_20px_rgba(200,230,0,0.3)] transition-shadow">Submit Cash Log to HQ</button>
+                            <button
+                                className="w-full font-bold py-3.5 rounded-xl mt-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5"
+                                style={{ background: 'var(--lime)', color: '#0A0A0A' }}
+                            >
+                                Submit Cash Log to HQ
+                            </button>
                         </form>
                     </div>
                 </div>
 
                 {/* Recent Local Transactions */}
-                <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] shadow-lg flex flex-col h-full">
-                    <div className="p-5 border-b border-[#2A2A2A]">
-                        <h4 className="font-bold text-white">Today's Ledger (Local)</h4>
+                <div
+                    className="rounded-2xl border shadow-lg flex flex-col h-full transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="p-5 border-b transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Today's Ledger (Local)</h4>
                     </div>
                     <div className="p-4 space-y-3 flex-1 overflow-y-auto">
                         {[
@@ -73,10 +94,10 @@ const BranchFinStaffDashboard = () => {
                             { title: 'Deposit to State Bank', amount: '- $2,400.00', type: 'Bank Drop', time: '09:00 AM' },
                             { title: 'Walk-in Cash Payment', amount: '+ $120.00', type: 'Revenue', time: '08:45 AM' },
                         ].map((tx, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 border-b border-[#2A2A2A] last:border-0">
+                            <div key={i} className="flex justify-between items-center p-3 border-b last:border-0 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                 <div>
-                                    <span className="block font-bold text-white text-sm">{tx.title}</span>
-                                    <span className="text-xs text-gray-500">{tx.type} · {tx.time}</span>
+                                    <span className="block font-bold text-sm" style={{ color: 'var(--text-main)' }}>{tx.title}</span>
+                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{tx.type} · {tx.time}</span>
                                 </div>
                                 <div className={`font-bold ${tx.amount.startsWith('+') ? 'text-green-400' : 'text-orange-400'}`}>
                                     {tx.amount}

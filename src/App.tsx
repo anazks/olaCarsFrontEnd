@@ -3,6 +3,7 @@ import { useScrollReveal } from './hooks/useScrollReveal';
 import AdminLogin from './pages/admin/AdminLogin';
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Sidebars
 import ExecutiveSidebar from './components/dashboard/sidebars/ExecutiveSidebar';
@@ -27,74 +28,93 @@ import ManageOperationalAdmins from './pages/dashboards/admin/ManageOperationalA
 import ManageFinancialAdmins from './pages/dashboards/admin/ManageFinancialAdmins';
 import ManageCountryManagers from './pages/dashboards/shared/ManageCountryManagers';
 import ManageBranches from './pages/dashboards/shared/ManageBranches';
+import ManageBranchManagers from './pages/dashboards/shared/ManageBranchManagers';
+import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
+import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
 
   return (
-    <Router>
-      <Routes>
-        {/* Admin Login Gateway */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          {/* Admin Login Gateway */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Admin Dashboards - Protected */}
-        {/* allowedRoles must match the 'role' field in the JWT from the API */}
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-          <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
-            <Route index element={<ExecutiveDashboard />} />
-            <Route path="manage-operational-admins" element={<ManageOperationalAdmins />} />
-            <Route path="manage-financial-admins" element={<ManageFinancialAdmins />} />
-            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
-            <Route path="manage-branches" element={<ManageBranches />} />
+          {/* Admin Dashboards - Protected */}
+          {/* allowedRoles must match the 'role' field in the JWT from the API */}
+          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
+              <Route index element={<ExecutiveDashboard />} />
+              <Route path="manage-operational-admins" element={<ManageOperationalAdmins />} />
+              <Route path="manage-financial-admins" element={<ManageFinancialAdmins />} />
+              <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+              <Route path="manage-branches" element={<ManageBranches />} />
+              <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
+              <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
+              <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['operationaladmin']} />}>
-          <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
-            <Route index element={<OperationalAdminDashboard />} />
-            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
-            <Route path="manage-branches" element={<ManageBranches />} />
+          <Route element={<ProtectedRoute allowedRoles={['operationaladmin']} />}>
+            <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
+              <Route index element={<OperationalAdminDashboard />} />
+              <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+              <Route path="manage-branches" element={<ManageBranches />} />
+              <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
+              <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
+              <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['financialadmin']} />}>
-          <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
-            <Route index element={<FinancialAdminDashboard />} />
-            <Route path="manage-country-managers" element={<ManageCountryManagers />} />
-            <Route path="manage-branches" element={<ManageBranches />} />
+          <Route element={<ProtectedRoute allowedRoles={['financialadmin']} />}>
+            <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
+              <Route index element={<FinancialAdminDashboard />} />
+              <Route path="manage-country-managers" element={<ManageCountryManagers />} />
+              <Route path="manage-branches" element={<ManageBranches />} />
+              <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
+              <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
+              <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
-          <Route path="/admin/country-manager/*" element={<DashboardLayout SidebarComponent={CountryManagerSidebar} />}>
-            <Route index element={<CountryManagerDashboard />} />
-            <Route path="manage-branches" element={<ManageBranches />} />
+          <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
+            <Route path="/admin/country-manager/*" element={<DashboardLayout SidebarComponent={CountryManagerSidebar} />}>
+              <Route index element={<CountryManagerDashboard />} />
+              <Route path="manage-branches" element={<ManageBranches />} />
+              <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
+              <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
+              <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['branchmanager']} />}>
-          <Route path="/admin/branch-manager/*" element={<DashboardLayout SidebarComponent={BranchManagerSidebar} />}>
-            <Route index element={<BranchManagerDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={['branchmanager']} />}>
+            <Route path="/admin/branch-manager/*" element={<DashboardLayout SidebarComponent={BranchManagerSidebar} />}>
+              <Route index element={<BranchManagerDashboard />} />
+              <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
+              <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['branchopstaff']} />}>
-          <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
-            <Route index element={<BranchOpStaffDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={['branchopstaff']} />}>
+            <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
+              <Route index element={<BranchOpStaffDashboard />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['branchfinstaff']} />}>
-          <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
-            <Route index element={<BranchFinStaffDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={['branchfinstaff']} />}>
+            <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
+              <Route index element={<BranchFinStaffDashboard />} />
+            </Route>
           </Route>
-        </Route>
-        {/* Redirect "/" and any unknown routes to login */}
-        <Route path="*" element={<Navigate to="/admin/login" replace />} />
+          {/* Redirect "/" and any unknown routes to login */}
+          <Route path="*" element={<Navigate to="/admin/login" replace />} />
 
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 

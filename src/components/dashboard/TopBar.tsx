@@ -1,32 +1,36 @@
-import { Bell, Search, Settings } from 'lucide-react';
+import { Bell, Search, Settings, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TopBarProps {
     toggleSidebar: () => void;
 }
 
 const TopBar = ({ }: TopBarProps) => {
+    const { theme, toggleTheme } = useTheme();
+
     return (
         <header
-            className="flex items-center justify-between px-6 py-4 h-20 flex-shrink-0"
+            className="flex items-center justify-between px-6 py-4 h-20 flex-shrink-0 transition-colors duration-300"
             style={{
-                background: '#151515',
-                borderBottom: '1px solid #2A2A2A'
+                background: 'var(--bg-topbar)',
+                borderBottom: '1px solid var(--border-main)'
             }}
         >
             <div className="flex items-center gap-4 flex-1">
                 {/* Search Bar */}
                 <div className="flex-1 max-w-lg">
                     <div
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-                        style={{ background: '#111111', border: '1px solid #2A2A2A' }}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-300"
+                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
                     >
                         <Search size={18} className="text-gray-400" />
                         <input
                             type="text"
                             placeholder="Search..."
-                            className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-gray-500"
+                            className="bg-transparent border-none outline-none text-sm w-full text-main placeholder-gray-500"
+                            style={{ color: 'var(--text-main)' }}
                         />
-                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded textxs font-medium" style={{ background: '#1C1C1C', color: '#6B7280', border: '1px solid #2A2A2A' }}>
+                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded textxs font-medium" style={{ background: 'var(--bg-card)', color: 'var(--text-dim)', border: '1px solid var(--border-main)' }}>
                             ⌘K
                         </div>
                     </div>
@@ -36,7 +40,15 @@ const TopBar = ({ }: TopBarProps) => {
             {/* Right Tools */}
             <div className="flex items-center gap-5 ml-4">
                 <button
-                    className="relative flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-white"
+                    onClick={toggleTheme}
+                    className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
+                    title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+
+                <button
+                    className="relative flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
                 >
                     <Bell size={20} />
                     <span
@@ -46,23 +58,23 @@ const TopBar = ({ }: TopBarProps) => {
                 </button>
 
                 <button
-                    className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-white"
+                    className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
                 >
                     <Settings size={20} />
                 </button>
 
                 {/* Profile Divider */}
-                <div className="w-px h-8" style={{ background: '#2A2A2A' }} />
+                <div className="w-px h-8" style={{ background: 'var(--border-main)' }} />
 
                 {/* User Profile */}
                 <div className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-semibold text-white group-hover:text-lime transition-colors">Admin User</p>
-                        <p className="text-xs text-gray-500">System Access</p>
+                        <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>Admin User</p>
+                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>System Access</p>
                     </div>
                     <div
                         className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
-                        style={{ background: 'linear-gradient(135deg, #1C1C1C 0%, #0d0d0d 100%)', border: '1px solid #2A2A2A', color: '#C8E600' }}
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: '#C8E600' }}
                     >
                         AU
                     </div>

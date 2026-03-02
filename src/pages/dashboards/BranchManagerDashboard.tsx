@@ -6,8 +6,10 @@ const BranchManagerDashboard = () => {
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-end mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Branch Hub <span className="text-lime text-xl font-normal ml-2">— Mumbai Central</span></h1>
-                    <p className="text-gray-400 text-sm">Your local fleet, staff, and daily targets.</p>
+                    <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
+                        Branch Hub <span style={{ color: 'var(--lime)', fontSize: '1.25rem', fontWeight: 'normal', marginLeft: '0.5rem' }}>— Mumbai Central</span>
+                    </h1>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Your local fleet, staff, and daily targets.</p>
                 </div>
             </div>
 
@@ -43,45 +45,57 @@ const BranchManagerDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Today's Handovers */}
-                <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] shadow-lg overflow-hidden">
-                    <div className="p-5 border-b border-[#2A2A2A]">
-                        <h4 className="font-bold text-white">Upcoming Handovers (Next 3 Hrs)</h4>
+                <div
+                    className="rounded-2xl border shadow-lg overflow-hidden transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="p-5 border-b transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Upcoming Handovers (Next 3 Hrs)</h4>
                     </div>
                     <div className="p-2">
                         {['10:30 AM', '11:00 AM', '12:15 PM'].map((time, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 border-b border-[#2A2A2A] last:border-0 hover:bg-white/5 transition-colors cursor-pointer">
+                            <div key={i} className="flex justify-between items-center p-3 border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-16 text-center font-bold text-lime text-sm">{time}</div>
+                                    <div className="w-16 text-center font-bold text-sm" style={{ color: 'var(--lime)' }}>{time}</div>
                                     <div>
-                                        <div className="text-white font-medium text-sm">Customer: Arjun D.</div>
-                                        <div className="text-xs text-gray-500">MH-12-AB-{1000 + i} (Premium Sedan)</div>
+                                        <div className="font-medium text-sm" style={{ color: 'var(--text-main)' }}>Customer: Arjun D.</div>
+                                        <div className="text-xs" style={{ color: 'var(--text-dim)' }}>MH-12-AB-{1000 + i} (Premium Sedan)</div>
                                     </div>
                                 </div>
-                                <button className="px-3 py-1.5 text-xs bg-lime text-black font-bold rounded">Assign Key</button>
+                                <button className="px-3 py-1.5 text-xs font-bold rounded cursor-pointer" style={{ background: 'var(--lime)', color: '#0A0A0A' }}>Assign Key</button>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Staff Tasks */}
-                <div className="bg-[#1C1C1C] rounded-2xl border border-[#2A2A2A] shadow-lg flex flex-col overflow-hidden">
-                    <div className="p-5 border-b border-[#2A2A2A]">
-                        <h4 className="font-bold text-white">Staff Task Board</h4>
+                <div
+                    className="rounded-2xl border shadow-lg flex flex-col overflow-hidden transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="p-5 border-b transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Staff Task Board</h4>
                     </div>
                     <div className="p-4 space-y-3">
-                        <div className="bg-[#111111] p-3 rounded-lg border border-[#2A2A2A] border-l-4 border-l-orange-500">
+                        <div
+                            className="p-3 rounded-lg border border-l-4 transition-colors"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', borderLeftColor: '#F97316' }}
+                        >
                             <div className="flex justify-between mb-1">
-                                <span className="font-bold text-white text-sm">Inspect returned SUV (Damage reported)</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>Inspect returned SUV (Damage reported)</span>
                                 <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">High</span>
                             </div>
-                            <div className="text-xs text-gray-500">Assigned: Ops Team · Due in 30 mins</div>
+                            <div className="text-xs" style={{ color: 'var(--text-dim)' }}>Assigned: Ops Team · Due in 30 mins</div>
                         </div>
-                        <div className="bg-[#111111] p-3 rounded-lg border border-[#2A2A2A] border-l-4 border-l-lime">
+                        <div
+                            className="p-3 rounded-lg border border-l-4 transition-colors"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', borderLeftColor: 'var(--lime)' }}
+                        >
                             <div className="flex justify-between mb-1">
-                                <span className="font-bold text-white text-sm">Deposit yesterdays cash box</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>Deposit yesterdays cash box</span>
                                 <span className="text-xs bg-lime/20 text-lime px-2 py-0.5 rounded">Normal</span>
                             </div>
-                            <div className="text-xs text-gray-500">Assigned: Finance · Due 12:00 PM</div>
+                            <div className="text-xs" style={{ color: 'var(--text-dim)' }}>Assigned: Finance · Due 12:00 PM</div>
                         </div>
                     </div>
                 </div>

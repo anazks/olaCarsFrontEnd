@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginByRole, API_ROLE_TO_ROUTE } from '../../services/authService';
 import { setToken, getDecodedToken } from '../../utils/auth';
+import loginBgVideo from '../../assets/loginbgvideo.mp4';
 
 const ROLES = [
     { ui: 'admin', label: 'Admin (Executive / CEO)' },
@@ -58,51 +59,64 @@ const AdminLogin = () => {
         }
     };
 
-    const inputStyle = {
-        background: '#111111',
-        border: '1px solid #2A2A2A',
-        color: 'white',
-    };
-
     return (
-        <div className="flex items-center justify-center min-h-screen" style={{ background: '#111111' }}>
+        <div className="relative flex items-center justify-center min-h-screen overflow-hidden">
+            {/* Background Video */}
+            <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover z-0"
+            >
+                <source src={loginBgVideo} type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+
+            {/* Dark Overlay for Readability */}
+            <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10" />
+
+            {/* Login Form Container */}
             <div
-                className="w-full max-w-md p-8 rounded-2xl border"
-                style={{ background: '#1C1C1C', borderColor: '#2A2A2A' }}
+                className="relative z-20 w-full max-w-md p-8 rounded-2xl border shadow-2xl backdrop-blur-md transition-all duration-300"
+                style={{
+                    background: 'rgba(28, 28, 28, 0.85)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                }}
             >
                 {/* Header */}
                 <div className="text-center mb-8">
                     <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl mx-auto mb-4"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl mx-auto mb-4 shadow-lg"
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         OC
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Staff Portal</h1>
-                    <p className="text-gray-400 text-sm mt-2">Sign in to access your dashboard</p>
+                    <h1 className="text-2xl font-bold text-white transition-colors">Staff Portal</h1>
+                    <p className="text-sm mt-2 text-gray-300 transition-colors">Sign in to access your dashboard</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-5">
                     {/* Role Selector */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-gray-400 transition-colors">
                             Role
                         </label>
                         <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer"
-                            style={inputStyle}
+                            className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime text-white"
+                            style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                         >
                             {ROLES.map(({ ui, label }) => (
-                                <option key={ui} value={ui}>{label}</option>
+                                <option key={ui} value={ui} className="bg-[#1C1C1C] text-white">{label}</option>
                             ))}
                         </select>
                     </div>
 
                     {/* Email / ID */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-gray-400 transition-colors">
                             Email / Employee ID
                         </label>
                         <input
@@ -111,16 +125,14 @@ const AdminLogin = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="e.g. admin@olacars.com"
-                            className="w-full px-4 py-3 rounded-xl outline-none"
-                            style={inputStyle}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#C8E600'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#2A2A2A'; }}
+                            className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime text-white"
+                            style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                         />
                     </div>
 
                     {/* Password */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-gray-400 transition-colors">
                             Password
                         </label>
                         <input
@@ -129,16 +141,14 @@ const AdminLogin = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full px-4 py-3 rounded-xl outline-none"
-                            style={inputStyle}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = '#C8E600'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = '#2A2A2A'; }}
+                            className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime text-white"
+                            style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                         />
                     </div>
 
                     {/* Error message */}
                     {error && (
-                        <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm text-center">
+                        <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-xl text-sm text-center">
                             {error}
                         </div>
                     )}
@@ -147,18 +157,8 @@ const AdminLogin = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all duration-300 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
-                        onMouseEnter={(e) => {
-                            if (isLoading) return;
-                            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(200,230,0,0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            if (isLoading) return;
-                            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                            (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
-                        }}
+                        className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer transition-all duration-300 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5"
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         {isLoading
                             ? <div className="w-5 h-5 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
