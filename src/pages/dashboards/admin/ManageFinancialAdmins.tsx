@@ -141,7 +141,7 @@ const ManageFinancialAdmins = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
-                        <DollarSign size={28} style={{ color: 'var(--lime)' }} />
+                        <DollarSign size={28} style={{ color: 'var(--brand-lime)' }} />
                         Manage Financial Admins
                     </h1>
                     <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage financial administrator accounts</p>
@@ -188,7 +188,7 @@ const ManageFinancialAdmins = () => {
             <div className="rounded-2xl overflow-x-auto transition-colors" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--lime)', borderTopColor: 'transparent' }} />
+                        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
                     </div>
                 ) : filteredAdmins.length === 0 ? (
                     <div className="text-center py-20 transition-colors" style={{ color: 'var(--text-dim)' }}>

@@ -159,7 +159,7 @@ const ManageOperationStaff = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
-                        <Wrench size={28} className="text-lime" style={{ color: 'var(--lime)' }} />
+                        <Wrench size={28} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
                         Manage Ground Ops Staff
                     </h1>
                     <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage branch operation staff accounts</p>
@@ -192,7 +192,7 @@ const ManageOperationStaff = () => {
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Active Accounts</p>
-                    <h3 className="text-3xl font-black text-lime transition-colors" style={{ color: 'var(--lime)' }}>{operationStaff.filter(s => s.status === 'ACTIVE').length}</h3>
+                    <h3 className="text-3xl font-black text-lime transition-colors" style={{ color: 'var(--brand-lime)' }}>{operationStaff.filter(s => s.status === 'ACTIVE').length}</h3>
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Total Branches</p>
@@ -264,7 +264,7 @@ const ManageOperationStaff = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                                                <Building2 size={16} className="text-lime" style={{ color: 'var(--lime)' }} />
+                                                <Building2 size={16} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
                                                 {typeof staff.branchId === 'object' ? staff.branchId?.name : (branches.find(b => b._id === staff.branchId)?.name || staff.branchId)}
                                             </div>
                                         </td>

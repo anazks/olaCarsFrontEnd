@@ -58,9 +58,9 @@ const CreateDriver = () => {
 
     const InputField = ({ icon, label, name, type = "text", placeholder, options, required = true }: any) => (
         <div className="space-y-1.5 flex-1 min-w-[280px]">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{label}</label>
+            <label className="text-xs font-bold uppercase tracking-widest ml-1" style={{ color: 'var(--text-dim)' }}>{label}</label>
             <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-brand-lime">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-brand-lime" style={{ color: 'var(--text-dim)' }}>
                     {icon}
                 </div>
                 {options ? (
@@ -69,11 +69,12 @@ const CreateDriver = () => {
                         required={required}
                         value={formData[name as keyof typeof formData]}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all appearance-none cursor-pointer font-medium"
+                        className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all appearance-none cursor-pointer font-medium"
+                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <option value="">{placeholder}</option>
                         {options.map((opt: any) => (
-                            <option key={opt.id || opt.value} value={opt.id || opt.value}>{opt.name || opt.label}</option>
+                            <option key={opt.id || opt.value} value={opt._id || opt.id || opt.value}>{opt.name || opt.label}</option>
                         ))}
                     </select>
                 ) : (
@@ -84,7 +85,8 @@ const CreateDriver = () => {
                         placeholder={placeholder}
                         value={formData[name as keyof typeof formData]}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all placeholder:text-gray-300 font-medium"
+                        className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all font-medium"
+                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 )}
             </div>
@@ -103,20 +105,20 @@ const CreateDriver = () => {
                     Back to List
                 </button>
                 <div className="text-right">
-                    <h1 className="text-2xl font-bold text-gray-900">New Driver Application</h1>
-                    <p className="text-sm text-gray-500 font-medium">Step 1: Basic Information Entry</p>
+                    <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>New Driver Application</h1>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Step 1: Basic Information Entry</p>
                 </div>
             </div>
 
             {/* Application Form */}
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Personal Section */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-                    <div className="flex items-center gap-2 border-b border-gray-50 pb-4 mb-2">
-                        <div className="p-2 bg-brand-lime/10 rounded-lg text-brand-lime">
+                <div className="p-6 rounded-2xl shadow-sm border space-y-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-2 border-b pb-4 mb-2" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                        <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
                             <User size={20} />
                         </div>
-                        <h2 className="font-bold text-gray-900 uppercase tracking-wider text-sm">Personal Information</h2>
+                        <h2 className="font-bold uppercase tracking-wider text-sm" style={{ color: 'var(--text-main)' }}>Personal Information</h2>
                     </div>
 
                     <div className="flex flex-wrap gap-6">
@@ -130,12 +132,12 @@ const CreateDriver = () => {
                 </div>
 
                 {/* Professional Section */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-                    <div className="flex items-center gap-2 border-b border-gray-50 pb-4 mb-2">
-                        <div className="p-2 bg-brand-lime/10 rounded-lg text-brand-lime">
+                <div className="p-6 rounded-2xl shadow-sm border space-y-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-2 border-b pb-4 mb-2" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                        <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
                             <Briefcase size={20} />
                         </div>
-                        <h2 className="font-bold text-gray-900 uppercase tracking-wider text-sm">Professional Details</h2>
+                        <h2 className="font-bold uppercase tracking-wider text-sm" style={{ color: 'var(--text-main)' }}>Professional Details</h2>
                     </div>
 
                     <div className="flex flex-wrap gap-6">
@@ -153,13 +155,13 @@ const CreateDriver = () => {
                 </div>
 
                 {/* Document Preview Placeholder */}
-                <div className="bg-brand-lime/5 border border-brand-lime/20 p-6 rounded-2xl flex items-start gap-4">
-                    <div className="p-3 bg-brand-lime/20 rounded-xl text-brand-lime shrink-0">
+                <div className="p-6 rounded-2xl flex items-start gap-4 border" style={{ backgroundColor: 'rgba(200,230,0,0.03)', borderColor: 'rgba(200,230,0,0.1)' }}>
+                    <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
                         <ShieldCheck size={24} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-900">Documentation Next Steps</h3>
-                        <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                        <h3 className="font-bold" style={{ color: 'var(--text-main)' }}>Documentation Next Steps</h3>
+                        <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                             Once this application is submitted, you will be able to upload the required documents (License Copy, ID, Utility Bill) from the driver's profile page. All applications undergo a <strong>mandatory credit check</strong>.
                         </p>
                     </div>
@@ -170,7 +172,10 @@ const CreateDriver = () => {
                     <button
                         type="button"
                         onClick={() => navigate('..')}
-                        className="px-8 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
+                        className="px-8 py-3 border rounded-xl font-bold transition-all active:scale-95"
+                        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}
                     >
                         Cancel
                     </button>

@@ -48,7 +48,7 @@ const BranchOpStaffDashboard = () => {
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                         <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>My Checklist</h4>
-                        <span className="text-xs px-2 py-1 rounded font-bold" style={{ background: 'var(--lime)', color: '#0A0A0A' }}>18 Total</span>
+                        <span className="text-xs px-2 py-1 rounded font-bold" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>18 Total</span>
                     </div>
                     <div className="p-4 space-y-3 flex-1 overflow-y-auto">
                         {[
@@ -78,7 +78,7 @@ const BranchOpStaffDashboard = () => {
                                         </span>
                                     </div>
                                     <div className="text-xs mb-2" style={{ color: 'var(--text-dim)' }}>{task.desc}</div>
-                                    <div className="text-xs font-bold mt-1" style={{ color: 'var(--lime)' }}>{task.time}</div>
+                                    <div className="text-xs font-bold mt-1" style={{ color: 'var(--brand-lime)' }}>{task.time}</div>
                                 </div>
                             </div>
                         ))}

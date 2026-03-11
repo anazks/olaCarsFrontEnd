@@ -73,13 +73,13 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all mb-1 ${isSidebarCollapsed ? 'justify-center' : ''}`}
             style={{
                 background: active ? 'rgba(200,230,0,0.1)' : 'transparent',
-                color: active ? 'var(--lime)' : 'var(--sidebar-text)',
+                color: active ? 'var(--brand-lime)' : 'var(--sidebar-text)',
             }}
             onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; }}
             onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
             title={isSidebarCollapsed ? label : ''}
         >
-            <span style={{ color: active ? 'var(--lime)' : 'inherit' }}>{icon}</span>
+            <span style={{ color: active ? 'var(--brand-lime)' : 'inherit' }}>{icon}</span>
             {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span>}
         </div>
     );
@@ -99,7 +99,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     onClick={toggleSidebar}
                     className={`p-2 rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? 'ml-4' : 'ml-2'}`}
                     style={{ color: 'var(--sidebar-text)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--lime)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
                 >
                     <Menu size={24} />
@@ -124,7 +124,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 <div
                     className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     style={{ color: 'var(--sidebar-text)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--lime)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
                     title={isSidebarCollapsed ? "Settings" : ""}
                 >

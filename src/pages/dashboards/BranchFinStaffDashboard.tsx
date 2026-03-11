@@ -72,7 +72,7 @@ const BranchFinStaffDashboard = () => {
                             </div>
                             <button
                                 className="w-full font-bold py-3.5 rounded-xl mt-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5"
-                                style={{ background: 'var(--lime)', color: '#0A0A0A' }}
+                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                             >
                                 Submit Cash Log to HQ
                             </button>

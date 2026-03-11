@@ -12,7 +12,7 @@ const OperationalAdminDashboard = () => {
                 <div className="flex gap-3 w-full sm:w-auto">
                     <button
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all cursor-pointer hover:bg-lime/10"
-                        style={{ background: 'var(--bg-card)', borderColor: 'var(--lime)', color: 'var(--lime)' }}
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
                     >
                         <MapPin size={16} /> Open Fleet Map
                     </button>
@@ -53,7 +53,7 @@ const OperationalAdminDashboard = () => {
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                         <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Live Operations</h4>
-                        <button className="text-sm hover:underline" style={{ color: 'var(--lime)' }}>View All</button>
+                        <button className="text-sm hover:underline" style={{ color: 'var(--brand-lime)' }}>View All</button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm relative">

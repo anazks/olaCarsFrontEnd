@@ -12,7 +12,7 @@ const FinancialAdminDashboard = () => {
                 <div className="flex gap-3 w-full sm:w-auto">
                     <button
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all cursor-pointer hover:bg-lime/10"
-                        style={{ background: 'var(--bg-card)', borderColor: 'var(--lime)', color: 'var(--lime)' }}
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
                     >
                         <Download size={16} /> Export CSV
                     </button>
@@ -93,7 +93,7 @@ const FinancialAdminDashboard = () => {
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                         <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Latest Transactions & Deposits</h4>
-                        <button className="text-sm hover:underline border-none bg-transparent cursor-pointer" style={{ color: 'var(--lime)' }}>View Ledger</button>
+                        <button className="text-sm hover:underline border-none bg-transparent cursor-pointer" style={{ color: 'var(--brand-lime)' }}>View Ledger</button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2">
                         {[

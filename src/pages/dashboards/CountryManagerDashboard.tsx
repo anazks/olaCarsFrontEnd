@@ -53,7 +53,7 @@ const CountryManagerDashboard = () => {
                             className="border p-4 rounded-xl hover:border-lime transition-all cursor-pointer group"
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                         >
-                            <h5 className="font-bold mb-3 transition-colors" style={{ color: 'var(--lime)' }}>{region}</h5>
+                            <h5 className="font-bold mb-3 transition-colors" style={{ color: 'var(--brand-lime)' }}>{region}</h5>
                             <div className="flex justify-between items-center p-2 rounded mb-1 text-sm transition-colors" style={{ background: 'var(--bg-card)' }}>
                                 <span style={{ color: 'var(--text-dim)' }}>Branches:</span>
                                 <span className="font-bold" style={{ color: 'var(--text-main)' }}>{4 + i * 2}</span>

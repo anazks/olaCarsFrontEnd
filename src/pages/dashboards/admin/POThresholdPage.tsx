@@ -54,7 +54,7 @@ const POThresholdPage = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
-                        <DollarSign size={28} style={{ color: 'var(--lime)' }} />
+                        <DollarSign size={28} style={{ color: 'var(--brand-lime)' }} />
                         Purchase Order Threshold
                     </h1>
                     <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
@@ -75,7 +75,7 @@ const POThresholdPage = () => {
             <div className="rounded-2xl p-8 transition-colors shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--lime)', borderTopColor: 'transparent' }} />
+                        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
                         <p className="text-sm animate-pulse" style={{ color: 'var(--text-dim)' }}>Loading current threshold...</p>
                     </div>
                 ) : (
@@ -139,7 +139,7 @@ const POThresholdPage = () => {
             {/* Info Section */}
             <div className="p-6 rounded-2xl transition-colors" style={{ background: 'rgba(200,230,0,0.03)', border: '1px border-dashed var(--border-main)' }}>
                 <h3 className="text-sm font-bold flex items-center gap-2 mb-2" style={{ color: 'var(--text-main)' }}>
-                    <AlertTriangle size={16} style={{ color: 'var(--lime)' }} />
+                    <AlertTriangle size={16} style={{ color: 'var(--brand-lime)' }} />
                     Important Note
                 </h3>
                 <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>

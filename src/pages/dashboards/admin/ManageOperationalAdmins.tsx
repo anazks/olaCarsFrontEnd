@@ -141,7 +141,7 @@ const ManageOperationalAdmins = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
-                        <Shield size={28} style={{ color: 'var(--lime)' }} />
+                        <Shield size={28} style={{ color: 'var(--brand-lime)' }} />
                         Manage Operational Admins
                     </h1>
                     <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage operational administrator accounts</p>
@@ -188,7 +188,7 @@ const ManageOperationalAdmins = () => {
             <div className="rounded-2xl overflow-x-auto transition-colors" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--lime)', borderTopColor: 'transparent' }} />
+                        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
                     </div>
                 ) : filteredAdmins.length === 0 ? (
                     <div className="text-center py-20 transition-colors" style={{ color: 'var(--text-dim)' }}>
@@ -218,7 +218,7 @@ const ManageOperationalAdmins = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors" style={{ background: 'rgba(200,230,0,0.15)', color: 'var(--lime)' }}>
+                                                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors" style={{ background: 'rgba(200,230,0,0.15)', color: 'var(--brand-lime)' }}>
                                                     {admin.fullName.charAt(0).toUpperCase()}
                                                 </div>
                                                 <span className="font-medium transition-colors" style={{ color: 'var(--text-main)' }}>{admin.fullName}</span>

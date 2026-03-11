@@ -7,7 +7,7 @@ const BranchManagerDashboard = () => {
             <div className="flex justify-between items-end mb-6">
                 <div>
                     <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
-                        Branch Hub <span style={{ color: 'var(--lime)', fontSize: '1.25rem', fontWeight: 'normal', marginLeft: '0.5rem' }}>— Mumbai Central</span>
+                        Branch Hub <span style={{ color: 'var(--brand-lime)', fontSize: '1.25rem', fontWeight: 'normal', marginLeft: '0.5rem' }}>— Mumbai Central</span>
                     </h1>
                     <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Your local fleet, staff, and daily targets.</p>
                 </div>
@@ -56,13 +56,13 @@ const BranchManagerDashboard = () => {
                         {['10:30 AM', '11:00 AM', '12:15 PM'].map((time, i) => (
                             <div key={i} className="flex justify-between items-center p-3 border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-16 text-center font-bold text-sm" style={{ color: 'var(--lime)' }}>{time}</div>
+                                    <div className="w-16 text-center font-bold text-sm" style={{ color: 'var(--brand-lime)' }}>{time}</div>
                                     <div>
                                         <div className="font-medium text-sm" style={{ color: 'var(--text-main)' }}>Customer: Arjun D.</div>
                                         <div className="text-xs" style={{ color: 'var(--text-dim)' }}>MH-12-AB-{1000 + i} (Premium Sedan)</div>
                                     </div>
                                 </div>
-                                <button className="px-3 py-1.5 text-xs font-bold rounded cursor-pointer" style={{ background: 'var(--lime)', color: '#0A0A0A' }}>Assign Key</button>
+                                <button className="px-3 py-1.5 text-xs font-bold rounded cursor-pointer" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>Assign Key</button>
                             </div>
                         ))}
                     </div>
@@ -89,7 +89,7 @@ const BranchManagerDashboard = () => {
                         </div>
                         <div
                             className="p-3 rounded-lg border border-l-4 transition-colors"
-                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', borderLeftColor: 'var(--lime)' }}
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', borderLeftColor: 'var(--brand-lime)' }}
                         >
                             <div className="flex justify-between mb-1">
                                 <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>Deposit yesterdays cash box</span>
