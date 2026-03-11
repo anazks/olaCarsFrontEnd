@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, KeySquare, CheckSquare, Sparkles, Navigation2, FilePlus, Settings, Menu, ChevronDown, ChevronRight, LogOut } from 'lucide-react';
+import { LayoutDashboard, KeySquare, CheckSquare, Sparkles, Navigation2, FilePlus, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface BranchOpStaffSidebarProps {
@@ -25,6 +25,9 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Sparkles size={20} />, label: 'Cleaning Schedule' },
         { icon: <Navigation2 size={20} />, label: 'Vehicle Check-in' },
         { icon: <FilePlus size={20} />, label: 'Log Damage' },
+        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-op-staff/purchase-orders' },
+        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/branch-op-staff/vehicles' },
+        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-op-staff/drivers' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

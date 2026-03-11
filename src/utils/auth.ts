@@ -9,6 +9,17 @@ export interface DecodedToken {
     [key: string]: any; // allow any extra fields the API may send
 }
 
+export const ROLE_LEVELS: Record<string, number> = {
+    'operationstaff': 1,
+    'financestaff': 1,
+    'workshopstaff': 1,
+    'branchmanager': 2,
+    'countrymanager': 3,
+    'operationadmin': 4,
+    'financeadmin': 4,
+    'admin': 5
+};
+
 export const getToken = (): string | null => {
     return localStorage.getItem('token');
 };
@@ -42,7 +53,7 @@ export const getDecodedToken = (): DecodedToken | null => {
     try {
         const decoded = jwtDecode<DecodedToken>(token);
         // Debug: log decoded payload so we can see the exact role field name
-        console.log('[auth] decoded JWT payload:', decoded);
+        // console.log('[auth] decoded JWT payload:', decoded);
         return decoded;
     } catch (error) {
         console.error('[auth] Invalid token format:', error);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, ChevronDown, ChevronRight, LogOut } from 'lucide-react';
+import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface FinancialAdminSidebarProps {
@@ -25,6 +25,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/financial-admin/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/financial-admin/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/financial-admin/manage-operation-staff' },
+        { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/financial-admin/manage-suppliers' },
+        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders' },
+        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/financial-admin/vehicles' },
+        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/financial-admin/drivers' },
     ];
 
     const financeItems = [

@@ -9,6 +9,7 @@ export interface Branch {
     state: string;
     phone: string;
     email: string;
+    country: string;
     managerId?: string;
     status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
     createdAt?: string;
@@ -23,6 +24,7 @@ export interface CreateBranchPayload {
     state: string;
     phone: string;
     email: string;
+    country: string;
     managerId?: string;
     status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 }
@@ -34,7 +36,7 @@ export interface UpdateBranchPayload extends Partial<CreateBranchPayload> {
 // GET all branches
 export const getAllBranches = async (): Promise<Branch[]> => {
     const response = await api.get('/api/branch');
-    console.log(response,'e2323')
+    console.log(response, 'e2323')
     return response.data.data;
 };
 

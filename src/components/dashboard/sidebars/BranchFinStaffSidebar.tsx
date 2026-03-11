@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Banknote, FileTerminal, ArrowDownFromLine, ShieldCheck, Settings, Menu, ChevronDown, ChevronRight, LogOut } from 'lucide-react';
+import { LayoutDashboard, Wallet, Receipt, CreditCard, History, FileText, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface BranchFinStaffSidebarProps {
@@ -20,10 +20,14 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     };
 
     const navItems = [
-        { icon: <Banknote size={20} />, label: 'Daily Deposits', active: true },
-        { icon: <ArrowDownFromLine size={20} />, label: 'Petty Cash Log' },
-        { icon: <FileTerminal size={20} />, label: 'Scan Receipts' },
-        { icon: <ShieldCheck size={20} />, label: 'Verify Payments' },
+        { icon: <Wallet size={20} />, label: 'Daily Collection' },
+        { icon: <Receipt size={20} />, label: 'Invoices' },
+        { icon: <CreditCard size={20} />, label: 'Payments' },
+        { icon: <History size={20} />, label: 'Transaction History' },
+        { icon: <FileText size={20} />, label: 'Reports' },
+        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-fin-staff/purchase-orders' },
+        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/branch-fin-staff/vehicles' },
+        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-fin-staff/drivers' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -73,6 +77,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             </div>
         );
     };
+
     return (
         <aside
             className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out"

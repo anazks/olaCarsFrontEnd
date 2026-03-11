@@ -1,4 +1,4 @@
-import { Bell, Search, Settings, Sun, Moon } from 'lucide-react';
+import { Search, Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getUser, getUserRole } from '../../utils/auth';
 
@@ -13,10 +13,29 @@ const TopBar = ({ }: TopBarProps) => {
 
     const getFormattedRole = (roleStr: string | null) => {
         if (!roleStr) return 'Access Panel';
-        return roleStr
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+
+        const roleMap: Record<string, string> = {
+            'admin': 'Admin',
+            'operationaladmin': 'Operational Admin',
+            'operationadmin': 'Operational Admin',
+            'financialadmin': 'Financial Admin',
+            'financeadmin': 'Financial Admin',
+            'countrymanager': 'Country Manager',
+            'branchmanager': 'Branch Manager',
+            'branchopstaff': 'Branch Operational Staff',
+            'operationstaff': 'Operational Staff',
+            'branchfinstaff': 'Branch Financial Staff',
+            'financestaff': 'Financial Staff',
+            'workshopstaff': 'Workshop Staff'
+        };
+
+        const normalizedRole = roleStr.toLowerCase().replace(/-/g, '');
+        return roleMap[normalizedRole] || (
+            roleStr
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+        );
     };
 
     const getInitials = (name: string | null) => {
@@ -66,16 +85,6 @@ const TopBar = ({ }: TopBarProps) => {
                     title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 >
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-
-                <button
-                    className="relative flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
-                >
-                    <Bell size={20} />
-                    <span
-                        className="absolute top-1 right-2 w-2 h-2 rounded-full"
-                        style={{ background: '#E74C3C' }}
-                    />
                 </button>
 
                 <button

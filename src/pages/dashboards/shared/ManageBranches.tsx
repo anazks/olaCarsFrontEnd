@@ -31,11 +31,18 @@ const ManageBranches = () => {
         state: '',
         phone: '',
         email: '',
+        country: 'Panama',
         managerId: '',
         status: 'ACTIVE' as string
     });
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+
+    // Common countries list
+    const countries = [
+        "Panama", "United States", "United Kingdom", "Canada", "Australia", "Germany",
+        "France", "India", "Nigeria", "South Africa", "United Arab Emirates"
+    ];
 
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
@@ -69,6 +76,7 @@ const ManageBranches = () => {
             state: '',
             phone: '',
             email: '',
+            country: 'Panama',
             managerId: '',
             status: 'ACTIVE'
         });
@@ -86,6 +94,7 @@ const ManageBranches = () => {
             state: branch.state,
             phone: branch.phone || '',
             email: branch.email,
+            country: branch.country || 'Panama',
             managerId: branch.managerId || '',
             status: branch.status
         });
@@ -146,7 +155,8 @@ const ManageBranches = () => {
         (b) =>
             b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             b.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.city.toLowerCase().includes(searchQuery.toLowerCase())
+            b.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (b.country && b.country.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const statusColor = (s: string) => {
@@ -249,7 +259,7 @@ const ManageBranches = () => {
                                                     <MapPin size={14} className="mt-1 flex-shrink-0" style={{ color: 'var(--text-dim)' }} />
                                                     <div className="flex flex-col">
                                                         <span className="text-sm line-clamp-1" style={{ color: 'var(--text-main)' }}>{branch.address}</span>
-                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}</span>
+                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}, {branch.country}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -426,6 +436,31 @@ const ManageBranches = () => {
                                         }
                                         placeholder="Kerala"
                                     />
+                                </div>
+
+                                {/* Country */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium"
+                                        style={{ color: "var(--text-dim)" }}>
+                                        Country
+                                    </label>
+
+                                    <select
+                                        value={formData.country}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, country: e.target.value })
+                                        }
+                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                        style={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)"
+                                        }}
+                                    >
+                                        {countries.map(c => (
+                                            <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* Email */}

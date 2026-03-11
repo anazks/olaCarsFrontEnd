@@ -33,7 +33,7 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     }
 
     // 3. Authorised — render the protected content
-    console.log('[ProtectedRoute] ✅ Authorised — rendering Outlet');
+    // console.log('[ProtectedRoute] ✅ Authorised — rendering Outlet');
     return <Outlet />;
 };
 

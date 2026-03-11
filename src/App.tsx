@@ -31,6 +31,23 @@ import ManageBranches from './pages/dashboards/shared/ManageBranches';
 import ManageBranchManagers from './pages/dashboards/shared/ManageBranchManagers';
 import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
+import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
+import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
+
+// Purchase Order Pages
+import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
+import CreatePurchaseOrder from './pages/dashboards/shared/CreatePurchaseOrder';
+import PurchaseOrderDetail from './pages/dashboards/shared/PurchaseOrderDetail';
+
+// Vehicle Pages
+import VehicleList from './pages/dashboards/shared/VehicleList';
+import CreateVehicle from './pages/dashboards/shared/CreateVehicle';
+import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
+
+// Driver Pages
+import DriverList from './pages/dashboards/shared/DriverList';
+import CreateDriver from './pages/dashboards/shared/CreateDriver';
+import DriverDetail from './pages/dashboards/shared/DriverDetail';
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -44,7 +61,6 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* Admin Dashboards - Protected */}
-          {/* allowedRoles must match the 'role' field in the JWT from the API */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
               <Route index element={<ExecutiveDashboard />} />
@@ -55,6 +71,15 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-suppliers" element={<ManageSuppliers />} />
+              <Route path="po-threshold" element={<POThresholdPage />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
@@ -66,6 +91,13 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-suppliers" element={<ManageSuppliers />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
@@ -77,6 +109,13 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-suppliers" element={<ManageSuppliers />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
@@ -87,6 +126,16 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-suppliers" element={<ManageSuppliers />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/create" element={<CreateVehicle />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
@@ -95,20 +144,49 @@ function App() {
               <Route index element={<BranchManagerDashboard />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-suppliers" element={<ManageSuppliers />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/create" element={<CreateVehicle />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['branchopstaff']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['operationstaff']} />}>
             <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
               <Route index element={<BranchOpStaffDashboard />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['branchfinstaff']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['financestaff']} />}>
             <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
               <Route index element={<BranchFinStaffDashboard />} />
+              <Route path="purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="vehicles" element={<VehicleList />} />
+              <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
             </Route>
           </Route>
+
+          {/* Global /purchase-orders route to handle TopBar bell click redirect */}
+          <Route path="/purchase-orders" element={<ProtectedRoute allowedRoles={['admin', 'operationadmin', 'financialadmin', 'countrymanager', 'branchmanager', 'branchopstaff', 'financestaff']} />}>
+            <Route index element={<Navigate to="/" replace />} />
+          </Route>
+
           {/* Redirect "/" and any unknown routes to login */}
           <Route path="*" element={<Navigate to="/admin/login" replace />} />
 
