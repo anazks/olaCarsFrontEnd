@@ -19,9 +19,12 @@ const DriverList = () => {
         try {
             setLoading(true);
             const data = await driverService.getAllDrivers();
-            setDrivers(data);
+            console.log(data,'data');
+            
+            setDrivers(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching drivers:', error);
+            setDrivers([]);
         } finally {
             setLoading(false);
         }
@@ -29,17 +32,25 @@ const DriverList = () => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
+            case 'ACTIVE':
             case 'APPROVED': return 'bg-green-100 text-green-700';
-            case 'REJECTED': return 'bg-red-100 text-red-700';
-            case 'PENDING_APPLICATION': return 'bg-yellow-100 text-yellow-700';
-            case 'TRIAL_PERIOD': return 'bg-blue-100 text-blue-700';
+            case 'REJECTED':
+            case 'SUSPENDED': return 'bg-red-100 text-red-700';
+            case 'PENDING REVIEW':
+            case 'VERIFICATION':
+            case 'CREDIT CHECK': 
+            case 'MANAGER REVIEW':
+            case 'CONTRACT PENDING': return 'bg-yellow-100 text-yellow-700';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
 
     const filteredDrivers = drivers.filter(driver => {
-        const matchesSearch = (driver.firstName + ' ' + driver.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            driver.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const fullName = driver.personalInfo?.fullName || '';
+        const email = driver.personalInfo?.email || '';
+        
+        const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'ALL' || driver.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -82,11 +93,15 @@ const DriverList = () => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
                         <option value="ALL">All Statuses</option>
-                        <option value="PENDING_APPLICATION">Pending Application</option>
-                        <option value="CREDIT_CHECK_REQUIRED">Credit Check</option>
-                        <option value="INTERVIEW_SCHEDULED">Interview</option>
-                        <option value="TRIAL_PERIOD">Trial Period</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="PENDING REVIEW">Pending Review</option>
+                        <option value="VERIFICATION">Verification</option>
+                        <option value="CREDIT CHECK">Credit Check</option>
+                        <option value="MANAGER REVIEW">Manager Review</option>
                         <option value="APPROVED">Approved</option>
+                        <option value="CONTRACT PENDING">Contract Pending</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="SUSPENDED">Suspended</option>
                         <option value="REJECTED">Rejected</option>
                     </select>
                 </div>
@@ -124,23 +139,23 @@ const DriverList = () => {
                             ) : (
                                 filteredDrivers.map((driver) => (
                                     <tr
-                                        key={driver.id}
+                                        key={driver._id}
                                         className="transition-colors cursor-pointer group"
                                         style={{ borderBottom: '1px solid var(--border-main)' }}
                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        onClick={() => navigate(driver.id)}
+                                        onClick={() => navigate(driver._id)}
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all group-hover:scale-110" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                    {driver.firstName[0]}{driver.lastName[0]}
+                                                    {(driver.personalInfo?.fullName?.[0] || 'D')}
                                                 </div>
                                                 <div>
                                                     <div className="font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>
-                                                        {driver.firstName} {driver.lastName}
+                                                        {driver.personalInfo?.fullName}
                                                     </div>
-                                                    <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{driver.email}</div>
+                                                    <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{driver.personalInfo?.email}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -149,19 +164,19 @@ const DriverList = () => {
                                                 {driver.status.replace(/_/g, ' ')}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                                                <FileText size={14} />
-                                                {driver.licenseNumber}
-                                            </div>
-                                            <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>Exp: {new Date(driver.licenseExpiry).toLocaleDateString()}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                                                <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                                                {new Date(driver.appliedAt).toLocaleDateString()}
-                                            </div>
-                                        </td>
+                                         <td className="px-6 py-4">
+                                             <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                                                 <FileText size={14} />
+                                                 {driver.drivingLicense?.licenseNumber || 'N/A'}
+                                             </div>
+                                             <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>Exp: {driver.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : 'N/A'}</div>
+                                         </td>
+                                         <td className="px-6 py-4">
+                                             <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                                                 <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
+                                                 {new Date(driver.appliedAt).toLocaleDateString()}
+                                             </div>
+                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <button className="p-2 rounded-lg transition-all" style={{ color: 'var(--text-dim)' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-dim)'}>
                                                 <ChevronRight size={20} />

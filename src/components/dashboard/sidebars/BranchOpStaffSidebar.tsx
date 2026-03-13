@@ -26,7 +26,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Navigation2 size={20} />, label: 'Vehicle Check-in' },
         { icon: <FilePlus size={20} />, label: 'Log Damage' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-op-staff/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/branch-op-staff/vehicles' },
+        { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/branch-op-staff/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-op-staff/drivers' },
     ];
 

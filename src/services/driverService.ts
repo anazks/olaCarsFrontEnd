@@ -1,73 +1,133 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from './api';
+import type { Branch } from './branchService';
 
 export interface Driver {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber: string;
-    status: 'PENDING_APPLICATION' | 'CREDIT_CHECK_REQUIRED' | 'INTERVIEW_SCHEDULED' | 'TRIAL_PERIOD' | 'APPROVED' | 'REJECTED';
-    branchId: string;
-    experienceYears: number;
-    licenseNumber: string;
-    licenseExpiry: string;
-    appliedAt: string;
-    creditCheck?: {
-        status: 'PENDING' | 'COMPLETED' | 'FAILED';
-        score?: number;
-        decision?: 'APPROVE' | 'DECLINE' | 'REFER';
-        performedAt?: string;
+    _id: string;
+    id?: string;
+    personalInfo: {
+        fullName: string;
+        email: string;
+        phone: string;
+        whatsappNumber?: string;
+        dateOfBirth: string;
+        nationality?: string;
+        photograph?: string;
     };
-    documents?: {
-        type: string;
-        url: string;
-        status: 'PENDING' | 'VERIFIED' | 'REJECTED';
-        uploadedAt: string;
-    }[];
+    emergencyContact?: {
+        name: string;
+        phone: string;
+        relationship?: string;
+    };
+    drivingLicense: {
+        licenseNumber?: string;
+        expiryDate?: string;
+        categories: string[];
+        frontImage?: string;
+        backImage?: string;
+        verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+        verifiedDate?: string;
+    };
+    identityDocs?: {
+        idType?: 'National ID' | 'Passport';
+        idNumber?: string;
+        idFrontImage?: string;
+        idBackImage?: string;
+    };
+    addressProof?: {
+        document?: string;
+    };
+    backgroundCheck: {
+        status: 'PENDING' | 'UPLOADED' | 'CLEARED' | 'FAILED' | 'NOT PROVIDED';
+        document?: string;
+        issuedDate?: string;
+        performedAt?: string;
+        notes?: string;
+    };
+    creditCheck?: {
+        score?: number;
+        rating?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'VERY POOR' | 'FRAUD';
+        decision?: 'AUTO_APPROVED' | 'MANUAL_REVIEW' | 'DECLINED';
+        fraudAlert?: boolean;
+        reviewNotes?: string;
+        resultDate?: string;
+        reportS3Key?: string;
+    };
+    contract?: {
+        issuedDate?: string;
+        signedDate?: string;
+        pdfS3Key?: string;
+        signedS3Key?: string;
+    };
+    rejection?: {
+        reason: string;
+        notes?: string;
+        date?: string;
+    };
+    medicalFitness: {
+        isRequired: boolean;
+        status?: 'PENDING' | 'COMPLETED' | 'FAILED';
+        certificate?: string;
+    };
+    activation: {
+        credentialsSent: boolean;
+        gpsMonitoringActive: boolean;
+        activatedDate?: string;
+    };
+    status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
+    branch: string | Branch;
+    experienceYears?: number;
+    appliedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
+export const getAllDrivers = async (filters?: any): Promise<Driver[]> => {
+    const response = await api.get('/api/driver', { params: filters });
+    return response.data.data;
+};
+
+export const getDriverById = async (id: string): Promise<Driver> => {
+    const response = await api.get(`/api/driver/${id}`);
+    return response.data.data;
+};
+
+export const createDriver = async (driverData: any): Promise<Driver> => {
+    const response = await api.post('/api/driver', driverData);
+    return response.data.data;
+};
+
+export const updateDriver = async (id: string, updateData: any): Promise<Driver> => {
+    const response = await api.put(`/api/driver/${id}`, updateData);
+    return response.data.data;
+};
+
+export const progressDriver = async (id: string, targetStatus: string, data?: any): Promise<Driver> => {
+    console.log(id, targetStatus, data);
+    const response = await api.put(`/api/driver/${id}/progress`, { targetStatus, ...data });
+    return response.data.data;
+};
+
+export const uploadDriverDocument = async (id: string, formData: FormData): Promise<any> => {
+    const response = await api.post(`/api/driver/${id}/upload-documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data.data;
+};
+
+export const deleteDriver = async (id: string): Promise<void> => {
+    await api.delete(`/api/driver/${id}`);
+};
+
+// Also export as a default object for backward compatibility if needed, 
+// though individual exports are preferred now.
 export const driverService = {
-    getAllDrivers: async (filters?: any) => {
-        const response = await axios.get(`${API_URL}/drivers`, { params: filters, headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    },
-
-    getDriverById: async (id: string) => {
-        const response = await axios.get(`${API_URL}/drivers/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    },
-
-    createDriver: async (driverData: any) => {
-        const response = await axios.post(`${API_URL}/drivers`, driverData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    },
-
-    updateDriver: async (id: string, updateData: any) => {
-        const response = await axios.put(`${API_URL}/drivers/${id}`, updateData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    },
-
-    progressDriver: async (id: string, action: string, data?: any) => {
-        const response = await axios.post(`${API_URL}/drivers/${id}/progress`, { action, ...data }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    },
-
-    uploadDocument: async (id: string, formData: FormData) => {
-        const response = await axios.post(`${API_URL}/drivers/${id}/documents`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        return response.data;
-    },
-
-    deleteDriver: async (id: string) => {
-        const response = await axios.delete(`${API_URL}/drivers/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        return response.data;
-    }
+    getAllDrivers,
+    getDriverById,
+    createDriver,
+    updateDriver,
+    progressDriver,
+    uploadDocument: uploadDriverDocument,
+    deleteDriver
 };
 
 export default driverService;

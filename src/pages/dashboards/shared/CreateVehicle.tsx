@@ -252,7 +252,7 @@ const CreateVehicle = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/dashboardvehicles')}
+                    onClick={() => navigate('/admin/country-manager')}
                     className="p-2.5 rounded-xl transition-all border hover:bg-white/5 cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                 >

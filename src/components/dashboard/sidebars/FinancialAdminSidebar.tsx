@@ -27,7 +27,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/financial-admin/manage-operation-staff' },
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/financial-admin/manage-suppliers' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/financial-admin/vehicles' },
+        { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/financial-admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/financial-admin/drivers' },
     ];
 

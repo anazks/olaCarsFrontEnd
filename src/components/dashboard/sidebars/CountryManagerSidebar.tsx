@@ -26,7 +26,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/country-manager/manage-operation-staff' },
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/country-manager/manage-suppliers' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/country-manager/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/country-manager/vehicles' },
+        { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/country-manager/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/country-manager/drivers' },
     ];
 

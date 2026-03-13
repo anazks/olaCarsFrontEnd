@@ -30,7 +30,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/admin/manage-suppliers' },
         { icon: <DollarSign size={20} />, label: 'PO Threshold', path: '/admin/admin/po-threshold' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/admin/purchase-orders' },
-        { icon: <CarFront size={20} />, label: 'Vehicles', path: '/admin/admin/vehicles' },
+        { icon: <CarFront size={20} />, label: 'Vehicles Onboarding', path: '/admin/admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/admin/drivers' },
     ];
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Calendar, Briefcase, FileText, ChevronLeft, MapPin, Building2, ShieldCheck, Sparkles, ChevronRight } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Briefcase, FileText, ChevronLeft, Building2, ShieldCheck, ChevronRight } from 'lucide-react';
 import { driverService } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
 
@@ -15,10 +15,10 @@ const CreateDriver = () => {
         phoneNumber: '',
         licenseNumber: '',
         licenseExpiry: '',
-        experienceYears: '',
         branchId: '',
-        homeAddress: '',
-        dateOfBirth: ''
+        dateOfBirth: '',
+        emergencyContactName: '',
+        emergencyContactPhone: ''
     });
 
     useEffect(() => {
@@ -28,9 +28,11 @@ const CreateDriver = () => {
     const fetchBranches = async () => {
         try {
             const data = await getAllBranches();
-            setBranches(data);
+            console.log('Fetched branches:', data);
+            setBranches(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching branches:', error);
+            setBranches([]);
         }
     };
 
@@ -43,10 +45,27 @@ const CreateDriver = () => {
         e.preventDefault();
         try {
             setLoading(true);
-            await driverService.createDriver({
-                ...formData,
-                experienceYears: parseInt(formData.experienceYears)
-            });
+
+            // Transform data to match backend schema
+            const driverData = {
+                personalInfo: {
+                    fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+                    email: formData.email,
+                    phone: formData.phoneNumber,
+                    dateOfBirth: formData.dateOfBirth
+                },
+                emergencyContact: {
+                    name: formData.emergencyContactName,
+                    phone: formData.emergencyContactPhone
+                },
+                drivingLicense: {
+                    licenseNumber: formData.licenseNumber,
+                    expiryDate: formData.licenseExpiry
+                },
+                branch: formData.branchId, // Map branchId to branch
+            };
+
+            await driverService.createDriver(driverData);
             navigate('..');
         } catch (error) {
             console.error('Error creating driver application:', error);
@@ -126,8 +145,18 @@ const CreateDriver = () => {
                         <InputField icon={<User size={18} />} label="Last Name" name="lastName" placeholder="e.g. Doe" />
                         <InputField icon={<Mail size={18} />} label="Email Address" name="email" type="email" placeholder="john.doe@example.com" />
                         <InputField icon={<Phone size={18} />} label="Phone Number" name="phoneNumber" placeholder="+254 700 000000" />
+                        <InputField icon={<Phone size={18} />} label="WhatsApp Number" name="whatsappNumber" placeholder="+254 700 000000 (Optional)" required={false} />
                         <InputField icon={<Calendar size={18} />} label="Date of Birth" name="dateOfBirth" type="date" />
-                        <InputField icon={<MapPin size={18} />} label="Home Address" name="homeAddress" placeholder="123 Street, Nairobi" />
+                        <InputField icon={<Building2 size={18} />} label="Nationality" name="nationality" placeholder="e.g. Kenyan" />
+                    </div>
+
+                    <div className="border-t pt-4 mt-6" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                        <h3 className="font-bold uppercase tracking-wider text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Emergency Contact</h3>
+                        <div className="flex flex-wrap gap-6">
+                            <InputField icon={<User size={18} />} label="Contact Name" name="emergencyContactName" placeholder="e.g. Jane Doe" />
+                            <InputField icon={<Phone size={18} />} label="Contact Phone" name="emergencyContactPhone" placeholder="+254 700 000000" />
+                            <InputField icon={<User size={18} />} label="Relationship" name="emergencyContactRelationship" placeholder="e.g. Spouse / Brother" />
+                        </div>
                     </div>
                 </div>
 
@@ -141,9 +170,15 @@ const CreateDriver = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-6">
+                        <InputField 
+                            icon={<FileText size={18} />} 
+                            label="ID Document Type" 
+                            name="idType" 
+                            options={[{ id: 'National ID', name: 'National ID' }, { id: 'Passport', name: 'Passport' }]} 
+                        />
+                        <InputField icon={<FileText size={18} />} label="ID Number" name="idNumber" placeholder="Enter ID/Passport Number" />
                         <InputField icon={<FileText size={18} />} label="License Number" name="licenseNumber" placeholder="DL-XXXXX" />
                         <InputField icon={<Calendar size={18} />} label="License Expiry" name="licenseExpiry" type="date" />
-                        <InputField icon={<Sparkles size={18} />} label="Exp. Years" name="experienceYears" type="number" placeholder="Years of experience" />
                         <InputField
                             icon={<Building2 size={18} />}
                             label="Assigned Branch"

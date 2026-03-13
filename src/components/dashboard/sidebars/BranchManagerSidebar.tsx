@@ -24,7 +24,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/branch-manager/manage-operation-staff' },
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/branch-manager/manage-suppliers' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-manager/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Vehicles', path: '/admin/branch-manager/vehicles' },
+        { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/branch-manager/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-manager/drivers' },
     ];
 
