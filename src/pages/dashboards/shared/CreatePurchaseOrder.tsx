@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText } from 'lucide-react';
 import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose } from '../../../services/purchaseOrderService';
 import { createPurchaseOrder } from '../../../services/purchaseOrderService';
 import type { Supplier } from '../../../services/supplierService';
@@ -25,7 +25,7 @@ const CreatePurchaseOrder = () => {
         purpose: 'Spare Parts',
         supplier: '',
         items: [
-            { itemName: '', quantity: 1, unitPrice: 0, description: '' }
+            { itemName: '', quantity: 1, unitPrice: 0, description: '', images: [] }
         ],
         paymentDate: '',
         branch: ''
@@ -64,7 +64,7 @@ const CreatePurchaseOrder = () => {
     const addItem = () => {
         setFormData({
             ...formData,
-            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: 0, description: '' }]
+            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: 0, description: '', images: [] }]
         });
     };
 
@@ -312,6 +312,49 @@ const CreatePurchaseOrder = () => {
                                     <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Subtotal</label>
                                     <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
                                         ${(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </div>
+                                </div>
+                                <div className="md:col-span-11 mt-4 space-y-3">
+                                    <div className="flex items-center gap-4">
+                                        <label className="cursor-pointer group/upload">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files || []);
+                                                    const currentImages = item.images || [];
+                                                    updateItem(index, 'images', [...currentImages, ...files]);
+                                                }}
+                                            />
+                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed transition-all hover:border-lime group-hover/upload:bg-lime/5"
+                                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                                <ImageIcon size={14} className="group-hover/upload:text-lime" />
+                                                <span className="text-xs font-bold uppercase tracking-wider group-hover/upload:text-main">Add Images</span>
+                                            </div>
+                                        </label>
+                                        
+                                        {item.images && item.images.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {item.images.map((file, fileIdx) => (
+                                                    <div key={fileIdx} className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border text-[10px]" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                                        <FileText size={12} className="text-lime" />
+                                                        <span className="truncate max-w-[100px]">{file.name}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newImages = item.images?.filter((_, i) => i !== fileIdx);
+                                                                updateItem(index, 'images', newImages);
+                                                            }}
+                                                            className="hover:text-red-400 p-0.5"
+                                                        >
+                                                            <X size={10} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="md:col-span-1 flex justify-end pt-5">

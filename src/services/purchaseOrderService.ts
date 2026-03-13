@@ -10,6 +10,7 @@ export interface PurchaseOrderItem {
     quantity: number;
     description?: string;
     unitPrice: number;
+    images?: File[]; // For frontend upload
 }
 
 export interface EditHistoryEntry {
@@ -79,7 +80,32 @@ export const getPurchaseOrderById = async (id: string): Promise<PurchaseOrder> =
 
 // POST create purchase order
 export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): Promise<PurchaseOrder> => {
-    const response = await api.post('/api/purchase-order', payload);
+    const formData = new FormData();
+
+    // Standard fields
+    formData.append('purpose', payload.purpose);
+    formData.append('supplier', payload.supplier);
+    if (payload.branch) formData.append('branch', payload.branch);
+    if (payload.paymentDate) formData.append('paymentDate', payload.paymentDate);
+
+    // Items array as stringified JSON (excluding images from the JSON)
+    const itemsForJson = payload.items.map(({ images, ...rest }) => rest);
+    formData.append('items', JSON.stringify(itemsForJson));
+
+    // Append images separately with specific key format
+    payload.items.forEach((item, index) => {
+        if (item.images && item.images.length > 0) {
+            item.images.forEach((file) => {
+                formData.append(`items[${index}][images]`, file);
+            });
+        }
+    });
+
+    const response = await api.post('/api/purchase-order', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
     return response.data;
 };
 
