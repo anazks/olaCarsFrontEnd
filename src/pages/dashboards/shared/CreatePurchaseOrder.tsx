@@ -336,18 +336,31 @@ const CreatePurchaseOrder = () => {
                                         </label>
                                         
                                         {item.images && item.images.length > 0 && (
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-wrap gap-3">
                                                 {item.images.map((file, fileIdx) => (
-                                                    <div key={fileIdx} className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border text-[10px]" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                                        <FileText size={12} className="text-lime" />
-                                                        <span className="truncate max-w-[100px]">{file.name}</span>
+                                                    <div key={fileIdx} className="relative group">
+                                                        <div className="w-16 h-16 rounded-lg border overflow-hidden transition-all group-hover:scale-105" 
+                                                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                            {file instanceof File ? (
+                                                                <img 
+                                                                    src={URL.createObjectURL(file)} 
+                                                                    alt={file.name}
+                                                                    className="w-full h-full object-cover"
+                                                                    onLoad={(e) => URL.revokeObjectURL((e.target as any).src)} // Clean up URL
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center">
+                                                                    <FileText size={16} className="text-lime" />
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => {
                                                                 const newImages = item.images?.filter((_, i) => i !== fileIdx);
                                                                 updateItem(index, 'images', newImages);
                                                             }}
-                                                            className="hover:text-red-400 p-0.5"
+                                                            className="absolute -top-1.5 -right-1.5 p-1 rounded-full bg-red-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10"
                                                         >
                                                             <X size={10} />
                                                         </button>

@@ -255,6 +255,22 @@ const PurchaseOrderDetail = () => {
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{item.itemName}</div>
                                             <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>{item.description}</div>
+                                            {item.images && item.images.length > 0 && (
+                                                <div className="flex gap-2 mt-3">
+                                                    {item.images.map((img, imgIdx) => (
+                                                        <div key={imgIdx} className="relative group cursor-pointer">
+                                                            <a href={typeof img === 'string' ? img : '#'} target="_blank" rel="noopener noreferrer">
+                                                                <img 
+                                                                    src={typeof img === 'string' ? img : URL.createObjectURL(img)} 
+                                                                    alt={`Item image ${imgIdx + 1}`}
+                                                                    className="w-12 h-12 object-cover rounded-lg border transition-all group-hover:scale-110" 
+                                                                    style={{ borderColor: 'var(--border-main)' }}
+                                                                />
+                                                            </a>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>${item.unitPrice.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>{item.quantity}</td>

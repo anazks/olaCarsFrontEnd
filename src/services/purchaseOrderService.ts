@@ -10,7 +10,7 @@ export interface PurchaseOrderItem {
     quantity: number;
     description?: string;
     unitPrice: number;
-    images?: File[]; // For frontend upload
+    images?: (File | string)[]; // File for upload, string for view
 }
 
 export interface EditHistoryEntry {
@@ -88,22 +88,28 @@ export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): 
     if (payload.branch) formData.append('branch', payload.branch);
     if (payload.paymentDate) formData.append('paymentDate', payload.paymentDate);
 
-    // Items array as stringified JSON (excluding images from the JSON)
-    const itemsForJson = payload.items.map(({ images, ...rest }) => rest);
-    formData.append('items', JSON.stringify(itemsForJson));
-
-    // Append images separately with specific key format
+    // Append item fields individually
     payload.items.forEach((item, index) => {
+        formData.append(`items[${index}][itemName]`, item.itemName);
+        formData.append(`items[${index}][quantity]`, String(item.quantity));
+        formData.append(`items[${index}][unitPrice]`, String(item.unitPrice));
+        if (item.description) {
+            formData.append(`items[${index}][description]`, item.description);
+        }
+
         if (item.images && item.images.length > 0) {
             item.images.forEach((file) => {
-                formData.append(`items[${index}][images]`, file);
+                // Ensure file is an actual File object during upload
+                if (file instanceof File) {
+                    formData.append(`items[${index}][images]`, file);
+                }
             });
         }
     });
 
     const response = await api.post('/api/purchase-order', formData, {
         headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': undefined, // Allow browser to set correct multipart boundary
         },
     });
     return response.data;
