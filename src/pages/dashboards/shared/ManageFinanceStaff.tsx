@@ -379,44 +379,48 @@ const ManageFinanceStaff = () => {
                                         placeholder="email@example.com"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Password {modalMode === 'edit' && '(Leave empty to keep current)'}
-                                    </label>
-                                    <input
-                                        type="password"
-                                        required={modalMode === 'create'}
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Phone Number
-                                    </label>
-                                    <PhoneInput
-                                        country={'in'}
-                                        value={formData.phone}
-                                        onChange={phone => setFormData({ ...formData, phone })}
-                                        containerStyle={{ width: '100%' }}
-                                        inputStyle={{
-                                            width: '100%',
-                                            height: '48px',
-                                            borderRadius: '12px',
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            color: 'var(--text-main)'
-                                        }}
-                                        buttonStyle={{
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            borderRadius: '12px 0 0 12px'
-                                        }}
-                                        dropdownStyle={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                    />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {modalMode === 'create' && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                Password
+                                            </label>
+                                            <input
+                                                type="password"
+                                                required
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                placeholder="••••••••"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                            Phone Number
+                                        </label>
+                                        <PhoneInput
+                                            country={'in'}
+                                            value={formData.phone}
+                                            onChange={phone => setFormData({ ...formData, phone })}
+                                            containerStyle={{ width: '100%' }}
+                                            inputStyle={{
+                                                width: '100%',
+                                                height: '48px',
+                                                borderRadius: '12px',
+                                                background: 'var(--bg-input)',
+                                                border: '1px solid var(--border-main)',
+                                                color: 'var(--text-main)'
+                                            }}
+                                            buttonStyle={{
+                                                background: 'var(--bg-input)',
+                                                border: '1px solid var(--border-main)',
+                                                borderRadius: '12px 0 0 12px'
+                                            }}
+                                            dropdownStyle={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>

@@ -311,20 +311,22 @@ const ManageFinancialAdmins = () => {
                                 />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                    Password {modalMode === 'edit' && <span className="opacity-50">(leave blank to keep unchanged)</span>}
-                                </label>
-                                <input
-                                    type="password"
-                                    required={modalMode === 'create'}
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    placeholder="••••••••"
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                />
-                            </div>
+                            {modalMode === 'create' && (
+                                <div className="space-y-1.5">
+                                    <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        placeholder="••••••••"
+                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            )}
 
                             {modalMode === 'edit' && (
                                 <div className="space-y-1.5">

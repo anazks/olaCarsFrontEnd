@@ -417,20 +417,22 @@ const ManageCountryManagers = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                    Password {modalMode === 'edit' && <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>(leave blank to keep unchanged)</span>}
-                                </label>
-                                <input
-                                    type="password"
-                                    required={modalMode === 'create'}
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    placeholder="••••••••"
-                                />
-                            </div>
+                            {modalMode === 'create' && (
+                                <div className="space-y-1.5">
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                        Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        required
+                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">

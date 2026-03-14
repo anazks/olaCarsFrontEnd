@@ -33,6 +33,7 @@ import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
+import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -136,6 +137,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="insurances" element={<ManageInsurances />} />
             </Route>
           </Route>
 
@@ -154,6 +156,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="insurances" element={<ManageInsurances />} />
             </Route>
           </Route>
 

@@ -227,6 +227,7 @@ export interface CreateVehiclePayload {
         odometer?: number;
         gpsSerialNumber?: string;
     };
+    insuranceId: string;
 }
 
 export interface ProgressVehiclePayload {

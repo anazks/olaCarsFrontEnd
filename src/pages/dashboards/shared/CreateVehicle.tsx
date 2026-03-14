@@ -6,6 +6,8 @@ import { getVehiclePurchaseOrders } from '../../../services/purchaseOrderService
 import type { PurchaseOrder } from '../../../services/purchaseOrderService';
 import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
+import { getEligibleInsurances } from '../../../services/insuranceService';
+import type { Insurance } from '../../../services/insuranceService';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,7 @@ const CreateVehicle = () => {
 
     // Dropdowns
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+    const [insurances, setInsurances] = useState<Insurance[]>([]);
     const [branchName, setBranchName] = useState<string>('');
 
     // Form state
@@ -63,13 +66,17 @@ const CreateVehicle = () => {
             fuelType: 'Petrol',
             transmission: 'Automatic',
         },
+        insuranceId: '',
     });
 
     const fetchData = useCallback(async () => {
         try {
-            const posData = await getVehiclePurchaseOrders();
-            console.log(posData, 'posData');
+            const [posData, insData] = await Promise.all([
+                getVehiclePurchaseOrders(),
+                getEligibleInsurances()
+            ]);
             setPurchaseOrders(posData.filter(po => po.status === 'APPROVED'));
+            setInsurances(insData);
         } catch (err) {
             console.error('Failed to fetch data:', err);
         }
@@ -161,6 +168,7 @@ const CreateVehicle = () => {
         if (!p.purchaseDate) return 'Purchase date is required';
         if (p.purchasePrice <= 0) return 'Purchase price must be greater than 0';
         if (!p.branch) return 'Branch is required (ensure it is set in PO)';
+        if (!formData.insuranceId) return 'Insurance selection is required';
 
         if (p.paymentMethod === 'Finance') {
             const f = p.financeDetails;
@@ -169,6 +177,7 @@ const CreateVehicle = () => {
         }
         return null;
     };
+
 
     const validateStep2 = (): string | null => {
         const b = formData.basicDetails;
@@ -371,6 +380,23 @@ const CreateVehicle = () => {
                                     style={inputStyle}
                                 >
                                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                            </FormField>
+
+                            <FormField label="Insurance Policy" required>
+                                <select
+                                    required
+                                    value={formData.insuranceId}
+                                    onChange={(e) => setFormData({ ...formData, insuranceId: e.target.value })}
+                                    className={inputClass}
+                                    style={inputStyle}
+                                >
+                                    <option value="">Select an active insurance</option>
+                                    {insurances.map(ins => (
+                                        <option key={ins._id} value={ins._id}>
+                                            {ins.policyNumber} — {ins.provider} ({ins.coverageType})
+                                        </option>
+                                    ))}
                                 </select>
                             </FormField>
                         </div>

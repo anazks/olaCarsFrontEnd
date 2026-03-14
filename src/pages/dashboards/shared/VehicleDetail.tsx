@@ -6,8 +6,10 @@ import {
     Zap, Wrench, Ban, ArrowRightLeft, Trash2, Clock, Send
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments } from '../../../services/vehicleService';
+import { getEligibleInsurances } from '../../../services/insuranceService';
 import { getUserRole } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
+import type { Insurance } from '../../../services/insuranceService';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -51,7 +53,6 @@ const DOC_FIELDS = [
     { key: 'numberPlateRear', label: 'Number Plate (Rear)' },
     { key: 'roadworthinessCertificate', label: 'Roadworthiness Certificate' },
     { key: 'transferOfOwnership', label: 'Transfer of Ownership' },
-    { key: 'policyDocument', label: 'Insurance Policy Doc' },
     { key: 'customsClearanceCertificate', label: 'Customs Clearance' },
     { key: 'importPermit', label: 'Import Permit' },
     { key: 'odometerPhoto', label: 'Odometer Photo' },
@@ -129,10 +130,20 @@ const VehicleDetail = () => {
 
     // Upload state
     const [uploadFiles, setUploadFiles] = useState<Record<string, File | File[]>>({});
+    const [eligibleInsurances, setEligibleInsurances] = useState<Insurance[]>([]);
     const [uploadLoading, setUploadLoading] = useState(false);
     const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const extPhotoRef = useRef<HTMLInputElement | null>(null);
     const intPhotoRef = useRef<HTMLInputElement | null>(null);
+
+    const fetchEligibleInsurances = useCallback(async () => {
+        try {
+            const data = await getEligibleInsurances();
+            setEligibleInsurances(data);
+        } catch (err) {
+            console.error('Failed to fetch eligible insurances:', err);
+        }
+    }, []);
 
     const fetchVehicle = useCallback(async () => {
         if (!id) return;
@@ -167,7 +178,10 @@ const VehicleDetail = () => {
         }
     }, [id]);
 
-    useEffect(() => { fetchVehicle(); }, [fetchVehicle]);
+    useEffect(() => { 
+        fetchVehicle(); 
+        fetchEligibleInsurances();
+    }, [fetchVehicle, fetchEligibleInsurances]);
 
     // ── Actions ────────────────────────────────────────────────────────────
     const handleProgress = async (targetStatus: VehicleStatus, updateData?: Record<string, any>) => {
@@ -437,79 +451,81 @@ const VehicleDetail = () => {
                 </div>
             )}
 
-            {/* DOCUMENTS REVIEW */}
-            {vehicle.status === 'DOCUMENTS REVIEW' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<FileText size={16} />} title="Legal Documents Review" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                            { k: 'registrationNumber', l: 'Registration Number', ph: 'GR-1234-24' },
-                            { k: 'registrationExpiry', l: 'Registration Expiry', t: 'date' },
-                            { k: 'roadTaxExpiry', l: 'Road Tax Expiry', t: 'date' },
-                            { k: 'roadworthinessExpiry', l: 'Roadworthiness Expiry', t: 'date' },
-                        ].map(f => (
-                            <div key={f.k} className="space-y-1.5">
-                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
-                                <input type={f.t || 'text'} placeholder={f.ph} value={legalDocs[f.k] || ''} onChange={e => setLegalDocs(p => ({ ...p, [f.k]: e.target.value }))} className={inputClass} style={inputStyle} />
-                            </div>
-                        ))}
-                    </div>
-                    <textarea placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
-                    <button onClick={() => handleProgress('INSURANCE VERIFICATION', { legalDocs })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Approve Documents</>}
-                    </button>
-                </div>
-            )}
-
             {/* INSURANCE VERIFICATION */}
             {vehicle.status === 'INSURANCE VERIFICATION' && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Shield size={16} />} title="Insurance Verification" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                            { k: 'insuranceType', l: 'Insurance Type', opts: ['Comprehensive', 'Third-Party', 'Fleet Policy'] },
-                            { k: 'providerName', l: 'Provider', ph: 'Star Assurance' },
-                            { k: 'policyNumber', l: 'Policy Number', ph: 'POL-2024-00123' },
-                            { k: 'startDate', l: 'Start Date', t: 'date' },
-                            { k: 'expiryDate', l: 'Expiry Date', t: 'date' },
-                            { k: 'premiumAmount', l: 'Premium', t: 'number' },
-                            { k: 'coverageAmount', l: 'Coverage', t: 'number' },
-                            { k: 'excessAmount', l: 'Excess', t: 'number' },
-                        ].map(f => (
-                            <div key={f.k} className="space-y-1.5">
-                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l} {['insuranceType', 'providerName', 'policyNumber', 'startDate', 'expiryDate'].includes(f.k) && <span className="text-red-500">*</span>}</label>
-                                {f.opts ? (
-                                    <select value={insurance[f.k] || f.opts[0]} onChange={e => setInsurance(p => ({ ...p, [f.k]: e.target.value }))} className={inputClass} style={inputStyle}>
-                                        {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                                    </select>
-                                ) : (
-                                    <input type={f.t || 'text'} placeholder={f.ph} value={insurance[f.k] || ''} onChange={e => setInsurance(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    {/* Importation toggle */}
-                    <div className="flex items-center gap-3 mt-4">
-                        <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
-                        <span className="text-sm" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
-                    </div>
-                    {importation.isImported && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
-                            {[
-                                { k: 'countryOfOrigin', l: 'Country of Origin' }, { k: 'shippingReference', l: 'Shipping Reference' },
-                                { k: 'portOfEntry', l: 'Port of Entry' }, { k: 'customsDeclarationNumber', l: 'Customs Declaration #' },
-                                { k: 'arrivalDate', l: 'Arrival Date', t: 'date' }, { k: 'shippingCost', l: 'Shipping Cost', t: 'number' },
-                                { k: 'customsDuty', l: 'Customs Duty', t: 'number' }, { k: 'portHandling', l: 'Port Handling', t: 'number' },
-                            ].map(f => (
-                                <div key={f.k} className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
-                                    <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
-                                </div>
-                            ))}
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Select an active insurance policy for this vehicle.</p>
+                    
+                    <div className="space-y-4 mt-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Select Policy *</label>
+                            <select 
+                                value={insurance.insuranceId || ''} 
+                                onChange={e => setInsurance(p => ({ ...p, insuranceId: e.target.value }))} 
+                                className={inputClass} 
+                                style={inputStyle}
+                            >
+                                <option value="">Select an Insurance Policy</option>
+                                {eligibleInsurances.map(ins => (
+                                    <option key={ins._id} value={ins._id}>
+                                        {ins.provider} - {ins.policyNumber} ({new Date(ins.expiryDate).toLocaleDateString()})
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                    )}
-                    <textarea placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
-                    <button onClick={() => handleProgress('INSPECTION REQUIRED', { insurancePolicy: { insuranceType: insurance.insuranceType || 'Comprehensive', ...insurance }, ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+
+                        {/* Policy Details Preview */}
+                        {insurance.insuranceId && (
+                            <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                {(() => {
+                                    const selected = eligibleInsurances.find(i => i._id === insurance.insuranceId);
+                                    if (!selected) return null;
+                                    return (
+                                        <div className="grid grid-cols-2 gap-4 text-xs">
+                                            <InfoRow label="Provider" value={selected.provider} />
+                                            <InfoRow label="Policy #" value={selected.policyNumber} />
+                                            <InfoRow label="Expiry" value={new Date(selected.expiryDate).toLocaleDateString()} />
+                                            <InfoRow label="Insured Value" value={selected.insuredValue} />
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
+                        {/* Importation toggle */}
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
+                            <span className="text-sm" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
+                        </div>
+
+                        {importation.isImported && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
+                                {[
+                                    { k: 'countryOfOrigin', l: 'Country of Origin' }, { k: 'shippingReference', l: 'Shipping Reference' },
+                                    { k: 'portOfEntry', l: 'Port of Entry' }, { k: 'customsDeclarationNumber', l: 'Customs Declaration #' },
+                                    { k: 'arrivalDate', l: 'Arrival Date', t: 'date' }, { k: 'shippingCost', l: 'Shipping Cost', t: 'number' },
+                                    { k: 'customsDuty', l: 'Customs Duty', t: 'number' }, { k: 'portHandling', l: 'Port Handling', t: 'number' },
+                                ].map(f => (
+                                    <div key={f.k} className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
+                                        <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <textarea placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-4`} style={inputStyle} />
+                    <button 
+                        onClick={() => handleProgress('INSPECTION REQUIRED', { 
+                            insuranceId: insurance.insuranceId, 
+                            ...(importation.isImported ? { importationDetails: importation } : {}) 
+                        })} 
+                        disabled={actionLoading || !insurance.insuranceId} 
+                        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50 mt-4" 
+                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                    >
                         {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Verify Insurance</>}
                     </button>
                 </div>
