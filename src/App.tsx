@@ -49,6 +49,7 @@ import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
 import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
+import Profile from './pages/dashboards/shared/Profile';
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -81,6 +82,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -99,6 +101,7 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -117,6 +120,7 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -138,6 +142,7 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="insurances" element={<ManageInsurances />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -157,6 +162,7 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="insurances" element={<ManageInsurances />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -169,6 +175,7 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 
@@ -182,6 +189,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 

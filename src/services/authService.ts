@@ -81,3 +81,11 @@ export const loginByRole = async (
 
     return { ...data, token };
 };
+
+export const changePassword = async (userId: string, data: any) => {
+    return await api.post(`api/user/${userId}/change-password`, data);
+};
+
+export const updateUserProfile = async (data: any) => {
+    return await api.put('api/user/update', data);
+};

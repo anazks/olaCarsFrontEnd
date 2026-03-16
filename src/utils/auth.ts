@@ -39,6 +39,7 @@ export const setUser = (user: any): void => {
 
 export const getUser = (): any | null => {
     const user = localStorage.getItem('user');
+    console.log(user, 'user');
     try {
         return user ? JSON.parse(user) : null;
     } catch (e) {

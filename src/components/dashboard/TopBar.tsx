@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { Search, Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getUser, getUserRole } from '../../utils/auth';
+import { API_ROLE_TO_ROUTE } from '../../services/authService';
 
 interface TopBarProps {
     toggleSidebar: () => void;
@@ -8,7 +10,9 @@ interface TopBarProps {
 
 const TopBar = ({ }: TopBarProps) => {
     const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
     const user = getUser();
+
     const role = getUserRole();
 
     const getFormattedRole = (roleStr: string | null) => {
@@ -46,6 +50,15 @@ const TopBar = ({ }: TopBarProps) => {
             .join('')
             .toUpperCase()
             .slice(0, 2);
+    };
+
+    const handleProfileClick = () => {
+        if (role) {
+            const basePath = API_ROLE_TO_ROUTE[role];
+            if (basePath) {
+                navigate(`${basePath}/profile`);
+            }
+        }
     };
 
     return (
@@ -97,7 +110,10 @@ const TopBar = ({ }: TopBarProps) => {
                 <div className="w-px h-8" style={{ background: 'var(--border-main)' }} />
 
                 {/* User Profile */}
-                <div className="flex items-center gap-3 cursor-pointer group">
+                <div 
+                    onClick={handleProfileClick}
+                    className="flex items-center gap-3 cursor-pointer group hover:opacity-80 transition-opacity"
+                >
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>
                             {user?.fullName || user?.email?.split('@')[0] || 'Admin User'}
