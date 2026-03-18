@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useScrollReveal } from './hooks/useScrollReveal';
+import { isTokenValid, logout, getToken } from './utils/auth';
 import AdminLogin from './pages/admin/AdminLogin';
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -51,9 +53,28 @@ import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
 import Profile from './pages/dashboards/shared/Profile';
 
+// Finance Pages
+import TaxManagement from './pages/dashboards/finance/TaxManagement';
+import ChartOfAccounts from './pages/dashboards/finance/ChartOfAccounts';
+import GeneralLedger from './pages/dashboards/finance/GeneralLedger';
+import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
+
 function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
+
+  useEffect(() => {
+    // Check token validity every 30 seconds
+    const interval = setInterval(() => {
+      const token = getToken();
+      if (token && !isTokenValid()) {
+        console.warn('[App] Session expired - logging out');
+        logout();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <ThemeProvider>
@@ -83,6 +104,10 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="taxes" element={<TaxManagement />} />
+              <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
             </Route>
           </Route>
 
@@ -121,6 +146,10 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="taxes" element={<TaxManagement />} />
+              <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
             </Route>
           </Route>
 
@@ -190,6 +219,10 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="taxes" element={<TaxManagement />} />
+              <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
             </Route>
           </Route>
 

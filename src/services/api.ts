@@ -22,21 +22,18 @@ api.interceptors.request.use(
     }
 );
 
+import { logout } from '../utils/auth';
+
 // Response Interceptor: Handle global errors like 401 Unauthorized
 api.interceptors.response.use(
     (response) => {
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error.response && error.response.status === 403) {
             // Token is expired or invalid
-            console.warn('Unauthorized access - redirecting to login');
-            localStorage.removeItem('token');
-
-            // Redirect to login page if we aren't already there
-            if (window.location.pathname !== '/admin/login') {
-                window.location.href = '/admin/login';
-            }
+            console.warn('Forbidden access - redirecting to login');
+            logout();
         }
         return Promise.reject(error);
     }

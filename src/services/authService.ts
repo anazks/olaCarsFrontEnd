@@ -35,11 +35,15 @@ export const UI_ROLE_TO_API_ROLE: Record<string, string> = {
 export const API_ROLE_TO_ROUTE: Record<string, string> = {
     'admin': '/admin/admin',
     'operationaladmin': '/admin/operational-admin',
+    'operationadmin': '/admin/operational-admin',
     'financialadmin': '/admin/financial-admin',
+    'financeadmin': '/admin/financial-admin',
     'countrymanager': '/admin/country-manager',
     'branchmanager': '/admin/branch-manager',
     'branchopstaff': '/admin/branch-op-staff',
+    'operationstaff': '/admin/branch-op-staff',
     'branchfinstaff': '/admin/branch-fin-staff',
+    'financestaff': '/admin/branch-fin-staff',
 };
 
 export interface LoginCredentials {

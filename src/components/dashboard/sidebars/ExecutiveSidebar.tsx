@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -55,6 +55,13 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Calendar size={20} />, label: 'Import Records' },
         { icon: <FileText size={20} />, label: 'Assignments' },
         { icon: <ShieldCheck size={20} />, label: 'Insurance & Claims' },
+    ];
+
+    const financeItems = [
+        { icon: <BarChart3 size={20} />, label: 'Finance Dashboard', path: '/admin/admin/finance-dashboard' },
+        { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/admin/taxes' },
+        { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/admin/chart-of-accounts' },
+        { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/admin/ledger' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -141,6 +148,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
                 <SidebarSection title="Staff Management" items={navItems} />
+                <SidebarSection title="Finance" items={financeItems} />
                 <SidebarSection title="Monitoring" items={monitoringItems} />
                 <SidebarSection title="Alert Center" items={alertItems} />
                 <SidebarSection title="Tasks" items={taskItems} />
@@ -150,6 +158,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             {/* Footer */}
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
                 <div
+                    onClick={() => navigate('profile')}
                     className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}

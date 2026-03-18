@@ -33,6 +33,14 @@ export const removeToken = (): void => {
     localStorage.removeItem('user');
 };
 
+export const logout = (): void => {
+    removeToken();
+    // Use window.location.href for a hard redirect to clear all states
+    if (window.location.pathname !== '/admin/login') {
+        window.location.href = '/admin/login';
+    }
+};
+
 export const setUser = (user: any): void => {
     localStorage.setItem('user', JSON.stringify(user));
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car } from 'lucide-react';
+import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface FinancialAdminSidebarProps {
@@ -32,6 +32,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     ];
 
     const financeItems = [
+        { icon: <BarChart3 size={20} />, label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard' },
+        { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/financial-admin/taxes' },
+        { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/financial-admin/chart-of-accounts' },
+        { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/financial-admin/ledger' },
         { icon: <DollarSign size={20} />, label: 'Revenue Streams' },
         { icon: <PieChart size={20} />, label: 'Profit Analysis' },
         { icon: <Receipt size={20} />, label: 'Billing & Invoices' },
@@ -127,6 +131,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
                 <div
+                    onClick={() => navigate('profile')}
                     className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}

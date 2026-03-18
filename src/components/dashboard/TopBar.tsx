@@ -101,7 +101,9 @@ const TopBar = ({ }: TopBarProps) => {
                 </button>
 
                 <button
+                    onClick={handleProfileClick}
                     className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
+                    title="Settings"
                 >
                     <Settings size={20} />
                 </button>
