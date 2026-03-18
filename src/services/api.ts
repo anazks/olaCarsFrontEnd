@@ -30,10 +30,20 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 403) {
-            // Token is expired or invalid
-            console.warn('Forbidden access - redirecting to login');
+        const status = error.response?.status;
+        const errorData = error.response?.data;
+        const errorCode = errorData?.code || errorData?.error;
+
+        if (status === 401) {
+            // Missing token
+            console.warn('Unauthorized access - missing token. Redirecting to login');
             logout();
+        } else if (status === 403) {
+            // Token is expired or invalid
+            if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN') {
+                console.warn(`Forbidden access - ${errorCode}. Redirecting to login`);
+                logout();
+            }
         }
         return Promise.reject(error);
     }
