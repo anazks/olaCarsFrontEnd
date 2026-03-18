@@ -36,6 +36,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/financial-admin/taxes' },
         { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/financial-admin/chart-of-accounts' },
         { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/financial-admin/ledger' },
+        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/financial-admin/purchase-bills' },
         { icon: <DollarSign size={20} />, label: 'Revenue Streams' },
         { icon: <PieChart size={20} />, label: 'Profit Analysis' },
         { icon: <Receipt size={20} />, label: 'Billing & Invoices' },

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { useScrollReveal } from './hooks/useScrollReveal';
 import { isTokenValid, logout, getToken } from './utils/auth';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -41,6 +42,7 @@ import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
 import CreatePurchaseOrder from './pages/dashboards/shared/CreatePurchaseOrder';
 import PurchaseOrderDetail from './pages/dashboards/shared/PurchaseOrderDetail';
+import PurchaseBillList from './pages/dashboards/shared/PurchaseBillList';
 
 // Vehicle Pages
 import VehicleList from './pages/dashboards/shared/VehicleList';
@@ -78,6 +80,26 @@ function App() {
 
   return (
     <ThemeProvider>
+      <Toaster 
+        position="top-right" 
+        reverseOrder={false} 
+        toastOptions={{
+          style: {
+            fontSize: '13px',
+            fontFamily: "'Inter', sans-serif",
+            borderRadius: '12px',
+            background: 'var(--bg-card)',
+            color: 'var(--text-main)',
+            border: '1px solid var(--border-main)',
+          },
+          success: {
+            iconTheme: {
+              primary: 'var(--brand-lime)',
+              secondary: 'var(--brand-black)',
+            },
+          },
+        }}
+      />
       <Router>
         <Routes>
           {/* Admin Login Gateway */}
@@ -98,6 +120,7 @@ function App() {
               <Route path="po-threshold" element={<POThresholdPage />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
@@ -141,6 +164,7 @@ function App() {
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
@@ -164,6 +188,7 @@ function App() {
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/create" element={<CreateVehicle />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
@@ -184,6 +209,7 @@ function App() {
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/create" element={<CreateVehicle />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
@@ -213,6 +239,7 @@ function App() {
               <Route index element={<BranchFinStaffDashboard />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />

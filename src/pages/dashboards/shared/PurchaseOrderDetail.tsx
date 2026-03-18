@@ -10,9 +10,10 @@ import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, UserCheck, History,
-    AlertCircle, Package
+    AlertCircle, Package, Receipt
 } from 'lucide-react';
 import ApproveRejectModal from './ApproveRejectModal';
+import PurchaseBillModal from './PurchaseBillModal';
 
 const PurchaseOrderDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ const PurchaseOrderDetail = () => {
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalAction, setModalAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+    const [isBillModalOpen, setIsBillModalOpen] = useState(false);
 
     const fetchPO = useCallback(async () => {
         if (!id) return;
@@ -115,6 +117,8 @@ const PurchaseOrderDetail = () => {
         userLevel > creatorLevel &&
         (po.totalAmount <= poThreshold || userLevel >= 5);
 
+    const canPay = po.status === 'APPROVED' && !po.isBilled;
+
     const statusColors = {
         WAITING: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         APPROVED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
@@ -140,6 +144,9 @@ const PurchaseOrderDetail = () => {
                                 style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
                                 {s.icon} {po.status}
                             </div>
+                            {po.isBilled && (
+                                <span className="text-[10px] px-3 py-1 rounded-full bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20 font-black tracking-widest uppercase">BILLED</span>
+                            )}
                             {po.isEdited && (
                                 <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold">EDITED</span>
                             )}
@@ -163,6 +170,18 @@ const PurchaseOrderDetail = () => {
                             style={{ background: '#C8E600', color: '#111' }}
                         >
                             <CheckCircle size={18} /> Approve Order
+                        </button>
+                    </div>
+                )}
+
+                {canPay && (
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={() => setIsBillModalOpen(true)}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
+                            style={{ background: '#C8E600', color: '#111' }}
+                        >
+                            <Receipt size={18} /> Register Bill / Pay
                         </button>
                     </div>
                 )}
@@ -354,6 +373,15 @@ const PurchaseOrderDetail = () => {
                     )}
                 </div>
             </div>
+
+            <PurchaseBillModal
+                isOpen={isBillModalOpen}
+                onClose={() => setIsBillModalOpen(false)}
+                onSuccess={fetchPO}
+                poId={po._id}
+                poNumber={po.purchaseOrderNumber}
+                totalAmount={po.totalAmount}
+            />
 
             <ApproveRejectModal
                 isOpen={isModalOpen}

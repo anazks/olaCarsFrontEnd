@@ -71,11 +71,11 @@ const CreateVehicle = () => {
 
     const fetchData = useCallback(async () => {
         try {
-            const [posData, insData] = await Promise.all([
-                getVehiclePurchaseOrders(),
+            const [posResponse, insData] = await Promise.all([
+                getVehiclePurchaseOrders(1, 100),
                 getEligibleInsurances()
             ]);
-            setPurchaseOrders(posData.filter(po => po.status === 'APPROVED'));
+            setPurchaseOrders(posResponse.data.filter(po => po.status === 'APPROVED'));
             setInsurances(insData);
         } catch (err) {
             console.error('Failed to fetch data:', err);

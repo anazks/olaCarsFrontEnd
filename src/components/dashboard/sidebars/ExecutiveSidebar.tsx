@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -62,6 +62,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/admin/taxes' },
         { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/admin/chart-of-accounts' },
         { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/admin/ledger' },
+        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/admin/purchase-bills' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

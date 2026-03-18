@@ -19,6 +19,18 @@ export interface EditHistoryEntry {
     changeSummary: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
 export interface PurchaseOrder {
     _id: string;
     purchaseOrderNumber: string;
@@ -35,6 +47,8 @@ export interface PurchaseOrder {
     approvedBy?: string;
     approverRole?: string;
     isEdited: boolean;
+    isBilled?: boolean;
+    isUsed?: boolean;
     editHistory: EditHistoryEntry[];
     createdAt: string;
     updatedAt: string;
@@ -60,16 +74,41 @@ export interface UpdatePurchaseOrderPayload {
     paymentDate?: string;
 }
 
-// GET all purchase orders
-export const getAllPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-    const response = await api.get('/api/purchase-order');
-    return response.data.data;
+export interface PurchaseOrderFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: POStatus;
+    supplier?: string;
+    branch?: string;
+    isUsed?: boolean;
+    isBilled?: boolean;
+    sortBy?: 'createdAt' | 'totalAmount' | 'purchaseOrderDate';
+    sortOrder?: 'asc' | 'desc';
+}
+
+// GET all purchase orders with filters, sorting, and pagination
+export const getAllPurchaseOrders = async (filters: PurchaseOrderFilters = {}): Promise<PaginatedResponse<PurchaseOrder>> => {
+    const response = await api.get('/api/purchase-order', {
+        params: filters
+    });
+    return response.data;
 };
 
 // GET purchase orders filtered by purpose=Vehicle (for vehicle onboarding)
-export const getVehiclePurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-    const response = await api.get('/api/purchase-order?purpose=Vehicle&isUsed=false');
-    return response.data.data;
+export const getVehiclePurchaseOrders = async (page = 1, limit = 10): Promise<PaginatedResponse<PurchaseOrder>> => {
+    const response = await api.get('/api/purchase-order', {
+        params: { purpose: 'Vehicle', isUsed: false, page, limit }
+    });
+    return response.data;
+};
+
+// GET purchase orders eligible for billing
+export const getEligiblePurchaseOrders = async (page = 1, limit = 10): Promise<PaginatedResponse<PurchaseOrder>> => {
+    const response = await api.get('/api/purchase-order/eligible-for-billing', {
+        params: { page, limit }
+    });
+    return response.data;
 };
 
 // GET single purchase order

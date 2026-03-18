@@ -217,7 +217,11 @@ const CreateDriver = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`flex items-center gap-2 px-12 py-3 bg-brand-lime text-black font-bold rounded-xl transition-all shadow-lg active:scale-95 ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-brand-lime/20'}`}
+                        className={`flex items-center gap-2 px-12 py-3 font-bold rounded-xl transition-all shadow-lg active:scale-95 border-none ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                        style={{ 
+                            backgroundColor: 'var(--brand-lime)', 
+                            color: 'var(--brand-black)' 
+                        }}
                     >
                         {loading ? 'Submitting...' : 'Initiate Application'}
                         {!loading && <ChevronRight size={20} />}

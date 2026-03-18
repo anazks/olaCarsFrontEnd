@@ -64,7 +64,11 @@ const DriverList = () => {
                 </div>
                 <button
                     onClick={() => navigate('new')}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-lime text-black font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
+                    style={{ 
+                        backgroundColor: 'var(--brand-lime)', 
+                        color: 'var(--brand-black)' 
+                    }}
                 >
                     <Plus size={20} />
                     New Application

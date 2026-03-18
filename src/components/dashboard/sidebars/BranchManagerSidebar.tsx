@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Clock, ClipboardList, Wallet, BellRing, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, ClipboardList, Wallet, BellRing, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface BranchManagerSidebarProps {
@@ -25,6 +25,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/branch-manager/manage-suppliers' },
         { icon: <Shield size={20} />, label: 'Insurance Management', path: '/admin/branch-manager/insurances' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-manager/purchase-orders' },
+        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/branch-manager/purchase-bills' },
         { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/branch-manager/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-manager/drivers' },
     ];

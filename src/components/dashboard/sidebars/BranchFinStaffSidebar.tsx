@@ -35,6 +35,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
         { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/branch-fin-staff/taxes' },
         { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/branch-fin-staff/chart-of-accounts' },
         { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/branch-fin-staff/ledger' },
+        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/branch-fin-staff/purchase-bills' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

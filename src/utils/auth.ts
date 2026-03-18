@@ -33,8 +33,11 @@ export const removeToken = (): void => {
     localStorage.removeItem('user');
 };
 
+import toast from 'react-hot-toast';
+
 export const logout = (): void => {
     removeToken();
+    toast.success('Logged out successfully');
     // Use window.location.href for a hard redirect to clear all states
     if (window.location.pathname !== '/admin/login') {
         window.location.href = '/admin/login';

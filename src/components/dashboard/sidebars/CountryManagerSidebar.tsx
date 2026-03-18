@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Map, FileCheck, Building2, TrendingUp, AlertOctagon, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield } from 'lucide-react';
+import { LayoutDashboard, Map, FileCheck, Building2, TrendingUp, AlertOctagon, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface CountryManagerSidebarProps {
@@ -27,6 +27,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/country-manager/manage-suppliers' },
         { icon: <Shield size={20} />, label: 'Insurance Management', path: '/admin/country-manager/insurances' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/country-manager/purchase-orders' },
+        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/country-manager/purchase-bills' },
         { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/country-manager/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/country-manager/drivers' },
     ];
