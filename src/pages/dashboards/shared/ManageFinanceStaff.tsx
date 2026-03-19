@@ -8,10 +8,13 @@ import {
     type FinanceStaff,
     type CreateFinanceStaffPayload,
     type UpdateFinanceStaffPayload,
+    type StaffFilters,
+    type PaginationMetadata
 } from '../../../services/financeStaffService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -20,7 +23,23 @@ const ManageFinanceStaff = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+    // Filter State
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<FinanceStaff['status'] | 'ALL'>('ALL');
+    const [branchFilter, setBranchFilter] = useState('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState<string>('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Pagination State
+    const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(10);
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -44,22 +63,39 @@ const ManageFinanceStaff = () => {
         setLoading(true);
         setError(null);
         try {
-            const [staffData, branchesData] = await Promise.all([
-                getAllFinanceStaff(),
+            const filters: StaffFilters = {
+                page: currentPage,
+                limit: limit,
+                sortBy,
+                sortOrder
+            };
+
+            if (searchQuery.trim()) filters.search = searchQuery.trim();
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (branchFilter !== 'ALL') filters.branchId = branchFilter;
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
+
+            const [staffRes, branchesData] = await Promise.all([
+                getAllFinanceStaff(filters),
                 getAllBranches()
             ]);
-            setFinanceStaff(Array.isArray(staffData) ? staffData : []);
+            setFinanceStaff(staffRes.data || []);
+            setPagination(staffRes.pagination);
             setBranches(Array.isArray(branchesData) ? branchesData : []);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch data');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentPage, limit, searchQuery, statusFilter, branchFilter, startDate, endDate, sortBy, sortOrder]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const timer = setTimeout(() => {
+            fetchData();
+        }, searchQuery ? 500 : 0);
+        return () => clearTimeout(timer);
+    }, [fetchData, searchQuery]);
 
     const openCreateModal = () => {
         setModalMode('create');
@@ -150,10 +186,34 @@ const ManageFinanceStaff = () => {
         }
     };
 
-    const filteredStaff = financeStaff.filter(staff =>
-        staff.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        staff.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const handlePageChange = (newPage: number) => {
+        if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+        setCurrentPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <div className="opacity-20 transition-opacity group-hover:opacity-50"><ChevronDown size={14} /></div>;
+        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} className="text-lime" style={{ color: 'var(--brand-lime)' }} /></div>;
+    };
+
+    const FilterLabel = ({ label }: { label: string }) => (
+        <label className="block text-[10px] uppercase font-black tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-dim)' }}>
+            {label}
+        </label>
     );
+
+    const filteredStaff = financeStaff; // Now handled server-side
 
     return (
         <div className="p-4 sm:p-6 transition-colors duration-300" style={{ background: 'var(--bg-main)' }}>
@@ -175,6 +235,17 @@ const ManageFinanceStaff = () => {
                         disabled={loading}
                     >
                         <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
+                        style={{ 
+                            background: showAdvancedFilters ? '' : 'var(--bg-card)', 
+                            borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)', 
+                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
+                        }}
+                    >
+                        <Filter size={18} /> Filters
                     </button>
                     <button
                         onClick={openCreateModal}
@@ -202,19 +273,77 @@ const ManageFinanceStaff = () => {
                 </div>
             </div>
 
-            {/* Toolbar */}
-            <div className="p-4 rounded-2xl border mb-6 flex flex-col md:flex-row gap-4 transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-dim)' }} />
+            {/* Toolbar / Filters */}
+            <div className="p-6 rounded-2xl border mb-8 space-y-4 transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={20} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="text"
                         placeholder="Search by name or email..."
-                        className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
                     />
                 </div>
+
+                {/* Advanced Filters */}
+                {showAdvancedFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t transition-all animate-in slide-in-from-top-2 duration-300" style={{ borderColor: 'var(--border-main)' }}>
+                        <div>
+                            <FilterLabel label="Account Status" />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="SUSPENDED">Suspended</option>
+                                <option value="LOCKED">Locked</option>
+                            </select>
+                        </div>
+                        <div>
+                            <FilterLabel label="Assigned Branch" />
+                            <select
+                                value={branchFilter}
+                                onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Branches</option>
+                                {branches.map(b => (
+                                    <option key={b._id} value={b._id}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <FilterLabel label="Joined From" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                        <div>
+                            <FilterLabel label="Joined To" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Table */}
@@ -222,11 +351,17 @@ const ManageFinanceStaff = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-bottom text-xs uppercase font-black tracking-wider transition-colors" style={{ background: 'rgba(0,0,0,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                <th className="px-6 py-4">Full Name</th>
-                                <th className="px-6 py-4">Contact Info</th>
+                            <tr className="border-bottom text-[10px] uppercase font-black tracking-wider transition-colors" style={{ background: 'rgba(0,0,0,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('fullName')}>
+                                    <div className="flex items-center gap-2">Full Name <SortIcon field="fullName" /></div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('email')}>
+                                    <div className="flex items-center gap-2">Contact Info <SortIcon field="email" /></div>
+                                </th>
                                 <th className="px-6 py-4">Branch</th>
-                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                    <div className="flex items-center gap-2">Status <SortIcon field="status" /></div>
+                                </th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -303,6 +438,49 @@ const ManageFinanceStaff = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.01)' }}>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span style={{ color: 'var(--text-main)' }}>{financeStaff.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> staff
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {[...Array(pagination.totalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${currentPage === i + 1 ? 'shadow-lg' : 'hover:bg-black/5'}`}
+                                        style={{ 
+                                            background: currentPage === i + 1 ? 'var(--brand-lime)' : 'transparent',
+                                            color: currentPage === i + 1 ? '#000' : 'var(--text-main)',
+                                            border: currentPage === i + 1 ? 'none' : '1px solid var(--border-main)'
+                                        }}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Error Toast */}

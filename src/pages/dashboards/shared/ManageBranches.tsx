@@ -18,7 +18,24 @@ const ManageBranches = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Server-side filtering & pagination state
+    const [filters, setFilters] = useState({
+        page: 1,
+        limit: 10,
+        search: '',
+        status: '' as any,
+        country: '',
+        sortBy: 'createdAt',
+        sortOrder: 'desc' as 'asc' | 'desc'
+    });
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+    });
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -52,18 +69,29 @@ const ManageBranches = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllBranches();
-            setBranches(Array.isArray(data) ? data : []);
+            const response = await getAllBranches(filters);
+            if (response.success) {
+                setBranches(response.data);
+                setPagination(response.pagination);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch branches');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchBranches();
     }, [fetchBranches]);
+
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value,
+            page: 1 // Reset to first page on filter change
+        }));
+    };
 
     const openCreateModal = () => {
         setModalMode('create');
@@ -151,13 +179,12 @@ const ManageBranches = () => {
         }
     };
 
-    const filteredBranches = branches.filter(
-        (b) =>
-            b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (b.country && b.country.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const handlePageChange = (newPage: number) => {
+        setFilters(prev => ({
+            ...prev,
+            page: newPage
+        }));
+    };
 
     const statusColor = (s: string) => {
         switch (s) {
@@ -197,17 +224,85 @@ const ManageBranches = () => {
                 </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                    type="text"
-                    placeholder="Search by name, code, or city..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                />
+            {/* Search and Filters */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder="Search by name, code, city, state..."
+                            value={filters.search}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-300 border ${
+                            showAdvancedFilters 
+                            ? 'border-lime text-lime bg-lime/10' 
+                            : 'border-transparent text-gray-400 bg-white/5 hover:bg-white/10'
+                        }`}
+                        style={{ borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)' }}
+                    >
+                        <Plus size={18} className={`transition-transform duration-300 ${showAdvancedFilters ? 'rotate-45' : ''}`} />
+                        Advanced Filters
+                    </button>
+                </div>
+
+                {showAdvancedFilters && (
+                    <div 
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 rounded-2xl border animate-in slide-in-from-top-4 duration-300"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                    >
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <select
+                                value={filters.status}
+                                onChange={(e) => handleFilterChange('status', e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Country</label>
+                            <select
+                                value={filters.country}
+                                onChange={(e) => handleFilterChange('country', e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Countries</option>
+                                {countries.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-end">
+                            <button
+                                onClick={() => setFilters({
+                                    page: 1,
+                                    limit: 10,
+                                    search: '',
+                                    status: '',
+                                    country: '',
+                                    sortBy: 'createdAt',
+                                    sortOrder: 'desc'
+                                })}
+                                className="w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border border-dashed transition-all hover:bg-white/5"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                Reset All Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Error banner */}
@@ -224,77 +319,122 @@ const ManageBranches = () => {
                         <div className="flex items-center justify-center py-20">
                             <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                         </div>
-                    ) : filteredBranches.length === 0 ? (
+                    ) : branches.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Building2 size={48} className="mx-auto mb-4 opacity-30" />
                             <p className="text-lg font-medium">No branches found</p>
-                            <p className="text-sm mt-1">Click "Add Branch" to create one</p>
+                            <p className="text-sm mt-1">Try adjusting your filters or click "Add Branch" to create one</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch Info</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Location</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredBranches.map((branch) => {
-                                    const sc = statusColor(branch.status);
-                                    return (
-                                        <tr
-                                            key={branch._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors"
-                                            style={{ borderColor: 'var(--border-main)' }}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold font-medium" style={{ color: 'var(--text-main)' }}>{branch.name}</div>
-                                                <div className="text-xs" style={{ color: '#C8E600' }}>{branch.code}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-start gap-2 max-w-[250px]">
-                                                    <MapPin size={14} className="mt-1 flex-shrink-0" style={{ color: 'var(--text-dim)' }} />
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm line-clamp-1" style={{ color: 'var(--text-main)' }}>{branch.address}</span>
-                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}, {branch.country}</span>
+                        <>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch Info</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Location</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {branches.map((branch) => {
+                                        const sc = statusColor(branch.status);
+                                        return (
+                                            <tr
+                                                key={branch._id}
+                                                className="border-b last:border-0 hover:bg-white/5 transition-colors"
+                                                style={{ borderColor: 'var(--border-main)' }}
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                                        {branch.name}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{branch.email}</div>
-                                                <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.phone}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
-                                                    {branch.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => openEditModal(branch)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
-                                                        style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
-                                                    >
-                                                        <Pencil size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(branch)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
-                                                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                                    <div className="text-xs font-mono" style={{ color: '#C8E600' }}>{branch.code}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-start gap-2 max-w-[250px]">
+                                                        <MapPin size={14} className="mt-1 flex-shrink-0" style={{ color: 'var(--text-dim)' }} />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm line-clamp-1" style={{ color: 'var(--text-main)' }}>{branch.address}</span>
+                                                            <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}, {branch.country}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm" style={{ color: 'var(--text-main)' }}>{branch.email}</div>
+                                                    <div className="text-xs font-mono" style={{ color: 'var(--text-dim)' }}>{branch.phone}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
+                                                        {branch.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 uppercase">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => openEditModal(branch)}
+                                                            className="p-2 rounded-xl transition-all cursor-pointer hover:bg-blue-500/20 active:scale-95"
+                                                            style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
+                                                        >
+                                                            <Pencil size={15} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteTarget(branch)}
+                                                            className="p-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/20 active:scale-95"
+                                                            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination */}
+                            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                    Showing <span style={{ color: 'var(--text-main)' }}>{branches.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> branches
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        {[...Array(pagination.totalPages)].map((_, i) => (
+                                            <button
+                                                key={i + 1}
+                                                onClick={() => handlePageChange(i + 1)}
+                                                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
+                                                style={{
+                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
+                                                }}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        disabled={filters.page === pagination.totalPages}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

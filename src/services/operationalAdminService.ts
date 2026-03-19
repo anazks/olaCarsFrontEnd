@@ -15,6 +15,30 @@ export interface OperationalAdmin {
     updatedAt?: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface AdminFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    role?: string;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: 'fullName' | 'createdAt' | 'email';
+    sortOrder?: 'asc' | 'desc';
+}
+
 export interface CreateOperationalAdminPayload {
     fullName: string;
     email: string;
@@ -30,10 +54,12 @@ export interface UpdateOperationalAdminPayload {
     twoFactorEnabled?: boolean;
 }
 
-// GET all operational admins
-export const getAllOperationalAdmins = async (): Promise<OperationalAdmin[]> => {
-    const response = await api.get('/api/operational-admin');
-    return response.data.data;
+// GET all operational admins with filters, sorting, and pagination
+export const getAllOperationalAdmins = async (filters: AdminFilters = {}): Promise<PaginatedResponse<OperationalAdmin>> => {
+    const response = await api.get('/api/operational-admin', {
+        params: filters
+    });
+    return response.data;
 };
 
 // POST create a new operational admin

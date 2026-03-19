@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, AlertTriangle, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     getAllOperationalAdmins,
     createOperationalAdmin,
@@ -8,15 +8,38 @@ import {
     type OperationalAdmin,
     type CreateOperationalAdminPayload,
     type UpdateOperationalAdminPayload,
+    type AdminFilters,
+    type PaginationMetadata
 } from '../../../services/operationalAdminService';
 
 type ModalMode = 'create' | 'edit' | null;
+
+const FilterLabel = ({ label }: { label: string }) => (
+    <label className="block text-[10px] uppercase font-black tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-dim)' }}>
+        {label}
+    </label>
+);
 
 const ManageOperationalAdmins = () => {
     const [admins, setAdmins] = useState<OperationalAdmin[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+    // Filter State
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<OperationalAdmin['status'] | 'ALL'>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState<AdminFilters['sortBy']>('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Pagination State
+    const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(10);
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -33,18 +56,34 @@ const ManageOperationalAdmins = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllOperationalAdmins();
-            setAdmins(Array.isArray(data) ? data : []);
+            const filters: AdminFilters = {
+                page: currentPage,
+                limit: limit,
+                sortBy,
+                sortOrder
+            };
+
+            if (searchQuery.trim()) filters.search = searchQuery.trim();
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
+
+            const response = await getAllOperationalAdmins(filters);
+            setAdmins(response.data || []);
+            setPagination(response.pagination);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch operational admins');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentPage, limit, searchQuery, statusFilter, startDate, endDate, sortBy, sortOrder]);
 
     useEffect(() => {
-        fetchAdmins();
-    }, [fetchAdmins]);
+        const timer = setTimeout(() => {
+            fetchAdmins();
+        }, searchQuery ? 500 : 0);
+        return () => clearTimeout(timer);
+    }, [fetchAdmins, searchQuery]);
 
     const openCreateModal = () => {
         setModalMode('create');
@@ -120,11 +159,26 @@ const ManageOperationalAdmins = () => {
         }
     };
 
-    const filteredAdmins = admins.filter(
-        (a) =>
-            a.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            a.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const handlePageChange = (newPage: number) => {
+        if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const handleSort = (field: AdminFilters['sortBy']) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+        setCurrentPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: AdminFilters['sortBy'] }) => {
+        if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
+        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: 'var(--brand-lime)' }} /></div>;
+    };
 
     const statusColor = (s: string) => {
         switch (s) {
@@ -152,7 +206,18 @@ const ManageOperationalAdmins = () => {
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
+                        style={{ 
+                            background: showAdvancedFilters ? '' : 'var(--bg-card)', 
+                            borderColor: showAdvancedFilters ? '' : 'var(--border-main)', 
+                            color: showAdvancedFilters ? '' : 'var(--text-main)' 
+                        }}
+                    >
+                        <Filter size={16} /> Filters
                     </button>
                     <button
                         onClick={openCreateModal}
@@ -164,17 +229,83 @@ const ManageOperationalAdmins = () => {
                 </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                />
+            {/* Filter Section */}
+            <div className="space-y-4 p-6 rounded-2xl border bg-white/[0.02]" style={{ borderColor: 'var(--border-main)' }}>
+                {/* Search Bar (Always visible) */}
+                <div className="relative">
+                    <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input
+                        type="text"
+                        placeholder="Search by name or email..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                </div>
+
+                {/* Advanced Filters */}
+                {showAdvancedFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2 duration-200">
+                        {/* Status Filter */}
+                        <div>
+                            <FilterLabel label="Status" />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="SUSPENDED">Suspended</option>
+                                <option value="LOCKED">Locked</option>
+                            </select>
+                        </div>
+
+                        {/* Date Filters */}
+                        <div>
+                            <FilterLabel label="Start Date" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+
+                        <div>
+                            <FilterLabel label="End Date" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+
+                        {/* Reset Filters */}
+                        <div className="flex flex-col justify-end">
+                            <button
+                                onClick={() => {
+                                    setStatusFilter('ALL');
+                                    setStartDate('');
+                                    setEndDate('');
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full py-3 text-xs font-bold opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <RefreshCw size={12} /> Reset All
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Error banner */}
@@ -190,7 +321,7 @@ const ManageOperationalAdmins = () => {
                     <div className="flex items-center justify-center py-20">
                         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
                     </div>
-                ) : filteredAdmins.length === 0 ? (
+                ) : admins.length === 0 ? (
                     <div className="text-center py-20 transition-colors" style={{ color: 'var(--text-dim)' }}>
                         <Shield size={48} className="mx-auto mb-4 opacity-30" />
                         <p className="text-lg font-medium">No operational admins found</p>
@@ -200,23 +331,32 @@ const ManageOperationalAdmins = () => {
                     <table className="w-full text-sm min-w-[800px]">
                         <thead>
                             <tr className="transition-colors" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
-                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Name</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Email</th>
+                                <th className="px-6 py-4">
+                                    <button onClick={() => handleSort('fullName')} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        Name <SortIcon field="fullName" />
+                                    </button>
+                                </th>
+                                <th className="px-6 py-4">
+                                    <button onClick={() => handleSort('email')} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        Email <SortIcon field="email" />
+                                    </button>
+                                </th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Status</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>2FA</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Created</th>
+                                <th className="px-6 py-4">
+                                    <button onClick={() => handleSort('createdAt')} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        Created <SortIcon field="createdAt" />
+                                    </button>
+                                </th>
                                 <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y transition-colors" style={{ borderColor: 'var(--border-main)' }}>
-                            {filteredAdmins.map((admin) => {
+                            {admins.map((admin) => {
                                 const sc = statusColor(admin.status);
                                 return (
-                                    <tr
-                                        key={admin._id}
-                                        className="transition-colors hover:bg-lime/5"
-                                    >
-                                        <td className="px-6 py-4">
+                                    <tr key={admin._id} className="transition-colors hover:bg-lime/5">
+                                        <td className="px-6 py-4 text-left">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors" style={{ background: 'rgba(200,230,0,0.15)', color: 'var(--brand-lime)' }}>
                                                     {admin.fullName.charAt(0).toUpperCase()}
@@ -224,21 +364,21 @@ const ManageOperationalAdmins = () => {
                                                 <span className="font-medium transition-colors" style={{ color: 'var(--text-main)' }}>{admin.fullName}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 transition-colors" style={{ color: 'var(--text-dim)' }}>{admin.email}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-3 py-1 rounded-full text-xs font-bold transition-colors" style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                                        <td className="px-6 py-4 text-left transition-colors" style={{ color: 'var(--text-dim)' }}>{admin.email}</td>
+                                        <td className="px-6 py-4 text-left">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-colors" style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                                                 {admin.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        <td className="px-6 py-4 text-left transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {admin.twoFactorEnabled ? (
-                                                <span className="text-green-400 text-xs font-bold">Enabled</span>
+                                                <span className="text-green-400 text-[10px] font-black tracking-wider px-2 py-0.5 rounded bg-green-400/10">Enabled</span>
                                             ) : (
-                                                <span className="text-xs transition-colors" style={{ color: 'var(--text-dim)', opacity: 0.5 }}>Disabled</span>
+                                                <span className="text-[10px] font-bold opacity-30">Disabled</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-xs transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : '—'}
+                                        <td className="px-6 py-4 text-left text-[11px] transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                            {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
@@ -265,6 +405,56 @@ const ManageOperationalAdmins = () => {
                             })}
                         </tbody>
                     </table>
+                )}
+
+                {/* Pagination footer */}
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="px-6 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span className="text-lime font-black">{admins.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1 || loading}
+                                className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-black/20 rounded-xl border border-white/5">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (pagination.totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-lime text-black' : 'hover:bg-white/5 opacity-50'}`}
+                                            style={{ color: currentPage === pageNum ? '#000' : 'var(--text-main)' }}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
 

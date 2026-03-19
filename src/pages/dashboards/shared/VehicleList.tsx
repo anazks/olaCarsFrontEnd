@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
-import type { Vehicle, VehicleStatus } from '../../../services/vehicleService';
+import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
 
 // ── Status Badge ──────────────────────────────────────────────────────────────
+
+import { getAllBranches, type Branch } from '../../../services/branchService';
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'PENDING ENTRY': { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
@@ -26,76 +28,117 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }
     'RETIRED': { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' },
 };
 
+const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
+const FUEL_TYPES = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
+
 const StatusBadge = ({ status }: { status: VehicleStatus }) => {
     const style = STATUS_STYLES[status] || STATUS_STYLES['PENDING ENTRY'];
     return (
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
             {status}
         </div>
     );
 };
 
-// ── Filter Tabs ───────────────────────────────────────────────────────────────
-
 type FilterTab = 'ALL' | 'ONBOARDING' | 'ACTIVE' | 'SUSPENDED' | 'RETIRED';
-
-const ONBOARDING_STATUSES: VehicleStatus[] = [
-    'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSURANCE VERIFICATION',
-    'INSPECTION REQUIRED', 'INSPECTION FAILED', 'REPAIR IN PROGRESS',
-    'ACCOUNTING SETUP', 'GPS ACTIVATION', 'BRANCH MANAGER APPROVAL',
-];
-const ACTIVE_STATUSES: VehicleStatus[] = ['ACTIVE — AVAILABLE', 'ACTIVE — RENTED', 'ACTIVE — MAINTENANCE', 'TRANSFER PENDING', 'TRANSFER COMPLETE'];
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 const VehicleList = () => {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Server-side filtering & pagination state
+    const [filters, setFilters] = useState({
+        page: 1,
+        limit: 10,
+        search: '',
+        status: undefined as VehicleStatus | undefined,
+        branch: '',
+        category: undefined as VehicleCategory | undefined,
+        fuelType: undefined as FuelType | undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc' as 'asc' | 'desc'
+    });
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+    });
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
+
     const navigate = useNavigate();
+
+    const fetchMetadata = useCallback(async () => {
+        try {
+            const bResponse = await getAllBranches({ limit: 1000 });
+            if (bResponse.success) setBranches(bResponse.data);
+        } catch (err) {
+            console.error('Failed to fetch filter metadata:', err);
+        }
+    }, []);
 
     const fetchVehicles = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllVehicles();
-            setVehicles(Array.isArray(data) ? data : []);
+            const response = await getAllVehicles(filters);
+            if (response.success) {
+                setVehicles(response.data);
+                setPagination(response.pagination);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch vehicles');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [filters]);
+
+    useEffect(() => {
+        fetchMetadata();
+    }, [fetchMetadata]);
 
     useEffect(() => {
         fetchVehicles();
     }, [fetchVehicles]);
 
-    const filtered = vehicles.filter((v) => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch =
-            v.basicDetails.vin.toLowerCase().includes(q) ||
-            v.basicDetails.make.toLowerCase().includes(q) ||
-            v.basicDetails.model.toLowerCase().includes(q);
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value,
+            page: 1
+        }));
+    };
 
-        let matchesTab = true;
-        if (activeTab === 'ONBOARDING') matchesTab = ONBOARDING_STATUSES.includes(v.status);
-        else if (activeTab === 'ACTIVE') matchesTab = ACTIVE_STATUSES.includes(v.status);
-        else if (activeTab === 'SUSPENDED') matchesTab = v.status === 'SUSPENDED';
-        else if (activeTab === 'RETIRED') matchesTab = v.status === 'RETIRED';
+    const handlePageChange = (newPage: number) => {
+        setFilters(prev => ({
+            ...prev,
+            page: newPage
+        }));
+    };
 
-        return matchesSearch && matchesTab;
-    });
+    const handleTabChange = (tab: FilterTab) => {
+        setActiveTab(tab);
+        let statusFilter: VehicleStatus | undefined = undefined;
+        // Map tabs to statuses if backend supports it or handle meta-filters
+        if (tab === 'SUSPENDED') statusFilter = 'SUSPENDED';
+        else if (tab === 'RETIRED') statusFilter = 'RETIRED';
+        // Note: For ONBOARDING and ACTIVE, we might need backend meta-filter support 
+        // or just fetch ALL and filter locally (not ideal for pagination).
+        // For now, only single status filters are passed.
+        handleFilterChange('status', statusFilter);
+    };
 
-    const tabs: { key: FilterTab; label: string; count: number }[] = [
-        { key: 'ALL', label: 'All', count: vehicles.length },
-        { key: 'ONBOARDING', label: 'Onboarding', count: vehicles.filter(v => ONBOARDING_STATUSES.includes(v.status)).length },
-        { key: 'ACTIVE', label: 'Active', count: vehicles.filter(v => ACTIVE_STATUSES.includes(v.status)).length },
-        { key: 'SUSPENDED', label: 'Suspended', count: vehicles.filter(v => v.status === 'SUSPENDED').length },
-        { key: 'RETIRED', label: 'Retired', count: vehicles.filter(v => v.status === 'RETIRED').length },
+    // Tabs for UI (metadata)
+    const tabs: { key: FilterTab; label: string }[] = [
+        { key: 'ALL', label: 'All Fleet' },
+        { key: 'ONBOARDING', label: 'Onboarding' },
+        { key: 'ACTIVE', label: 'Active Fleet' },
+        { key: 'SUSPENDED', label: 'Suspended' },
+        { key: 'RETIRED', label: 'Retired' },
     ];
 
     return (
@@ -105,7 +148,7 @@ const VehicleList = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Car size={28} style={{ color: '#C8E600' }} />
-                        Vehicles
+                        Manage Vehicles
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Manage vehicle onboarding and fleet lifecycle</p>
                 </div>
@@ -123,18 +166,17 @@ const VehicleList = () => {
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                             style={{ background: '#C8E600', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} /> Add Vehicle
+                            <Plus size={18} />Vehicle Onboarding
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Filter Tabs */}
             <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
+                        onClick={() => handleTabChange(tab.key)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
                         style={{
                             background: activeTab === tab.key ? 'rgba(200,230,0,0.15)' : 'transparent',
@@ -143,27 +185,104 @@ const VehicleList = () => {
                         }}
                     >
                         {tab.label}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{
-                            background: activeTab === tab.key ? 'rgba(200,230,0,0.2)' : 'var(--bg-sidebar)',
-                            color: activeTab === tab.key ? '#C8E600' : 'var(--text-dim)',
-                        }}>
-                            {tab.count}
-                        </span>
+                        {activeTab === tab.key && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{
+                                background: 'rgba(200,230,0,0.2)',
+                                color: '#C8E600',
+                            }}>
+                                {pagination.total}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
 
-            {/* Search */}
-            <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                    type="text"
-                    placeholder="Search by VIN, make, or model..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                />
+            {/* Search and Advanced Filters Toggle */}
+            <div className="space-y-4">
+                <div className="flex gap-3">
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by VIN, make, or model..."
+                            value={filters.search}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
+                    >
+                        Advanced Filters {showAdvancedFilters ? '↑' : '↓'}
+                    </button>
+                </div>
+
+                {showAdvancedFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Category</label>
+                            <select
+                                value={filters.category}
+                                onChange={(e) => handleFilterChange('category', e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Categories</option>
+                                {CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Fuel Type</label>
+                            <select
+                                value={filters.fuelType}
+                                onChange={(e) => handleFilterChange('fuelType', e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Fuel Types</option>
+                                {FUEL_TYPES.map(fuel => (
+                                    <option key={fuel} value={fuel}>{fuel}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Branch</label>
+                            <select
+                                value={filters.branch}
+                                onChange={(e) => handleFilterChange('branch', e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Branches</option>
+                                {branches.map(branch => (
+                                    <option key={branch._id} value={branch._id}>{branch.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-end pb-0.5">
+                            <button
+                                onClick={() => setFilters({
+                                    ...filters,
+                                    search: '',
+                                    status: undefined,
+                                    branch: '',
+                                    category: undefined,
+                                    fuelType: undefined,
+                                    page: 1
+                                })}
+                                className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
+                                style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Error */}
@@ -180,74 +299,121 @@ const VehicleList = () => {
                         <div className="flex items-center justify-center py-20">
                             <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                         </div>
-                    ) : filtered.length === 0 ? (
+                    ) : vehicles.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Car size={48} className="mx-auto mb-4 opacity-30" />
                             <p className="text-lg font-medium">No vehicles found</p>
                             <p className="text-sm mt-1">Try adjusting your filters or add a new vehicle</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Vehicle</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>VIN</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Year</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Price</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((v) => (
-                                    <tr
-                                        key={v._id}
-                                        className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
-                                        style={{ borderColor: 'var(--border-main)' }}
-                                        onClick={() => navigate(v._id)}
-                                    >
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {v.basicDetails.make} {v.basicDetails.model}
-                                            </div>
-                                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                                                {v.basicDetails.colour || ''} · {v.basicDetails.fuelType}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails.vin}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm" style={{ color: 'var(--text-main)' }}>{v.basicDetails.year}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm" style={{ color: 'var(--text-main)' }}>{v.basicDetails.category}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <StatusBadge status={v.status} />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {v.purchaseDetails.currency} {v.purchaseDetails.purchasePrice.toLocaleString()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
-                                                    className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-lime/20"
-                                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
-                                                    title="View Details"
-                                                >
-                                                    <Eye size={15} />
-                                                </button>
-                                            </div>
-                                        </td>
+                        <>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Vehicle</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>VIN</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Year</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Price</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {vehicles.map((v) => (
+                                        <tr
+                                            key={v._id}
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                            onClick={() => navigate(v._id)}
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                                    {v.basicDetails.make} {v.basicDetails.model}
+                                                    {v.basicDetails.colour && (
+                                                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ background: v.basicDetails.colour.toLowerCase() }} />
+                                                    )}
+                                                </div>
+                                                <div className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">{v.basicDetails.fuelType}</span>
+                                                    <span>{v.basicDetails.transmission}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails.vin}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{v.basicDetails.year}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{v.basicDetails.category}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <StatusBadge status={v.status} />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                                    {v.purchaseDetails.currency} {v.purchaseDetails.purchasePrice.toLocaleString()}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
+                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95"
+                                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination */}
+                            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                    Showing <span style={{ color: 'var(--text-main)' }}>{vehicles.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> vehicles
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        {[...Array(pagination.totalPages)].map((_, i) => (
+                                            <button
+                                                key={i + 1}
+                                                onClick={() => handlePageChange(i + 1)}
+                                                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
+                                                style={{
+                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
+                                                }}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        disabled={filters.page === pagination.totalPages}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

@@ -9,8 +9,11 @@ export interface LedgerEntry {
         name: string;
         category: string;
     };
-    debit: number;
-    credit: number;
+    debit?: number;
+    credit?: number;
+    amount?: number;
+    type?: 'DEBIT' | 'CREDIT';
+    entryDate?: string;
     referenceId?: string;
     createdAt?: string;
 }

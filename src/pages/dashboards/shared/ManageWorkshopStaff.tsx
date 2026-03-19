@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, Wrench, AlertTriangle } from 'lucide-react';
 import {
-    getAllOperationStaff,
-    createOperationStaff,
-    updateOperationStaff,
-    deleteOperationStaff,
-    type OperationStaff,
-    type CreateOperationStaffPayload,
-    type UpdateOperationStaffPayload,
+    getAllWorkshopStaff,
+    createWorkshopStaff,
+    updateWorkshopStaff,
+    deleteWorkshopStaff,
+    type WorkshopStaff,
+    type CreateWorkshopStaffPayload,
+    type UpdateWorkshopStaffPayload,
     type StaffFilters,
     type PaginationMetadata
-} from '../../../services/operationStaffService';
+} from '../../../services/workshopStaffService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -18,8 +18,21 @@ import { ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type ModalMode = 'create' | 'edit' | null;
 
-const ManageOperationStaff = () => {
-    const [operationStaff, setOperationStaff] = useState<OperationStaff[]>([]);
+const phoneInputStyles = `
+  .phone-input-container .form-control:focus {
+    border-color: var(--brand-lime) !important;
+    box-shadow: 0 0 0 2px var(--brand-lime) !important;
+    outline: none !important;
+  }
+  .phone-input-container .flag-dropdown.open,
+  .phone-input-container .flag-dropdown:hover,
+  .phone-input-container .flag-dropdown:focus {
+    background: transparent !important;
+  }
+`;
+
+const ManageWorkshopStaff = () => {
+    const [workshopStaff, setWorkshopStaff] = useState<WorkshopStaff[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -27,7 +40,7 @@ const ManageOperationStaff = () => {
 
     // Filter State
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<OperationStaff['status'] | 'ALL'>('ALL');
+    const [statusFilter, setStatusFilter] = useState<WorkshopStaff['status'] | 'ALL'>('ALL');
     const [branchFilter, setBranchFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -43,7 +56,7 @@ const ManageOperationStaff = () => {
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
-    const [selectedStaff, setSelectedStaff] = useState<OperationStaff | null>(null);
+    const [selectedStaff, setSelectedStaff] = useState<WorkshopStaff | null>(null);
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -56,7 +69,7 @@ const ManageOperationStaff = () => {
     const [formLoading, setFormLoading] = useState(false);
 
     // Delete confirmation
-    const [deleteTarget, setDeleteTarget] = useState<OperationStaff | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<WorkshopStaff | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -77,10 +90,10 @@ const ManageOperationStaff = () => {
             if (endDate) filters.endDate = endDate;
 
             const [staffRes, branchesData] = await Promise.all([
-                getAllOperationStaff(filters),
+                getAllWorkshopStaff(filters),
                 getAllBranches()
             ]);
-            setOperationStaff(staffRes.data || []);
+            setWorkshopStaff(staffRes.data || []);
             setPagination(staffRes.pagination);
             setBranches(Array.isArray(branchesData) ? branchesData : []);
         } catch (err: any) {
@@ -111,7 +124,7 @@ const ManageOperationStaff = () => {
         setFormError(null);
     };
 
-    const openEditModal = (staff: OperationStaff) => {
+    const openEditModal = (staff: WorkshopStaff) => {
         setModalMode('edit');
         setSelectedStaff(staff);
         setFormData({
@@ -138,7 +151,7 @@ const ManageOperationStaff = () => {
 
         try {
             if (modalMode === 'create') {
-                const payload: CreateOperationStaffPayload = {
+                const payload: CreateWorkshopStaffPayload = {
                     fullName: formData.fullName,
                     email: formData.email,
                     password: formData.password,
@@ -146,9 +159,9 @@ const ManageOperationStaff = () => {
                     branchId: formData.branchId,
                     status: formData.status
                 };
-                await createOperationStaff(payload);
+                await createWorkshopStaff(payload);
             } else if (modalMode === 'edit' && selectedStaff) {
-                const payload: UpdateOperationStaffPayload = {
+                const payload: UpdateWorkshopStaffPayload = {
                     id: selectedStaff._id,
                     fullName: formData.fullName,
                     email: formData.email,
@@ -159,7 +172,7 @@ const ManageOperationStaff = () => {
                 if (formData.password) {
                     payload.password = formData.password;
                 }
-                await updateOperationStaff(payload);
+                await updateWorkshopStaff(payload);
             }
             fetchData();
             closeModal();
@@ -174,7 +187,7 @@ const ManageOperationStaff = () => {
         if (!deleteTarget) return;
         setDeleteLoading(true);
         try {
-            await deleteOperationStaff(deleteTarget._id);
+            await deleteWorkshopStaff(deleteTarget._id);
             fetchData();
             setDeleteTarget(null);
         } catch (err: any) {
@@ -211,18 +224,19 @@ const ManageOperationStaff = () => {
         </label>
     );
 
-    const filteredStaff = operationStaff; // Now handled server-side
+    const filteredStaff = workshopStaff; // Now handled server-side
 
     return (
         <div className="p-4 sm:p-6 transition-colors duration-300" style={{ background: 'var(--bg-main)' }}>
+            <style>{phoneInputStyles}</style>
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
                         <Wrench size={28} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
-                        Manage Ground Ops Staff
+                        Manage Workshop Staff
                     </h1>
-                    <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage branch operation staff accounts</p>
+                    <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage branch workshop staff accounts</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
@@ -250,7 +264,7 @@ const ManageOperationStaff = () => {
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
-                        <Plus size={20} /> Add Operation Staff
+                        <Plus size={20} /> Add Workshop Staff
                     </button>
                 </div>
             </div>
@@ -259,11 +273,11 @@ const ManageOperationStaff = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Total Staff</p>
-                    <h3 className="text-3xl font-black transition-colors" style={{ color: 'var(--text-main)' }}>{operationStaff.length}</h3>
+                    <h3 className="text-3xl font-black transition-colors" style={{ color: 'var(--text-main)' }}>{workshopStaff.length}</h3>
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Active Accounts</p>
-                    <h3 className="text-3xl font-black text-lime transition-colors" style={{ color: 'var(--brand-lime)' }}>{operationStaff.filter(s => s.status === 'ACTIVE').length}</h3>
+                    <h3 className="text-3xl font-black text-lime transition-colors" style={{ color: 'var(--brand-lime)' }}>{workshopStaff.filter(s => s.status === 'ACTIVE').length}</h3>
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Total Branches</p>
@@ -368,7 +382,7 @@ const ManageOperationStaff = () => {
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center">
                                         <RefreshCw size={24} className="animate-spin inline-block mb-2 text-lime" />
-                                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading operation staff...</p>
+                                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading workshop staff...</p>
                                     </td>
                                 </tr>
                             ) : filteredStaff.length === 0 ? (
@@ -441,7 +455,7 @@ const ManageOperationStaff = () => {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span style={{ color: 'var(--text-main)' }}>{operationStaff.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> staff
+                            Showing <span style={{ color: 'var(--text-main)' }}>{workshopStaff.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> staff
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -503,10 +517,10 @@ const ManageOperationStaff = () => {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h2 className="text-2xl font-black transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>
-                                    {modalMode === 'create' ? 'Add Operation Staff' : 'Edit Operation Staff'}
+                                    {modalMode === 'create' ? 'Add Workshop Staff' : 'Edit Workshop Staff'}
                                 </h2>
                                 <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                                    {modalMode === 'create' ? 'Create a new branch operation staff account' : `Update account for ${selectedStaff?.fullName}`}
+                                    {modalMode === 'create' ? 'Create a new branch workshop staff account' : `Update account for ${selectedStaff?.fullName}`}
                                 </p>
                             </div>
                             <button
@@ -555,48 +569,68 @@ const ManageOperationStaff = () => {
                                         placeholder="email@example.com"
                                     />
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    {modalMode === 'create' && (
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                                Password
-                                            </label>
-                                            <input
-                                                type="password"
-                                                required
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
-                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                placeholder="••••••••"
-                                            />
-                                        </div>
-                                    )}
+                                {modalMode === 'create' && (
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Phone Number
+                                            Password
                                         </label>
-                                        <PhoneInput
-                                            country={'in'}
-                                            value={formData.phone}
-                                            onChange={phone => setFormData({ ...formData, phone })}
-                                            containerStyle={{ width: '100%' }}
-                                            inputStyle={{
-                                                width: '100%',
-                                                height: '48px',
-                                                borderRadius: '12px',
-                                                background: 'var(--bg-input)',
-                                                border: '1px solid var(--border-main)',
-                                                color: 'var(--text-main)'
-                                            }}
-                                            buttonStyle={{
-                                                background: 'var(--bg-input)',
-                                                border: '1px solid var(--border-main)',
-                                                borderRadius: '12px 0 0 12px'
-                                            }}
-                                            dropdownStyle={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                        <input
+                                            type="password"
+                                            required
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime font-bold"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            placeholder="••••••••"
                                         />
                                     </div>
+                                )}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        Phone Number
+                                    </label>
+                                    <PhoneInput
+                                        country={'in'}
+                                        value={formData.phone}
+                                        onChange={phone => setFormData({ ...formData, phone })}
+                                        containerStyle={{ width: '100%' }}
+                                        inputStyle={{
+                                            width: '100%',
+                                            height: '48px',
+                                            borderRadius: '12px',
+                                            background: 'var(--bg-input)',
+                                            border: '1px solid var(--border-main)',
+                                            color: 'var(--text-main)',
+                                            fontSize: '14px',
+                                            fontWeight: '700',
+                                            paddingLeft: '58px'
+                                        }}
+                                        buttonStyle={{
+                                            background: 'transparent',
+                                            border: '1px solid var(--border-main)',
+                                            borderRadius: '12px 0 0 12px',
+                                            borderRight: 'none',
+                                            width: '48px'
+                                        }}
+                                        dropdownStyle={{ 
+                                            background: 'var(--bg-card)', 
+                                            color: 'var(--text-main)',
+                                            border: '1px solid var(--border-main)',
+                                            borderRadius: '12px',
+                                            marginTop: '4px',
+                                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
+                                        }}
+                                        searchStyle={{
+                                            background: 'var(--bg-input)',
+                                            color: 'var(--text-main)',
+                                            border: '1px solid var(--border-main)',
+                                            padding: '8px',
+                                            margin: '4px',
+                                            width: 'calc(100% - 8px)'
+                                        }}
+                                        containerClass="phone-input-container"
+                                        inputClass="phone-input-field"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
@@ -660,7 +694,7 @@ const ManageOperationStaff = () => {
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
                     <div
-                        className="relative w-full max-w-sm p-8 rounded-3xl border shadow-2xl transition-all animate-in zoom-in-95 duration-200 text-center"
+                        className="relative w-full max-sm p-8 rounded-3xl border shadow-2xl transition-all animate-in zoom-in-95 duration-200 text-center"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
                         <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -694,4 +728,4 @@ const ManageOperationStaff = () => {
     );
 };
 
-export default ManageOperationStaff;
+export default ManageWorkshopStaff;

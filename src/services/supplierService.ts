@@ -27,10 +27,35 @@ export interface UpdateSupplierPayload extends Partial<CreateSupplierPayload> {
     id: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    success: boolean;
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface SupplierFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+    isActive?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
 // GET all suppliers
-export const getAllSuppliers = async (): Promise<Supplier[]> => {
-    const response = await api.get('/api/supplier');
-    return response.data.data;
+export const getAllSuppliers = async (filters: SupplierFilters = {}): Promise<PaginatedResponse<Supplier>> => {
+    const response = await api.get('/api/supplier', {
+        params: filters
+    });
+    return response.data;
 };
 
 // GET single supplier

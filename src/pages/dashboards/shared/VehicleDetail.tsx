@@ -10,6 +10,8 @@ import { getEligibleInsurances } from '../../../services/insuranceService';
 import { getUserRole } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
 import type { Insurance } from '../../../services/insuranceService';
+import InsuranceSelectorModal from './InsuranceSelectorModal';
+import { ChevronRight } from 'lucide-react';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -70,7 +72,7 @@ const cardClass = 'rounded-2xl border p-6 space-y-5';
 const cardStyle = { background: 'var(--bg-card)', borderColor: 'var(--border-main)' };
 
 const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
-    <div className="flex items-center gap-2 text-[#C8E600]">
+    <div className="flex items-center gap-2" style={{ color: 'var(--brand-lime)' }}>
         {icon}<h3 className="font-semibold uppercase tracking-wider text-xs">{title}</h3>
     </div>
 );
@@ -117,6 +119,7 @@ const VehicleDetail = () => {
     // Stage-specific form state
     const [legalDocs, setLegalDocs] = useState<Record<string, string>>({});
     const [insurance, setInsurance] = useState<Record<string, any>>({});
+    const [isInsuranceModalOpen, setIsInsuranceModalOpen] = useState(false);
     const [importation, setImportation] = useState<Record<string, any>>({ isImported: false });
     const [checklist, setChecklist] = useState<ChecklistItem[]>(
         CHECKLIST_NAMES.map(name => ({ name, condition: 'Good' as InspectionCondition, notes: '', isMandatoryFail: true }))
@@ -138,8 +141,10 @@ const VehicleDetail = () => {
 
     const fetchEligibleInsurances = useCallback(async () => {
         try {
-            const data = await getEligibleInsurances();
-            setEligibleInsurances(data);
+            const response = await getEligibleInsurances();
+            // Handle both plain array and paginated response
+            const data = (response as any).data || response;
+            setEligibleInsurances(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Failed to fetch eligible insurances:', err);
         }
@@ -273,35 +278,38 @@ const VehicleDetail = () => {
                 </div>
             </div>
 
-            {/* Pipeline Progress */}
-            <div className={cardClass} style={cardStyle}>
-                <SectionHeader icon={<Zap size={16} />} title="Onboarding Pipeline" />
-                <div className="flex items-center gap-1 overflow-x-auto pb-2">
-                    {PIPELINE.map((st, i) => {
-                        const done = currentIdx >= 0 && i <= currentIdx;
-                        const active = vehicle.status === st;
-                        return (
-                            <div key={st} className="flex items-center gap-1 min-w-0">
-                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
-                                    style={{ background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)', color: done ? '#C8E600' : 'var(--text-dim)' }}>
-                                    {done && i < currentIdx ? <CheckCircle size={12} /> : null}
-                                    {st.replace('ACTIVE — ', '')}
-                                </div>
-                                {i < PIPELINE.length - 1 && <div className="w-4 h-px flex-shrink-0" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Vehicle Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Pipeline Progress - Only show if NOT active/rented */}
+            {!(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Car size={16} />} title="Vehicle Details" />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <SectionHeader icon={<Zap size={16} />} title="Onboarding Pipeline" />
+                    <div className="flex items-center gap-1 overflow-x-auto pb-2">
+                        {PIPELINE.map((st, i) => {
+                            const done = currentIdx >= 0 && i <= currentIdx;
+                            const active = vehicle.status === st;
+                            return (
+                                <div key={st} className="flex items-center gap-1 min-w-0">
+                                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
+                                        style={{ background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)', color: done ? '#C8E600' : 'var(--text-dim)' }}>
+                                        {done && i < currentIdx ? <CheckCircle size={12} /> : null}
+                                        {st.replace('ACTIVE — ', '')}
+                                    </div>
+                                    {i < PIPELINE.length - 1 && <div className="w-4 h-px flex-shrink-0" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Vehicle Details & Purchase Info */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className={`${cardClass} lg:col-span-2`} style={cardStyle}>
+                    <SectionHeader icon={<Car size={16} />} title="Vehicle Overview" />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                         <InfoRow label="Make" value={vehicle.basicDetails.make} />
                         <InfoRow label="Model" value={vehicle.basicDetails.model} />
                         <InfoRow label="Year" value={vehicle.basicDetails.year} />
+                        <InfoRow label="VIN" value={vehicle.basicDetails.vin} />
                         <InfoRow label="Category" value={vehicle.basicDetails.category} />
                         <InfoRow label="Fuel" value={vehicle.basicDetails.fuelType} />
                         <InfoRow label="Transmission" value={vehicle.basicDetails.transmission} />
@@ -309,20 +317,128 @@ const VehicleDetail = () => {
                         <InfoRow label="Seats" value={vehicle.basicDetails.seats} />
                         <InfoRow label="Body" value={vehicle.basicDetails.bodyType} />
                         <InfoRow label="Engine #" value={vehicle.basicDetails.engineNumber} />
-                        <InfoRow label="Odometer" value={vehicle.basicDetails.odometer ? `${vehicle.basicDetails.odometer} km` : undefined} />
+                        <InfoRow label="Odometer" value={vehicle.basicDetails.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} km` : '0 km'} />
                         <InfoRow label="GPS Serial" value={vehicle.basicDetails.gpsSerialNumber} />
+                        <InfoRow label="Monthly Rent" value={vehicle.basicDetails.monthlyRent ? `$${vehicle.basicDetails.monthlyRent.toLocaleString()}` : (vehicle.basicDetails as any)['monthlyRent '] ? `$${(vehicle.basicDetails as any)['monthlyRent '].toLocaleString()}` : '—'} />
                     </div>
                 </div>
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<FileText size={16} />} title="Purchase Details" />
-                    <div className="grid grid-cols-2 gap-4">
-                        <InfoRow label="Vendor" value={vehicle.purchaseDetails.vendorName} />
-                        <InfoRow label="Date" value={vehicle.purchaseDetails.purchaseDate ? new Date(vehicle.purchaseDetails.purchaseDate).toLocaleDateString() : undefined} />
-                        <InfoRow label="Price" value={`${vehicle.purchaseDetails.currency} ${vehicle.purchaseDetails.purchasePrice.toLocaleString()}`} />
-                        <InfoRow label="Payment" value={vehicle.purchaseDetails.paymentMethod} />
+                    <SectionHeader icon={<FileText size={16} />} title="Purchase Information" />
+                    <div className="space-y-4">
+                        <InfoRow label="Vendor / Supplier" value={vehicle.purchaseDetails.vendorName} />
+                        <InfoRow label="Purchase Date" value={vehicle.purchaseDetails.purchaseDate ? new Date(vehicle.purchaseDetails.purchaseDate).toLocaleDateString() : undefined} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <InfoRow label="Price" value={`${vehicle.purchaseDetails.currency} ${vehicle.purchaseDetails.purchasePrice.toLocaleString()}`} />
+                            <InfoRow label="Method" value={vehicle.purchaseDetails.paymentMethod} />
+                        </div>
+                        {vehicle.purchaseDetails.branch && typeof vehicle.purchaseDetails.branch !== 'string' && (
+                            <InfoRow label="Assigned Branch" value={vehicle.purchaseDetails.branch.name} />
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Comprehensive Details for Onboarded Vehicles */}
+            {(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Legal Documents */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Shield size={16} />} title="Legal Documents" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <InfoRow label="Reg Number" value={vehicle.legalDocs?.registrationNumber} />
+                            <InfoRow label="Reg Expiry" value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label="Road Tax Expiry" value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label="Roadworthiness" value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
+                        </div>
+                    </div>
+
+                    {/* Insurance Policy */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Shield size={16} />} title="Insurance Policy" />
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-start">
+                                <InfoRow label="Provider" value={vehicle.insurancePolicy?.providerName} />
+                                <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>VAlID</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoRow label="Policy #" value={vehicle.insurancePolicy?.policyNumber} />
+                                <InfoRow label="Type" value={vehicle.insurancePolicy?.insuranceType} />
+                                <InfoRow label="Premium" value={vehicle.insurancePolicy?.premiumAmount ? `$${vehicle.insurancePolicy.premiumAmount.toLocaleString()}` : '—'} />
+                                <InfoRow label="Expiry" value={vehicle.insurancePolicy?.expiryDate ? new Date(vehicle.insurancePolicy.expiryDate).toLocaleDateString() : '—'} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* GPS Configuration */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Satellite size={16} />} title="GPS & Tracking" />
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${vehicle.gpsConfiguration?.isActivated ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                                <span className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-main)' }}>{vehicle.gpsConfiguration?.isActivated ? 'Active Configuration' : 'Disabled'}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoRow label="Geofence Zone" value={vehicle.gpsConfiguration?.geofenceZone || 'Global'} />
+                                <InfoRow label="Speed Limit" value={vehicle.gpsConfiguration?.speedLimitThreshold ? `${vehicle.gpsConfiguration.speedLimitThreshold} km/h` : '—'} />
+                                <InfoRow label="Idle Alert" value={vehicle.gpsConfiguration?.idleTimeAlertMins ? `${vehicle.gpsConfiguration.idleTimeAlertMins} mins` : '—'} />
+                                <InfoRow label="Sync Freq" value={vehicle.gpsConfiguration?.mileageSyncFrequencyHrs ? `${vehicle.gpsConfiguration.mileageSyncFrequencyHrs} hrs` : '—'} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Accounting Setup */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Calculator size={16} />} title="Accounting & Valuation" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <InfoRow label="Depreciation" value={vehicle.accountingSetup?.depreciationMethod} />
+                            <InfoRow label="Useful Life" value={vehicle.accountingSetup?.usefulLifeYears ? `${vehicle.accountingSetup.usefulLifeYears} Years` : '—'} />
+                            <InfoRow label="Residual Value" value={vehicle.accountingSetup?.residualValue ? `$${vehicle.accountingSetup.residualValue.toLocaleString()}` : '—'} />
+                            <InfoRow label="Setup Status" value={vehicle.accountingSetup?.isSetupComplete ? 'Complete' : 'Pending'} />
+                        </div>
+                    </div>
+
+                    {/* Inspection Summary */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<ClipboardCheck size={16} />} title="Last Inspection" />
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <InfoRow label="Result" value={vehicle.inspection?.status || 'Passed'} />
+                                <InfoRow label="Date" value={vehicle.inspection?.date ? new Date(vehicle.inspection.date).toLocaleDateString() : '—'} />
+                            </div>
+                            <div className="pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center justify-between text-[10px] font-bold uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
+                                    <span>Highlights</span>
+                                    <span className="text-green-500">23 Items Checked</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    {vehicle.inspection?.checklistItems?.slice(0, 4).map((item, i) => (
+                                        <div key={i} className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-main)' }}>
+                                            <div className="w-1 h-1 rounded-full bg-green-500" />
+                                            <span className="truncate">{item.name}</span>
+                                        </div>
+                                    ))}
+                                    {vehicle.inspection?.checklistItems && vehicle.inspection.checklistItems.length > 4 && (
+                                        <div className="text-[9px] font-bold" style={{ color: 'var(--brand-lime)' }}>
+                                            + {vehicle.inspection.checklistItems.length - 4} more items
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Clock size={16} />} title="Onboarding Meta" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <InfoRow label="Onboarded By" value={vehicle.creatorRole?.replace(/([A-Z])/g, ' $1')} />
+                            <InfoRow label="Created Date" value={vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : '—'} />
+                            <InfoRow label="Last Update" value={vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleDateString() : '—'} />
+                            <InfoRow label="Imports" value={vehicle.importationDetails?.isImported ? 'Yes' : 'No'} />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── STAGE ACTIONS ─────────────────────────────────────────────── */}
             {/* PENDING ENTRY Actions */}
@@ -460,19 +576,20 @@ const VehicleDetail = () => {
                     <div className="space-y-4 mt-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Select Policy *</label>
-                            <select 
-                                value={insurance.insuranceId || ''} 
-                                onChange={e => setInsurance(p => ({ ...p, insuranceId: e.target.value }))} 
-                                className={inputClass} 
-                                style={inputStyle}
+                            <button
+                                type="button"
+                                onClick={() => setIsInsuranceModalOpen(true)}
+                                className={`flex items-center justify-between ${inputClass}`}
+                                style={{ ...inputStyle, textAlign: 'left' }}
                             >
-                                <option value="">Select an Insurance Policy</option>
-                                {eligibleInsurances.map(ins => (
-                                    <option key={ins._id} value={ins._id}>
-                                        {ins.provider} - {ins.policyNumber} ({new Date(ins.expiryDate).toLocaleDateString()})
-                                    </option>
-                                ))}
-                            </select>
+                                {insurance.insuranceId ? (() => {
+                                    const ins = eligibleInsurances.find(i => i._id === insurance.insuranceId);
+                                    return ins ? `${ins.provider} — ${ins.policyNumber}` : 'Select an Insurance Policy';
+                                })() : (
+                                    <span style={{ color: 'var(--text-dim)' }}>Select an Insurance Policy</span>
+                                )}
+                                <ChevronRight size={16} style={{ color: 'var(--text-dim)' }} />
+                            </button>
                         </div>
 
                         {/* Policy Details Preview */}
@@ -771,6 +888,17 @@ const VehicleDetail = () => {
                     </div>
                 </div>
             )}
+
+            <InsuranceSelectorModal
+                isOpen={isInsuranceModalOpen}
+                onClose={() => setIsInsuranceModalOpen(false)}
+                insurances={eligibleInsurances}
+                selectedId={insurance.insuranceId}
+                onSelect={(ins) => {
+                    setInsurance(prev => ({ ...prev, insuranceId: ins._id }));
+                    setIsInsuranceModalOpen(false);
+                }}
+            />
         </div>
     );
 };

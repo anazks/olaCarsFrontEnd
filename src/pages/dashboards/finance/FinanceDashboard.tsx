@@ -40,11 +40,21 @@ const FinanceDashboard = () => {
     // Here we'll just demonstrate the UI metrics based on the subset we loaded.
     const monthIncome = recentEntries
         .filter(e => e.accountingCode && e.accountingCode.category === 'INCOME')
-        .reduce((sum, e) => sum + (e.credit || 0) - (e.debit || 0), 0);
+        .reduce((sum, e) => {
+            if (e.amount !== undefined) {
+                return sum + (e.type === 'CREDIT' ? e.amount : -e.amount);
+            }
+            return sum + (e.credit || 0) - (e.debit || 0);
+        }, 0);
 
     const monthExpense = recentEntries
         .filter(e => e.accountingCode && e.accountingCode.category === 'EXPENSE')
-        .reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+        .reduce((sum, e) => {
+            if (e.amount !== undefined) {
+                return sum + (e.type === 'DEBIT' ? e.amount : -e.amount);
+            }
+            return sum + (e.debit || 0) - (e.credit || 0);
+        }, 0);
 
     const summaryCards = [
         {
@@ -147,25 +157,32 @@ const FinanceDashboard = () => {
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Description</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Account</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Accounting Code</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {recentEntries.map((entry) => {
-                                    const dateObj = new Date(entry.date);
+                                    const entryDateStr = entry.entryDate || entry.date;
+                                    const dateObj = new Date(entryDateStr);
                                     const formattedDate = !isNaN(dateObj.getTime()) 
                                         ? `${dateObj.toLocaleDateString()}` 
-                                        : entry.date;
+                                        : entryDateStr;
                                         
-                                    // Determine if this looks like cash in vs cash out for quick visual read
-                                    // Credit on income = good, debit on expense = bad
                                     let amount = 0;
-                                    
-                                    if (entry.credit > 0) {
-                                        amount = entry.credit;
-                                    } else if (entry.debit > 0) {
-                                        amount = entry.debit;
+                                    let isDebit = false;
+
+                                    if (entry.amount !== undefined) {
+                                        amount = entry.amount;
+                                        isDebit = entry.type === 'DEBIT';
+                                    } else {
+                                        if ((entry.credit || 0) > 0) {
+                                            amount = entry.credit || 0;
+                                            isDebit = false;
+                                        } else if ((entry.debit || 0) > 0) {
+                                            amount = entry.debit || 0;
+                                            isDebit = true;
+                                        }
                                     }
 
                                     return (
@@ -182,11 +199,11 @@ const FinanceDashboard = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className={`font-mono text-sm font-bold ${entry.debit > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                                    {entry.debit > 0 ? '-' : '+'}{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                <div className={`font-mono text-sm font-bold ${isDebit ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {isDebit ? '-' : '+'}{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </div>
                                                 <div className="text-[10px] uppercase tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-dim)' }}>
-                                                    {entry.debit > 0 ? 'DR' : 'CR'}
+                                                    {isDebit ? 'DR' : 'CR'}
                                                 </div>
                                             </td>
                                         </tr>

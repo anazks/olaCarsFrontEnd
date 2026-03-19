@@ -25,9 +25,10 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/operational-admin/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/operational-admin/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/operational-admin/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/operational-admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/operational-admin/manage-suppliers' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/operational-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Vehicles Onboarding', path: '/admin/operational-admin/vehicles' },
+        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/operational-admin/drivers' },
     ];
 

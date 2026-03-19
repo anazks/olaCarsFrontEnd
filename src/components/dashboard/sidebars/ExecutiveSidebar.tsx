@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, AlertTriangle, ListTodo, Calendar, ShieldCheck, TrendingUp, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Wrench } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 
 interface ExecutiveSidebarProps {
@@ -27,10 +27,11 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/admin/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/admin/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/admin/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/admin/manage-suppliers' },
         { icon: <DollarSign size={20} />, label: 'PO Threshold', path: '/admin/admin/po-threshold' },
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/admin/purchase-orders' },
-        { icon: <CarFront size={20} />, label: 'Vehicles Onboarding', path: '/admin/admin/vehicles' },
+        { icon: <CarFront size={20} />, label: 'Manage Vehicles', path: '/admin/admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/admin/drivers' },
     ];
 

@@ -83,6 +83,8 @@ export interface PurchaseOrderFilters {
     branch?: string;
     isUsed?: boolean;
     isBilled?: boolean;
+    startDate?: string;
+    endDate?: string;
     sortBy?: 'createdAt' | 'totalAmount' | 'purchaseOrderDate';
     sortOrder?: 'asc' | 'desc';
 }

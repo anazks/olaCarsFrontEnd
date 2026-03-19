@@ -58,6 +58,8 @@ export interface Driver {
         pdfS3Key?: string;
         signedS3Key?: string;
     };
+    assignedVehicle?: string | any;
+    currentVehicle?: string;
     rejection?: {
         reason: string;
         notes?: string;
@@ -81,9 +83,34 @@ export interface Driver {
     updatedAt?: string;
 }
 
-export const getAllDrivers = async (filters?: any): Promise<Driver[]> => {
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface DriverFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    branch?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    startDate?: string;
+    endDate?: string;
+}
+
+// GET all drivers with filters
+export const getAllDrivers = async (filters: DriverFilters = {}): Promise<PaginatedResponse<Driver>> => {
     const response = await api.get('/api/driver', { params: filters });
-    return response.data.data;
+    return response.data;
 };
 
 export const getDriverById = async (id: string): Promise<Driver> => {

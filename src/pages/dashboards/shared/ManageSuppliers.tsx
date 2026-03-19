@@ -28,7 +28,24 @@ const ManageSuppliers = () => {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Server-side filtering & pagination state
+    const [filters, setFilters] = useState({
+        page: 1,
+        limit: 10,
+        search: '',
+        category: '',
+        isActive: undefined as boolean | undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc' as 'asc' | 'desc'
+    });
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+    });
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -54,18 +71,36 @@ const ManageSuppliers = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllSuppliers();
-            setSuppliers(Array.isArray(data) ? data : []);
+            const response = await getAllSuppliers(filters);
+            if (response.success) {
+                setSuppliers(response.data);
+                setPagination(response.pagination);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch suppliers');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchSuppliers();
     }, [fetchSuppliers]);
+
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value,
+            page: 1
+        }));
+    };
+
+    const handlePageChange = (newPage: number) => {
+        setFilters(prev => ({
+            ...prev,
+            page: newPage
+        }));
+    };
 
     const openCreateModal = () => {
         setModalMode('create');
@@ -170,13 +205,6 @@ const ManageSuppliers = () => {
         }
     };
 
-    const filteredSuppliers = suppliers.filter(
-        (s) =>
-            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.contactPerson.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     return (
         <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
@@ -206,17 +234,85 @@ const ManageSuppliers = () => {
                 </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                    type="text"
-                    placeholder="Search by name, contact person, or category..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                />
+            {/* Search and Filters */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder="Search by name, contact person, email..."
+                            value={filters.search}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-300 border ${
+                            showAdvancedFilters 
+                            ? 'border-lime text-lime bg-lime/10' 
+                            : 'border-transparent text-gray-400 bg-white/5 hover:bg-white/10'
+                        }`}
+                        style={{ borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)' }}
+                    >
+                        <Plus size={18} className={`transition-transform duration-300 ${showAdvancedFilters ? 'rotate-45' : ''}`} />
+                        Advanced Filters
+                    </button>
+                </div>
+
+                {showAdvancedFilters && (
+                    <div 
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 rounded-2xl border animate-in slide-in-from-top-4 duration-300"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                    >
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Category</label>
+                            <select
+                                value={filters.category}
+                                onChange={(e) => handleFilterChange('category', e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Categories</option>
+                                {CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <select
+                                value={filters.isActive === undefined ? '' : filters.isActive.toString()}
+                                onChange={(e) => handleFilterChange('isActive', e.target.value === '' ? undefined : e.target.value === 'true')}
+                                className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="true">Active Only</option>
+                                <option value="false">Inactive Only</option>
+                            </select>
+                        </div>
+                        <div className="flex items-end">
+                            <button
+                                onClick={() => setFilters({
+                                    page: 1,
+                                    limit: 10,
+                                    search: '',
+                                    category: '',
+                                    isActive: undefined,
+                                    sortBy: 'createdAt',
+                                    sortOrder: 'desc'
+                                })}
+                                className="w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border border-dashed transition-all hover:bg-white/5"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                Reset All Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Error banner */}
@@ -228,99 +324,142 @@ const ManageSuppliers = () => {
 
             {/* Table */}
             <div className="rounded-2xl overflow-hidden border transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
                             <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                         </div>
-                    ) : filteredSuppliers.length === 0 ? (
+                    ) : suppliers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Users size={48} className="mx-auto mb-4 opacity-30" />
                             <p className="text-lg font-medium">No suppliers found</p>
-                            <p className="text-sm mt-1">Click "Add Supplier" to create one</p>
+                            <p className="text-sm mt-1">Try adjusting your filters or click "Add Supplier" to create one</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Supplier Info</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Person</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Details</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredSuppliers.map((supplier) => (
-                                    <tr
-                                        key={supplier._id}
-                                        className="border-b last:border-0 hover:bg-white/5 transition-colors"
-                                        style={{ borderColor: 'var(--border-main)' }}
-                                    >
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold font-medium" style={{ color: 'var(--text-main)' }}>{supplier.name}</div>
-                                            <div className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
-                                                <MapPin size={12} />
-                                                <span className="line-clamp-1">{supplier.address}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{supplier.contactPerson}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-main)' }}>
-                                                    <Mail size={14} style={{ color: '#C8E600' }} />
-                                                    {supplier.email}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-dim)' }}>
-                                                    <Phone size={14} style={{ color: '#C8E600' }} />
-                                                    {supplier.phone}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                <Tag size={12} />
-                                                {supplier.category}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${supplier.isActive ? '' : 'opacity-50'}`}
-                                                style={{
-                                                    background: supplier.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(107,114,128,0.1)',
-                                                    color: supplier.isActive ? '#22c55e' : '#6b7280',
-                                                    borderColor: supplier.isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'
-                                                }}>
-                                                {supplier.isActive ? 'ACTIVE' : 'INACTIVE'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(supplier)}
-                                                    className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
-                                                    style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
-                                                >
-                                                    <Pencil size={15} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteTarget(supplier)}
-                                                    className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
-                                                    style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </div>
-                                        </td>
+                        <>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Supplier Info</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Person</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Details</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {suppliers.map((supplier: Supplier) => (
+                                        <tr
+                                            key={supplier._id}
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors"
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                                    {supplier.name}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
+                                                    <MapPin size={12} />
+                                                    <span className="line-clamp-1">{supplier.address}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{supplier.contactPerson}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-main)' }}>
+                                                        <Mail size={14} style={{ color: '#C8E600' }} />
+                                                        {supplier.email}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-dim)' }}>
+                                                        <Phone size={14} style={{ color: '#C8E600' }} />
+                                                        {supplier.phone}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                                    <Tag size={12} />
+                                                    {supplier.category}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${supplier.isActive ? '' : 'opacity-50'}`}
+                                                    style={{
+                                                        background: supplier.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(107,114,128,0.1)',
+                                                        color: supplier.isActive ? '#22c55e' : '#6b7280',
+                                                        borderColor: supplier.isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'
+                                                    }}>
+                                                    {supplier.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => openEditModal(supplier)}
+                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-blue-500/20 active:scale-95"
+                                                        style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
+                                                    >
+                                                        <Pencil size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteTarget(supplier)}
+                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/20 active:scale-95"
+                                                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination */}
+                            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                    Showing <span style={{ color: 'var(--text-main)' }}>{suppliers.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> suppliers
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        {[...Array(pagination.totalPages)].map((_, i) => (
+                                            <button
+                                                key={i + 1}
+                                                onClick={() => handlePageChange(i + 1)}
+                                                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
+                                                style={{
+                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
+                                                }}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        disabled={filters.page === pagination.totalPages}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
-            </div>
 
             {/* Modals */}
             {modalMode && (

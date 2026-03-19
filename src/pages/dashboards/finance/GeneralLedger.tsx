@@ -53,8 +53,15 @@ const GeneralLedger = () => {
     }, [fetchData]);
 
     // Derived statistics
-    const totalDebit = entries.reduce((sum, entry) => sum + (entry.debit || 0), 0);
-    const totalCredit = entries.reduce((sum, entry) => sum + (entry.credit || 0), 0);
+    const totalDebit = entries.reduce((sum, entry) => {
+        if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
+        return sum + (entry.debit || 0);
+    }, 0);
+
+    const totalCredit = entries.reduce((sum, entry) => {
+        if (entry.amount !== undefined && entry.type === 'CREDIT') return sum + entry.amount;
+        return sum + (entry.credit || 0);
+    }, 0);
 
     return (
         <div className="max-w-7xl mx-auto space-y-6">
@@ -195,12 +202,21 @@ const GeneralLedger = () => {
                             <tbody>
                                 {entries.map((entry) => {
                                     // Formatting the date
-                                    const dateObj = new Date(entry.date);
+                                    const entryDateStr = entry.entryDate || entry.date;
+                                    const dateObj = new Date(entryDateStr);
                                     const formattedDate = !isNaN(dateObj.getTime()) 
                                         ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
-                                        : entry.date;
+                                        : entryDateStr;
 
                                     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
+
+                                    const debitVal = entry.amount !== undefined 
+                                        ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                                        : (entry.debit || 0);
+                                        
+                                    const creditVal = entry.amount !== undefined 
+                                        ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+                                        : (entry.credit || 0);
 
                                     return (
                                         <tr key={entry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
@@ -225,16 +241,16 @@ const GeneralLedger = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                {entry.debit > 0 ? (
+                                                {debitVal > 0 ? (
                                                     <span className="font-mono text-sm font-bold text-red-400">
-                                                        {entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        {debitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                {entry.credit > 0 ? (
+                                                {creditVal > 0 ? (
                                                     <span className="font-mono text-sm font-bold text-green-400">
-                                                        {entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
                                             </td>

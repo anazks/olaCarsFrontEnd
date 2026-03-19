@@ -12,6 +12,30 @@ export interface FinanceStaff {
     updatedAt?: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface StaffFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    branchId?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    startDate?: string;
+    endDate?: string;
+}
+
 export interface CreateFinanceStaffPayload {
     fullName: string;
     email: string;
@@ -31,10 +55,12 @@ export interface UpdateFinanceStaffPayload {
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
 }
 
-// GET all finance staff
-export const getAllFinanceStaff = async (): Promise<FinanceStaff[]> => {
-    const response = await api.get('/api/finance-staff');
-    return response.data.data;
+// GET all finance staff with filters
+export const getAllFinanceStaff = async (filters: StaffFilters = {}): Promise<PaginatedResponse<FinanceStaff>> => {
+    const response = await api.get('/api/finance-staff', {
+        params: filters
+    });
+    return response.data;
 };
 
 // POST create a new finance staff

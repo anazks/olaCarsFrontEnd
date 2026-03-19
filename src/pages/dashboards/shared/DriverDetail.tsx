@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertTriangle, AlertCircle, FileCheck, FileSignature } from 'lucide-react';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertTriangle, AlertCircle, FileCheck, Car, Tag } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
+import { getVehicleById } from '../../../services/vehicleService';
+import type { Vehicle } from '../../../services/vehicleService';
 import { getUserRole } from '../../../utils/auth';
 
 const DriverDetail = () => {
@@ -16,6 +18,8 @@ const DriverDetail = () => {
     const [fraudAlert, setFraudAlert] = useState<boolean>(false);
     const [reviewNotes, setReviewNotes] = useState<string>('');
     const [rejectionReason, setRejectionReason] = useState<string>('OTHER');
+    const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
+    const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [activationChecks, setActivationChecks] = useState({
         credentialsSent: false,
         gpsMonitoringActive: false
@@ -36,6 +40,21 @@ const DriverDetail = () => {
             if (data.creditCheck?.score) setCreditScore(data.creditCheck.score);
             if (data.creditCheck?.fraudAlert) setFraudAlert(data.creditCheck.fraudAlert);
             if (data.creditCheck?.reviewNotes) setReviewNotes(data.creditCheck.reviewNotes);
+            
+            if (data.currentVehicle) {
+                try {
+                    setLoadingVehicle(true);
+                    const vehicleData = await getVehicleById(data.currentVehicle);
+                    setAssignedVehicle(vehicleData);
+                } catch (vError) {
+                    console.error('Error fetching assigned vehicle:', vError);
+                } finally {
+                    setLoadingVehicle(false);
+                }
+            } else {
+                setAssignedVehicle(null);
+            }
+
             console.log(data, "data");
 
         } catch (error) {
@@ -272,13 +291,13 @@ const DriverDetail = () => {
                         </div>
                     )}
 
-                    {isStaff && driver.status === 'APPROVED' && (
+                    {isStaff && driver.status === 'APPROVED' && !driver.currentVehicle && (
                         <button
-                            onClick={() => handleProgress('CONTRACT PENDING', { notes: 'Contract issued to driver.' })}
+                            onClick={() => navigate('assign-vehicle')}
                             className="px-6 py-2.5 bg-black text-white font-bold rounded-xl hover:bg-gray-900 transition-all flex items-center gap-2"
                         >
-                            <FileSignature size={18} />
-                            Issue Contract
+                            <Car size={18} />
+                            Assign Vehicle
                         </button>
                     )}
 
@@ -354,9 +373,74 @@ const DriverDetail = () => {
                 </div>
             </div>
 
-            <div className="space-y-8">
-                {/* Information Sections */}
+                {/* Assigned Vehicle Section */}
+                {loadingVehicle ? (
+                    <div className="p-6 rounded-2xl border animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-10 h-10 rounded-lg bg-gray-200" style={{ backgroundColor: 'var(--bg-input)' }} />
+                            <div className="h-4 w-48 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />
+                        </div>
+                        <div className="grid grid-cols-4 gap-8">
+                            {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />)}
+                        </div>
+                    </div>
+                ) : assignedVehicle ? (
+                    <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--brand-lime-subtle, rgba(200,230,0,0.1))' }}>
+                        <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] -mr-12 -mt-12" style={{ backgroundColor: 'rgba(200,230,0,0.05)' }} />
+                        <div className="flex items-center justify-between mb-6 border-b pb-4 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                                    <Car size={20} />
+                                </div>
+                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Assigned Vehicle</h2>
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-tighter shadow-sm border border-brand-lime/20 animate-pulse">
+                                Active Rental
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                            <div className="flex gap-4 items-start">
+                                <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 shrink-0" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                    {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
+                                        <img 
+                                            src={assignedVehicle.purchaseDetails.purchaseReceipt.startsWith('http') ? assignedVehicle.purchaseDetails.purchaseReceipt : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${assignedVehicle.purchaseDetails.purchaseReceipt}`} 
+                                            alt="Vehicle" 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    ) : (
+                                        <Car size={24} style={{ color: 'var(--text-dim)', opacity: 0.3 }} />
+                                    )}
+                                </div>
+                                <InfoCard 
+                                    label="Vehicle Model" 
+                                    value={`${assignedVehicle.basicDetails.make} ${assignedVehicle.basicDetails.model}`} 
+                                    icon={<Tag size={14} />} 
+                                />
+                            </div>
+                            <InfoCard label="Registration" value={assignedVehicle.legalDocs?.registrationNumber || 'N/A'} />
+                            <InfoCard label="VIN Number" value={assignedVehicle.basicDetails.vin} />
+                            <InfoCard 
+                                label="Monthly Rent" 
+                                value={assignedVehicle.basicDetails.monthlyRent ? `$${assignedVehicle.basicDetails.monthlyRent.toLocaleString()}` : 'N/A'} 
+                                icon={<FileText size={14} />}
+                            />
+                        </div>
+                        
+                        <div className="mt-6 flex justify-end">
+                            <button 
+                                onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
+                                className="text-xs font-bold text-brand-lime uppercase hover:underline flex items-center gap-1"
+                            >
+                                View Vehicle Details <ChevronLeft size={14} className="rotate-180" />
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+
                 <div className="space-y-8">
+                    {/* Information Sections */}
+                    <div className="space-y-8">
                     {/* Basic Info */}
                     <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -mr-8 -mt-8" style={{ backgroundColor: 'rgba(200,230,0,0.03)' }} />

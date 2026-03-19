@@ -1,27 +1,70 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar } from 'lucide-react';
-import { driverService } from '../../../services/driverService';
-import type { Driver } from '../../../services/driverService';
+import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft } from 'lucide-react';
+import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../services/driverService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 
 const DriverList = () => {
     const navigate = useNavigate();
     const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+    // Filter State
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [branchFilter, setBranchFilter] = useState('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState<string>('appliedAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Pagination State
+    const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(10);
 
     useEffect(() => {
-        fetchDrivers();
+        const timer = setTimeout(() => {
+            fetchDrivers();
+        }, searchTerm ? 500 : 0);
+        return () => clearTimeout(timer);
+    }, [currentPage, statusFilter, branchFilter, startDate, endDate, sortBy, sortOrder, searchTerm]);
+
+    useEffect(() => {
+        const fetchBranchesData = async () => {
+            try {
+                const data = await getAllBranches();
+                setBranches(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+            }
+        };
+        fetchBranchesData();
     }, []);
 
     const fetchDrivers = async () => {
         try {
             setLoading(true);
-            const data = await driverService.getAllDrivers();
-            console.log(data,'data');
-            
-            setDrivers(Array.isArray(data) ? data : []);
+            const filters: DriverFilters = {
+                page: currentPage,
+                limit: limit,
+                sortBy,
+                sortOrder
+            };
+
+            if (searchTerm.trim()) filters.search = searchTerm.trim();
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (branchFilter !== 'ALL') filters.branch = branchFilter;
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
+
+            const res = await driverService.getAllDrivers(filters);
+            setDrivers(res.data || []);
+            setPagination(res.pagination);
         } catch (error) {
             console.error('Error fetching drivers:', error);
             setDrivers([]);
@@ -45,15 +88,34 @@ const DriverList = () => {
         }
     };
 
-    const filteredDrivers = drivers.filter(driver => {
-        const fullName = driver.personalInfo?.fullName || '';
-        const email = driver.personalInfo?.email || '';
-        
-        const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'ALL' || driver.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    const handlePageChange = (newPage: number) => {
+        if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+        setCurrentPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <div className="opacity-20 transition-opacity group-hover:opacity-50"><ChevronDown size={14} /></div>;
+        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} className="text-lime" style={{ color: 'var(--brand-lime)' }} /></div>;
+    };
+
+    const FilterLabel = ({ label }: { label: string }) => (
+        <label className="block text-[10px] uppercase font-black tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-dim)' }}>
+            {label}
+        </label>
+    );
+
+    const filteredDrivers = drivers; // Now handled server-side
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -62,53 +124,118 @@ const DriverList = () => {
                     <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>Driver Management</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Monitor and manage driver onboarding applications</p>
                 </div>
-                <button
-                    onClick={() => navigate('new')}
-                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
-                    style={{ 
-                        backgroundColor: 'var(--brand-lime)', 
-                        color: 'var(--brand-black)' 
-                    }}
-                >
-                    <Plus size={20} />
-                    New Application
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={fetchDrivers}
+                        className="p-2.5 rounded-xl border transition-all hover:bg-lime/5 disabled:opacity-50"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        title="Refresh data"
+                        disabled={loading}
+                    >
+                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
+                        style={{ 
+                            background: showAdvancedFilters ? '' : 'var(--bg-card)', 
+                            borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)', 
+                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
+                        }}
+                    >
+                        <Filter size={18} /> Filters
+                    </button>
+                    <button
+                        onClick={() => navigate('new')}
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
+                        style={{ 
+                            backgroundColor: 'var(--brand-lime)', 
+                            color: 'var(--brand-black)' 
+                        }}
+                    >
+                        <Plus size={20} /> New Application
+                    </button>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            {/* Toolbar / Filters */}
+            <div className="p-6 rounded-2xl border mb-8 space-y-4 transition-colors shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                {/* Search Bar */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={20} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="text"
-                        placeholder="Search name or email..."
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-colors"
-                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        placeholder="Search by name or email..."
+                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
+                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
                     />
                 </div>
-                <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <select
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime appearance-none font-medium transition-colors"
-                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="PENDING REVIEW">Pending Review</option>
-                        <option value="VERIFICATION">Verification</option>
-                        <option value="CREDIT CHECK">Credit Check</option>
-                        <option value="MANAGER REVIEW">Manager Review</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="CONTRACT PENDING">Contract Pending</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="SUSPENDED">Suspended</option>
-                        <option value="REJECTED">Rejected</option>
-                    </select>
-                </div>
+
+                {/* Advanced Filters */}
+                {showAdvancedFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t transition-all animate-in slide-in-from-top-2 duration-300" style={{ borderColor: 'var(--border-main)' }}>
+                        <div>
+                            <FilterLabel label="Onboarding Status" />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="DRAFT">Draft</option>
+                                <option value="PENDING REVIEW">Pending Review</option>
+                                <option value="VERIFICATION">Verification</option>
+                                <option value="CREDIT CHECK">Credit Check</option>
+                                <option value="MANAGER REVIEW">Manager Review</option>
+                                <option value="APPROVED">Approved</option>
+                                <option value="CONTRACT PENDING">Contract Pending</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="SUSPENDED">Suspended</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+                        <div>
+                            <FilterLabel label="Assigned Branch" />
+                            <select
+                                value={branchFilter}
+                                onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Branches</option>
+                                {branches.map(b => (
+                                    <option key={b._id} value={b._id}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <FilterLabel label="Applied From" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                        <div>
+                            <FilterLabel label="Applied To" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Drivers Table */}
@@ -117,10 +244,24 @@ const DriverList = () => {
                     <table className="w-full text-left border-collapse">
                         <thead className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <tr>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Driver</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>License</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Applied</th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('personalInfo.fullName')}>
+                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        Driver <SortIcon field="personalInfo.fullName" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        Status <SortIcon field="status" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4">
+                                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>License</span>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('appliedAt')}>
+                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        Applied <SortIcon field="appliedAt" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                             </tr>
                         </thead>
@@ -192,6 +333,49 @@ const DriverList = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span style={{ color: 'var(--text-main)' }}>{drivers.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> drivers
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {[...Array(pagination.totalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${currentPage === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                        style={{ 
+                                            background: currentPage === i + 1 ? 'var(--brand-lime)' : 'transparent',
+                                            color: currentPage === i + 1 ? '#000' : 'var(--text-main)',
+                                            border: currentPage === i + 1 ? 'none' : '1px solid var(--border-main)'
+                                        }}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

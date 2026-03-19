@@ -34,6 +34,7 @@ import ManageBranches from './pages/dashboards/shared/ManageBranches';
 import ManageBranchManagers from './pages/dashboards/shared/ManageBranchManagers';
 import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
+import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
@@ -53,6 +54,7 @@ import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
 import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
+import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
 import Profile from './pages/dashboards/shared/Profile';
 
 // Finance Pages
@@ -116,6 +118,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="po-threshold" element={<POThresholdPage />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
@@ -142,6 +145,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
@@ -161,6 +165,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
@@ -169,6 +174,7 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="profile" element={<Profile />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
@@ -184,6 +190,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
@@ -195,6 +202,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
             </Route>
@@ -205,6 +213,7 @@ function App() {
               <Route index element={<BranchManagerDashboard />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
@@ -216,6 +225,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
             </Route>
@@ -245,6 +255,7 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="profile" element={<Profile />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />

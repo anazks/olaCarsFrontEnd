@@ -17,6 +17,31 @@ export interface CountryManager {
     updatedAt?: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface ManagerFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    country?: string;
+    branchId?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    startDate?: string;
+    endDate?: string;
+}
+
 export interface CreateCountryManagerPayload {
     fullName: string;
     email: string;
@@ -38,10 +63,12 @@ export interface UpdateCountryManagerPayload {
     twoFactorEnabled?: boolean;
 }
 
-// GET all country managers
-export const getAllCountryManagers = async (): Promise<CountryManager[]> => {
-    const response = await api.get('/api/country-manager');
-    return response.data.data;
+// GET all country managers with filters
+export const getAllCountryManagers = async (filters: ManagerFilters = {}): Promise<PaginatedResponse<CountryManager>> => {
+    const response = await api.get('/api/country-manager', {
+        params: filters
+    });
+    return response.data;
 };
 
 // POST create a new country manager

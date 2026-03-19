@@ -1,6 +1,6 @@
 import api from './api';
 
-export interface OperationStaff {
+export interface WorkshopStaff {
     _id: string;
     fullName: string;
     email: string;
@@ -36,7 +36,7 @@ export interface StaffFilters {
     endDate?: string;
 }
 
-export interface CreateOperationStaffPayload {
+export interface CreateWorkshopStaffPayload {
     fullName: string;
     email: string;
     password: string;
@@ -45,7 +45,7 @@ export interface CreateOperationStaffPayload {
     status?: string;
 }
 
-export interface UpdateOperationStaffPayload {
+export interface UpdateWorkshopStaffPayload {
     id: string;
     fullName?: string;
     email?: string;
@@ -55,31 +55,31 @@ export interface UpdateOperationStaffPayload {
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
 }
 
-// GET all operation staff with filters
-export const getAllOperationStaff = async (filters: StaffFilters = {}): Promise<PaginatedResponse<OperationStaff>> => {
-    const response = await api.get('/api/operation-staff', {
+// GET all workshop staff with filters
+export const getAllWorkshopStaff = async (filters: StaffFilters = {}): Promise<PaginatedResponse<WorkshopStaff>> => {
+    const response = await api.get('/api/workshop-staff', {
         params: filters
     });
     return response.data;
 };
 
-// POST create a new operation staff
-export const createOperationStaff = async (
-    payload: CreateOperationStaffPayload
-): Promise<OperationStaff> => {
-    const response = await api.post('/api/operation-staff', payload);
+// POST create a new workshop staff
+export const createWorkshopStaff = async (
+    payload: CreateWorkshopStaffPayload
+): Promise<WorkshopStaff> => {
+    const response = await api.post('/api/workshop-staff', payload);
     return response.data;
 };
 
-// PUT update an operation staff
-export const updateOperationStaff = async (
-    payload: UpdateOperationStaffPayload
-): Promise<OperationStaff> => {
-    const response = await api.put('/api/operation-staff/update', payload);
+// PUT update a workshop staff
+export const updateWorkshopStaff = async (
+    payload: UpdateWorkshopStaffPayload
+): Promise<WorkshopStaff> => {
+    const response = await api.put('/api/workshop-staff/update', payload);
     return response.data;
 };
 
-// DELETE an operation staff by ID
-export const deleteOperationStaff = async (id: string): Promise<void> => {
-    await api.delete(`/api/operation-staff/${id}`);
+// DELETE a workshop staff by ID
+export const deleteWorkshopStaff = async (id: string): Promise<void> => {
+    await api.delete(`/api/workshop-staff/${id}`);
 };

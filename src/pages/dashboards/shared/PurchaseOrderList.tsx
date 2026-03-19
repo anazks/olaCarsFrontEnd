@@ -69,6 +69,8 @@ const PurchaseOrderList = () => {
     const [branchFilter, setBranchFilter] = useState<string>('ALL');
     const [isUsedFilter, setIsUsedFilter] = useState<'ALL' | 'TRUE' | 'FALSE'>('ALL');
     const [isBilledFilter, setIsBilledFilter] = useState<'ALL' | 'TRUE' | 'FALSE'>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     // Sorting State
     const [sortBy, setSortBy] = useState<PurchaseOrderFilters['sortBy']>('createdAt');
@@ -82,12 +84,12 @@ const PurchaseOrderList = () => {
     useEffect(() => {
         const fetchMetadata = async () => {
             try {
-                const [sData, bData] = await Promise.all([
-                    getAllSuppliers(),
-                    getAllBranches()
+                const [sResponse, bResponse] = await Promise.all([
+                    getAllSuppliers({ limit: 1000 }),
+                    getAllBranches({ limit: 1000 })
                 ]);
-                setSuppliers(sData || []);
-                setBranches(bData || []);
+                setSuppliers(sResponse.data || []);
+                setBranches(bResponse.data || []);
             } catch (err) {
                 console.error('Failed to fetch filter metadata:', err);
             } finally {
@@ -114,6 +116,8 @@ const PurchaseOrderList = () => {
             if (branchFilter !== 'ALL') filters.branch = branchFilter;
             if (isUsedFilter !== 'ALL') filters.isUsed = isUsedFilter === 'TRUE';
             if (isBilledFilter !== 'ALL') filters.isBilled = isBilledFilter === 'TRUE';
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
 
             const response = await getAllPurchaseOrders(filters);
             setPos(Array.isArray(response.data) ? response.data : []);
@@ -123,7 +127,7 @@ const PurchaseOrderList = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, limit, searchQuery, statusFilter, supplierFilter, branchFilter, isUsedFilter, isBilledFilter, sortBy, sortOrder]);
+    }, [currentPage, limit, searchQuery, statusFilter, supplierFilter, branchFilter, isUsedFilter, isBilledFilter, startDate, endDate, sortBy, sortOrder]);
 
     // Debounced search effect
     useEffect(() => {
@@ -295,6 +299,29 @@ const PurchaseOrderList = () => {
                             </select>
                         </div>
 
+                        {/* Date Filters */}
+                        <div>
+                            <FilterLabel label="Start Date" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+
+                        <div>
+                            <FilterLabel label="End Date" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+
                         {/* Reset Filters */}
                         <div className="flex flex-col justify-end">
                             <button
@@ -304,6 +331,8 @@ const PurchaseOrderList = () => {
                                     setSupplierFilter('ALL');
                                     setIsBilledFilter('ALL');
                                     setIsUsedFilter('ALL');
+                                    setStartDate('');
+                                    setEndDate('');
                                     setCurrentPage(1);
                                 }}
                                 className="w-full py-3 text-xs font-bold opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"

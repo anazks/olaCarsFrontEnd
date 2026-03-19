@@ -33,11 +33,35 @@ export interface UpdateBranchPayload extends Partial<CreateBranchPayload> {
     id: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    success: boolean;
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface BranchFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+    country?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
 // GET all branches
-export const getAllBranches = async (): Promise<Branch[]> => {
-    const response = await api.get('/api/branch');
-    console.log(response, 'e2323')
-    return response.data.data;
+export const getAllBranches = async (filters: BranchFilters = {}): Promise<PaginatedResponse<Branch>> => {
+    const response = await api.get('/api/branch', {
+        params: filters
+    });
+    return response.data;
 };
 
 // GET single branch

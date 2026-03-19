@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Shield, Plus, Edit2, Trash2, FileText, Upload, X, Check, AlertCircle, Search } from 'lucide-react';
+import { Shield, Plus, Trash2, Upload, X, Check, AlertTriangle, Search, Eye, Download } from 'lucide-react';
 import {
     getAllInsurances,
     createInsurance,
-    updateInsurance,
     deleteInsurance,
     type Insurance,
     type CreateInsurancePayload,
+    type InsuranceStatus,
     type PolicyType,
     type CoverageType
 } from '../../../services/insuranceService';
@@ -15,12 +15,29 @@ const ManageInsurances = () => {
     const [insurances, setInsurances] = useState<Insurance[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+
+    // Server-side filtering & pagination state
+    const [filters, setFilters] = useState({
+        page: 1,
+        limit: 10,
+        search: '',
+        status: undefined as InsuranceStatus | undefined,
+        policyType: undefined as PolicyType | undefined,
+        coverageType: undefined as CoverageType | undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc' as 'asc' | 'desc'
+    });
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+    });
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [selectedInsurance, setSelectedInsurance] = useState<Insurance | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [formData, setFormData] = useState<CreateInsurancePayload>({
         provider: '',
         policyNumber: '',
@@ -41,9 +58,11 @@ const ManageInsurances = () => {
     const fetchInsurances = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getAllInsurances();
-            console.log(data, 'data');
-            setInsurances(Array.isArray(data) ? data : []);
+            const response = await getAllInsurances(filters);
+            if (response.success) {
+                setInsurances(response.data);
+                setPagination(response.pagination);
+            }
             setError(null);
         } catch (err) {
             console.error('Fetch error:', err);
@@ -51,14 +70,35 @@ const ManageInsurances = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchInsurances();
     }, [fetchInsurances]);
 
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value,
+            page: 1
+        }));
+    };
+
+    const handlePageChange = (newPage: number) => {
+        setFilters(prev => ({
+            ...prev,
+            page: newPage
+        }));
+    };
+
+    const getFullUrl = (path: string | undefined) => {
+        if (!path) return '';
+        if (path.startsWith('http')) return path;
+        const baseUrl = 'https://ola-cars-uploads-2026.s3.ap-south-1.amazonaws.com';
+        return `${baseUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
+    };
+
     const handleOpenCreateModal = () => {
-        setModalMode('create');
         setFormData({
             provider: '',
             policyNumber: '',
@@ -73,47 +113,26 @@ const ManageInsurances = () => {
         setIsModalOpen(true);
     };
 
-    const handleOpenEditModal = (ins: Insurance) => {
-        setModalMode('edit');
-        setSelectedInsurance(ins);
-        setFormData({
-            provider: ins.provider,
-            policyNumber: ins.policyNumber,
-            policyType: ins.policyType,
-            coverageType: ins.coverageType,
-            startDate: ins.startDate.split('T')[0],
-            expiryDate: ins.expiryDate.split('T')[0],
-            insuredValue: ins.insuredValue,
-            providerContact: { ...ins.providerContact }
-        });
-        setIsModalOpen(true);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            setLoading(true);
-            if (modalMode === 'create') {
-                const fd = new FormData();
-                fd.append('provider', formData.provider);
-                fd.append('policyNumber', formData.policyNumber);
-                fd.append('policyType', formData.policyType);
-                fd.append('coverageType', formData.coverageType);
-                fd.append('startDate', new Date(formData.startDate).toISOString());
-                fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
-                fd.append('insuredValue', formData.insuredValue.toString());
-                fd.append('providerContact[name]', formData.providerContact.name);
-                fd.append('providerContact[phone]', formData.providerContact.phone);
-                fd.append('providerContact[email]', formData.providerContact.email);
-                
-                if (policyFile) {
-                    fd.append('policyDocument', policyFile);
-                }
-
-                await createInsurance(fd);
-            } else if (selectedInsurance) {
-                await updateInsurance(selectedInsurance._id, formData);
+            const fd = new FormData();
+            fd.append('provider', formData.provider);
+            fd.append('policyNumber', formData.policyNumber);
+            fd.append('policyType', formData.policyType);
+            fd.append('coverageType', formData.coverageType);
+            fd.append('startDate', new Date(formData.startDate).toISOString());
+            fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
+            fd.append('insuredValue', formData.insuredValue.toString());
+            fd.append('providerContact[name]', formData.providerContact.name);
+            fd.append('providerContact[phone]', formData.providerContact.phone);
+            fd.append('providerContact[email]', formData.providerContact.email);
+            
+            if (policyFile) {
+                fd.append('policyDocument', policyFile);
             }
+
+            await createInsurance(fd);
             setIsModalOpen(false);
             setPolicyFile(null);
             fetchInsurances();
@@ -134,136 +153,252 @@ const ManageInsurances = () => {
         }
     };
 
-
-    const filteredInsurances = insurances.filter(ins =>
-        (ins?.provider?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (ins?.policyNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
-
     return (
-        <div className="p-6 space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Shield className="text-lime" /> Insurance Management
                     </h1>
-                    <p className="text-sm text-dim">Manage vehicle insurance policies and documents</p>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Manage vehicle insurance policies and documents</p>
                 </div>
                 <button
                     onClick={handleOpenCreateModal}
-                    className="flex items-center gap-2 bg-lime text-black px-4 py-2 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(163,230,53,0.3)] transition-all"
+                    className="flex items-center gap-2 bg-lime text-black px-6 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(163,230,53,0.3)] transition-all hover:-translate-y-0.5"
                 >
                     <Plus size={20} /> New Policy
                 </button>
             </div>
 
-            <div className="flex items-center gap-4 bg-glass border border-white/5 p-4 rounded-2xl">
-                <Search className="text-dim" size={20} />
-                <input
-                    type="text"
-                    placeholder="Search by provider or policy number..."
-                    className="bg-transparent outline-none w-full text-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            {/* Search and Advanced Filters */}
+            <div className="space-y-4">
+                <div className="flex gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by provider or policy number..."
+                            className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            value={filters.search}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
+                    >
+                        Advanced Filters {showAdvancedFilters ? '↑' : '↓'}
+                    </button>
+                </div>
+
+                {showAdvancedFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <select
+                                value={filters.status || ''}
+                                onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="EXPIRED">EXPIRED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Policy Type</label>
+                            <select
+                                value={filters.policyType || ''}
+                                onChange={(e) => handleFilterChange('policyType', e.target.value || undefined)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Types</option>
+                                <option value="INDIVIDUAL">INDIVIDUAL</option>
+                                <option value="FLEET">FLEET</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Coverage</label>
+                            <select
+                                value={filters.coverageType || ''}
+                                onChange={(e) => handleFilterChange('coverageType', e.target.value || undefined)}
+                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Coverage</option>
+                                <option value="COMPREHENSIVE">COMPREHENSIVE</option>
+                                <option value="THIRD_PARTY">THIRD_PARTY</option>
+                            </select>
+                        </div>
+                        <div className="flex items-end pb-0.5">
+                            <button
+                                onClick={() => setFilters({
+                                    ...filters,
+                                    search: '',
+                                    status: undefined,
+                                    policyType: undefined,
+                                    coverageType: undefined,
+                                    page: 1
+                                })}
+                                className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
+                                style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {error && (
-                <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl animate-in fade-in duration-300">
-                    <AlertCircle size={20} />
-                    <span className="text-sm">{error}</span>
+                <div className="flex items-center gap-3 p-4 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                    <AlertTriangle size={18} /> {error}
                 </div>
             )}
 
-            <div className="bg-glass border border-white/5 rounded-2xl overflow-hidden overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="bg-white/5 text-xs font-bold uppercase tracking-wider text-dim">
-                        <tr>
-                            <th className="px-6 py-4">Provider / Policy</th>
-                            <th className="px-6 py-4">Type / Coverage</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Expiry</th>
-                            <th className="px-6 py-4">Insured Value</th>
-                            <th className="px-6 py-4">Document</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                        {loading ? (
-                            <tr>
-                                <td colSpan={7} className="px-6 py-12 text-center text-dim">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="animate-spin border-2 border-lime border-t-transparent rounded-full w-6 h-6" />
-                                        <span className="text-sm">Loading policies...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : filteredInsurances.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} className="px-6 py-12 text-center text-dim">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Shield size={32} className="opacity-20" />
-                                        <span className="text-sm">No insurance policies found</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredInsurances.map(ins => (
-                                <tr key={ins._id} className="hover:bg-white/5 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold">{ins.provider || 'N/A'}</div>
-                                        <div className="text-xs text-dim">{ins.policyNumber || 'No Policy #'}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="px-2 py-0.5 rounded-md bg-white/10 text-[10px] w-fit font-bold">{ins.policyType || 'INDIVIDUAL'}</span>
-                                            <span className="text-xs text-dim">{ins.coverageType || 'COMPREHENSIVE'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                                            ins.status === 'ACTIVE' ? 'bg-lime/10 text-lime' : 'bg-red-500/10 text-red-500'
-                                        }`}>
-                                            {ins.status || 'UNKNOWN'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        {ins.expiryDate ? new Date(ins.expiryDate).toLocaleDateString() : 'N/A'}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-mono">
-                                        ${(ins.insuredValue || 0).toLocaleString()}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            {ins.policyDocument ? (
-                                                <a
-                                                    href={ins.policyDocument}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-2 bg-lime/10 text-lime rounded-lg hover:bg-lime/20"
-                                                >
-                                                    <FileText size={16} />
-                                                </a>
-                                            ) : (
-                                                <span className="text-[10px] text-dim italic">No Document</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button onClick={() => handleOpenEditModal(ins)} className="p-2 hover:bg-white/10 rounded-lg text-dim hover:text-white transition-all">
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button onClick={() => handleDelete(ins._id)} className="p-2 hover:bg-red-500/10 rounded-lg text-dim hover:text-red-500 transition-all">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
+            <div className="bg-glass border border-white/5 rounded-2xl overflow-hidden overflow-x-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : insurances.length === 0 ? (
+                    <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
+                        <Shield size={48} className="mx-auto mb-4 opacity-20" />
+                        <p className="text-lg font-medium">No insurance policies found</p>
+                        <p className="text-sm mt-1">Try adjusting your filters or click "New Policy"</p>
+                    </div>
+                ) : (
+                    <>
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Provider / Policy</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Type / Coverage</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Expiry</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Insured Value</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Docs</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {insurances.map(ins => (
+                                    <tr key={ins._id} className="hover:bg-white/5 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{ins.provider || 'N/A'}</div>
+                                            <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{ins.policyNumber || 'No Policy #'}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] w-fit font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
+                                                    {ins.policyType || 'INDIVIDUAL'}
+                                                </span>
+                                                <span className="text-[10px] uppercase font-medium" style={{ color: 'var(--text-dim)' }}>{ins.coverageType?.replace('_', ' ') || 'COMPREHENSIVE'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                ins.status === 'ACTIVE' ? '' : 'opacity-50'
+                                            }`} style={{
+                                                background: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                                                color: ins.status === 'ACTIVE' ? '#22c55e' : '#ef4444',
+                                                borderColor: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'
+                                            }}>
+                                                {ins.status || 'UNKNOWN'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>
+                                            {ins.expiryDate ? new Date(ins.expiryDate).toLocaleDateString() : 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                            ${(ins.insuredValue || 0).toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {ins.documents?.policyDocumentUrl ? (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedImage(getFullUrl(ins.documents?.policyDocumentUrl))}
+                                                        className="p-2 rounded-xl transition-all hover:bg-lime/20 text-lime"
+                                                        style={{ background: 'rgba(200,230,0,0.1)' }}
+                                                        title="View Document"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <a
+                                                        href={getFullUrl(ins.documents?.policyDocumentUrl)}
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500"
+                                                        style={{ background: 'rgba(59,130,246,0.1)' }}
+                                                        title="Download Document"
+                                                    >
+                                                        <Download size={16} />
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] italic" style={{ color: 'var(--text-dim)' }}>No Document</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button onClick={() => handleDelete(ins._id)} className="p-2 rounded-xl hover:bg-red-500/10 text-dim hover:text-red-500 transition-all cursor-pointer">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {/* Pagination */}
+                        <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                            <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                Showing <span style={{ color: 'var(--text-main)' }}>{insurances.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> policies
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    disabled={filters.page === 1}
+                                    onClick={() => handlePageChange(filters.page - 1)}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    Previous
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    {[...Array(pagination.totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => handlePageChange(i + 1)}
+                                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
+                                            style={{
+                                                background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
+                                                border: '1px solid var(--border-main)',
+                                                color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
+                                            }}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    disabled={filters.page === pagination.totalPages}
+                                    onClick={() => handlePageChange(filters.page + 1)}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* CRUD Modal */}
@@ -272,8 +407,8 @@ const ManageInsurances = () => {
                     <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                             <h2 className="text-xl font-bold flex items-center gap-2">
-                                {modalMode === 'create' ? <Plus className="text-lime" /> : <Edit2 className="text-lime" />}
-                                {modalMode === 'create' ? 'New Insurance Policy' : 'Edit Insurance Policy'}
+                                <Plus className="text-lime" />
+                                New Insurance Policy
                             </h2>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-dim hover:text-white transition-all">
                                 <X size={24} />
@@ -412,7 +547,6 @@ const ManageInsurances = () => {
                                 </div>
                             </div>
 
-                            {modalMode === 'create' && (
                                 <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-lime">Policy Document</h3>
                                     <div className="flex items-center gap-4">
@@ -438,7 +572,6 @@ const ManageInsurances = () => {
                                         </label>
                                     </div>
                                 </div>
-                            )}
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <button
@@ -456,12 +589,36 @@ const ManageInsurances = () => {
                                     {loading ? (
                                         <div className="animate-spin border-2 border-black border-t-transparent rounded-full w-4 h-4" />
                                     ) : (
-                                        modalMode === 'create' ? <Check size={20} /> : <Upload size={20} />
+                                        <Check size={20} />
                                     )}
-                                    {modalMode === 'create' ? 'Create Policy' : 'Save Changes'}
+                                    Create Policy
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* ImageViewer Modal */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 animate-in fade-in duration-300"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button 
+                        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-10"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <X size={24} />
+                    </button>
+                    <div 
+                        className="relative max-w-5xl max-h-[90vh] w-full flex items-center justify-center animate-in zoom-in-95 duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <img 
+                            src={selectedImage} 
+                            alt="Insurance Document" 
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10"
+                        />
                     </div>
                 </div>
             )}

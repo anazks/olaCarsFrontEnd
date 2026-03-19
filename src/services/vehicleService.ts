@@ -50,7 +50,7 @@ export interface PurchaseDetails {
     currency: string;
     paymentMethod: PaymentMethod;
     financeDetails?: FinanceDetails;
-    branch: string;
+    branch: string | { _id: string; name: string; [key: string]: any };
     purchaseReceipt?: string;
 }
 
@@ -62,6 +62,7 @@ export interface BasicDetails {
     category: VehicleCategory;
     fuelType: FuelType;
     transmission: Transmission;
+    monthlyRent?: number;
     engineCapacity?: number;
     colour?: string;
     seats?: number;
@@ -194,8 +195,10 @@ export interface Vehicle {
     retirementDetails?: RetirementDetails;
     status: VehicleStatus;
     statusHistory?: StatusHistoryEntry[];
-    createdAt?: string;
-    updatedAt?: string;
+    createdBy?: string;
+    creatorRole?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
@@ -238,10 +241,49 @@ export interface ProgressVehiclePayload {
 
 // ── API Functions ─────────────────────────────────────────────────────────────
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    success: boolean;
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface VehicleFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: VehicleStatus;
+    branch?: string;
+    category?: VehicleCategory;
+    fuelType?: FuelType;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
 // GET all vehicles
-export const getAllVehicles = async (): Promise<Vehicle[]> => {
-    const response = await api.get('/api/vehicle/');
-    return response.data.data;
+export const getAllVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
+    const response = await api.get('/api/vehicle/', {
+        params: filters
+    });
+    return response.data;
+};
+
+// GET all available vehicles for rental
+export const getAvailableVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
+    const response = await api.get('/api/vehicle/available', { params: filters });
+    return response.data;
+};
+
+// POST assign vehicle to driver
+export const assignVehicleToDriver = async (vehicleId: string, driverId: string): Promise<any> => {
+    const response = await api.post(`/api/vehicle/${vehicleId}/assign/${driverId}`);
+    return response.data;
 };
 
 // GET single vehicle

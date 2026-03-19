@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
 import { getEligibleInsurances } from '../../../services/insuranceService';
 import type { Insurance } from '../../../services/insuranceService';
+import InsuranceSelectorModal from './InsuranceSelectorModal';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ const CreateVehicle = () => {
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     const [insurances, setInsurances] = useState<Insurance[]>([]);
     const [branchName, setBranchName] = useState<string>('');
+    const [isInsuranceModalOpen, setIsInsuranceModalOpen] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState<CreateVehiclePayload>({
@@ -71,12 +73,17 @@ const CreateVehicle = () => {
 
     const fetchData = useCallback(async () => {
         try {
-            const [posResponse, insData] = await Promise.all([
+            const [posResponse, insResponse] = await Promise.all([
                 getVehiclePurchaseOrders(1, 100),
                 getEligibleInsurances()
             ]);
-            setPurchaseOrders(posResponse.data.filter(po => po.status === 'APPROVED'));
-            setInsurances(insData);
+            
+            // Handle both plain array and paginated response for backward compatibility or future-proofing
+            const posData = (posResponse as any).data || posResponse;
+            const insData = (insResponse as any).data || insResponse;
+
+            setPurchaseOrders(Array.isArray(posData) ? posData.filter((po: any) => po.status === 'APPROVED') : []);
+            setInsurances(Array.isArray(insData) ? insData : []);
         } catch (err) {
             console.error('Failed to fetch data:', err);
         }
@@ -384,20 +391,20 @@ const CreateVehicle = () => {
                             </FormField>
 
                             <FormField label="Insurance Policy" required>
-                                <select
-                                    required
-                                    value={formData.insuranceId}
-                                    onChange={(e) => setFormData({ ...formData, insuranceId: e.target.value })}
-                                    className={inputClass}
-                                    style={inputStyle}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsInsuranceModalOpen(true)}
+                                    className={`flex items-center justify-between ${inputClass}`}
+                                    style={{ ...inputStyle, textAlign: 'left' }}
                                 >
-                                    <option value="">Select an active insurance</option>
-                                    {insurances.map(ins => (
-                                        <option key={ins._id} value={ins._id}>
-                                            {ins.policyNumber} — {ins.provider} ({ins.coverageType})
-                                        </option>
-                                    ))}
-                                </select>
+                                    {formData.insuranceId ? (() => {
+                                        const ins = insurances.find(i => i._id === formData.insuranceId);
+                                        return ins ? `${ins.provider} — ${ins.policyNumber}` : 'Select an active insurance';
+                                    })() : (
+                                        <span style={{ color: 'var(--text-dim)' }}>Select an active insurance</span>
+                                    )}
+                                    <ChevronRight size={16} style={{ color: 'var(--text-dim)' }} />
+                                </button>
                             </FormField>
                         </div>
 
@@ -587,6 +594,17 @@ const CreateVehicle = () => {
                     )}
                 </div>
             </form>
+
+            <InsuranceSelectorModal
+                isOpen={isInsuranceModalOpen}
+                onClose={() => setIsInsuranceModalOpen(false)}
+                insurances={insurances}
+                selectedId={formData.insuranceId}
+                onSelect={(ins) => {
+                    setFormData(prev => ({ ...prev, insuranceId: ins._id }));
+                    setIsInsuranceModalOpen(false);
+                }}
+            />
         </div>
     );
 };

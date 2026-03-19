@@ -21,7 +21,9 @@ export interface Insurance {
     insuredValue: number;
     providerContact: ProviderContact;
     status: InsuranceStatus;
-    policyDocument?: string;
+    documents?: {
+        policyDocumentUrl?: string;
+    };
     vehicles?: string[];
     createdAt?: string;
     updatedAt?: string;
@@ -38,16 +40,42 @@ export interface CreateInsurancePayload {
     providerContact: ProviderContact;
 }
 
-export const getAllInsurances = async (): Promise<Insurance[]> => {
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
 
-    const response = await api.get('/api/insurance/');
-    console.log(response, 'response');
-    return response.data.data;
+export interface PaginatedResponse<T> {
+    success: boolean;
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface InsuranceFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: InsuranceStatus;
+    policyType?: PolicyType;
+    coverageType?: CoverageType;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export const getAllInsurances = async (filters: InsuranceFilters = {}): Promise<PaginatedResponse<Insurance>> => {
+    const response = await api.get('/api/insurance/', {
+        params: filters
+    });
+    return response.data;
 };
 
-export const getEligibleInsurances = async (): Promise<Insurance[]> => {
-    const response = await api.get('/api/insurance/eligible');
-    return response.data.data;
+export const getEligibleInsurances = async (filters: InsuranceFilters = {}): Promise<PaginatedResponse<Insurance>> => {
+    const response = await api.get('/api/insurance/eligible', {
+        params: filters
+    });
+    return response.data;
 };
 
 export const getInsuranceById = async (id: string): Promise<Insurance> => {

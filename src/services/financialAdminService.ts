@@ -15,6 +15,30 @@ export interface FinancialAdmin {
     updatedAt?: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface AdminFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    role?: string;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: 'fullName' | 'createdAt' | 'email';
+    sortOrder?: 'asc' | 'desc';
+}
+
 export interface CreateFinancialAdminPayload {
     fullName: string;
     email: string;
@@ -30,10 +54,12 @@ export interface UpdateFinancialAdminPayload {
     twoFactorEnabled?: boolean;
 }
 
-// GET all financial admins
-export const getAllFinancialAdmins = async (): Promise<FinancialAdmin[]> => {
-    const response = await api.get('/api/finance-admin');
-    return response.data.data;
+// GET all financial admins with filters, sorting, and pagination
+export const getAllFinancialAdmins = async (filters: AdminFilters = {}): Promise<PaginatedResponse<FinancialAdmin>> => {
+    const response = await api.get('/api/finance-admin', {
+        params: filters
+    });
+    return response.data;
 };
 
 // GET a financial admin by ID

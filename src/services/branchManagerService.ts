@@ -13,6 +13,31 @@ export interface BranchManager {
     updatedAt?: string;
 }
 
+export interface PaginationMetadata {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
+export interface ManagerFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+    country?: string;
+    branchId?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    startDate?: string;
+    endDate?: string;
+}
+
 export interface CreateBranchManagerPayload {
     fullName: string;
     email: string;
@@ -27,10 +52,12 @@ export interface UpdateBranchManagerPayload extends Partial<CreateBranchManagerP
     id: string;
 }
 
-// GET all branch managers
-export const getAllBranchManagers = async (): Promise<BranchManager[]> => {
-    const response = await api.get('/api/branch-manager');
-    return response.data.data;
+// GET all branch managers with filters
+export const getAllBranchManagers = async (filters: ManagerFilters = {}): Promise<PaginatedResponse<BranchManager>> => {
+    const response = await api.get('/api/branch-manager', {
+        params: filters
+    });
+    return response.data;
 };
 
 // GET single branch manager
