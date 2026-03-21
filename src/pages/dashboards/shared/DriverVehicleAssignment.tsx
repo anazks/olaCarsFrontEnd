@@ -17,6 +17,11 @@ const DriverVehicleAssignment = () => {
     const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
     const [assigning, setAssigning] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [leaseDetails, setLeaseDetails] = useState({
+        leaseDuration: '',
+        monthlyRent: '',
+        notes: ''
+    });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -56,7 +61,11 @@ const DriverVehicleAssignment = () => {
             setError(null);
             
             // Advance the driver to CONTRACT PENDING and assign the vehicle
-            await assignVehicleToDriver(selectedVehicleId, id);
+            await assignVehicleToDriver(selectedVehicleId, id, {
+                leaseDuration: Number(leaseDetails.leaseDuration),
+                monthlyRent: Number(leaseDetails.monthlyRent),
+                notes: leaseDetails.notes
+            });
             
             // Navigate back to the driver detail page
             navigate('..');
@@ -183,39 +192,77 @@ const DriverVehicleAssignment = () => {
 
             {/* Action Bar */}
             {selectedVehicleId && (
-                <div className="fixed bottom-0 left-0 right-0 border-t p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50 animate-in slide-in-from-bottom-5" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="max-w-7xl mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-brand-lime/20 text-brand-lime flex items-center justify-center">
-                                <RouteIcon size={24} />
+                <div className="fixed bottom-0 left-0 right-0 border-t p-6 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] z-50 animate-in slide-in-from-bottom-5" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-brand-lime/20 text-brand-lime flex items-center justify-center">
+                                    <RouteIcon size={28} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim">Selected Vehicle</p>
+                                    <p className="font-black text-xl">
+                                        {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.make} {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.model}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Selected Vehicle</p>
-                                <p className="font-black text-lg">
-                                    {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.make} {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.model}
-                                </p>
+
+                            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Lease Duration (Months)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="e.g. 12"
+                                        value={leaseDetails.leaseDuration}
+                                        onChange={(e) => setLeaseDetails({ ...leaseDetails, leaseDuration: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all font-bold"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Monthly Rent (USD)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="e.g. 1500"
+                                        value={leaseDetails.monthlyRent}
+                                        onChange={(e) => setLeaseDetails({ ...leaseDetails, monthlyRent: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all font-bold"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Optional Notes</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Additional terms..."
+                                        value={leaseDetails.notes}
+                                        onChange={(e) => setLeaseDetails({ ...leaseDetails, notes: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={() => setSelectedVehicleId(null)}
-                                className="px-6 py-3 rounded-xl font-bold hover:bg-black/5 transition-all uppercase tracking-wider text-sm"
-                                style={{ color: 'var(--text-dim)' }}
-                            >
-                                Cancel Selection
-                            </button>
-                            <button 
-                                onClick={handleAssign}
-                                disabled={assigning}
-                                className="px-8 py-3 rounded-xl font-black bg-brand-lime text-black hover:bg-opacity-90 shadow-lg shadow-brand-lime/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
-                            >
-                                {assigning ? (
-                                    <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> Assigning...</>
-                                ) : (
-                                    <><CheckCircle2 size={18} /> Confirm Assignment</>
-                                )}
-                            </button>
+                            
+                            <div className="flex gap-3 w-full lg:w-auto">
+                                <button 
+                                    onClick={() => setSelectedVehicleId(null)}
+                                    className="flex-1 lg:flex-none px-6 py-3 rounded-xl font-bold hover:bg-white/5 transition-all uppercase tracking-wider text-xs border"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleAssign}
+                                    disabled={assigning || !leaseDetails.leaseDuration || !leaseDetails.monthlyRent}
+                                    className="flex-1 lg:flex-none px-8 py-3 rounded-xl font-black bg-brand-lime text-black hover:scale-[1.02] active:scale-95 shadow-xl shadow-brand-lime/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider text-xs"
+                                >
+                                    {assigning ? (
+                                        <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> Processing...</>
+                                    ) : (
+                                        <><CheckCircle2 size={18} /> Confirm Assignment</>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

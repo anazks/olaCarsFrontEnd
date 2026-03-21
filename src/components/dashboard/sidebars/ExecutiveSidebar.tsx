@@ -33,6 +33,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/admin/purchase-orders' },
         { icon: <CarFront size={20} />, label: 'Manage Vehicles', path: '/admin/admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/admin/drivers' },
+        { icon: <ShieldCheck size={20} />, label: 'Legal Agreements', path: '/admin/admin/agreements' },
     ];
 
     const monitoringItems = [

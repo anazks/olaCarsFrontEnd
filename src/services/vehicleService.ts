@@ -281,8 +281,16 @@ export const getAvailableVehicles = async (filters: VehicleFilters = {}): Promis
 };
 
 // POST assign vehicle to driver
-export const assignVehicleToDriver = async (vehicleId: string, driverId: string): Promise<any> => {
-    const response = await api.post(`/api/vehicle/${vehicleId}/assign/${driverId}`);
+export const assignVehicleToDriver = async (
+    vehicleId: string, 
+    driverId: string,
+    leaseDetails: {
+        leaseDuration: number;
+        monthlyRent: number;
+        notes?: string;
+    }
+): Promise<any> => {
+    const response = await api.post(`/api/vehicle/${vehicleId}/assign/${driverId}`, leaseDetails);
     return response.data;
 };
 

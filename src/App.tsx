@@ -38,6 +38,8 @@ import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
+import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
+import EditAgreement from './pages/dashboards/shared/EditAgreement';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -55,6 +57,7 @@ import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
 import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
+import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import Profile from './pages/dashboards/shared/Profile';
 
 // Finance Pages
@@ -134,6 +137,9 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
+              <Route path="agreements" element={<ManageAgreements />} />
+              <Route path="agreements/new" element={<EditAgreement />} />
+              <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
           </Route>
 
@@ -154,6 +160,9 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="agreements" element={<ManageAgreements />} />
+              <Route path="agreements/new" element={<EditAgreement />} />
+              <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
           </Route>
 
@@ -205,6 +214,9 @@ function App() {
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="agreements" element={<ManageAgreements />} />
+              <Route path="agreements/new" element={<EditAgreement />} />
+              <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
           </Route>
 
@@ -268,6 +280,9 @@ function App() {
           <Route path="/purchase-orders" element={<ProtectedRoute allowedRoles={['admin', 'operationadmin', 'financialadmin', 'countrymanager', 'branchmanager', 'branchopstaff', 'financestaff']} />}>
             <Route index element={<Navigate to="/" replace />} />
           </Route>
+
+          {/* Agreement Signing Route */}
+          <Route path="/agreements/sign/:id" element={<AgreementSignPage />} />
 
           {/* Redirect "/" and any unknown routes to login */}
           <Route path="*" element={<Navigate to="/admin/login" replace />} />

@@ -30,6 +30,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/operational-admin/purchase-orders' },
         { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/operational-admin/drivers' },
+        { icon: <ShieldCheck size={20} />, label: 'Legal Agreements', path: '/admin/operational-admin/agreements' },
     ];
 
     const monitoringItems = [

@@ -31,6 +31,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/country-manager/purchase-bills' },
         { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/country-manager/vehicles' },
         { icon: <Users size={20} />, label: 'Drivers', path: '/admin/country-manager/drivers' },
+        { icon: <ShieldCheck size={20} />, label: 'Legal Agreements', path: '/admin/country-manager/agreements' },
     ];
 
     const performanceItems = [
