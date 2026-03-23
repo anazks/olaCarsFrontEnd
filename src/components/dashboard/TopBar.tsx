@@ -3,6 +3,8 @@ import { Search, Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getUser, getUserRole } from '../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../services/authService';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface TopBarProps {
     toggleSidebar: () => void;
@@ -10,27 +12,28 @@ interface TopBarProps {
 
 const TopBar = ({ }: TopBarProps) => {
     const { theme, toggleTheme } = useTheme();
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const user = getUser();
 
     const role = getUserRole();
 
     const getFormattedRole = (roleStr: string | null) => {
-        if (!roleStr) return 'Access Panel';
+        if (!roleStr) return t('common.accessPanel');
 
         const roleMap: Record<string, string> = {
-            'admin': 'Admin',
-            'operationaladmin': 'Operational Admin',
-            'operationadmin': 'Operational Admin',
-            'financialadmin': 'Financial Admin',
-            'financeadmin': 'Financial Admin',
-            'countrymanager': 'Country Manager',
-            'branchmanager': 'Branch Manager',
-            'branchopstaff': 'Branch Operational Staff',
-            'operationstaff': 'Operational Staff',
-            'branchfinstaff': 'Branch Financial Staff',
-            'financestaff': 'Financial Staff',
-            'workshopstaff': 'Workshop Staff'
+            'admin': t('roles.admin'),
+            'operationaladmin': t('roles.operationalAdmin'),
+            'operationadmin': t('roles.operationalAdmin'),
+            'financialadmin': t('roles.financialAdmin'),
+            'financeadmin': t('roles.financialAdmin'),
+            'countrymanager': t('roles.countryManager'),
+            'branchmanager': t('roles.branchManager'),
+            'branchopstaff': t('roles.branchOpStaff'),
+            'operationstaff': t('roles.operationStaff'),
+            'branchfinstaff': t('roles.branchFinStaff'),
+            'financestaff': t('roles.financeStaff'),
+            'workshopstaff': t('roles.workshopStaff')
         };
 
         const normalizedRole = roleStr.toLowerCase().replace(/-/g, '');
@@ -79,7 +82,7 @@ const TopBar = ({ }: TopBarProps) => {
                         <Search size={18} className="text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search..."
+                            placeholder={t('common.search')}
                             className="bg-transparent border-none outline-none text-sm w-full text-main placeholder-gray-500"
                             style={{ color: 'var(--text-main)' }}
                         />
@@ -92,10 +95,13 @@ const TopBar = ({ }: TopBarProps) => {
 
             {/* Right Tools */}
             <div className="flex items-center gap-5 ml-4">
+                {/* Language Switcher */}
+                <LanguageSwitcher />
+
                 <button
                     onClick={toggleTheme}
                     className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
-                    title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    title={theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
                 >
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
@@ -103,7 +109,7 @@ const TopBar = ({ }: TopBarProps) => {
                 <button
                     onClick={handleProfileClick}
                     className="flex items-center justify-center p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-lime"
-                    title="Settings"
+                    title={t('common.settings')}
                 >
                     <Settings size={20} />
                 </button>

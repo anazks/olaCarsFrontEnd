@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Car, Wrench, MapPin, Users, CalendarSync, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface OperationalAdminSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface OperationalAdminSidebarProps {
 const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: OperationalAdminSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,25 +22,25 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     };
 
     const navItems = [
-        { icon: <Globe size={20} />, label: 'Manage Country Managers', path: '/admin/operational-admin/manage-country-managers' },
-        { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/operational-admin/manage-branches' },
-        { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/operational-admin/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/operational-admin/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/operational-admin/manage-operation-staff' },
-        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/operational-admin/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/operational-admin/manage-suppliers' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/operational-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/operational-admin/drivers' },
-        { icon: <ShieldCheck size={20} />, label: 'Legal Agreements', path: '/admin/operational-admin/agreements' },
+        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/operational-admin/manage-country-managers' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/operational-admin/manage-finance-staff' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements' },
     ];
 
     const monitoringItems = [
-        { icon: <MapPin size={20} />, label: 'Live GPS Tracking' },
-        { icon: <Car size={20} />, label: 'Fleet Inventory' },
-        { icon: <Wrench size={20} />, label: 'Maintenance Hub' },
-        { icon: <Users size={20} />, label: 'Driver Roster' },
-        { icon: <CalendarSync size={20} />, label: 'Assignments' },
+        { icon: <MapPin size={20} />, label: t('sidebar.items.liveGpsTracking') },
+        { icon: <Car size={20} />, label: t('sidebar.items.fleetInventory') },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.maintenanceHub') },
+        { icon: <Users size={20} />, label: t('sidebar.items.driverRoster') },
+        { icon: <CalendarSync size={20} />, label: t('sidebar.items.assignments') },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -115,15 +117,15 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="Ops Overview"
+                    label={t('sidebar.items.opsOverview')}
                     active={location.pathname === '/admin/operational-admin'}
                     onClick={() => navigate('/admin/operational-admin')}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="Staff Management" items={navItems} />
-                <SidebarSection title="Operations" items={monitoringItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.operations')} items={monitoringItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -133,10 +135,10 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -144,10 +146,10 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>

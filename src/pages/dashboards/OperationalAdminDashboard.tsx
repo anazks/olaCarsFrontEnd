@@ -1,47 +1,50 @@
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Settings, MapPin, Wrench as Tool, CheckCircle2 } from 'lucide-react';
 import { StatCard, AlertCard } from '../../components/dashboard/widgets/StatusCards';
 
 const OperationalAdminDashboard = () => {
+    const { t } = useTranslation();
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>Operations Dashboard</h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Real-time fleet tracking and maintenance hub.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('dashboards.operational.title')}</h1>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('dashboards.operational.subtitle')}</p>
                 </div>
                 <div className="flex gap-3 w-full sm:w-auto">
                     <button
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all cursor-pointer hover:bg-lime/10"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
                     >
-                        <MapPin size={16} /> Open Fleet Map
+                        <MapPin size={16} /> {t('dashboards.operational.openMap')}
                     </button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    superTitle="Total Vehicles"
-                    title="Active Fleet"
+                    superTitle={t('dashboards.common.totalVehicles')}
+                    title={t('dashboards.operational.stats.activeFleet')}
                     value="450"
                     color="#4F46E5" // Indigo
                 />
                 <StatCard
-                    superTitle="On the Road"
-                    title="Live Tracking"
+                    superTitle={t('dashboards.operational.stats.onTheRoad')}
+                    title={t('dashboards.operational.stats.liveTracking')}
                     value="382"
                     color="#148F85" // Teal
                 />
                 <StatCard
-                    superTitle="In Service"
-                    title="Depot Maintenance"
+                    superTitle={t('dashboards.operational.stats.inService')}
+                    title={t('dashboards.operational.stats.depotMaintenance')}
                     value="45"
                     color="#F59E0B" // Amber
                 />
                 <AlertCard
-                    title="Critical VOR"
+                    title={t('dashboards.operational.stats.criticalVor')}
                     count={23}
-                    desc="Vehicle Off Road"
+                    desc={t('dashboards.operational.stats.vehicleOffRoad')}
                 />
             </div>
 
@@ -52,17 +55,17 @@ const OperationalAdminDashboard = () => {
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Live Operations</h4>
-                        <button className="text-sm hover:underline" style={{ color: 'var(--brand-lime)' }}>View All</button>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>{t('dashboards.operational.liveOps.title')}</h4>
+                        <button className="text-sm hover:underline" style={{ color: 'var(--brand-lime)' }}>{t('common.viewAll')}</button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm relative">
                             <thead>
                                 <tr className="text-xs uppercase transition-colors" style={{ background: 'var(--bg-input)', color: 'var(--text-dim)' }}>
-                                    <th className="px-6 py-4">Vehicle</th>
-                                    <th className="px-6 py-4">Driver</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">ETA/Est.</th>
+                                    <th className="px-6 py-4">{t('dashboards.operational.liveOps.table.vehicle')}</th>
+                                    <th className="px-6 py-4">{t('dashboards.operational.liveOps.table.driver')}</th>
+                                    <th className="px-6 py-4">{t('dashboards.operational.liveOps.table.status')}</th>
+                                    <th className="px-6 py-4">{t('dashboards.operational.liveOps.table.eta')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
@@ -89,14 +92,14 @@ const OperationalAdminDashboard = () => {
                     className="rounded-2xl border p-5 shadow-lg flex flex-col transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    <h4 className="font-bold mb-4" style={{ color: 'var(--text-main)' }}>Maintenance Queue</h4>
+                    <h4 className="font-bold mb-4" style={{ color: 'var(--text-main)' }}>{t('dashboards.operational.maintenance.title')}</h4>
 
                     <div className="space-y-3 flex-1 overflow-y-auto pr-2">
                         {[
-                            { title: 'Routine Servicing (Oil/Filters)', count: 12, icon: <Settings size={18} className="text-blue-400" />, time: 'Due Today' },
-                            { title: 'Tyre Replacements', count: 5, icon: <CheckCircle2 size={18} className="text-green-400" />, time: 'Scheduled' },
-                            { title: 'Engine Diagnostics', count: 8, icon: <Tool size={18} className="text-orange-400" />, time: 'Pending Bay' },
-                            { title: 'Body Repair (Accidental)', count: 3, icon: <AlertTriangle size={18} className="text-red-400" />, time: 'Awaiting Parts' },
+                            { title: t('dashboards.operational.maintenance.routineServicing'), count: 12, icon: <Settings size={18} className="text-blue-400" />, time: t('dashboards.operational.maintenance.dueToday') },
+                            { title: t('dashboards.operational.maintenance.tyreReplacements'), count: 5, icon: <CheckCircle2 size={18} className="text-green-400" />, time: t('dashboards.operational.maintenance.scheduled') },
+                            { title: t('dashboards.operational.maintenance.engineDiagnostics'), count: 8, icon: <Tool size={18} className="text-orange-400" />, time: t('dashboards.operational.maintenance.pendingBay') },
+                            { title: t('dashboards.operational.maintenance.bodyRepair'), count: 3, icon: <AlertTriangle size={18} className="text-red-400" />, time: t('dashboards.operational.maintenance.awaitingParts') },
                         ].map((q, i) => (
                             <div
                                 key={i}
@@ -131,3 +134,4 @@ const OperationalAdminDashboard = () => {
 };
 
 export default OperationalAdminDashboard;
+

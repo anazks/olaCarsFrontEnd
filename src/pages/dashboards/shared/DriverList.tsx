@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 
 const DriverList = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -115,21 +117,19 @@ const DriverList = () => {
         </label>
     );
 
-    const filteredDrivers = drivers; // Now handled server-side
-
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>Driver Management</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Monitor and manage driver onboarding applications</p>
+                    <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>{t('management.drivers.title')}</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>{t('management.drivers.subtitle')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={fetchDrivers}
                         className="p-2.5 rounded-xl border transition-all hover:bg-lime/5 disabled:opacity-50"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
-                        title="Refresh data"
+                        title={t('common.refresh')}
                         disabled={loading}
                     >
                         <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
@@ -143,7 +143,7 @@ const DriverList = () => {
                             color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
                         }}
                     >
-                        <Filter size={18} /> Filters
+                        <Filter size={18} /> {t('management.common.filters')}
                     </button>
                     <button
                         onClick={() => navigate('new')}
@@ -153,7 +153,7 @@ const DriverList = () => {
                             color: 'var(--brand-black)' 
                         }}
                     >
-                        <Plus size={20} /> New Application
+                        <Plus size={20} /> {t('management.drivers.newBtn')}
                     </button>
                 </div>
             </div>
@@ -165,7 +165,7 @@ const DriverList = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={20} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="text"
-                        placeholder="Search by name or email..."
+                        placeholder={t('management.drivers.searchPlaceholder')}
                         className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         value={searchTerm}
@@ -180,42 +180,35 @@ const DriverList = () => {
                 {showAdvancedFilters && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t transition-all animate-in slide-in-from-top-2 duration-300" style={{ borderColor: 'var(--border-main)' }}>
                         <div>
-                            <FilterLabel label="Onboarding Status" />
+                            <FilterLabel label={t('management.drivers.filters.status')} />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Statuses</option>
-                                <option value="DRAFT">Draft</option>
-                                <option value="PENDING REVIEW">Pending Review</option>
-                                <option value="VERIFICATION">Verification</option>
-                                <option value="CREDIT CHECK">Credit Check</option>
-                                <option value="MANAGER REVIEW">Manager Review</option>
-                                <option value="APPROVED">Approved</option>
-                                <option value="CONTRACT PENDING">Contract Pending</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="SUSPENDED">Suspended</option>
-                                <option value="REJECTED">Rejected</option>
+                                <option value="ALL">{t('management.drivers.filters.allStatuses')}</option>
+                                {['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED'].map(status => (
+                                    <option key={status} value={status}>{t(`management.drivers.statusLabels.${status}`)}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
-                            <FilterLabel label="Assigned Branch" />
+                            <FilterLabel label={t('management.drivers.filters.branch')} />
                             <select
                                 value={branchFilter}
                                 onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Branches</option>
+                                <option value="ALL">{t('management.common.modal.selectBranch')}</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <FilterLabel label="Applied From" />
+                            <FilterLabel label={t('management.drivers.filters.from')} />
                             <input
                                 type="date"
                                 value={startDate}
@@ -225,7 +218,7 @@ const DriverList = () => {
                             />
                         </div>
                         <div>
-                            <FilterLabel label="Applied To" />
+                            <FilterLabel label={t('management.drivers.filters.to')} />
                             <input
                                 type="date"
                                 value={endDate}
@@ -246,23 +239,23 @@ const DriverList = () => {
                             <tr>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('personalInfo.fullName')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                        Driver <SortIcon field="personalInfo.fullName" />
+                                        {t('management.drivers.table.driver')} <SortIcon field="personalInfo.fullName" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                        Status <SortIcon field="status" />
+                                        {t('common.status')} <SortIcon field="status" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-4">
-                                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>License</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.license')}</span>
                                 </th>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('appliedAt')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                        Applied <SortIcon field="appliedAt" />
+                                        {t('management.drivers.table.applied')} <SortIcon field="appliedAt" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
@@ -272,17 +265,17 @@ const DriverList = () => {
                                         <td colSpan={5} className="px-6 py-4 h-16" style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}></td>
                                     </tr>
                                 ))
-                            ) : filteredDrivers.length === 0 ? (
+                            ) : drivers.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center" style={{ color: 'var(--text-dim)' }}>
                                         <div className="flex flex-col items-center gap-2">
                                             <Users size={40} style={{ opacity: 0.2 }} />
-                                            <p>No drivers found matching your criteria</p>
+                                            <p>{t('management.drivers.empty.noDrivers')}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
-                                filteredDrivers.map((driver) => (
+                                drivers.map((driver) => (
                                     <tr
                                         key={driver._id}
                                         className="transition-colors cursor-pointer group"
@@ -306,7 +299,7 @@ const DriverList = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(driver.status)}`}>
-                                                {driver.status.replace(/_/g, ' ')}
+                                                {t(`management.drivers.statusLabels.${driver.status}`)}
                                             </span>
                                         </td>
                                          <td className="px-6 py-4">
@@ -314,7 +307,7 @@ const DriverList = () => {
                                                  <FileText size={14} />
                                                  {driver.drivingLicense?.licenseNumber || 'N/A'}
                                              </div>
-                                             <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>Exp: {driver.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : 'N/A'}</div>
+                                             <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.expiry')}: {driver.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : 'N/A'}</div>
                                          </td>
                                          <td className="px-6 py-4">
                                              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
@@ -338,7 +331,7 @@ const DriverList = () => {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span style={{ color: 'var(--text-main)' }}>{drivers.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> drivers
+                            {t('management.drivers.pagination.showing', { count: drivers.length, total: pagination.total })}
                         </p>
                         <div className="flex items-center gap-2">
                             <button

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, KeySquare, CheckSquare, Sparkles, Navigation2, FilePlus, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface BranchOpStaffSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface BranchOpStaffSidebarProps {
 const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: BranchOpStaffSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,14 +22,14 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
     };
 
     const navItems = [
-        { icon: <CheckSquare size={20} />, label: 'Daily Tasks' },
-        { icon: <KeySquare size={20} />, label: 'Driver Handovers' },
-        { icon: <Sparkles size={20} />, label: 'Cleaning Schedule' },
-        { icon: <Navigation2 size={20} />, label: 'Vehicle Check-in' },
-        { icon: <FilePlus size={20} />, label: 'Log Damage' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-op-staff/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-op-staff/drivers' },
+        { icon: <CheckSquare size={20} />, label: t('sidebar.items.dailyTasks') },
+        { icon: <KeySquare size={20} />, label: t('sidebar.items.driverHandovers') },
+        { icon: <Sparkles size={20} />, label: t('sidebar.items.cleaningSchedule') },
+        { icon: <Navigation2 size={20} />, label: t('sidebar.items.vehicleCheckin') },
+        { icon: <FilePlus size={20} />, label: t('sidebar.items.logDamage') },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-op-staff/purchase-orders' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-op-staff/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-op-staff/drivers' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -103,14 +105,14 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="Ops Overview"
+                    label={t('sidebar.items.opsOverview')}
                     active={true}
                     onClick={() => { }}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="Operational Tasks" items={navItems} />
+                <SidebarSection title={t('sidebar.sections.operationalTasks')} items={navItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -120,10 +122,10 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -131,10 +133,10 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>

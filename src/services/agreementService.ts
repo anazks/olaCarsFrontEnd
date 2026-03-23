@@ -74,7 +74,10 @@ const agreementService = {
 
   getPlaceholders: async (): Promise<string[]> => {
     const response = await api.get('/api/agreements/placeholders');
-    return response.data.data;
+    const data = response.data.data;
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object') return Object.keys(data);
+    return [];
   },
 
   verifySignature: async (driverId: string, agreementId: string): Promise<{ accepted: boolean }> => {

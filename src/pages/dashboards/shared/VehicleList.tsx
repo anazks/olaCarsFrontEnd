@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
-
-// ── Status Badge ──────────────────────────────────────────────────────────────
-
+import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+
+// ── Status Styles ──────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'PENDING ENTRY': { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
@@ -32,11 +32,12 @@ const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
 const FUEL_TYPES = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 
 const StatusBadge = ({ status }: { status: VehicleStatus }) => {
+    const { t } = useTranslation();
     const style = STATUS_STYLES[status] || STATUS_STYLES['PENDING ENTRY'];
     return (
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-            {status}
+            {t(`management.vehicles.statusLabels.${status}`)}
         </div>
     );
 };
@@ -44,6 +45,7 @@ const StatusBadge = ({ status }: { status: VehicleStatus }) => {
 type FilterTab = 'ALL' | 'ONBOARDING' | 'ACTIVE' | 'SUSPENDED' | 'RETIRED';
 
 const VehicleList = () => {
+    const { t } = useTranslation();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,11 +93,11 @@ const VehicleList = () => {
                 setPagination(response.pagination);
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch vehicles');
+            setError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, t]);
 
     useEffect(() => {
         fetchMetadata();
@@ -123,34 +125,30 @@ const VehicleList = () => {
     const handleTabChange = (tab: FilterTab) => {
         setActiveTab(tab);
         let statusFilter: VehicleStatus | undefined = undefined;
-        // Map tabs to statuses if backend supports it or handle meta-filters
         if (tab === 'SUSPENDED') statusFilter = 'SUSPENDED';
         else if (tab === 'RETIRED') statusFilter = 'RETIRED';
-        // Note: For ONBOARDING and ACTIVE, we might need backend meta-filter support 
-        // or just fetch ALL and filter locally (not ideal for pagination).
-        // For now, only single status filters are passed.
         handleFilterChange('status', statusFilter);
     };
 
     // Tabs for UI (metadata)
     const tabs: { key: FilterTab; label: string }[] = [
-        { key: 'ALL', label: 'All Fleet' },
-        { key: 'ONBOARDING', label: 'Onboarding' },
-        { key: 'ACTIVE', label: 'Active Fleet' },
-        { key: 'SUSPENDED', label: 'Suspended' },
-        { key: 'RETIRED', label: 'Retired' },
+        { key: 'ALL', label: t('management.vehicles.tabs.all') },
+        { key: 'ONBOARDING', label: t('management.vehicles.tabs.onboarding') },
+        { key: 'ACTIVE', label: t('management.vehicles.tabs.active') },
+        { key: 'SUSPENDED', label: t('management.vehicles.tabs.suspended') },
+        { key: 'RETIRED', label: t('management.vehicles.tabs.retired') },
     ];
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6 p-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Car size={28} style={{ color: '#C8E600' }} />
-                        Manage Vehicles
+                        {t('management.vehicles.title')}
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Manage vehicle onboarding and fleet lifecycle</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.subtitle')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -158,7 +156,7 @@ const VehicleList = () => {
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {t('common.refresh')}
                     </button>
                     {['countrymanager', 'branchmanager'].includes(getUserRole() || '') && (
                         <button
@@ -166,18 +164,18 @@ const VehicleList = () => {
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                             style={{ background: '#C8E600', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} />Vehicle Onboarding
+                            <Plus size={18} />{t('management.vehicles.onboardingBtn')}
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
+            <div className="flex gap-1 p-1 rounded-xl overflow-x-auto no-scrollbar" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
                         onClick={() => handleTabChange(tab.key)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap"
                         style={{
                             background: activeTab === tab.key ? 'rgba(200,230,0,0.15)' : 'transparent',
                             color: activeTab === tab.key ? '#C8E600' : 'var(--text-dim)',
@@ -204,7 +202,7 @@ const VehicleList = () => {
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by VIN, make, or model..."
+                            placeholder={t('management.vehicles.searchPlaceholder')}
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
                             className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
@@ -216,49 +214,49 @@ const VehicleList = () => {
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
                     >
-                        Advanced Filters {showAdvancedFilters ? '↑' : '↓'}
+                        {t('management.vehicles.advancedFilters')} {showAdvancedFilters ? '↑' : '↓'}
                     </button>
                 </div>
 
                 {showAdvancedFilters && (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Category</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</label>
                             <select
                                 value={filters.category}
                                 onChange={(e) => handleFilterChange('category', e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Categories</option>
+                                <option value="">{t('management.vehicles.filters.allCategories')}</option>
                                 {CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
+                                    <option key={cat} value={cat}>{t(`management.vehicles.categories.${cat}`)}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Fuel Type</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('sidebar.sections.operations')}</label>
                             <select
                                 value={filters.fuelType}
                                 onChange={(e) => handleFilterChange('fuelType', e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Fuel Types</option>
+                                <option value="">{t('management.vehicles.filters.allFuelTypes')}</option>
                                 {FUEL_TYPES.map(fuel => (
-                                    <option key={fuel} value={fuel}>{fuel}</option>
+                                    <option key={fuel} value={fuel}>{t(`management.vehicles.fuelTypes.${fuel}`)}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Branch</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.branchName')}</label>
                             <select
                                 value={filters.branch}
                                 onChange={(e) => handleFilterChange('branch', e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Branches</option>
+                                <option value="">{t('management.vehicles.filters.allBranches')}</option>
                                 {branches.map(branch => (
                                     <option key={branch._id} value={branch._id}>{branch.name}</option>
                                 ))}
@@ -278,7 +276,7 @@ const VehicleList = () => {
                                 className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                Reset Filters
+                                {t('management.common.resetFilters')}
                             </button>
                         </div>
                     </div>
@@ -293,7 +291,7 @@ const VehicleList = () => {
             )}
 
             {/* Table */}
-            <div className="rounded-2xl overflow-hidden border transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="rounded-2xl overflow-hidden border transition-colors duration-300 shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
@@ -302,21 +300,21 @@ const VehicleList = () => {
                     ) : vehicles.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Car size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No vehicles found</p>
-                            <p className="text-sm mt-1">Try adjusting your filters or add a new vehicle</p>
+                            <p className="text-lg font-medium">{t('management.vehicles.empty.noVehicles')}</p>
+                            <p className="text-sm mt-1">{t('management.vehicles.empty.refine')}</p>
                         </div>
                     ) : (
                         <>
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Vehicle</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>VIN</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Year</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Price</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.year')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -335,7 +333,7 @@ const VehicleList = () => {
                                                     )}
                                                 </div>
                                                 <div className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">{v.basicDetails.fuelType}</span>
+                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">{t(`management.vehicles.fuelTypes.${v.basicDetails.fuelType}`)}</span>
                                                     <span>{v.basicDetails.transmission}</span>
                                                 </div>
                                             </td>
@@ -346,7 +344,7 @@ const VehicleList = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{v.basicDetails.year}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{v.basicDetails.category}</div>
+                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.categories.${v.basicDetails.category}`)}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <StatusBadge status={v.status} />
@@ -356,13 +354,13 @@ const VehicleList = () => {
                                                     {v.purchaseDetails.currency} {v.purchaseDetails.purchasePrice.toLocaleString()}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-end gap-2">
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2 text-right">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
-                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95"
+                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95 ml-auto"
                                                         style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
-                                                        title="View Details"
+                                                        title={t('common.view')}
                                                     >
                                                         <Eye size={15} />
                                                     </button>
@@ -375,24 +373,24 @@ const VehicleList = () => {
 
                             {/* Pagination */}
                             <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                    Showing <span style={{ color: 'var(--text-main)' }}>{vehicles.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> vehicles
+                                <div className="text-xs font-black tracking-widest uppercase opacity-60" style={{ color: 'var(--text-dim)' }}>
+                                    {t('management.vehicles.pagination.showing', { count: vehicles.length, total: pagination.total })}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         disabled={filters.page === 1}
                                         onClick={() => handlePageChange(filters.page - 1)}
-                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
                                     >
-                                        Previous
+                                        <ChevronLeft size={16} />
                                     </button>
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1.5">
                                         {[...Array(pagination.totalPages)].map((_, i) => (
                                             <button
                                                 key={i + 1}
                                                 onClick={() => handlePageChange(i + 1)}
-                                                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
+                                                className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20 scale-105' : 'hover:bg-white/10 opacity-50 hover:opacity-100'}`}
                                                 style={{
                                                     background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
                                                     border: '1px solid var(--border-main)',
@@ -406,10 +404,10 @@ const VehicleList = () => {
                                     <button
                                         disabled={filters.page === pagination.totalPages}
                                         onClick={() => handlePageChange(filters.page + 1)}
-                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
                                     >
-                                        Next
+                                        <ChevronRight size={16} />
                                     </button>
                                 </div>
                             </div>

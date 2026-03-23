@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag } from 'lucide-react';
 import {
     getAllSuppliers,
@@ -25,6 +26,7 @@ const CATEGORIES = [
 ];
 
 const ManageSuppliers = () => {
+    const { t } = useTranslation();
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -77,11 +79,11 @@ const ManageSuppliers = () => {
                 setPagination(response.pagination);
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch suppliers');
+            setError(err.response?.data?.message || err.message || t('management.suppliers.fetchFailed'));
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, t]);
 
     useEffect(() => {
         fetchSuppliers();
@@ -130,7 +132,7 @@ const ManageSuppliers = () => {
             email: supplier.email,
             phone: supplier.phone || '',
             address: supplier.address,
-            category: isPredefined ? supplier.category : 'Other',
+            category: isPredefined ? supplier.category : t('management.suppliers.categories.Other'),
             customCategory: isPredefined ? '' : supplier.category,
             isActive: supplier.isActive
         });
@@ -148,10 +150,10 @@ const ManageSuppliers = () => {
         setFormLoading(true);
         setFormError(null);
 
-        const finalCategory = formData.category === 'Other' ? formData.customCategory : formData.category;
+        const finalCategory = formData.category === t('management.suppliers.categories.Other') ? formData.customCategory : formData.category;
 
         if (!finalCategory) {
-            setFormError('Please specify a category');
+            setFormError(t('management.suppliers.form.specifyCategory'));
             setFormLoading(false);
             return;
         }
@@ -184,7 +186,7 @@ const ManageSuppliers = () => {
             closeModal();
             fetchSuppliers();
         } catch (err: any) {
-            setFormError(err.response?.data?.message || err.message || 'Operation failed');
+            setFormError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         } finally {
             setFormLoading(false);
         }
@@ -198,7 +200,7 @@ const ManageSuppliers = () => {
             setDeleteTarget(null);
             fetchSuppliers();
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Delete failed');
+            setError(err.response?.data?.message || err.message || t('management.common.deleteFailed'));
             setDeleteTarget(null);
         } finally {
             setDeleteLoading(false);
@@ -212,9 +214,9 @@ const ManageSuppliers = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Users size={28} style={{ color: '#C8E600' }} />
-                        Manage Suppliers
+                        {t('management.suppliers.title')}
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Manage individual contacts who provide source materials</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.subtitle')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -222,14 +224,14 @@ const ManageSuppliers = () => {
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {t('management.common.refreshData', { defaultValue: 'Refresh' })}
                     </button>
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >
-                        <Plus size={18} /> Add Supplier
+                        <Plus size={18} /> {t('management.suppliers.add')}
                     </button>
                 </div>
             </div>
@@ -241,7 +243,7 @@ const ManageSuppliers = () => {
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                         <input
                             type="text"
-                            placeholder="Search by name, contact person, email..."
+                            placeholder={t('management.common.searchPlaceholder')}
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
                             className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
@@ -258,7 +260,7 @@ const ManageSuppliers = () => {
                         style={{ borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)' }}
                     >
                         <Plus size={18} className={`transition-transform duration-300 ${showAdvancedFilters ? 'rotate-45' : ''}`} />
-                        Advanced Filters
+                        {t('management.common.filters')}
                     </button>
                 </div>
 
@@ -268,30 +270,30 @@ const ManageSuppliers = () => {
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
                         <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Category</label>
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.form.category')}</label>
                             <select
                                 value={filters.category}
                                 onChange={(e) => handleFilterChange('category', e.target.value)}
                                 className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Categories</option>
+                                <option value="">{t('management.suppliers.categories.all')}</option>
                                 {CATEGORIES.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <label className="text-xs font-black uppercase tracking-widest px-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</label>
                             <select
                                 value={filters.isActive === undefined ? '' : filters.isActive.toString()}
                                 onChange={(e) => handleFilterChange('isActive', e.target.value === '' ? undefined : e.target.value === 'true')}
                                 className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-bold"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Statuses</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
+                                <option value="">{t('management.common.allStatuses')}</option>
+                                <option value="true">{t('management.common.status.active')}</option>
+                                <option value="false">{t('management.common.status.inactive')}</option>
                             </select>
                         </div>
                         <div className="flex items-end">
@@ -308,7 +310,7 @@ const ManageSuppliers = () => {
                                 className="w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border border-dashed transition-all hover:bg-white/5"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                Reset All Filters
+                                {t('management.common.resetAll')}
                             </button>
                         </div>
                     </div>
@@ -331,20 +333,20 @@ const ManageSuppliers = () => {
                     ) : suppliers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Users size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No suppliers found</p>
-                            <p className="text-sm mt-1">Try adjusting your filters or click "Add Supplier" to create one</p>
+                            <p className="text-lg font-medium">{t('management.suppliers.notFound')}</p>
+                            <p className="text-sm mt-1">{t('management.suppliers.clickToAdd')}</p>
                         </div>
                     ) : (
                         <>
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Supplier Info</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Person</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Details</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.table.supplierInfo')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.table.contactPerson')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.table.contactDetails')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.form.category')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -391,7 +393,7 @@ const ManageSuppliers = () => {
                                                         color: supplier.isActive ? '#22c55e' : '#6b7280',
                                                         borderColor: supplier.isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'
                                                     }}>
-                                                    {supplier.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                    {supplier.isActive ? t('management.common.status.active').toUpperCase() : t('management.common.status.inactive').toUpperCase()}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
@@ -400,6 +402,7 @@ const ManageSuppliers = () => {
                                                         onClick={() => openEditModal(supplier)}
                                                         className="p-2 rounded-xl transition-all cursor-pointer hover:bg-blue-500/20 active:scale-95"
                                                         style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
+                                                        title={t('management.common.edit', { defaultValue: 'Edit' })}
                                                     >
                                                         <Pencil size={15} />
                                                     </button>
@@ -407,6 +410,7 @@ const ManageSuppliers = () => {
                                                         onClick={() => setDeleteTarget(supplier)}
                                                         className="p-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/20 active:scale-95"
                                                         style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                                        title={t('management.common.delete.title', { defaultValue: 'Delete' })}
                                                     >
                                                         <Trash2 size={15} />
                                                     </button>
@@ -420,7 +424,7 @@ const ManageSuppliers = () => {
                             {/* Pagination */}
                             <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                                 <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                    Showing <span style={{ color: 'var(--text-main)' }}>{suppliers.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> suppliers
+                                    {t('management.common.showing')} <span style={{ color: 'var(--text-main)' }}>{suppliers.length}</span> {t('management.common.of')} <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> {t('management.common.records')}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -429,7 +433,7 @@ const ManageSuppliers = () => {
                                         className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        Previous
+                                        {t('management.common.pagination.previous')}
                                     </button>
                                     <div className="flex items-center gap-1">
                                         {[...Array(pagination.totalPages)].map((_, i) => (
@@ -453,7 +457,7 @@ const ManageSuppliers = () => {
                                         className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        Next
+                                        {t('management.common.pagination.next')}
                                     </button>
                                 </div>
                             </div>
@@ -481,7 +485,7 @@ const ManageSuppliers = () => {
                         {/* HEADER */}
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-semibold" style={{ color: "var(--text-main)" }}>
-                                {modalMode === "create" ? "Add New Supplier" : "Edit Supplier Details"}
+                                {modalMode === "create" ? t('management.suppliers.modalTitleCreate') : t('management.suppliers.modalTitleEdit')}
                             </h2>
                             <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-lg transition">
                                 <X size={20} />
@@ -493,7 +497,7 @@ const ManageSuppliers = () => {
                                 {/* Supplier Name */}
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Supplier Name
+                                        {t('management.suppliers.form.name')}
                                     </label>
                                     <input
                                         type="text"
@@ -502,14 +506,14 @@ const ManageSuppliers = () => {
                                         style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Enter supplier/company name"
+                                        placeholder={t('management.suppliers.form.namePlaceholder')}
                                     />
                                 </div>
 
                                 {/* Contact Person */}
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Contact Person
+                                        {t('management.suppliers.form.contactPerson')}
                                     </label>
                                     <input
                                         type="text"
@@ -518,14 +522,14 @@ const ManageSuppliers = () => {
                                         style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                         value={formData.contactPerson}
                                         onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                                        placeholder="Full name of contact person"
+                                        placeholder={t('management.suppliers.form.contactPersonPlaceholder')}
                                     />
                                 </div>
 
                                 {/* Email */}
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Email Address
+                                        {t('management.suppliers.form.email')}
                                     </label>
                                     <input
                                         type="email"
@@ -534,14 +538,14 @@ const ManageSuppliers = () => {
                                         style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="supplier@example.com"
+                                        placeholder={t('management.suppliers.form.emailPlaceholder')}
                                     />
                                 </div>
 
                                 {/* Phone */}
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Phone Number
+                                        {t('management.common.modal.phone')}
                                     </label>
                                     <PhoneInput
                                         country={"in"}
@@ -568,7 +572,7 @@ const ManageSuppliers = () => {
                                 {/* Category Dropdown */}
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Category
+                                        {t('management.suppliers.form.category')}
                                     </label>
                                     <select
                                         value={formData.category}
@@ -583,10 +587,10 @@ const ManageSuppliers = () => {
                                 </div>
 
                                 {/* Custom Category (Conditional) */}
-                                {formData.category === 'Other' && (
+                                {formData.category === t('management.suppliers.categories.Other') && (
                                     <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
                                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                            Custom Category
+                                            {t('management.suppliers.form.customCategory')}
                                         </label>
                                         <input
                                             type="text"
@@ -595,7 +599,7 @@ const ManageSuppliers = () => {
                                             style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                             value={formData.customCategory}
                                             onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
-                                            placeholder="Enter your custom category"
+                                            placeholder={t('management.suppliers.form.customCategoryPlaceholder')}
                                         />
                                     </div>
                                 )}
@@ -604,7 +608,7 @@ const ManageSuppliers = () => {
                             {/* Address */}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                    Office Address
+                                    {t('management.suppliers.form.address')}
                                 </label>
                                 <textarea
                                     required
@@ -613,15 +617,15 @@ const ManageSuppliers = () => {
                                     style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                     value={formData.address}
                                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="Complete street address, city, state"
+                                    placeholder={t('management.suppliers.form.addressPlaceholder')}
                                 />
                             </div>
 
                             {/* Status and Toggle */}
                             <div className="flex items-center justify-between p-4 rounded-xl border" style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}>
                                 <div>
-                                    <div className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>Supplier Status</div>
-                                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>Toggle to activate or deactivate this supplier</div>
+                                    <div className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>{t('management.suppliers.form.status')}</div>
+                                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>{t('management.suppliers.form.statusToggle')}</div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -650,7 +654,7 @@ const ManageSuppliers = () => {
                                     className="flex-1 py-3 rounded-xl text-sm font-medium transition-all"
                                     style={{ border: "1px solid var(--border-main)", color: "var(--text-dim)" }}
                                 >
-                                    Cancel
+                                    {t('management.common.modal.cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -661,7 +665,7 @@ const ManageSuppliers = () => {
                                     {formLoading ? (
                                         <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                                     ) : (
-                                        modalMode === "create" ? "Add Supplier" : "Save Changes"
+                                        modalMode === "create" ? t('management.suppliers.createButton') : t('management.suppliers.updateButton')
                                     )}
                                 </button>
                             </div>
@@ -681,9 +685,9 @@ const ManageSuppliers = () => {
                         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: 'rgba(239,68,68,0.1)' }}>
                             <Trash2 size={40} style={{ color: '#ef4444' }} />
                         </div>
-                        <h2 className="text-2xl font-bold text-center mb-2" style={{ color: 'var(--text-main)' }}>Confirm Deletion</h2>
+                        <h3 className="text-2xl font-bold text-center mb-2" style={{ color: 'var(--text-main)' }}>{t('management.suppliers.deleteTitle')}</h3>
                         <p className="text-center mb-8" style={{ color: 'var(--text-dim)' }}>
-                            Are you sure you want to delete <strong style={{ color: 'var(--text-main)' }}>{deleteTarget.name}</strong>? This action cannot be undone.
+                            {t('management.suppliers.deleteConfirm', { name: deleteTarget.name })}
                         </p>
                         <div className="flex gap-4">
                             <button
@@ -691,7 +695,7 @@ const ManageSuppliers = () => {
                                 className="flex-1 py-3.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                                 style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                Cancel
+                                {t('management.common.modal.cancel')}
                             </button>
                             <button
                                 onClick={handleDelete}
@@ -701,7 +705,7 @@ const ManageSuppliers = () => {
                             >
                                 {deleteLoading
                                     ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    : 'Confirm Delete'
+                                    : t('management.common.delete.confirmSubmit')
                                 }
                             </button>
                         </div>

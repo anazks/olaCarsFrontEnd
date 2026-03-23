@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, UserCheck, AlertTriangle, Building2, ShieldCheck, Mail, Phone, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     getAllBranchManagers,
@@ -18,6 +19,7 @@ import 'react-phone-input-2/lib/style.css';
 type ModalMode = 'create' | 'edit' | null;
 
 const ManageBranchManagers = () => {
+    const { t } = useTranslation();
     const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -80,7 +82,7 @@ const ManageBranchManagers = () => {
             setBranchManagers(response.data || []);
             setPagination(response.pagination);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch branch managers');
+            setError(err.response?.data?.message || err.message || t('management.branchManagers.fetchFailed', { defaultValue: 'Failed to fetch branch managers' }));
         } finally {
             setLoading(false);
         }
@@ -165,7 +167,7 @@ const ManageBranchManagers = () => {
             closeModal();
             fetchManagers();
         } catch (err: any) {
-            setFormError(err.response?.data?.message || err.message || 'Operation failed');
+            setFormError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         } finally {
             setFormLoading(false);
         }
@@ -179,7 +181,7 @@ const ManageBranchManagers = () => {
             setDeleteTarget(null);
             fetchManagers();
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Delete failed');
+            setError(err.response?.data?.message || err.message || t('management.common.deleteFailed'));
             setDeleteTarget(null);
         } finally {
             setDeleteLoading(false);
@@ -215,7 +217,7 @@ const ManageBranchManagers = () => {
 
     const getBranchName = (branchId: string) => {
         const branch = branches.find(b => b._id === branchId);
-        return branch ? branch.name : 'Unknown Branch';
+        return branch ? branch.name : t('management.branchManagers.unknownBranch', { defaultValue: 'Unknown Branch' });
     };
 
     const statusColor = (s: string) => {
@@ -233,9 +235,9 @@ const ManageBranchManagers = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <UserCheck size={28} style={{ color: '#C8E600' }} />
-                        Manage Branch Managers
+                        {t('management.branchManagers.title')}
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Create and manage accounts for branch managers</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.branchManagers.subtitle')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -254,14 +256,14 @@ const ManageBranchManagers = () => {
                             color: showAdvancedFilters ? '' : 'var(--text-main)' 
                         }}
                     >
-                        <Filter size={16} /> Filters
+                        <Filter size={16} /> {t('management.common.filters')}
                     </button>
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >
-                        <Plus size={18} /> Add Manager
+                        <Plus size={18} /> {t('management.branchManagers.add')}
                     </button>
                 </div>
             </div>
@@ -273,7 +275,7 @@ const ManageBranchManagers = () => {
                     <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                     <input
                         type="text"
-                        placeholder="Search by name, email, or phone..."
+                        placeholder={t('management.common.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -289,29 +291,29 @@ const ManageBranchManagers = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2 duration-200">
                         {/* Status Filter */}
                         <div>
-                            <FilterLabel label="Status" />
+                            <FilterLabel label={t('management.common.modal.status')} />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Statuses</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
+                                <option value="ALL">{t('management.common.allStatuses')}</option>
+                                <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                <option value="INACTIVE">{t('management.common.status.inactive')}</option>
                             </select>
                         </div>
 
                         {/* Branch Filter */}
                         <div>
-                            <FilterLabel label="Branch" />
+                            <FilterLabel label={t('management.common.table.branchInfo')} />
                             <select
                                 value={branchFilter}
                                 onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Branches</option>
+                                <option value="ALL">{t('management.common.allBranches', { defaultValue: 'All Branches' })}</option>
                                 {branches.map((b: Branch) => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
                                 ))}
@@ -320,7 +322,7 @@ const ManageBranchManagers = () => {
 
                         {/* Date Filters */}
                         <div>
-                            <FilterLabel label="Start Date" />
+                            <FilterLabel label={t('management.common.startDate')} />
                             <input
                                 type="date"
                                 value={startDate}
@@ -331,7 +333,7 @@ const ManageBranchManagers = () => {
                         </div>
 
                         <div>
-                            <FilterLabel label="End Date" />
+                            <FilterLabel label={t('management.common.endDate')} />
                             <input
                                 type="date"
                                 value={endDate}
@@ -354,7 +356,7 @@ const ManageBranchManagers = () => {
                                 className="w-full py-3 text-xs font-bold opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
                                 style={{ color: 'var(--text-main)' }}
                             >
-                                <RefreshCw size={12} /> Reset All
+                                <RefreshCw size={12} /> {t('management.common.resetAll')}
                             </button>
                         </div>
                     </div>
@@ -378,8 +380,8 @@ const ManageBranchManagers = () => {
                     ) : branchManagers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <UserCheck size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No branch managers found</p>
-                            <p className="text-sm mt-1">Click "Add Manager" to create one</p>
+                            <p className="text-lg font-medium">{t('management.branchManagers.notFound')}</p>
+                            <p className="text-sm mt-1">{t('management.branchManagers.clickToAdd')}</p>
                         </div>
                     ) : (
                         <table className="w-full text-left border-collapse">
@@ -387,18 +389,18 @@ const ManageBranchManagers = () => {
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('fullName')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Manager Info <SortIcon field="fullName" />
+                                            {t('management.common.table.branchInfo')} <SortIcon field="fullName" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.branchInfo')}</th>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('email')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Contact <SortIcon field="email" />
+                                            {t('management.common.table.contact')} <SortIcon field="email" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>2FA</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.twoFactor')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -436,14 +438,14 @@ const ManageBranchManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
-                                                    {manager.status}
+                                                    {t(`management.common.status.${manager.status.toLowerCase()}`, { defaultValue: manager.status })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <ShieldCheck size={16} style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }} />
                                                     <span className="text-sm" style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }}>
-                                                        {manager.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                                                        {manager.twoFactorEnabled ? t('management.common.status.enabled') : t('management.common.status.disabled')}
                                                     </span>
                                                 </div>
                                             </td>
@@ -477,7 +479,7 @@ const ManageBranchManagers = () => {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span className="text-lime font-black">{branchManagers.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                            {t('management.common.showing')} <span className="text-lime font-black">{branchManagers.length}</span> {t('management.common.of')} <span className="text-white font-black">{pagination.total}</span> {t('management.common.records')}
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -534,7 +536,7 @@ const ManageBranchManagers = () => {
                     >
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-                                {modalMode === 'create' ? 'Add Branch Manager' : 'Edit Branch Manager'}
+                                {modalMode === 'create' ? t('management.branchManagers.modalTitleCreate') : t('management.branchManagers.modalTitleEdit')}
                             </h2>
                             <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
                                 <X size={24} />
@@ -544,7 +546,7 @@ const ManageBranchManagers = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Full Name</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
                                     <input
                                         type="text"
                                         required
@@ -556,7 +558,7 @@ const ManageBranchManagers = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Email Address</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.officialEmailLabel')}</label>
                                     <input
                                         type="email"
                                         required
@@ -573,7 +575,7 @@ const ManageBranchManagers = () => {
                                 {modalMode === 'create' && (
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                            Password
+                                            {t('management.common.modal.password')}
                                         </label>
                                         <input
                                             type="password"
@@ -587,7 +589,7 @@ const ManageBranchManagers = () => {
                                     </div>
                                 )}
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Phone Number</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.phone')}</label>
                                     <PhoneInput
                                         country={'in'}
                                         value={formData.phone}
@@ -617,7 +619,7 @@ const ManageBranchManagers = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Assign Branch</label>
+                                <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.assignBranch')}</label>
                                 <select
                                     required
                                     value={formData.branchId}
@@ -625,7 +627,7 @@ const ManageBranchManagers = () => {
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <option value="" style={{ background: 'var(--bg-card)' }}>Select a branch</option>
+                                    <option value="" style={{ background: 'var(--bg-card)' }}>{t('management.common.modal.selectBranch')}</option>
                                     {branches.map((branch: Branch) => (
                                         <option key={branch._id} value={branch._id} style={{ background: 'var(--bg-card)' }}>
                                             {branch.name} ({branch.code})
@@ -636,15 +638,15 @@ const ManageBranchManagers = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Status</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.status')}</label>
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                                         className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>ACTIVE</option>
-                                        <option value="INACTIVE" style={{ background: 'var(--bg-card)' }}>INACTIVE</option>
+                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.active')}</option>
+                                        <option value="INACTIVE" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.inactive')}</option>
                                     </select>
                                 </div>
                                 <div className="flex items-end pb-3">
@@ -659,7 +661,7 @@ const ManageBranchManagers = () => {
                                             <div className={`w-12 h-6 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
                                             <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </div>
-                                        <span className="text-sm font-medium group-hover:opacity-80 transition-opacity" style={{ color: 'var(--text-main)' }}>Two-Factor Authentication</span>
+                                        <span className="text-sm font-medium group-hover:opacity-80 transition-opacity" style={{ color: 'var(--text-main)' }}>{t('management.common.modal.twoFactorAuth')}</span>
                                     </label>
                                 </div>
                             </div>
@@ -672,12 +674,10 @@ const ManageBranchManagers = () => {
 
                             <div className="flex gap-4 pt-4">
                                 <button
-                                    type="button"
-                                    onClick={closeModal}
                                     className="flex-1 py-4 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                                     style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                                 >
-                                    Cancel
+                                    {t('management.common.modal.cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -687,7 +687,7 @@ const ManageBranchManagers = () => {
                                 >
                                     {formLoading
                                         ? <div className="w-6 h-6 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
-                                        : modalMode === 'create' ? 'Create Manager' : 'Update Manager'
+                                        : modalMode === 'create' ? t('management.branchManagers.createButton') : t('management.branchManagers.updateButton')
                                     }
                                 </button>
                             </div>
@@ -707,9 +707,9 @@ const ManageBranchManagers = () => {
                         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: 'rgba(239,68,68,0.1)' }}>
                             <Trash2 size={40} style={{ color: '#ef4444' }} />
                         </div>
-                        <h2 className="text-2xl font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>Confirm Deletion</h2>
+                        <h2 className="text-2xl font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>{t('management.branchManagers.deleteTitle')}</h2>
                         <p className="text-center mb-8" style={{ color: 'var(--text-dim)' }}>
-                            Are you absolutely sure you want to delete <strong style={{ color: 'var(--text-main)' }}>{deleteTarget.fullName}</strong>? This will permanently disable their access to the system.
+                            {t('management.branchManagers.deleteConfirm', { name: deleteTarget.fullName })}
                         </p>
                         <div className="flex gap-4">
                             <button
@@ -717,7 +717,7 @@ const ManageBranchManagers = () => {
                                 className="flex-1 py-3.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                                 style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                Cancel
+                                {t('management.common.modal.cancel')}
                             </button>
                             <button
                                 onClick={handleDelete}
@@ -727,7 +727,7 @@ const ManageBranchManagers = () => {
                             >
                                 {deleteLoading
                                     ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    : 'Confirm Delete'
+                                    : t('management.common.delete.confirmSubmit')
                                 }
                             </button>
                         </div>

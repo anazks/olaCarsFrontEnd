@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Shield, Plus, Trash2, Upload, X, Check, AlertTriangle, Search, Eye, Download } from 'lucide-react';
 import {
     getAllInsurances,
@@ -12,6 +13,7 @@ import {
 } from '../../../services/insuranceService';
 
 const ManageInsurances = () => {
+    const { t } = useTranslation();
     const [insurances, setInsurances] = useState<Insurance[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -66,7 +68,7 @@ const ManageInsurances = () => {
             setError(null);
         } catch (err) {
             console.error('Fetch error:', err);
-            setError('Failed to fetch insurances');
+            setError(t('management.insurances.fetchFailed'));
         } finally {
             setLoading(false);
         }
@@ -137,19 +139,19 @@ const ManageInsurances = () => {
             setPolicyFile(null);
             fetchInsurances();
         } catch (err) {
-            setError('Failed to save insurance');
+            setError(t('management.insurances.saveFailed'));
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this insurance policy?')) return;
+        if (!window.confirm(t('management.insurances.deleteConfirm'))) return;
         try {
-            await deleteInsurance(id);
+            deleteInsurance(id);
             fetchInsurances();
         } catch (err) {
-            setError('Failed to delete insurance');
+            setError(t('management.insurances.deleteFailed'));
         }
     };
 
@@ -158,15 +160,15 @@ const ManageInsurances = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                        <Shield className="text-lime" /> Insurance Management
+                        <Shield className="text-lime" /> {t('management.insurances.title')}
                     </h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Manage vehicle insurance policies and documents</p>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.subtitle')}</p>
                 </div>
                 <button
                     onClick={handleOpenCreateModal}
                     className="flex items-center gap-2 bg-lime text-black px-6 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(163,230,53,0.3)] transition-all hover:-translate-y-0.5"
                 >
-                    <Plus size={20} /> New Policy
+                    <Plus size={20} /> {t('management.insurances.add')}
                 </button>
             </div>
 
@@ -177,7 +179,7 @@ const ManageInsurances = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Search by provider or policy number..."
+                            placeholder={t('management.common.searchPlaceholder')}
                             className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             value={filters.search}
@@ -189,50 +191,50 @@ const ManageInsurances = () => {
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
                     >
-                        Advanced Filters {showAdvancedFilters ? '↑' : '↓'}
+                        {t('management.common.filters')} {showAdvancedFilters ? '↑' : '↓'}
                     </button>
                 </div>
 
                 {showAdvancedFilters && (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</label>
                             <select
                                 value={filters.status || ''}
                                 onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Statuses</option>
-                                <option value="ACTIVE">ACTIVE</option>
-                                <option value="EXPIRED">EXPIRED</option>
-                                <option value="CANCELLED">CANCELLED</option>
+                                <option value="">{t('management.common.allStatuses')}</option>
+                                <option value="ACTIVE">{t('management.insurances.statusLabels.ACTIVE')}</option>
+                                <option value="EXPIRED">{t('management.insurances.statusLabels.EXPIRED')}</option>
+                                <option value="CANCELLED">{t('management.insurances.statusLabels.CANCELLED')}</option>
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Policy Type</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.form.policyType')}</label>
                             <select
                                 value={filters.policyType || ''}
                                 onChange={(e) => handleFilterChange('policyType', e.target.value || undefined)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Types</option>
-                                <option value="INDIVIDUAL">INDIVIDUAL</option>
-                                <option value="FLEET">FLEET</option>
+                                <option value="">{t('management.insurances.types.all')}</option>
+                                <option value="INDIVIDUAL">{t('management.insurances.types.INDIVIDUAL')}</option>
+                                <option value="FLEET">{t('management.insurances.types.FLEET')}</option>
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>Coverage</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.form.coverage')}</label>
                             <select
                                 value={filters.coverageType || ''}
                                 onChange={(e) => handleFilterChange('coverageType', e.target.value || undefined)}
                                 className="w-full px-4 py-2 rounded-lg text-sm outline-none"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Coverage</option>
-                                <option value="COMPREHENSIVE">COMPREHENSIVE</option>
-                                <option value="THIRD_PARTY">THIRD_PARTY</option>
+                                <option value="">{t('management.insurances.coverage.all')}</option>
+                                <option value="COMPREHENSIVE">{t('management.insurances.coverage.COMPREHENSIVE')}</option>
+                                <option value="THIRD_PARTY">{t('management.insurances.coverage.THIRD_PARTY')}</option>
                             </select>
                         </div>
                         <div className="flex items-end pb-0.5">
@@ -248,7 +250,7 @@ const ManageInsurances = () => {
                                 className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                Reset Filters
+                                {t('management.common.resetAll')}
                             </button>
                         </div>
                     </div>
@@ -269,21 +271,21 @@ const ManageInsurances = () => {
                 ) : insurances.length === 0 ? (
                     <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                         <Shield size={48} className="mx-auto mb-4 opacity-20" />
-                        <p className="text-lg font-medium">No insurance policies found</p>
-                        <p className="text-sm mt-1">Try adjusting your filters or click "New Policy"</p>
+                        <p className="text-lg font-medium">{t('management.insurances.notFound')}</p>
+                        <p className="text-sm mt-1">{t('management.insurances.clickToAdd')}</p>
                     </div>
                 ) : (
                     <>
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Provider / Policy</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Type / Coverage</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Expiry</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Insured Value</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Docs</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.providerPolicy')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.typeCoverage')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.expiry')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.insuredValue')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.docs')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
@@ -296,9 +298,9 @@ const ManageInsurances = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1">
                                                 <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] w-fit font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
-                                                    {ins.policyType || 'INDIVIDUAL'}
+                                                    {t(`management.insurances.types.${ins.policyType || 'INDIVIDUAL'}`)}
                                                 </span>
-                                                <span className="text-[10px] uppercase font-medium" style={{ color: 'var(--text-dim)' }}>{ins.coverageType?.replace('_', ' ') || 'COMPREHENSIVE'}</span>
+                                                <span className="text-[10px] uppercase font-medium" style={{ color: 'var(--text-dim)' }}>{t(`management.insurances.coverage.${ins.coverageType || 'COMPREHENSIVE'}`)}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -309,7 +311,7 @@ const ManageInsurances = () => {
                                                 color: ins.status === 'ACTIVE' ? '#22c55e' : '#ef4444',
                                                 borderColor: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'
                                             }}>
-                                                {ins.status || 'UNKNOWN'}
+                                                {t(`management.insurances.statusLabels.${ins.status || 'UNKNOWN'}`)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>
@@ -325,7 +327,7 @@ const ManageInsurances = () => {
                                                         onClick={() => setSelectedImage(getFullUrl(ins.documents?.policyDocumentUrl))}
                                                         className="p-2 rounded-xl transition-all hover:bg-lime/20 text-lime"
                                                         style={{ background: 'rgba(200,230,0,0.1)' }}
-                                                        title="View Document"
+                                                        title={t('management.common.view', { defaultValue: 'View' })}
                                                     >
                                                         <Eye size={16} />
                                                     </button>
@@ -336,7 +338,7 @@ const ManageInsurances = () => {
                                                         rel="noopener noreferrer"
                                                         className="p-2 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500"
                                                         style={{ background: 'rgba(59,130,246,0.1)' }}
-                                                        title="Download Document"
+                                                        title={t('management.common.download', { defaultValue: 'Download' })}
                                                     >
                                                         <Download size={16} />
                                                     </a>
@@ -360,7 +362,7 @@ const ManageInsurances = () => {
                         {/* Pagination */}
                         <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                             <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                Showing <span style={{ color: 'var(--text-main)' }}>{insurances.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> policies
+                                {t('management.common.showing')} <span style={{ color: 'var(--text-main)' }}>{insurances.length}</span> {t('management.common.of')} <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> {t('management.common.records')}
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
@@ -369,7 +371,7 @@ const ManageInsurances = () => {
                                     className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    Previous
+                                    {t('management.common.pagination.previous')}
                                 </button>
                                 <div className="flex items-center gap-1">
                                     {[...Array(pagination.totalPages)].map((_, i) => (
@@ -393,7 +395,7 @@ const ManageInsurances = () => {
                                     className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    Next
+                                    {t('management.common.pagination.next')}
                                 </button>
                             </div>
                         </div>
@@ -408,7 +410,7 @@ const ManageInsurances = () => {
                         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                             <h2 className="text-xl font-bold flex items-center gap-2">
                                 <Plus className="text-lime" />
-                                New Insurance Policy
+                                {t('management.insurances.modalTitleCreate')}
                             </h2>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-dim hover:text-white transition-all">
                                 <X size={24} />
@@ -418,7 +420,7 @@ const ManageInsurances = () => {
                         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">Policy Info</h3>
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyInfo')}</h3>
                                     <div className="space-y-1.5">
                                         <label className="text-xs text-dim uppercase">Provider</label>
                                         <input
@@ -430,7 +432,7 @@ const ManageInsurances = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Policy Number</label>
+                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyNumber')}</label>
                                         <input
                                             required
                                             type="text"
@@ -441,32 +443,32 @@ const ManageInsurances = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">Policy Type</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyType')}</label>
                                             <select
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
                                                 value={formData.policyType}
                                                 onChange={(e) => setFormData({...formData, policyType: e.target.value as PolicyType})}
                                             >
-                                                <option value="INDIVIDUAL">INDIVIDUAL</option>
-                                                <option value="FLEET">FLEET</option>
+                                                <option value="INDIVIDUAL">{t('management.insurances.types.INDIVIDUAL')}</option>
+                                                <option value="FLEET">{t('management.insurances.types.FLEET')}</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">Coverage</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.coverage')}</label>
                                             <select
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
                                                 value={formData.coverageType}
                                                 onChange={(e) => setFormData({...formData, coverageType: e.target.value as CoverageType})}
                                             >
-                                                <option value="COMPREHENSIVE">COMPREHENSIVE</option>
-                                                <option value="THIRD_PARTY">THIRD_PARTY</option>
+                                                <option value="COMPREHENSIVE">{t('management.insurances.coverage.COMPREHENSIVE')}</option>
+                                                <option value="THIRD_PARTY">{t('management.insurances.coverage.THIRD_PARTY')}</option>
                                             </select>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">Financials & Timeline</h3>
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.financialsTimeline')}</h3>
                                     <div className="space-y-1.5">
                                         <label className="text-xs text-dim uppercase">Insured Value ($)</label>
                                         <input
@@ -479,7 +481,7 @@ const ManageInsurances = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">Start Date</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.startDate')}</label>
                                             <input
                                                 required
                                                 type="date"
@@ -489,7 +491,7 @@ const ManageInsurances = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">Expiry Date</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.expiryDate')}</label>
                                             <input
                                                 required
                                                 type="date"
@@ -503,10 +505,10 @@ const ManageInsurances = () => {
                             </div>
 
                             <div className="bg-white/5 p-4 rounded-2xl space-y-4">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-lime">Provider Contact</h3>
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.providerContact')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Name</label>
+                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.name')}</label>
                                         <input
                                             required
                                             type="text"
@@ -519,7 +521,7 @@ const ManageInsurances = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Phone</label>
+                                        <label className="text-xs text-dim uppercase">{t('management.common.modal.phone')}</label>
                                         <input
                                             required
                                             type="tel"
@@ -532,7 +534,7 @@ const ManageInsurances = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Email</label>
+                                        <label className="text-xs text-dim uppercase">{t('management.common.modal.officialEmailLabel')}</label>
                                         <input
                                             required
                                             type="email"
@@ -548,7 +550,7 @@ const ManageInsurances = () => {
                             </div>
 
                                 <div className="bg-white/5 p-4 rounded-2xl space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">Policy Document</h3>
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
                                     <div className="flex items-center gap-4">
                                         <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-lime/40 hover:bg-lime/5 transition-all cursor-pointer group">
                                             <input 
@@ -558,16 +560,16 @@ const ManageInsurances = () => {
                                             />
                                             {policyFile ? (
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <Check className="text-lime" size={24} />
-                                                    <span className="text-xs font-medium">{policyFile.name}</span>
-                                                    <span className="text-[10px] text-dim">Click to change</span>
-                                                </div>
+                                                     <Check className="text-lime" size={24} />
+                                                     <span className="text-xs font-medium">{policyFile.name}</span>
+                                                     <span className="text-[10px] text-dim">{t('management.insurances.form.clickToChange')}</span>
+                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <Upload className="text-dim group-hover:text-lime transition-colors" size={24} />
-                                                    <span className="text-xs font-medium">Upload Policy Document</span>
-                                                    <span className="text-[10px] text-dim">PDF, JPG, or PNG</span>
-                                                </div>
+                                                     <Upload className="text-dim group-hover:text-lime transition-colors" size={24} />
+                                                     <span className="text-xs font-medium">{t('management.insurances.form.uploadDoc')}</span>
+                                                     <span className="text-[10px] text-dim">{t('management.insurances.form.docTypes')}</span>
+                                                 </div>
                                             )}
                                         </label>
                                     </div>
@@ -577,10 +579,10 @@ const ManageInsurances = () => {
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-6 py-3 rounded-xl font-bold hover:bg-white/5 transition-all text-dim hover:text-white"
-                                >
-                                    Cancel
-                                </button>
+                                     className="px-6 py-3 rounded-xl font-bold hover:bg-white/5 transition-all text-dim hover:text-white"
+                                 >
+                                     {t('management.common.modal.cancel')}
+                                 </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -588,11 +590,11 @@ const ManageInsurances = () => {
                                 >
                                     {loading ? (
                                         <div className="animate-spin border-2 border-black border-t-transparent rounded-full w-4 h-4" />
-                                    ) : (
-                                        <Check size={20} />
-                                    )}
-                                    Create Policy
-                                </button>
+                                     ) : (
+                                         <Check size={20} />
+                                     )}
+                                     {t('management.insurances.createButton')}
+                                 </button>
                             </div>
                         </form>
                     </div>

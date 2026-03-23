@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, Edit, History, Plus, Search, Globe, Download } from 'lucide-react';
 import agreementService from '../../services/agreementService';
 import type { Agreement } from '../../services/agreementService';
@@ -11,6 +12,7 @@ interface AgreementListProps {
 }
 
 const AgreementList = ({ onViewHistory }: AgreementListProps) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [agreements, setAgreements] = useState<Agreement[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
     };
 
     const handleDownloadPDF = async (agreement: Agreement) => {
-        const toastId = toast.loading('Generating PDF...');
+        const toastId = toast.loading(t('management.agreements.list.toast.generating'));
         try {
             const doc = new jsPDF({
                 unit: 'pt',
@@ -90,10 +92,10 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
             });
 
             doc.save(`${agreement.title.replace(/\s+/g, '_')}_v${agreement.version}.pdf`);
-            toast.success('PDF downloaded successfully', { id: toastId });
+            toast.success(t('management.agreements.list.toast.success'), { id: toastId });
         } catch (error) {
             console.error('PDF generation failed:', error);
-            toast.error('Failed to generate PDF', { id: toastId });
+            toast.error(t('management.agreements.list.toast.failed'), { id: toastId });
         } finally {
             const container = document.querySelector('div[style*="550pt"]');
             if (container) document.body.removeChild(container);
@@ -127,7 +129,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={18} />
                         <input
                             type="text"
-                            placeholder="Search agreements..."
+                            placeholder={t('management.agreements.list.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime transition-all"
@@ -142,7 +144,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                             className="pl-10 pr-8 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime transition-all appearance-none cursor-pointer"
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <option value="">All Countries</option>
+                            <option value="">{t('management.common.allCountries')}</option>
                             <option value="US">USA</option>
                             <option value="IN">India</option>
                             <option value="KE">Kenya</option>
@@ -156,7 +158,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                     style={{ background: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                 >
-                    <Plus size={20} /> Create New
+                    <Plus size={20} /> {t('management.agreements.list.createBtn')}
                 </button>
             </div>
 
@@ -166,13 +168,13 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Title</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Country</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Type</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Version</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Status</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">Last Updated</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim text-right">Actions</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.title')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.country')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.type')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.version')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.status')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.lastUpdated')}</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim text-right">{t('management.common.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5" style={{ borderColor: 'var(--border-main)' }}>
@@ -187,7 +189,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                             ) : filteredAgreements.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-dim">
-                                        No agreements found matching your search.
+                                        {t('management.agreements.list.noAgreements')}
                                     </td>
                                 </tr>
                             ) : (
@@ -219,7 +221,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${getStatusColor(agreement.status)}`}>
-                                                {agreement.status}
+                                                {t(`management.agreements.statusLabels.${agreement.status}`)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-dim">
@@ -230,21 +232,21 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                                                 <button
                                                     onClick={() => navigate(`edit/${agreement._id}`)}
                                                     className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title="Edit Agreement"
+                                                    title={t('management.agreements.list.actions.edit')}
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDownloadPDF(agreement)}
                                                     className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title="Download PDF"
+                                                    title={t('management.agreements.list.actions.download')}
                                                 >
                                                     <Download size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => onViewHistory(agreement)}
                                                     className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title="View History"
+                                                    title={t('management.agreements.list.actions.history')}
                                                 >
                                                     <History size={18} />
                                                 </button>

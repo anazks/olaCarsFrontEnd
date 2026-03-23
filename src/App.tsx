@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { useScrollReveal } from './hooks/useScrollReveal';
 import { isTokenValid, logout, getToken } from './utils/auth';
+import './i18n';
 import AdminLogin from './pages/admin/AdminLogin';
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -57,6 +58,7 @@ import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
 import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
+import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import Profile from './pages/dashboards/shared/Profile';
 
@@ -283,6 +285,14 @@ function App() {
 
           {/* Agreement Signing Route */}
           <Route path="/agreements/sign/:id" element={<AgreementSignPage />} />
+
+          {/* Driver Dashboard - Protected */}
+          <Route element={<ProtectedRoute allowedRoles={['driver']} />}>
+            <Route path="/admin/driver/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
+              <Route index element={<DriverDashboard />} />
+              <Route path="profile" element={<Profile />} />
+            </Route>
+          </Route>
 
           {/* Redirect "/" and any unknown routes to login */}
           <Route path="*" element={<Navigate to="/admin/login" replace />} />

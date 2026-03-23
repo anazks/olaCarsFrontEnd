@@ -1,124 +1,120 @@
-import { CheckSquare, AlertTriangle, KeySquare } from 'lucide-react';
-import { StatCard, AlertCard } from '../../components/dashboard/widgets/StatusCards';
+import { useTranslation } from 'react-i18next';
+import { StatCard } from '../../components/dashboard/widgets/StatusCards';
+import { ClipboardCheck, Key, Droplets, AlertTriangle, Play, CheckCircle } from 'lucide-react';
 
 const BranchOpStaffDashboard = () => {
+    const { t } = useTranslation();
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-end mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>Ground Operations</h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Tasks, checklists, and vehicle condition reporting.</p>
-                </div>
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.title')}</h1>
+                <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('dashboards.branchOp.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    superTitle="My Tasks"
-                    title="Completed today"
-                    value="12/18"
-                    icon={<CheckSquare size={14} />}
+                    superTitle={t('dashboards.branchOp.stats.myTasks')}
+                    title={t('dashboards.branchOp.stats.completedToday')}
+                    value="8 / 12"
+                    icon={<ClipboardCheck size={14} />}
                     color="#4F46E5"
                 />
                 <StatCard
-                    superTitle="Pending Keys"
-                    title="Handover required"
+                    superTitle={t('dashboards.branchOp.stats.pendingKeys')}
+                    title={t('dashboards.branchOp.stats.handoverRequired')}
                     value="4"
-                    icon={<KeySquare size={14} />}
+                    icon={<Key size={14} />}
+                    color="#F59E0B"
+                />
+                <StatCard
+                    superTitle={t('dashboards.branchOp.stats.cleanBay')}
+                    title={t('dashboards.branchOp.stats.waitingForWash')}
+                    value="2"
+                    icon={<Droplets size={14} />}
                     color="#148F85"
                 />
                 <StatCard
-                    superTitle="Clean Bay"
-                    title="Waiting for wash"
-                    value="3"
-                    color="#1F2937"
-                />
-                <AlertCard
-                    title="Reported Damages"
-                    count={1}
-                    desc="Since 9:00 AM Shift start"
+                    superTitle={t('dashboards.branchOp.stats.reportedDamages')}
+                    title={t('dashboards.branchOp.stats.sinceShiftStart')}
+                    value="1"
+                    icon={<AlertTriangle size={14} />}
                     color="#EF4444"
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Assigned Tasks */}
+                {/* Checklist Section */}
                 <div
-                    className="rounded-2xl border shadow-lg flex flex-col h-full transition-colors"
+                    className="rounded-2xl border shadow-lg overflow-hidden transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>My Checklist</h4>
-                        <span className="text-xs px-2 py-1 rounded font-bold" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>18 Total</span>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.checklist.title')}</h4>
+                        <span className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10" style={{ color: 'var(--text-dim)' }}>
+                            {t('dashboards.branchOp.checklist.total', { count: 3 })}
+                        </span>
                     </div>
-                    <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+                    <div className="p-4 space-y-2">
                         {[
-                            { title: 'Check-in: MH-12-KL-3333', desc: 'Verify fuel level & mileage', time: '10:30 AM', priority: 'High' },
-                            { title: 'Handover: MH-14-XY-9087 to Mr. Sharma', desc: 'Customer waiting in lobby', time: '11:00 AM', priority: 'Critical' },
-                            { title: 'Washing Bay', desc: 'Move 3 returned cars to cleaning', time: '11:30 AM', priority: 'Normal' },
-                            { title: 'Sanitize Premium SUVs', desc: 'Wipe all touchpoints before dispatch', time: '1:00 PM', priority: 'Normal' },
-                        ].map((task, i) => (
-                            <div
-                                key={i}
-                                className="flex gap-4 p-4 rounded-xl border transition-all group cursor-default"
-                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                            >
-                                <div className="mt-1">
-                                    <div
-                                        className="w-5 h-5 rounded border-2 flex justify-center items-center group-hover:border-lime cursor-pointer transition-colors"
-                                        style={{ borderColor: 'var(--text-dim)' }}
-                                    >
-                                        {/* Checkmark icon placeholder */}
-                                    </div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{task.title}</span>
-                                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${task.priority === 'Critical' ? 'bg-red-500/20 text-red-500' : task.priority === 'High' ? 'bg-orange-500/20 text-orange-500' : 'bg-white/5 text-gray-400'}`}>
-                                            {task.priority}
-                                        </span>
-                                    </div>
-                                    <div className="text-xs mb-2" style={{ color: 'var(--text-dim)' }}>{task.desc}</div>
-                                    <div className="text-xs font-bold mt-1" style={{ color: 'var(--brand-lime)' }}>{task.time}</div>
-                                </div>
+                            { task: 'Morning Inventory Check (All Keys)', status: 'complete' },
+                            { task: 'Verify Cleaning Schedule', status: 'pending' },
+                            { task: 'Log fuel levels for SUV batch AA', status: 'pending' },
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer hover:bg-white/5" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                {item.status === 'complete' ? (
+                                    <CheckCircle size={20} className="text-green-400" />
+                                ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-dashed border-white/20" />
+                                )}
+                                <span className={`text-sm ${item.status === 'complete' ? 'line-through' : ''}`} style={{ color: item.status === 'complete' ? 'var(--text-dim)' : 'var(--text-main)' }}>
+                                    {item.task}
+                                </span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Action Panel */}
+                {/* Quick Actions */}
                 <div
-                    className="rounded-2xl border p-5 shadow-lg flex flex-col h-full transition-colors"
+                    className="rounded-2xl border p-5 shadow-lg flex flex-col transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    <h4 className="font-bold mb-6" style={{ color: 'var(--text-main)' }}>Quick Actions</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <h4 className="font-bold mb-6" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.actions.title')}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                         <button
-                            className="flex flex-col items-center justify-center p-6 border rounded-xl hover:bg-lime/10 hover:border-lime/40 cursor-pointer transition-all group"
-                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed transition-all hover:border-lime group"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                         >
-                            <CheckSquare size={32} className="mb-3 group-hover:text-lime transition-colors" />
-                            <span className="font-semibold text-sm group-hover:text-lime transition-colors">Start Handover</span>
+                            <div className="w-12 h-12 rounded-full bg-lime/10 flex items-center justify-center text-lime group-hover:scale-110 transition-transform">
+                                <Play size={24} />
+                            </div>
+                            <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.actions.startHandover')}</span>
                         </button>
                         <button
-                            className="flex flex-col items-center justify-center p-6 border rounded-xl hover:bg-lime/10 hover:border-lime/40 cursor-pointer transition-all group"
-                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed transition-all hover:border-blue-400 group"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                         >
-                            <CheckSquare size={32} className="mb-3 group-hover:text-lime transition-colors" />
-                            <span className="font-semibold text-sm group-hover:text-lime transition-colors">Process Check-in</span>
+                            <div className="w-12 h-12 rounded-full bg-blue-400/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                                <ClipboardCheck size={24} />
+                            </div>
+                            <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.actions.processCheckin')}</span>
                         </button>
                         <button
-                            className="flex flex-col items-center justify-center p-6 border rounded-xl hover:bg-red-500/10 hover:border-red-500/50 cursor-pointer transition-all group text-red-400 sm:col-span-2"
-                            style={{ background: 'var(--bg-input)', borderColor: 'rgba(239,68,68,0.2)' }}
+                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed transition-all hover:border-red-400 group sm:col-span-2"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                         >
-                            <AlertTriangle size={32} className="mb-3" />
-                            <span className="font-semibold text-sm">Report Damage</span>
+                            <div className="w-12 h-12 rounded-full bg-red-400/10 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
+                                <AlertTriangle size={24} />
+                            </div>
+                            <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchOp.actions.reportDamage')}</span>
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
     );
 };
 
 export default BranchOpStaffDashboard;
+

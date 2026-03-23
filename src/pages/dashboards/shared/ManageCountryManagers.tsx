@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Globe, AlertTriangle, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     getAllCountryManagers,
@@ -17,6 +18,7 @@ import 'react-phone-input-2/lib/style.css';
 type ModalMode = 'create' | 'edit' | null;
 
 const ManageCountryManagers = () => {
+    const { t } = useTranslation();
     const [managers, setManagers] = useState<CountryManager[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -84,7 +86,7 @@ const ManageCountryManagers = () => {
             setManagers(response.data || []);
             setPagination(response.pagination);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch country managers');
+            setError(err.response?.data?.message || err.message || t('management.countryManagers.fetchFailed', { defaultValue: 'Failed to fetch country managers' }));
         } finally {
             setLoading(false);
         }
@@ -168,7 +170,7 @@ const ManageCountryManagers = () => {
             closeModal();
             fetchManagers();
         } catch (err: any) {
-            setFormError(err.response?.data?.message || err.message || 'Operation failed');
+            setFormError(err.response?.data?.message || err.message || t('management.common.operationFailed', { defaultValue: 'Operation failed' }));
         } finally {
             setFormLoading(false);
         }
@@ -182,7 +184,7 @@ const ManageCountryManagers = () => {
             setDeleteTarget(null);
             fetchManagers();
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Delete failed');
+            setError(err.response?.data?.message || err.message || t('management.common.deleteFailed', { defaultValue: 'Delete failed' }));
             setDeleteTarget(null);
         } finally {
             setDeleteLoading(false);
@@ -232,9 +234,9 @@ const ManageCountryManagers = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Globe size={28} style={{ color: '#C8E600' }} />
-                        Manage Country Managers
+                        {t('management.countryManagers.title')}
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Create, update, and manage country manager accounts</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.countryManagers.subtitle')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -253,14 +255,14 @@ const ManageCountryManagers = () => {
                             color: showAdvancedFilters ? '' : 'var(--text-main)' 
                         }}
                     >
-                        <Filter size={16} /> Filters
+                        <Filter size={16} /> {t('management.common.filters')}
                     </button>
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >
-                        <Plus size={18} /> Add Country Manager
+                        <Plus size={18} /> {t('management.countryManagers.add')}
                     </button>
                 </div>
             </div>
@@ -272,7 +274,7 @@ const ManageCountryManagers = () => {
                     <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                     <input
                         type="text"
-                        placeholder="Search by name or email..."
+                        placeholder={t('management.common.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -288,30 +290,30 @@ const ManageCountryManagers = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2 duration-200">
                         {/* Status Filter */}
                         <div>
-                            <FilterLabel label="Status" />
+                            <FilterLabel label={t('management.common.table.status')} />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Statuses</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="SUSPENDED">Suspended</option>
-                                <option value="LOCKED">Locked</option>
+                                <option value="ALL">{t('management.common.allStatuses')}</option>
+                                <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
+                                <option value="LOCKED">{t('management.common.status.locked')}</option>
                             </select>
                         </div>
 
                         {/* Country Filter */}
                         <div>
-                            <FilterLabel label="Country" />
+                            <FilterLabel label={t('management.common.table.country')} />
                             <select
                                 value={countryFilter}
                                 onChange={(e) => { setCountryFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Countries</option>
+                                <option value="ALL">{t('management.common.allCountries')}</option>
                                 {countries.map(c => (
                                     <option key={c} value={c}>{c}</option>
                                 ))}
@@ -320,7 +322,7 @@ const ManageCountryManagers = () => {
 
                         {/* Date Filters */}
                         <div>
-                            <FilterLabel label="Start Date" />
+                            <FilterLabel label={t('management.common.startDate')} />
                             <input
                                 type="date"
                                 value={startDate}
@@ -331,7 +333,7 @@ const ManageCountryManagers = () => {
                         </div>
 
                         <div>
-                            <FilterLabel label="End Date" />
+                            <FilterLabel label={t('management.common.endDate')} />
                             <input
                                 type="date"
                                 value={endDate}
@@ -354,7 +356,7 @@ const ManageCountryManagers = () => {
                                 className="w-full py-3 text-xs font-bold opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
                                 style={{ color: 'var(--text-main)' }}
                             >
-                                <RefreshCw size={12} /> Reset All
+                                <RefreshCw size={12} /> {t('management.common.resetAll')}
                             </button>
                         </div>
                     </div>
@@ -378,8 +380,8 @@ const ManageCountryManagers = () => {
                     ) : managers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
                             <Globe size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No country managers found</p>
-                            <p className="text-sm mt-1">Click "Add Country Manager" to create one</p>
+                            <p className="text-lg font-medium">{t('management.countryManagers.notFound')}</p>
+                            <p className="text-sm mt-1">{t('management.countryManagers.clickToAdd')}</p>
                         </div>
                     ) : (
                         <table className="w-full text-left border-collapse">
@@ -387,23 +389,23 @@ const ManageCountryManagers = () => {
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('fullName')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Name <SortIcon field="fullName" />
+                                            {t('management.common.table.name')} <SortIcon field="fullName" />
                                         </button>
                                     </th>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('email')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Email & Phone <SortIcon field="email" />
+                                            {t('management.common.table.phoneEmail')} <SortIcon field="email" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Country</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>2FA</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.country')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.twoFactor')}</th>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('createdAt')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Created <SortIcon field="createdAt" />
+                                            {t('management.common.table.created')} <SortIcon field="createdAt" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -426,7 +428,7 @@ const ManageCountryManagers = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col text-xs space-y-0.5">
                                                     <span style={{ color: 'var(--text-main)' }}>{manager.email}</span>
-                                                    <span style={{ color: 'var(--text-dim)' }}>{manager.phone || 'No phone'}</span>
+                                                    <span style={{ color: 'var(--text-dim)' }}>{manager.phone || t('management.countryManagers.noPhone', { defaultValue: 'No phone' })}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -437,14 +439,14 @@ const ManageCountryManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
-                                                    {manager.status}
+                                                    {t(`management.common.status.${manager.status.toLowerCase()}`, { defaultValue: manager.status })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 {manager.twoFactorEnabled ? (
-                                                    <span className="text-xs font-bold" style={{ color: '#22c55e' }}>Enabled</span>
+                                                    <span className="text-xs font-bold" style={{ color: '#22c55e' }}>{t('management.common.status.enabled')}</span>
                                                 ) : (
-                                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Disabled</span>
+                                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.common.status.disabled')}</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
@@ -480,7 +482,7 @@ const ManageCountryManagers = () => {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span className="text-lime font-black">{managers.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                            {t('management.common.showing')} <span className="text-lime font-black">{managers.length}</span> {t('management.common.of')} <span className="text-white font-black">{pagination.total}</span> {t('management.common.records')}
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -537,7 +539,7 @@ const ManageCountryManagers = () => {
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>
-                                {modalMode === 'create' ? 'Add Country Manager' : 'Edit Country Manager'}
+                                {modalMode === 'create' ? t('management.countryManagers.modalTitleCreate') : t('management.countryManagers.modalTitleEdit')}
                             </h2>
                             <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
                                 <X size={20} />
@@ -547,7 +549,7 @@ const ManageCountryManagers = () => {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Full Name</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
                                     <input
                                         type="text"
                                         required
@@ -559,7 +561,7 @@ const ManageCountryManagers = () => {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Email</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.email')}</label>
                                     <input
                                         type="email"
                                         required
@@ -574,7 +576,7 @@ const ManageCountryManagers = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Country</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.country')}</label>
                                     <select
                                         value={formData.country}
                                         onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -587,7 +589,7 @@ const ManageCountryManagers = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Phone Number</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.phone')}</label>
                                     <PhoneInput
                                         country={({
                                             "Panama": "pa",
@@ -631,7 +633,7 @@ const ManageCountryManagers = () => {
                             {modalMode === 'create' && (
                                 <div className="space-y-1.5">
                                     <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                        Password
+                                        {t('management.common.modal.password')}
                                     </label>
                                     <input
                                         type="password"
@@ -647,16 +649,16 @@ const ManageCountryManagers = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Status</label>
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.status')}</label>
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>ACTIVE</option>
-                                        <option value="SUSPENDED" style={{ background: 'var(--bg-card)' }}>SUSPENDED</option>
-                                        <option value="LOCKED" style={{ background: 'var(--bg-card)' }}>LOCKED</option>
+                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.active')}</option>
+                                        <option value="SUSPENDED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.suspended')}</option>
+                                        <option value="LOCKED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.locked')}</option>
                                     </select>
                                 </div>
                                 <div className="flex flex-col justify-end pb-1">
@@ -671,7 +673,7 @@ const ManageCountryManagers = () => {
                                             <div className={`w-10 h-5 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
                                             <div className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                         </div>
-                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>2FA Enabled</span>
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.common.modal.twoFactorEnabled')}</span>
                                     </label>
                                 </div>
                             </div>
@@ -687,9 +689,8 @@ const ManageCountryManagers = () => {
                                     type="button"
                                     onClick={closeModal}
                                     className="flex-1 py-3.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-                                    style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                                 >
-                                    Cancel
+                                    {t('management.common.modal.cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -699,7 +700,7 @@ const ManageCountryManagers = () => {
                                 >
                                     {formLoading
                                         ? <div className="w-5 h-5 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
-                                        : modalMode === 'create' ? 'Create Manager' : 'Save Changes'
+                                        : modalMode === 'create' ? t('management.countryManagers.createButton') : t('management.common.modal.saveChanges')
                                     }
                                 </button>
                             </div>
@@ -719,18 +720,17 @@ const ManageCountryManagers = () => {
                         <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(239,68,68,0.15)' }}>
                             <Trash2 size={28} style={{ color: '#ef4444' }} />
                         </div>
-                        <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-main)' }}>Delete Country Manager?</h3>
+                        <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('management.countryManagers.deleteTitle')}</h3>
                         <p className="text-sm mb-6" style={{ color: 'var(--text-dim)' }}>
-                            Are you sure you want to delete <strong style={{ color: 'var(--text-main)' }}>{deleteTarget.fullName}</strong>? This action cannot be undone.
+                            {t('management.common.delete.confirm', { name: deleteTarget.fullName })}
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setDeleteTarget(null)}
                                 className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-                                style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
-                            >
-                                Cancel
-                            </button>
+                                >
+                                    {t('management.common.modal.cancel')}
+                                </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteLoading}
@@ -739,7 +739,7 @@ const ManageCountryManagers = () => {
                             >
                                 {deleteLoading
                                     ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    : 'Delete'
+                                    : t('management.common.delete.submit')
                                 }
                             </button>
                         </div>

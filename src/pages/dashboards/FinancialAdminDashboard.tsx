@@ -1,50 +1,53 @@
+import { useTranslation } from 'react-i18next';
 import { StatCard, AlertCard } from '../../components/dashboard/widgets/StatusCards';
 import { Download, ArrowUpRight, ArrowDownRight, DollarSign, Wallet } from 'lucide-react';
 
 const FinancialAdminDashboard = () => {
+    const { t } = useTranslation();
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>Finance Hub</h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Revenue tracking, branch audits, and collections.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('dashboards.financial.title')}</h1>
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('dashboards.financial.subtitle')}</p>
                 </div>
                 <div className="flex gap-3 w-full sm:w-auto">
                     <button
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all cursor-pointer hover:bg-lime/10"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
                     >
-                        <Download size={16} /> Export CSV
+                        <Download size={16} /> {t('common.exportCsv')}
                     </button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    superTitle="Total Revenue (MTD)"
-                    title="Gross Payouts"
+                    superTitle={t('dashboards.financial.stats.totalRevenue')}
+                    title={t('dashboards.financial.stats.grossPayouts')}
                     value="$142,500"
                     icon={<ArrowUpRight size={14} />}
                     color="#148F85"
                 />
                 <StatCard
-                    superTitle="Pending Collections"
-                    title="Awaiting Deposit"
+                    superTitle={t('dashboards.financial.stats.pendingCollections')}
+                    title={t('dashboards.financial.stats.awaitingDeposit')}
                     value="$18,200"
                     icon={<DollarSign size={14} />}
                     color="#F59E0B"
                 />
                 <StatCard
-                    superTitle="Fleet Expenses"
-                    title="Maintenance largely"
+                    superTitle={t('dashboards.financial.stats.fleetExpenses')}
+                    title={t('dashboards.financial.stats.maintenanceLargely')}
                     value="$4,120"
                     icon={<ArrowDownRight size={14} />}
                     color="#EF4444"
                 />
                 <AlertCard
-                    title="Overdue Invoices"
+                    title={t('dashboards.financial.stats.overdueInvoices')}
                     count={14}
-                    desc="Corporate clients"
+                    desc={t('dashboards.financial.stats.corporateClients')}
                     color="#F97316"
                 />
             </div>
@@ -56,7 +59,7 @@ const FinancialAdminDashboard = () => {
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <div className="p-5 border-b transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Top Branches Revenue (MTD)</h4>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>{t('dashboards.financial.branchRevenue.title')}</h4>
                     </div>
                     <div className="p-5 space-y-4">
                         {[
@@ -92,8 +95,8 @@ const FinancialAdminDashboard = () => {
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <div className="p-5 border-b flex justify-between items-center transition-colors" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>Latest Transactions & Deposits</h4>
-                        <button className="text-sm hover:underline border-none bg-transparent cursor-pointer" style={{ color: 'var(--brand-lime)' }}>View Ledger</button>
+                        <h4 className="font-bold" style={{ color: 'var(--text-main)' }}>{t('dashboards.financial.transactions.title')}</h4>
+                        <button className="text-sm hover:underline border-none bg-transparent cursor-pointer" style={{ color: 'var(--brand-lime)' }}>{t('dashboards.financial.transactions.viewLedger')}</button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2">
                         {[
@@ -109,7 +112,9 @@ const FinancialAdminDashboard = () => {
                                     </div>
                                     <div>
                                         <h5 className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{tx.desc}</h5>
-                                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{tx.id} · {tx.status}</p>
+                                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                                            {tx.id} · {tx.status === 'Cleared' ? t('dashboards.financial.transactions.cleared') : t('dashboards.financial.transactions.pendingVerification')}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className={`text-sm font-bold ${tx.type === 'Debit' ? 'text-red-400' : 'text-green-400'}`}>
@@ -125,3 +130,4 @@ const FinancialAdminDashboard = () => {
 };
 
 export default FinancialAdminDashboard;
+

@@ -1,0 +1,855 @@
+{
+  "common": {
+    "search": "Buscar...",
+    "settings": "Configuración",
+    "dashboardSettings": "Configuración del Tablero",
+    "logout": "Cerrar sesión",
+    "lightMode": "Cambiar a Modo Claro",
+    "darkMode": "Cambiar a Modo Oscuro",
+    "accessPanel": "Panel de Acceso",
+    "viewAll": "Ver todo",
+    "refresh": "Actualizar",
+    "exportCsv": "Exportar CSV",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "view": "Ver",
+    "status": "Estado",
+    "actions": "Acciones"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "operationalAdmin": "Administrador Operativo",
+    "financialAdmin": "Administrador financiero",
+    "countryManager": "Gerente de País",
+    "branchManager": "Gerente de Sucursal",
+    "branchOpStaff": "Personal Operativo de Sucursal",
+    "operationStaff": "Personal Operativo",
+    "branchFinStaff": "Personal Financiero de Sucursal",
+    "financeStaff": "Personal Financiero",
+    "workshopStaff": "Personal de Taller"
+  },
+  "login": {
+    "staffPortal": "Portal del Personal",
+    "signInMessage": "Inicie sesión para acceder a su tablero",
+    "role": "Rol",
+    "emailLabel": "Correo electrónico / ID de empleado",
+    "emailPlaceholder": "ej. admin@olacars.com",
+    "password": "Contraseña",
+    "accessDashboard": "Acceder al Tablero",
+    "loginFailed": "Error de inicio de sesión. Por favor, compruebe sus credenciales.",
+    "roleAdmin": "Administrador (Ejecutivo / CEO)",
+    "roleOperationalAdmin": "Administrador Operativo",
+    "roleFinancialAdmin": "Administrador financiero",
+    "roleCountryManager": "Gerente de País",
+    "roleBranchManager": "Gerente de Sucursal",
+    "roleBranchOpStaff": "Personal Operativo de Sucursal",
+    "roleBranchFinStaff": "Personal Financiero de Sucursal"
+  },
+  "sidebar": {
+    "sections": {
+      "staffManagement": "Gestión de Personal",
+      "finance": "Finanzas",
+      "financeOperations": "Operaciones Financieras",
+      "monitoring": "Monitoreo",
+      "alertCenter": "Centro de Alertas",
+      "tasks": "Tareas",
+      "agendaCalendar": "Agenda y Calendario",
+      "operations": "Operaciones",
+      "performance": "Rendimiento",
+      "localOperations": "Operaciones Locales",
+      "operationalTasks": "Tareas Operativas",
+      "financialTasks": "Tareas Financieras",
+      "generalLedgerTax": "Libro Mayor e Impuestos"
+    },
+    "items": {
+      "dashboard": "Tablero",
+      "opsOverview": "Resumen de Ops",
+      "finOverview": "Resumen Fin",
+      "financeOverview": "Resumen de Finanzas",
+      "nationalDashboard": "Tablero Nacional",
+      "branchOverview": "Resumen de Sucursal",
+      "operationalAdmins": "Administradores Operativos",
+      "financialAdmins": "Administradores Financieros",
+      "countryManagers": "Gerentes de País",
+      "manageCountryManagers": "Gestionar Gerentes de País",
+      "manageBranches": "Gestionar Sucursales",
+      "branchManagers": "Gerentes de Sucursal",
+      "financeStaff": "Personal de Finanzas",
+      "groundOpsStaff": "Personal de Operaciones",
+      "workshopStaff": "Personal de Taller",
+      "suppliers": "Proveedores",
+      "poThreshold": "Umbral de OC",
+      "purchaseOrders": "Órdenes de Compra",
+      "purchaseBills": "Facturas de Compra",
+      "manageVehicles": "Gestionar Vehículos",
+      "drivers": "Conductores",
+      "legalAgreements": "Contratos Legales",
+      "insuranceManagement": "Gestión de Seguros",
+      "collectionsBoard": "Tablero de Cobros",
+      "gpsRiskDashboard": "Tablero de GPS y Riesgos",
+      "viewAlerts": "Ver Alertas",
+      "taskDetails": "Detalles de Tarea",
+      "pendingTasks": "Tareas Pendientes",
+      "vehicleList": "Lista de Vehículos",
+      "registerVehicle": "Registrar Vehículo",
+      "importRecords": "Importar Registros",
+      "assignments": "Asignaciones",
+      "insuranceClaims": "Seguros y Reclamaciones",
+      "financeDashboard": "Tablero de Finanzas",
+      "taxManagement": "Gestión de Impuestos",
+      "chartOfAccounts": "Plan de Cuentas",
+      "generalLedger": "Libro Mayor",
+      "liveGpsTracking": "Rastreo GPS en Vivo",
+      "fleetInventory": "Inventario de Flota",
+      "maintenanceHub": "Centro de Mantenimiento",
+      "driverRoster": "Lista de Conductores",
+      "regionalPerformance": "Rendimiento Regional",
+      "revenueGrowth": "Ingresos y Crecimiento",
+      "complianceReports": "Informes de Cumplimiento",
+      "criticalEscalations": "Escalaciones Críticas",
+      "myTeam": "Mi Equipo",
+      "shiftSchedule": "Horario de Turnos",
+      "taskAssignments": "Asignaciones de Tareas",
+      "branchRevenue": "Ingresos de Sucursal",
+      "localAlerts": "Alertas Locales",
+      "dailyCollection": "Recaudación Diaria",
+      "invoices": "Facturas",
+      "payments": "Pagos",
+      "transactionHistory": "Historial de Transacciones",
+      "reports": "Reports",
+      "dailyTasks": "Tareas Diarias",
+      "driverHandovers": "Entregas de Conductores",
+      "cleaningSchedule": "Horario de Limpieza",
+      "vehicleCheckin": "Entrada de Vehículo",
+      "logDamage": "Registrar Daño",
+      "revenueStreams": "Fuentes de Ingresos",
+      "profitAnalysis": "Análisis de Ganancias",
+      "billingInvoices": "Facturación y Facturas",
+      "taxCompliance": "Cumplimiento Tributario",
+      "payoutRegistry": "Registro de Pagos",
+      "riskAudit": "Auditoría de Riesgos"
+    }
+  },
+  "dashboards": {
+    "common": {
+      "welcomeBack": "Bienvenido de nuevo.",
+      "systemOverview": "Aquí está el resumen de su sistema.",
+      "activeNotifications": "Notificaciones activas",
+      "totalVehicles": "Vehículos Totales",
+      "activeVehicles": "Vehículos Activos",
+      "assignedVehicles": "Vehículos Asignados",
+      "unassignedVehicles": "Vehículos No Asignados",
+      "monthlyTarget": "Objetivo Mensual",
+      "weekChange": "{{value}} esta semana",
+      "last12Months": "Últimos 12 meses"
+    },
+    "executive": {
+      "title": "Tablero Ejecutivo",
+      "stats": {
+        "fleetTotal": "Total de Flota",
+        "registered": "registrado",
+        "assignedOperating": "Asignado y operando",
+        "collectionsWeek": "Cobros (Semana)",
+        "collectedThisWeek": "cobrado esta semana",
+        "totalAlerts": "Alertas totales",
+        "overdueMaintenance": "Mantenimiento Vencido"
+      },
+      "trends": {
+        "collectionTitle": "Tendencia de Cobro",
+        "weekOverWeek": "semana tras semana",
+        "vsOriginAnterior": "vs Origen anterior",
+        "chartTitle": "Tendencia de Cobros",
+        "collected": "Cobrado",
+        "plan": "Plan"
+      },
+      "tasks": {
+        "title": "Resumen de Tareas",
+        "overdue": "Vencidas",
+        "upcoming": "Próximas",
+        "assigned": "Asignadas"
+      },
+      "generalInfo": {
+        "title": "Información General",
+        "chauffeurs": "Chóferes",
+        "gpsOnline": "GPS en línea",
+        "skus": "SKUs"
+      },
+      "tabs": {
+        "overview": "Resumen",
+        "vehiclesDrivers": "Vehículos y Conductores",
+        "collections": "Cobros",
+        "riskMaintenance": "Riesgo y Mantenimiento"
+      }
+    },
+    "operational": {
+      "title": "Tablero de Operaciones",
+      "subtitle": "Seguimiento de flota en tiempo real y centro de mantenimiento.",
+      "openMap": "Abrir Mapa de Flota",
+      "stats": {
+        "onTheRoad": "En la carretera",
+        "liveTracking": "Seguimiento en vivo",
+        "inService": "En servicio",
+        "depotMaintenance": "Mantenimiento en depósito",
+        "criticalVor": "VOR Crítico",
+        "vehicleOffRoad": "Vehículo fuera de servicio"
+      },
+      "liveOps": {
+        "title": "Operaciones en Vivo",
+        "table": {
+          "vehicle": "Vehículo",
+          "driver": "Conductor",
+          "status": "Estado",
+          "eta": "ETA/Est."
+        }
+      },
+      "maintenance": {
+        "title": "Cola de Mantenimiento",
+        "dueToday": "Vence hoy",
+        "scheduled": "Programado",
+        "pendingBay": "Bahía pendiente",
+        "awaitingParts": "Esperando piezas",
+        "routineServicing": "Servicio de rutina (Aceite/Filtros)",
+        "tyreReplacements": "Reemplazo de neumáticos",
+        "engineDiagnostics": "Diagnóstico de motor",
+        "bodyRepair": "Reparación de carrocería (Accidental)"
+      }
+    },
+    "financial": {
+      "title": "Centro de Finanzas",
+      "subtitle": "Seguimiento de ingresos, auditorías de sucursales y cobros.",
+      "stats": {
+        "totalRevenue": "Ingresos Totales (MTD)",
+        "grossPayouts": "Pagos Brutos",
+        "pendingCollections": "Cobros Pendientes",
+        "awaitingDeposit": "Esperando Depósito",
+        "fleetExpenses": "Gastos de Flota",
+        "maintenanceLargely": "Mantenimiento principalmente",
+        "overdueInvoices": "Facturas Vencidas",
+        "corporateClients": "Clientes corporativos"
+      },
+      "branchRevenue": {
+        "title": "Ingresos de Sucursales Superiores (MTD)",
+        "target": "Objetivo"
+      },
+      "transactions": {
+        "title": "Últimas Transacciones y Depósitos",
+        "viewLedger": "Ver Libro Mayor",
+        "cleared": "Liquidado",
+        "pendingVerification": "Pendiente de Verificación",
+        "credit": "Crédito",
+        "deposit": "Depósito",
+        "debit": "Débito"
+      }
+    },
+    "country": {
+      "title": "Resumen Nacional",
+      "subtitle": "Rendimiento entre regiones y métricas nacionales críticas.",
+      "stats": {
+        "totalBranches": "Sucursales Totales",
+        "activeNationwide": "Activas en todo el país",
+        "nationalGoal": "Objetivo Nacional",
+        "fleetUtilization": "Utilización de flota",
+        "totalStaff": "Personal Total",
+        "acrossRegions": "En todas las regiones",
+        "complianceFlags": "Banderas de Cumplimiento",
+        "regulatoryAudits": "Regulatorio / Auditorías"
+      },
+      "performance": {
+        "title": "Cuadrícula de Rendimiento Regional",
+        "branches": "Sucursales",
+        "yield": "Rendimiento",
+        "alerts": "Alertas"
+      }
+    },
+    "branch": {
+      "title": "Centro de Sucursal",
+      "subtitle": "Su flota local, personal y objetivos diarios.",
+      "stats": {
+        "localFleet": "Flota Local",
+        "availableVsTotal": "Disponible vs Total",
+        "todayBookings": "Reservas de Hoy",
+        "scheduledPickups": "Recogidas programadas",
+        "staffOnShift": "Personal en Turno",
+        "opsFinance": "Ops y Finanzas",
+        "customerWait": "Espera del Cliente"
+      },
+      "handovers": {
+        "title": "Próximas Entregas (Próximas 3 Horas)",
+        "customer": "Cliente",
+        "assignKey": "Asignar Llave"
+      },
+      "tasks": {
+        "title": "Tablero de Tareas del Personal",
+        "high": "Alta",
+        "normal": "Normal",
+        "assigned": "Asignado",
+        "dueIn": "Vence en {{value}}"
+      }
+    },
+    "branchOp": {
+      "title": "Operaciones de Campo",
+      "subtitle": "Tareas, listas de verificación e informes de estado del vehículo.",
+      "stats": {
+        "myTasks": "Mis Tareas",
+        "completedToday": "Completado hoy",
+        "pendingKeys": "Llaves Pendientes",
+        "handoverRequired": "Entrega requerida",
+        "cleanBay": "Bahía Limpia",
+        "waitingForWash": "Esperando lavado",
+        "reportedDamages": "Daños Reportados",
+        "sinceShiftStart": "Desde el inicio del turno"
+      },
+      "checklist": {
+        "title": "Mi Lista de Verificación",
+        "total": "{{count}} Total"
+      },
+      "actions": {
+        "title": "Acciones Rápidas",
+        "startHandover": "Iniciar Entrega",
+        "processCheckin": "Procesar Entrada",
+        "reportDamage": "Reportar Daño"
+      }
+    },
+    "branchFin": {
+      "title": "Finanzas de Sucursal",
+      "subtitle": "Facturación, recaudación de efectivo y conciliación diaria.",
+      "stats": {
+        "cashOnHand": "Efectivo en Mano",
+        "physicalVault": "Bóveda Física",
+        "pendingInvoices": "Facturas Pendientes",
+        "awaitingPayment": "Esperando Pago",
+        "todaysRevenue": "Ingresos de Hoy",
+        "netCollection": "Recaudación Neta",
+        "discrepancy": "Discrepancia",
+        "reconciliationAlerts": "Alertas de Conciliación"
+      },
+      "transactions": {
+        "title": "Transacciones Recientes",
+        "id": "ID",
+        "type": "Tipo",
+        "amount": "Monto",
+        "status": "Estado"
+      },
+      "actions": {
+        "generateInvoice": "Generar Factura",
+        "forCurrentBooking": "Para entregas de reservas actuales",
+        "reconcileCash": "Conciliar Efectivo",
+        "closeDailyRegister": "Cerrar registro diario y bitácora"
+      }
+    }
+  },
+  "management": {
+    "common": {
+      "filters": "Filtros",
+      "advancedFilters": "Filtros Avanzados",
+      "searchPlaceholder": "Buscar por nombre o correo...",
+      "searchPlaceholderBranches": "Buscar por nombre, código, ciudad, estado...",
+      "allStatuses": "Todos los Estados",
+      "allCountries": "Todos los Países",
+      "startDate": "Fecha de Inicio",
+      "endDate": "Fecha de Fin",
+      "resetAll": "Reiniciar Todo",
+      "resetFilters": "Reiniciar Todos los Filtros",
+      "joinedFrom": "Unido Desde",
+      "joinedTo": "Unido Hasta",
+      "totalStaff": "Personal Total",
+      "activeAccounts": "Cuentas Activas",
+      "totalBranches": "Sucursales Totales",
+      "showing": "Mostrando",
+      "of": "de",
+      "records": "registros",
+      "branches": "sucursales",
+      "operationFailed": "Operación fallida",
+      "deleteFailed": "Eliminación fallida",
+      "refresh": "Actualizar",
+      "table": {
+        "name": "Nombre",
+        "email": "Correo",
+        "phoneEmail": "Correo y Teléfono",
+        "status": "Estado",
+        "twoFactor": "2FA",
+        "created": "Creado",
+        "actions": "Acciones",
+        "country": "País",
+        "branchInfo": "Información de Sucursal",
+        "location": "Ubicación",
+        "contact": "Contacto"
+      },
+      "status": {
+        "active": "Activo",
+        "suspended": "Suspendido",
+        "locked": "Bloqueado",
+        "enabled": "Habilitado",
+        "disabled": "Deshabilitado",
+        "inactive": "Inactivo",
+        "maintenance": "Mantenimiento"
+      },
+      "delete": {
+        "confirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
+        "submit": "Eliminar",
+        "confirmSubmit": "Confirmar Eliminación"
+      },
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Siguiente"
+      },
+      "modal": {
+        "fullName": "Nombre Completo",
+        "email": "Correo Electrónico",
+        "password": "Contraseña",
+        "cancel": "Cancelar",
+        "saveChanges": "Guardar Cambios",
+        "phone": "Número de Teléfono",
+        "country": "País",
+        "status": "Estado",
+        "twoFactorEnabled": "2FA Habilitado",
+        "branchName": "Nombre de la Sucursal",
+        "branchCode": "Código de la Sucursal",
+        "city": "Ciudad",
+        "state": "Estado",
+        "address": "Dirección Completa",
+        "officialEmail": "Correo Oficial",
+        "officialEmailLabel": "Correo Electrónico",
+        "assignBranch": "Asignar Sucursal",
+        "selectBranch": "Seleccionar una sucursal",
+        "twoFactorAuth": "Autenticación de Dos Factores",
+        "create": "Crear"
+      }
+    },
+    "branches": {
+      "title": "Gestionar Sucursales",
+      "subtitle": "Crear y gestionar ubicaciones físicas de sucursales",
+      "add": "Agregar Sucursal",
+      "notFound": "No se encontraron sucursales",
+      "clickToAdd": "Intente ajustar sus filtros o haga clic en \"Agregar Sucursal\" para crear una",
+      "modalTitleCreate": "Agregar Nueva Sucursal",
+      "modalTitleEdit": "Editar Detalle de Sucursal",
+      "createButton": "Crear Sucursal",
+      "updateButton": "Actualizar Sucursal",
+      "deleteTitle": "Confirmar Eliminación",
+      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar {{name}}? Todos los datos asociados se eliminarán permanentemente."
+    },
+    "branchManagers": {
+      "title": "Gestionar Gerentes de Sucursal",
+      "subtitle": "Crear y gestionar cuentas para gerentes de sucursal",
+      "add": "Agregar Gerente",
+      "notFound": "No se encontraron gerentes de sucursal",
+      "clickToAdd": "Haga clic en \"Agregar Gerente\" para crear uno",
+      "modalTitleCreate": "Agregar Gerente de Sucursal",
+      "modalTitleEdit": "Editar Gerente de Sucursal",
+      "createButton": "Crear Gerente",
+      "updateButton": "Actualizar Gerente",
+      "deleteTitle": "Confirmar Eliminación",
+      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar a {{name}}? Esto desactivará permanentemente su acceso al sistema."
+    },
+    "financeStaff": {
+      "title": "Gestionar Personal de Finanzas",
+      "subtitle": "Crear, actualizar y gestionar cuentas del personal de finanzas de la sucursal",
+      "add": "Agregar Personal de Finanzas",
+      "notFound": "No se encontró personal de finanzas",
+      "clickToAdd": "Haga clic en \"Agregar Personal de Finanzas\" para crear uno",
+      "modalTitleCreate": "Agregar Personal de Finanzas",
+      "modalTitleEdit": "Editar Personal de Finanzas",
+      "createButton": "Crear Personal",
+      "updateButton": "Guardar Cambios",
+      "deleteTitle": "¿Eliminar Cuenta?",
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+    },
+    "operationStaff": {
+      "title": "Gestionar Personal de Operaciones",
+      "subtitle": "Crear, actualizar y gestionar cuentas del personal de operaciones de la sucursal",
+      "add": "Agregar Personal de Operaciones",
+      "notFound": "No se encontró personal de operaciones",
+      "clickToAdd": "Haga clic en \"Agregar Personal de Operaciones\" para crear uno",
+      "modalTitleCreate": "Agregar Personal de Operaciones",
+      "modalTitleEdit": "Editar Personal de Operaciones",
+      "createButton": "Crear Personal",
+      "updateButton": "Guardar Cambios",
+      "deleteTitle": "¿Eliminar Cuenta?",
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+    },
+    "workshopStaff": {
+      "title": "Gestionar Personal del Taller",
+      "subtitle": "Crear, actualizar y gestionar cuentas del personal del taller de la sucursal",
+      "add": "Agregar Personal del Taller",
+      "loading": "Cargando personal del taller...",
+      "notFound": "No se encontró personal.",
+      "modalTitleCreate": "Agregar Personal del Taller",
+      "modalTitleEdit": "Actualizar Personal del Taller",
+      "createButton": "Crear Personal",
+      "updateButton": "Guardar Cambios",
+      "deleteTitle": "¿Eliminar Cuenta?",
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+    },
+    "opAdmins": {
+      "title": "Gestionar Administradores Operativos",
+      "subtitle": "Crear, actualizar y gestionar cuentas de administradores operativos",
+      "add": "Agregar Administrador Operativo",
+      "notFound": "No se encontraron administradores operativos",
+      "clickToAdd": "Haga clic en \"Agregar Administrador Operativo\" para crear uno",
+      "modalTitleCreate": "Agregar Administrador Operativo",
+      "modalTitleEdit": "Editar Administrador Operativo",
+      "deleteTitle": "¿Eliminar Administrador?",
+      "createButton": "Crear Administrador"
+    },
+    "finAdmins": {
+      "title": "Gestionar Administradores Financieros",
+      "subtitle": "Crear, actualizar y gestionar cuentas de administradores financieros",
+      "add": "Agregar Administrador Financiero",
+      "notFound": "No se encontraron administradores financieros",
+      "clickToAdd": "Haga clic en \"Agregar Administrador Financiero\" para crear uno",
+      "modalTitleCreate": "Agregar Administrador Financiero",
+      "modalTitleEdit": "Editar Administrador Financiero",
+      "deleteTitle": "¿Eliminar Administrador?",
+      "createButton": "Crear Administrador"
+    },
+    "countryManagers": {
+      "title": "Gestionar Gerentes de País",
+      "subtitle": "Crear, actualizar y gestionar cuentas de gerentes de país",
+      "add": "Agregar Gerente de País",
+      "notFound": "No se encontraron gerentes de país",
+      "clickToAdd": "Haga clic en \"Agregar Gerente de País\" para crear uno",
+      "modalTitleCreate": "Agregar Gerente de País",
+      "modalTitleEdit": "Editar Gerente de País",
+      "deleteTitle": "¿Eliminar Gerente de País?",
+      "createButton": "Crear Gerente"
+    },
+    "suppliers": {
+      "title": "Gestionar Proveedores",
+      "subtitle": "Gestionar contactos individuales que proporcionan materiales de origen",
+      "add": "Agregar Proveedor",
+      "fetchFailed": "Error al obtener proveedores",
+      "deleteTitle": "Confirmar Eliminación",
+      "deleteConfirm": "¿Está seguro de que desea eliminar {{name}}? Esta acción no se puede deshacer.",
+      "notFound": "No se encontraron proveedores",
+      "clickToAdd": "Intente ajustar sus filtros o haga clic en \"Agregar proveedor\" para crear uno",
+      "modalTitleCreate": "Agregar Nuevo Proveedor",
+      "modalTitleEdit": "Editar Detalles del Proveedor",
+      "createButton": "Agregar Proveedor",
+      "updateButton": "Guardar Cambios",
+      "table": {
+        "supplierInfo": "Información del Proveedor",
+        "contactPerson": "Persona de Contacto",
+        "contactDetails": "Detalles de Contacto"
+      },
+      "form": {
+        "name": "Nombre del Proveedor",
+        "namePlaceholder": "Ingrese el nombre del proveedor/empresa",
+        "contactPerson": "Persona de Contacto",
+        "contactPersonPlaceholder": "Nombre completo de la persona de contacto",
+        "email": "Correo Electrónico",
+        "emailPlaceholder": "proveedor@ejemplo.com",
+        "category": "Categoría",
+        "customCategory": "Categoría Personalizada",
+        "customCategoryPlaceholder": "Ingrese su categoría personalizada",
+        "address": "Dirección de la Oficina",
+        "addressPlaceholder": "Dirección completa, ciudad, estado",
+        "status": "Estado del Proveedor",
+        "statusToggle": "Alternar para activar o desactivar este proveedor",
+        "specifyCategory": "Por favor, especifique una categoría"
+      },
+      "categories": {
+        "all": "Todas las Categorías",
+        "Vehicles": "Vehículos",
+        "Spare Parts": "Piezas de repuesto",
+        "Services": "Servicios",
+        "Office Supplies": "Suministros de oficina",
+        "IT Equipment": "Equipo de TI",
+        "Marketing": "Marketing",
+        "Other": "Otro"
+      }
+    },
+    "insurances": {
+      "title": "Gestión de Seguros",
+      "subtitle": "Gestionar pólizas de seguro de vehículos y documentos",
+      "add": "Nueva Póliza",
+      "fetchFailed": "Error al obtener seguros",
+      "notFound": "No se encontraron pólizas de seguro",
+      "clickToAdd": "Intente ajustar sus filtros o haga clic en \"Nueva Póliza\"",
+      "modalTitleCreate": "Nueva Póliza de Seguro",
+      "createButton": "Crear Póliza",
+      "deleteConfirm": "¿Está seguro de que desea eliminar esta póliza de seguro?",
+      "deleteFailed": "Error al eliminar el seguro",
+      "saveFailed": "Error al guardar el seguro",
+      "table": {
+        "providerPolicy": "Proveedor / Póliza",
+        "typeCoverage": "Tipo / Cobertura",
+        "expiry": "Vencimiento",
+        "insuredValue": "Valor Asegurado",
+        "docs": "Docs"
+      },
+      "form": {
+        "policyInfo": "Información de la Póliza",
+        "provider": "Proveedor",
+        "policyNumber": "Número de Póliza",
+        "policyType": "Tipo de Póliza",
+        "coverage": "Cobertura",
+        "financialsTimeline": "Finanzas y Cronograma",
+        "insuredValue": "Valor Asegurado ($)",
+        "startDate": "Fecha de Inicio",
+        "expiryDate": "Fecha de Vencimiento",
+        "providerContact": "Contacto del Proveedor",
+        "name": "Nombre",
+        "phone": "Teléfono",
+        "email": "Correo Electrónico",
+        "policyDoc": "Documento de la Póliza",
+        "uploadDoc": "Cargar Documento de la Póliza",
+        "docTypes": "PDF, JPG o PNG",
+        "clickToChange": "Haga clic para cambiar"
+      },
+      "statusLabels": {
+        "ACTIVE": "ACTIVO",
+        "EXPIRED": "VENCIDO",
+        "CANCELLED": "CANCELADO",
+        "UNKNOWN": "DESCONOCIDO"
+      },
+      "types": {
+        "all": "Todos los Tipos",
+        "INDIVIDUAL": "INDIVIDUAL",
+        "FLEET": "FLOTA"
+      },
+      "coverage": {
+        "all": "Toda la Cobertura",
+        "COMPREHENSIVE": "INTEGRAL",
+        "THIRD_PARTY": "A TERCEROS"
+      }
+    },
+    "agreements": {
+      "title": "Acuerdos Legales",
+      "subtitle": "Gestione documentos legales y del sistema con control de versiones. Los cambios en los acuerdos publicados crean automáticamente nuevas versiones y conservan el historial.",
+      "cards": {
+        "versionControl": {
+          "title": "Control de Versiones",
+          "description": "Las actualizaciones del contenido, título o país incrementan el número de versión automáticamente."
+        },
+        "tiptap": {
+          "title": "Extensión TipTap",
+          "description": "Utilice el editor de texto enriquecido para dar formato a las políticas con encabezados, listas y enlaces."
+        },
+        "auditTrail": {
+          "title": "Pista de Auditoría",
+          "description": "Vea un historial completo de cambios, incluyendo quién actualizó el acuerdo y cuándo."
+        }
+      },
+      "list": {
+        "searchPlaceholder": "Buscar acuerdos...",
+        "createBtn": "Crear Nuevo",
+        "noAgreements": "No se encontraron acuerdos que coincidan con su búsqueda.",
+        "table": {
+          "title": "Título",
+          "country": "País",
+          "type": "Tipo",
+          "version": "Versión",
+          "status": "Estado",
+          "lastUpdated": "Última Actualización"
+        },
+        "actions": {
+          "edit": "Editar Acuerdo",
+          "download": "Descargar PDF",
+          "history": "Ver Historial"
+        },
+        "toast": {
+          "generating": "Generando PDF...",
+          "success": "PDF descargado con éxito",
+          "failed": "Error al generar el PDF"
+        }
+      },
+      "history": {
+        "title": "Historial de Versiones",
+        "noVersions": "No se encontraron versiones anteriores.",
+        "version": "Versión",
+        "info": "Versión {{version}}",
+        "createdBy": "Creado Por",
+        "date": "Fecha",
+        "previewPlaceholder": "Seleccione una versión para previsualizar su contenido."
+      },
+      "statusLabels": {
+        "PUBLISHED": "PUBLICADO",
+        "DRAFT": "BORRADOR",
+        "ARCHIVED": "ARCHIVADO"
+      }
+    },
+    "purchaseOrders": {
+      "title": "Órdenes de Compra",
+      "subtitle": "Gestión de solicitudes e inventario",
+      "createBtn": "Crear OC",
+      "searchPlaceholder": "Buscar por # de Órden de Compra o nombre del artículo...",
+      "filters": {
+        "billingStatus": "Estado de Facturación",
+        "onboardingStatus": "Estado de Incorporación",
+        "startDate": "Fecha de Inicio",
+        "endDate": "Fecha de Fin",
+        "allOrders": "Todas las Órdenes",
+        "billedOnly": "Solo Facturadas",
+        "notBilled": "No Facturadas",
+        "anyUsage": "Cualquier Uso",
+        "unusedOnly": "Sin Usar Solamente",
+        "alreadyUsed": "Ya Usadas"
+      },
+      "table": {
+        "poDetails": "Detalles de OC",
+        "totalAmount": "Monto Total",
+        "sourceInfo": "Información de Origen",
+        "timeline": "Cronología",
+        "explore": "Explorar",
+        "billed": "FACTURADA",
+        "modded": "Modificada",
+        "uniqueItems": "{{count}} Artículos Únicos",
+        "unknownVendor": "Vendedor Desconocido",
+        "unknownBranch": "Sucursal Desconocida"
+      },
+      "empty": {
+        "noOrders": "No se encontraron órdenes de compra",
+        "refine": "Intente ajustar su búsqueda o filtros para ver más resultados"
+      },
+      "pagination": {
+        "reviewing": "Revisando {{count}} de {{total}} registros"
+      }
+    },
+    "purchaseBills": {
+      "title": "Facturas de Compra",
+      "subtitle": "Rastree y gestione sus facturas de compra y pagos",
+      "searchPlaceholder": "Buscar por ID, notas o método...",
+      "statusLabels": {
+        "PENDING": "Pendiente",
+        "COMPLETED": "Completado",
+        "FAILED": "Fallido",
+        "CANCELLED": "Cancelado"
+      },
+      "table": {
+        "dateMethod": "Fecha y Método",
+        "description": "Descripción",
+        "amount": "Monto"
+      },
+      "loading": "Cargando transacciones...",
+      "empty": {
+        "noBills": "No se encontraron facturas",
+        "refine": "Ajuste sus filtros o términos de búsqueda"
+      }
+    },
+    "vehicles": {
+      "title": "Gestionar Vehículos",
+      "subtitle": "Gestionar la incorporación de vehículos y el ciclo de vida de la flota",
+      "onboardingBtn": "Incorporación de Vehículos",
+      "tabs": {
+        "all": "Toda la Flota",
+        "onboarding": "Incorporación",
+        "active": "Flota Activa",
+        "suspended": "Suspendido",
+        "retired": "Retirado"
+      },
+      "searchPlaceholder": "Buscar por VIN, marca o modelo...",
+      "advancedFilters": "Filtros Avanzados",
+      "filters": {
+        "allCategories": "Todas las Categorías",
+        "allFuelTypes": "Todos los Tipos de Combustible",
+        "allBranches": "Todas las Sucursales"
+      },
+      "table": {
+        "vehicle": "Vehículo",
+        "vin": "VIN",
+        "year": "Año",
+        "category": "Categoría",
+        "price": "Precio"
+      },
+      "empty": {
+        "noVehicles": "No se encontraron vehículos",
+        "refine": "Intenta ajustar tus filtros o agrega un nuevo vehículo"
+      },
+      "pagination": {
+        "showing": "Mostrando {{count}} de {{total}} vehículos"
+      },
+      "categories": {
+        "Sedan": "Sedán",
+        "SUV": "SUV",
+        "Pickup": "Pickup",
+        "Van": "Camioneta",
+        "Luxury": "Lujo",
+        "Commercial": "Comercial"
+      },
+      "fuelTypes": {
+        "Petrol": "Gasolina",
+        "Diesel": "Diésel",
+        "Hybrid": "Híbrido",
+        "Electric": "Eléctrico"
+      },
+      "statusLabels": {
+        "PENDING ENTRY": "Entrada Pendiente",
+        "DOCUMENTS REVIEW": "Revisión de Documentos",
+        "INSURANCE VERIFICATION": "Verificación de Seguro",
+        "INSPECTION REQUIRED": "Inspección Requerida",
+        "INSPECTION FAILED": "Inspección Fallida",
+        "REPAIR IN PROGRESS": "Reparación en Progreso",
+        "ACCOUNTING SETUP": "Configuración Contable",
+        "GPS ACTIVATION": "Activación de GPS",
+        "BRANCH MANAGER APPROVAL": "Aprobación del Gerente de Sucursal",
+        "ACTIVE — AVAILABLE": "Activo — Disponible",
+        "ACTIVE — RENTED": "Activo — Alquilado",
+        "ACTIVE — MAINTENANCE": "Activo — Mantenimiento",
+        "SUSPENDED": "Suspendido",
+        "TRANSFER PENDING": "Transferencia Pendiente",
+        "TRANSFER COMPLETE": "Transferencia Completa",
+        "RETIRED": "Retirado"
+      }
+    },
+    "drivers": {
+      "title": "Gestión de Conductores",
+      "subtitle": "Monitorear y gestionar las solicitudes de incorporación de conductores",
+      "newBtn": "Nueva Solicitud",
+      "searchPlaceholder": "Buscar por nombre o correo...",
+      "filters": {
+        "status": "Estado de Incorporación",
+        "branch": "Sucursal Asignada",
+        "from": "Aplicado Desde",
+        "to": "Aplicado Hasta",
+        "allStatuses": "Todos los Estados"
+      },
+      "table": {
+        "driver": "Conductor",
+        "license": "Licencia",
+        "applied": "Aplicado",
+        "expiry": "Venc"
+      },
+      "empty": {
+        "noDrivers": "No se encontraron conductores que coincidan con sus criterios"
+      },
+      "pagination": {
+        "showing": "Mostrando {{count}} de {{total}} conductores"
+      },
+      "statusLabels": {
+        "DRAFT": "Borrador",
+        "PENDING REVIEW": "Pendiente de Revisión",
+        "VERIFICATION": "Verificación",
+        "CREDIT CHECK": "Verificación de Crédito",
+        "MANAGER REVIEW": "Revisión del Gerente",
+        "APPROVED": "Aprobado",
+        "CONTRACT PENDING": "Contrato Pendiente",
+        "ACTIVE": "Activo",
+        "SUSPENDED": "Suspendido",
+        "REJECTED": "Rechazado"
+      }
+    },
+    "threshold": {
+      "title": "Umbral de Orden de Compra",
+      "subtitle": "Establecer el monto mínimo requerido para la aprobación de nivel superior de las órdenes de compra",
+      "loading": "Cargando umbral actual...",
+      "label": "Monto del Umbral",
+      "helperText": "Todas las órdenes de compra con un monto igual o superior a este valor requerirán niveles de aprobación adicionales.",
+      "success": "¡Configuración actualizada con éxito!",
+      "saving": "Guardando...",
+      "saveBtn": "Guardar Cambios",
+      "noteTitle": "Nota Importante",
+      "noteText": "Cambiar el umbral de la orden de compra es una acción global. Los nuevos umbrales entran en vigor inmediatamente para todas las presentaciones de órdenes de compra posteriores. Las órdenes pendientes estarán sujetas al umbral que estaba activo en el momento de su presentación."
+    },
+    "tax": {
+      "title": "Impuesto"
+    }
+  },
+  "language": {
+    "switchLanguage": "Cambiar Idioma",
+    "english": "Inglés",
+    "spanish": "Español"
+  }
+}

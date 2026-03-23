@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Map, FileCheck, Building2, TrendingUp, AlertOctagon, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface CountryManagerSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface CountryManagerSidebarProps {
 const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: CountryManagerSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,25 +22,25 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
     };
 
     const navItems = [
-        { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/country-manager/manage-branches' },
-        { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/country-manager/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/country-manager/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/country-manager/manage-operation-staff' },
-        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/country-manager/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/country-manager/manage-suppliers' },
-        { icon: <Shield size={20} />, label: 'Insurance Management', path: '/admin/country-manager/insurances' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/country-manager/purchase-orders' },
-        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/country-manager/purchase-bills' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/country-manager/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/country-manager/drivers' },
-        { icon: <ShieldCheck size={20} />, label: 'Legal Agreements', path: '/admin/country-manager/agreements' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/country-manager/manage-branches' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/country-manager/manage-branch-managers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/country-manager/manage-finance-staff' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/country-manager/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers' },
+        { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/country-manager/insurances' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/country-manager/purchase-orders' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/country-manager/purchase-bills' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements' },
     ];
 
     const performanceItems = [
-        { icon: <Map size={20} />, label: 'Regional Performance', path: '/admin/country-manager/regional-performance' },
-        { icon: <TrendingUp size={20} />, label: 'Revenue & Growth', path: '/admin/country-manager/revenue-growth' },
-        { icon: <FileCheck size={20} />, label: 'Compliance Reports', path: '/admin/country-manager/compliance-reports' },
-        { icon: <AlertOctagon size={20} />, label: 'Critical Escalations', path: '/admin/country-manager/critical-escalations' },
+        { icon: <Map size={20} />, label: t('sidebar.items.regionalPerformance'), path: '/admin/country-manager/regional-performance' },
+        { icon: <TrendingUp size={20} />, label: t('sidebar.items.revenueGrowth'), path: '/admin/country-manager/revenue-growth' },
+        { icon: <FileCheck size={20} />, label: t('sidebar.items.complianceReports'), path: '/admin/country-manager/compliance-reports' },
+        { icon: <AlertOctagon size={20} />, label: t('sidebar.items.criticalEscalations'), path: '/admin/country-manager/critical-escalations' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -115,15 +117,15 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="National Dashboard"
+                    label={t('sidebar.items.nationalDashboard')}
                     active={location.pathname === '/admin/country-manager'}
                     onClick={() => navigate('/admin/country-manager')}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="Staff Management" items={navItems} />
-                <SidebarSection title="Performance" items={performanceItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.performance')} items={performanceItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -133,10 +135,10 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -144,10 +146,10 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>

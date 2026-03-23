@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, Wrench, AlertTriangle } from 'lucide-react';
 import {
     getAllWorkshopStaff,
@@ -32,6 +33,7 @@ const phoneInputStyles = `
 `;
 
 const ManageWorkshopStaff = () => {
+    const { t } = useTranslation();
     const [workshopStaff, setWorkshopStaff] = useState<WorkshopStaff[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -97,7 +99,7 @@ const ManageWorkshopStaff = () => {
             setPagination(staffRes.pagination);
             setBranches(Array.isArray(branchesData) ? branchesData : []);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch data');
+            setError(err.response?.data?.message || err.message || t('management.workshopStaff.fetchFailed', { defaultValue: 'Failed to fetch data' }));
         } finally {
             setLoading(false);
         }
@@ -177,7 +179,7 @@ const ManageWorkshopStaff = () => {
             fetchData();
             closeModal();
         } catch (err: any) {
-            setFormError(err.response?.data?.message || err.message || 'Operation failed');
+            setFormError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         } finally {
             setFormLoading(false);
         }
@@ -191,7 +193,7 @@ const ManageWorkshopStaff = () => {
             fetchData();
             setDeleteTarget(null);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Delete failed');
+            setError(err.response?.data?.message || err.message || t('management.common.deleteFailed'));
         } finally {
             setDeleteLoading(false);
         }
@@ -234,16 +236,16 @@ const ManageWorkshopStaff = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
                         <Wrench size={28} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
-                        Manage Workshop Staff
+                        {t('management.workshopStaff.title')}
                     </h1>
-                    <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>Create, update, and manage branch workshop staff accounts</p>
+                    <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.workshopStaff.subtitle')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={fetchData}
                         className="p-2.5 rounded-xl border transition-all hover:bg-lime/5 disabled:opacity-50"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
-                        title="Refresh data"
+                        title={t('management.common.refreshData', { defaultValue: 'Refresh data' })}
                         disabled={loading}
                     >
                         <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
@@ -257,14 +259,14 @@ const ManageWorkshopStaff = () => {
                             color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
                         }}
                     >
-                        <Filter size={18} /> Filters
+                        <Filter size={18} /> {t('management.common.filters')}
                     </button>
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
                         style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
-                        <Plus size={20} /> Add Workshop Staff
+                        <Plus size={20} /> {t('management.workshopStaff.add')}
                     </button>
                 </div>
             </div>
@@ -272,15 +274,15 @@ const ManageWorkshopStaff = () => {
             {/* Stats Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Total Staff</p>
+                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.stats.totalStaff', { defaultValue: 'Total Staff' })}</p>
                     <h3 className="text-3xl font-black transition-colors" style={{ color: 'var(--text-main)' }}>{workshopStaff.length}</h3>
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Active Accounts</p>
+                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.stats.activeAccounts', { defaultValue: 'Active Accounts' })}</p>
                     <h3 className="text-3xl font-black text-lime transition-colors" style={{ color: 'var(--brand-lime)' }}>{workshopStaff.filter(s => s.status === 'ACTIVE').length}</h3>
                 </div>
                 <div className="p-5 rounded-2xl border transition-colors" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>Total Branches</p>
+                    <p className="text-xs uppercase font-black tracking-widest transition-colors mb-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.stats.totalBranches', { defaultValue: 'Total Branches' })}</p>
                     <h3 className="text-3xl font-black transition-colors" style={{ color: 'var(--text-main)' }}>{branches.length}</h3>
                 </div>
             </div>
@@ -292,7 +294,7 @@ const ManageWorkshopStaff = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={20} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="text"
-                        placeholder="Search by name or email..."
+                        placeholder={t('management.common.searchPlaceholder')}
                         className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         value={searchQuery}
@@ -314,10 +316,10 @@ const ManageWorkshopStaff = () => {
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Statuses</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="SUSPENDED">Suspended</option>
-                                <option value="LOCKED">Locked</option>
+                                <option value="ALL">{t('management.common.allStatuses')}</option>
+                                <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                <option value="SUSPENDED">{t('management.common.status.suspended', { defaultValue: 'Suspended' })}</option>
+                                <option value="LOCKED">{t('management.common.status.locked', { defaultValue: 'Locked' })}</option>
                             </select>
                         </div>
                         <div>
@@ -328,14 +330,14 @@ const ManageWorkshopStaff = () => {
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Branches</option>
+                                <option value="ALL">{t('management.common.allBranches')}</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
                                 ))}
                             </select>
                         </div>
                         <div>
-                            <FilterLabel label="Joined From" />
+                            <FilterLabel label={t('management.common.joinedDateFrom', { defaultValue: 'Joined From' })} />
                             <input
                                 type="date"
                                 value={startDate}
@@ -345,7 +347,7 @@ const ManageWorkshopStaff = () => {
                             />
                         </div>
                         <div>
-                            <FilterLabel label="Joined To" />
+                            <FilterLabel label={t('management.common.joinedDateTo', { defaultValue: 'Joined To' })} />
                             <input
                                 type="date"
                                 value={endDate}
@@ -365,16 +367,16 @@ const ManageWorkshopStaff = () => {
                         <thead>
                             <tr className="border-bottom text-[10px] uppercase font-black tracking-wider transition-colors" style={{ background: 'rgba(0,0,0,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('fullName')}>
-                                    <div className="flex items-center gap-2">Full Name <SortIcon field="fullName" /></div>
+                                    <div className="flex items-center gap-2">{t('management.common.modal.fullName')} <SortIcon field="fullName" /></div>
                                 </th>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('email')}>
-                                    <div className="flex items-center gap-2">Contact Info <SortIcon field="email" /></div>
+                                    <div className="flex items-center gap-2">{t('management.common.table.contact')} <SortIcon field="email" /></div>
                                 </th>
-                                <th className="px-6 py-4">Branch</th>
+                                <th className="px-6 py-4">{t('management.common.table.branchInfo')}</th>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
-                                    <div className="flex items-center gap-2">Status <SortIcon field="status" /></div>
+                                    <div className="flex items-center gap-2">{t('management.common.table.status')} <SortIcon field="status" /></div>
                                 </th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4 text-right">{t('management.common.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y transition-colors" style={{ borderColor: 'var(--border-main)' }}>
@@ -382,13 +384,13 @@ const ManageWorkshopStaff = () => {
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center">
                                         <RefreshCw size={24} className="animate-spin inline-block mb-2 text-lime" />
-                                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading workshop staff...</p>
+                                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.workshopStaff.loading', { defaultValue: 'Loading workshop staff...' })}</p>
                                     </td>
                                 </tr>
                             ) : filteredStaff.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center">
-                                        <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>No staff found.</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.workshopStaff.notFound')}</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -407,7 +409,7 @@ const ManageWorkshopStaff = () => {
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-dim)' }}>
                                                     <Phone size={14} />
-                                                    {staff.phone || 'No phone'}
+                                                    {staff.phone || t('management.common.noPhone', { defaultValue: 'No phone' })}
                                                 </div>
                                             </div>
                                         </td>
@@ -422,7 +424,7 @@ const ManageWorkshopStaff = () => {
                                                 staff.status === 'SUSPENDED' ? 'bg-yellow-500/10 text-yellow-500' :
                                                     'bg-red-500/10 text-red-500'
                                                 }`}>
-                                                {staff.status}
+                                                {t(`management.common.status.${staff.status.toLowerCase()}`)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -431,14 +433,14 @@ const ManageWorkshopStaff = () => {
                                                     onClick={() => openEditModal(staff)}
                                                     className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
                                                     style={{ color: 'var(--text-dim)' }}
-                                                    title="Edit"
+                                                    title={t('management.common.edit', { defaultValue: 'Edit' })}
                                                 >
                                                     <Pencil size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(staff)}
                                                     className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-400"
-                                                    title="Delete"
+                                                    title={t('management.common.delete.title', { defaultValue: 'Delete' })}
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -455,7 +457,7 @@ const ManageWorkshopStaff = () => {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span style={{ color: 'var(--text-main)' }}>{workshopStaff.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> staff
+                            {t('management.common.showing')} <span style={{ color: 'var(--text-main)' }}>{workshopStaff.length}</span> {t('management.common.of')} <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> {t('management.common.records')}
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -517,10 +519,10 @@ const ManageWorkshopStaff = () => {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h2 className="text-2xl font-black transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>
-                                    {modalMode === 'create' ? 'Add Workshop Staff' : 'Edit Workshop Staff'}
+                                    {modalMode === 'create' ? t('management.workshopStaff.modalTitleCreate') : t('management.workshopStaff.modalTitleEdit')}
                                 </h2>
                                 <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                                    {modalMode === 'create' ? 'Create a new branch workshop staff account' : `Update account for ${selectedStaff?.fullName}`}
+                                    {modalMode === 'create' ? t('management.workshopStaff.subtitle') : t('management.workshopStaff.modalTitleEdit')}
                                 </p>
                             </div>
                             <button
@@ -543,7 +545,7 @@ const ManageWorkshopStaff = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Full Name
+                                        {t('management.common.modal.fullName')}
                                     </label>
                                     <input
                                         type="text"
@@ -557,7 +559,7 @@ const ManageWorkshopStaff = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Email Address
+                                        {t('management.common.modal.officialEmailLabel')}
                                     </label>
                                     <input
                                         type="email"
@@ -572,7 +574,7 @@ const ManageWorkshopStaff = () => {
                                 {modalMode === 'create' && (
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            Password
+                                            {t('management.common.modal.password')}
                                         </label>
                                         <input
                                             type="password"
@@ -587,7 +589,7 @@ const ManageWorkshopStaff = () => {
                                 )}
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Phone Number
+                                        {t('management.common.modal.phone')}
                                     </label>
                                     <PhoneInput
                                         country={'in'}
@@ -634,7 +636,7 @@ const ManageWorkshopStaff = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Assigned Branch
+                                        {t('management.common.modal.assignBranch')}
                                     </label>
                                     <select
                                         required
@@ -643,7 +645,7 @@ const ManageWorkshopStaff = () => {
                                         className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="">Select a branch</option>
+                                        <option value="">{t('management.common.modal.selectBranch')}</option>
                                         {branches.map(branch => (
                                             <option key={branch._id} value={branch._id}>{branch.name} ({branch.city})</option>
                                         ))}
@@ -651,7 +653,7 @@ const ManageWorkshopStaff = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        Account Status
+                                        {t('management.common.modal.status')}
                                     </label>
                                     <select
                                         value={formData.status}
@@ -659,9 +661,9 @@ const ManageWorkshopStaff = () => {
                                         className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="ACTIVE">Active</option>
-                                        <option value="SUSPENDED">Suspended</option>
-                                        <option value="LOCKED">Locked</option>
+                                        <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                        <option value="SUSPENDED">{t('management.common.status.suspended', { defaultValue: 'Suspended' })}</option>
+                                        <option value="LOCKED">{t('management.common.status.locked', { defaultValue: 'Locked' })}</option>
                                     </select>
                                 </div>
                             </div>
@@ -673,7 +675,7 @@ const ManageWorkshopStaff = () => {
                                     className="px-6 py-3 rounded-xl font-bold text-sm transition-all hover:bg-black/5"
                                     style={{ color: 'var(--text-dim)' }}
                                 >
-                                    Cancel
+                                    {t('management.common.modal.cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -681,7 +683,7 @@ const ManageWorkshopStaff = () => {
                                     className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:shadow-lg disabled:opacity-50"
                                     style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                                 >
-                                    {formLoading ? <RefreshCw className="animate-spin" size={18} /> : (modalMode === 'create' ? 'Create Staff' : 'Save Changes')}
+                                    {formLoading ? <RefreshCw className="animate-spin" size={18} /> : (modalMode === 'create' ? t('management.workshopStaff.createButton') : t('management.workshopStaff.updateButton'))}
                                 </button>
                             </div>
                         </form>
@@ -700,9 +702,9 @@ const ManageWorkshopStaff = () => {
                         <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                             <Trash2 size={32} />
                         </div>
-                        <h2 className="text-xl font-black mb-2 transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>Delete Account?</h2>
+                        <h2 className="text-xl font-black mb-2 transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>{t('management.workshopStaff.deleteTitle')}</h2>
                         <p className="text-sm mb-8 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                            Are you sure you want to delete <span className="font-bold text-red-400">{deleteTarget.fullName}</span>? This action cannot be undone.
+                            {t('management.workshopStaff.deleteConfirm', { name: deleteTarget.fullName })}
                         </p>
 
                         <div className="flex flex-col gap-3">
@@ -711,14 +713,14 @@ const ManageWorkshopStaff = () => {
                                 disabled={deleteLoading}
                                 className="w-full py-3.5 rounded-xl bg-red-500 text-white font-black text-sm transition-all hover:bg-red-600 active:scale-95 disabled:opacity-50"
                             >
-                                {deleteLoading ? <RefreshCw className="animate-spin inline mr-2" size={18} /> : 'YES, PERMANENTLY DELETE'}
+                                {deleteLoading ? <RefreshCw className="animate-spin inline mr-2" size={18} /> : t('management.common.delete.confirmSubmit')}
                             </button>
                             <button
                                 onClick={() => setDeleteTarget(null)}
                                 className="w-full py-3.5 rounded-xl font-black text-sm transition-all hover:bg-black/5"
                                 style={{ color: 'var(--text-dim)' }}
                             >
-                                CANCEL
+                                {t('management.common.modal.cancel')}
                             </button>
                         </div>
                     </div>

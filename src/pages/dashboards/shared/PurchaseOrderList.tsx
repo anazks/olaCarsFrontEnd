@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown } from 'lucide-react';
 import { getAllPurchaseOrders } from '../../../services/purchaseOrderService';
 import type { PurchaseOrder, POStatus, PaginationMetadata, PurchaseOrderFilters } from '../../../services/purchaseOrderService';
@@ -8,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
+    const { t } = useTranslation();
     const styles = {
         WAITING: {
             bg: 'rgba(245, 158, 11, 0.1)',
@@ -35,7 +37,7 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
             {style.icon}
-            {status}
+            {t(`management.common.status.${status.toLowerCase()}`, { defaultValue: status })}
         </div>
     );
 };
@@ -47,6 +49,7 @@ const FilterLabel = ({ label }: { label: string }) => (
 );
 
 const PurchaseOrderList = () => {
+    const { t } = useTranslation();
     // Data State
     const [pos, setPos] = useState<PurchaseOrder[]>([]);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -123,11 +126,11 @@ const PurchaseOrderList = () => {
             setPos(Array.isArray(response.data) ? response.data : []);
             setPagination(response.pagination);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch purchase orders');
+            setError(err.response?.data?.message || err.message || t('management.purchaseOrders.fetchFailed', { defaultValue: 'Failed to fetch purchase orders' }));
         } finally {
             setLoading(false);
         }
-    }, [currentPage, limit, searchQuery, statusFilter, supplierFilter, branchFilter, isUsedFilter, isBilledFilter, startDate, endDate, sortBy, sortOrder]);
+    }, [currentPage, limit, searchQuery, statusFilter, supplierFilter, branchFilter, isUsedFilter, isBilledFilter, startDate, endDate, sortBy, sortOrder, t]);
 
     // Debounced search effect
     useEffect(() => {
@@ -165,9 +168,9 @@ const PurchaseOrderList = () => {
                 <div>
                     <h1 className="text-2xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <FileText size={28} style={{ color: '#C8E600' }} />
-                        Purchase Orders
+                        {t('management.purchaseOrders.title')}
                     </h1>
-                    <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--text-dim)' }}>Request and inventory management</p>
+                    <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.subtitle')}</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -186,7 +189,7 @@ const PurchaseOrderList = () => {
                             color: showAdvancedFilters ? '' : 'var(--text-main)' 
                         }}
                     >
-                        <Filter size={16} /> Filters
+                        <Filter size={16} /> {t('management.common.filters')}
                     </button>
                     {canCreate && (
                         <button
@@ -194,7 +197,7 @@ const PurchaseOrderList = () => {
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg hover:shadow-lime/20 hover:-translate-y-0.5 active:translate-y-0"
                             style={{ background: '#C8E600', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} /> Create PO
+                            <Plus size={18} /> {t('management.purchaseOrders.createBtn')}
                         </button>
                     )}
                 </div>
@@ -207,7 +210,7 @@ const PurchaseOrderList = () => {
                     <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                     <input
                         type="text"
-                        placeholder="Search by Purchase Order # or Item name..."
+                        placeholder={t('management.purchaseOrders.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -223,30 +226,30 @@ const PurchaseOrderList = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2 duration-200">
                         {/* Status Filter */}
                         <div>
-                            <FilterLabel label="Status" />
+                            <FilterLabel label={t('management.common.table.status')} />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Statuses</option>
-                                <option value="WAITING">Waiting</option>
-                                <option value="APPROVED">Approved</option>
-                                <option value="REJECTED">Rejected</option>
+                                <option value="ALL">{t('management.common.allStatuses')}</option>
+                                <option value="WAITING">{t('management.common.status.waiting')}</option>
+                                <option value="APPROVED">{t('management.common.status.approved')}</option>
+                                <option value="REJECTED">{t('management.common.status.rejected')}</option>
                             </select>
                         </div>
 
                         {/* Branch Filter */}
                         <div>
-                            <FilterLabel label="Branch" />
+                            <FilterLabel label={t('management.branches.title')} />
                             <select
                                 value={branchFilter}
                                 onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Branches</option>
+                                <option value="ALL">{t('management.common.allBranches')}</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
                                 ))}
@@ -255,14 +258,14 @@ const PurchaseOrderList = () => {
 
                         {/* Supplier Filter */}
                         <div>
-                            <FilterLabel label="Supplier" />
+                            <FilterLabel label={t('management.suppliers.title')} />
                             <select
                                 value={supplierFilter}
                                 onChange={(e) => { setSupplierFilter(e.target.value); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Suppliers</option>
+                                <option value="ALL">{t('management.common.allSuppliers')}</option>
                                 {suppliers.map(s => (
                                     <option key={s._id} value={s._id}>{s.name}</option>
                                 ))}
@@ -271,37 +274,37 @@ const PurchaseOrderList = () => {
 
                         {/* Billed Filter */}
                         <div>
-                            <FilterLabel label="Billing Status" />
+                            <FilterLabel label={t('management.purchaseOrders.filters.billingStatus')} />
                             <select
                                 value={isBilledFilter}
                                 onChange={(e) => { setIsBilledFilter(e.target.value as any); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">All Orders</option>
-                                <option value="TRUE">Billed Only</option>
-                                <option value="FALSE">Not Billed</option>
+                                <option value="ALL">{t('management.purchaseOrders.filters.allOrders')}</option>
+                                <option value="TRUE">{t('management.purchaseOrders.filters.billedOnly')}</option>
+                                <option value="FALSE">{t('management.purchaseOrders.filters.notBilled')}</option>
                             </select>
                         </div>
 
                         {/* Used Status Filter */}
                         <div>
-                            <FilterLabel label="Onboarding Status" />
+                            <FilterLabel label={t('management.purchaseOrders.filters.onboardingStatus')} />
                             <select
                                 value={isUsedFilter}
                                 onChange={(e) => { setIsUsedFilter(e.target.value as any); setCurrentPage(1); }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">Any Usage</option>
-                                <option value="FALSE">Unused Only</option>
-                                <option value="TRUE">Already Used</option>
+                                <option value="ALL">{t('management.purchaseOrders.filters.anyUsage')}</option>
+                                <option value="FALSE">{t('management.purchaseOrders.filters.unusedOnly')}</option>
+                                <option value="TRUE">{t('management.purchaseOrders.filters.alreadyUsed')}</option>
                             </select>
                         </div>
 
                         {/* Date Filters */}
                         <div>
-                            <FilterLabel label="Start Date" />
+                            <FilterLabel label={t('management.purchaseOrders.filters.startDate')} />
                             <input
                                 type="date"
                                 value={startDate}
@@ -312,7 +315,7 @@ const PurchaseOrderList = () => {
                         </div>
 
                         <div>
-                            <FilterLabel label="End Date" />
+                            <FilterLabel label={t('management.purchaseOrders.filters.endDate')} />
                             <input
                                 type="date"
                                 value={endDate}
@@ -338,7 +341,7 @@ const PurchaseOrderList = () => {
                                 className="w-full py-3 text-xs font-bold opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
                                 style={{ color: 'var(--text-main)' }}
                             >
-                                <RefreshCw size={12} /> Reset All
+                                <RefreshCw size={12} /> {t('management.common.resetAll')}
                             </button>
                         </div>
                     </div>
@@ -366,8 +369,8 @@ const PurchaseOrderList = () => {
                             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <FileText size={40} className="opacity-20" />
                             </div>
-                            <p className="text-xl font-black" style={{ color: 'var(--text-main)' }}>No matching orders</p>
-                            <p className="text-sm mt-1 opacity-50">Refine your search or clear filters to see more results</p>
+                            <p className="text-xl font-black" style={{ color: 'var(--text-main)' }}>{t('management.purchaseOrders.empty.noOrders')}</p>
+                            <p className="text-sm mt-1 opacity-50">{t('management.purchaseOrders.empty.refine')}</p>
                         </div>
                     ) : (
                         <table className="w-full text-left border-separate border-spacing-0">
@@ -376,26 +379,26 @@ const PurchaseOrderList = () => {
                                     <th className="px-6 py-5">
                                         <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors" 
                                             style={{ color: 'var(--text-dim)' }}>
-                                            PO Details
+                                            {t('management.purchaseOrders.table.poDetails')}
                                         </button>
                                     </th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
                                     <th className="px-6 py-5">
                                         <button onClick={() => handleSort('totalAmount')} 
                                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
                                             style={{ color: 'var(--text-dim)' }}>
-                                            Total Amount <SortIcon field="totalAmount" />
+                                            {t('management.purchaseOrders.table.totalAmount')} <SortIcon field="totalAmount" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Source Info</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.table.sourceInfo')}</th>
                                     <th className="px-6 py-5">
                                         <button onClick={() => handleSort('purchaseOrderDate')} 
                                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
                                             style={{ color: 'var(--text-dim)' }}>
-                                            Timeline <SortIcon field="purchaseOrderDate" />
+                                            {t('management.purchaseOrders.table.timeline')} <SortIcon field="purchaseOrderDate" />
                                         </button>
                                     </th>
-                                    <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Explore</th>
+                                    <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.table.explore')}</th>
                                 </tr>
                             </thead>
                             <tbody className={loading ? 'opacity-40 transition-opacity' : ''}>
@@ -410,7 +413,7 @@ const PurchaseOrderList = () => {
                                                 <div className="font-black text-sm flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                     {po.purchaseOrderNumber}
                                                     {po.isBilled && (
-                                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black tracking-tighter uppercase whitespace-nowrap">BILLED</span>
+                                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black tracking-tighter uppercase whitespace-nowrap">{t('management.purchaseOrders.table.billed')}</span>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -418,7 +421,7 @@ const PurchaseOrderList = () => {
                                                         {po.purpose}
                                                     </span>
                                                     {po.isEdited && (
-                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-black italic uppercase">Modded</span>
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-black italic uppercase">{t('management.purchaseOrders.table.modded')}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -431,17 +434,17 @@ const PurchaseOrderList = () => {
                                                 ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </div>
                                             <div className="text-[10px] opacity-40 font-bold" style={{ color: 'var(--text-dim)' }}>
-                                                {po.items.length} unique items
+                                                {t('management.purchaseOrders.table.uniqueItems', { count: po.items.length })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="space-y-1">
                                                 <div className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                     <div className="w-1 h-1 rounded-full bg-[#C8E600]" />
-                                                    {typeof po.supplier === 'object' ? po.supplier.name : 'Unknown Vendor'}
+                                                    {typeof po.supplier === 'object' ? po.supplier.name : t('management.purchaseOrders.table.unknownVendor')}
                                                 </div>
                                                 <div className="text-[10px] opacity-50 font-medium flex items-center gap-2 pl-3" style={{ color: 'var(--text-dim)' }}>
-                                                    {typeof po.branch === 'object' ? po.branch.name : 'Unknown Branch'}
+                                                    {typeof po.branch === 'object' ? po.branch.name : t('management.purchaseOrders.table.unknownBranch')}
                                                 </div>
                                             </div>
                                         </td>
@@ -461,7 +464,7 @@ const PurchaseOrderList = () => {
                                                     onClick={() => navigate(po._id)}
                                                     className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[#C8E600] hover:text-black group-hover:shadow-[0_0_15px_rgba(200,230,0,0.2)]"
                                                     style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-dim)' }}
-                                                    title="View Full Ledger"
+                                                    title={t('management.purchaseOrders.table.explore')}
                                                 >
                                                     <Eye size={18} />
                                                 </button>
@@ -479,7 +482,11 @@ const PurchaseOrderList = () => {
                     <div className="px-8 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" 
                         style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            Reviewing <span className="text-[#C8E600] font-black">{pos.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                            {t('management.purchaseOrders.pagination.reviewing', { 
+                                count: pos.length, 
+                                total: pagination.total,
+                                interpolation: { escapeValue: false }
+                            })}
                         </div>
                         
                         {pagination.totalPages > 1 && (

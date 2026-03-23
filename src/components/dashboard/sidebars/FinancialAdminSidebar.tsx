@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, DollarSign, PieChart, Receipt, FileText, Banknote, ShieldAlert, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3, Wrench } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface FinancialAdminSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface FinancialAdminSidebarProps {
 const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: FinancialAdminSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,30 +22,30 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     };
 
     const navItems = [
-        { icon: <Globe size={20} />, label: 'Manage Country Managers', path: '/admin/financial-admin/manage-country-managers' },
-        { icon: <Building2 size={20} />, label: 'Manage Branches', path: '/admin/financial-admin/manage-branches' },
-        { icon: <UserCheck size={20} />, label: 'Branch Managers', path: '/admin/financial-admin/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/financial-admin/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/financial-admin/manage-operation-staff' },
-        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/financial-admin/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/financial-admin/manage-suppliers' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/financial-admin/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/financial-admin/drivers' },
+        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/financial-admin/manage-country-managers' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/financial-admin/manage-branches' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/financial-admin/manage-branch-managers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/financial-admin/manage-finance-staff' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/financial-admin/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/financial-admin/manage-workshop-staff' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/financial-admin/manage-suppliers' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers' },
     ];
 
     const financeItems = [
-        { icon: <BarChart3 size={20} />, label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard' },
-        { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/financial-admin/taxes' },
-        { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/financial-admin/chart-of-accounts' },
-        { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/financial-admin/ledger' },
-        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/financial-admin/purchase-bills' },
-        { icon: <DollarSign size={20} />, label: 'Revenue Streams' },
-        { icon: <PieChart size={20} />, label: 'Profit Analysis' },
-        { icon: <Receipt size={20} />, label: 'Billing & Invoices' },
-        { icon: <FileText size={20} />, label: 'Tax Compliance' },
-        { icon: <Banknote size={20} />, label: 'Payout Registry' },
-        { icon: <ShieldAlert size={20} />, label: 'Risk Audit' },
+        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard' },
+        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes' },
+        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts' },
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/financial-admin/purchase-bills' },
+        { icon: <DollarSign size={20} />, label: t('sidebar.items.revenueStreams') },
+        { icon: <PieChart size={20} />, label: t('sidebar.items.profitAnalysis') },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.billingInvoices') },
+        { icon: <FileText size={20} />, label: t('sidebar.items.taxCompliance') },
+        { icon: <Banknote size={20} />, label: t('sidebar.items.payoutRegistry') },
+        { icon: <ShieldAlert size={20} />, label: t('sidebar.items.riskAudit') },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -120,15 +122,15 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="Finance Overview"
+                    label={t('sidebar.items.financeOverview')}
                     active={location.pathname === '/admin/financial-admin'}
                     onClick={() => navigate('/admin/financial-admin')}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="Staff Management" items={navItems} />
-                <SidebarSection title="Finance Operations" items={financeItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.financeOperations')} items={financeItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -138,10 +140,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -149,10 +151,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>

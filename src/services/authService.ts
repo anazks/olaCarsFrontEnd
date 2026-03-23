@@ -44,6 +44,7 @@ export const API_ROLE_TO_ROUTE: Record<string, string> = {
     'operationstaff': '/admin/branch-op-staff',
     'branchfinstaff': '/admin/branch-fin-staff',
     'financestaff': '/admin/branch-fin-staff',
+    'driver': '/admin/driver',
 };
 
 export interface LoginCredentials {

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, Save, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import systemSettingsService from '../../../services/systemSettingsService';
 
 const POThresholdPage = () => {
+    const { t } = useTranslation();
     const [threshold, setThreshold] = useState<number | string>('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -17,11 +19,11 @@ const POThresholdPage = () => {
             const value = await systemSettingsService.getPOThreshold();
             setThreshold(value);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to fetch threshold');
+            setError(err.response?.data?.message || err.message || t('management.threshold.loadingFailed') || 'Failed to fetch threshold');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         fetchThreshold();
@@ -42,7 +44,7 @@ const POThresholdPage = () => {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to update threshold');
+            setError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         } finally {
             setSaving(false);
         }
@@ -55,10 +57,10 @@ const POThresholdPage = () => {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
                         <DollarSign size={28} style={{ color: 'var(--brand-lime)' }} />
-                        Purchase Order Threshold
+                        {t('management.threshold.title')}
                     </h1>
                     <p className="text-sm mt-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                        Set the minimum amount required for higher-level approval of purchase orders
+                        {t('management.threshold.subtitle')}
                     </p>
                 </div>
                 <button
@@ -67,7 +69,7 @@ const POThresholdPage = () => {
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-50"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                 >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {t('common.refresh')}
                 </button>
             </div>
 
@@ -76,13 +78,13 @@ const POThresholdPage = () => {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-12 space-y-4">
                         <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
-                        <p className="text-sm animate-pulse" style={{ color: 'var(--text-dim)' }}>Loading current threshold...</p>
+                        <p className="text-sm animate-pulse" style={{ color: 'var(--text-dim)' }}>{t('management.threshold.loading')}</p>
                     </div>
                 ) : (
                     <form onSubmit={handleSave} className="space-y-6">
                         <div className="space-y-3">
                             <label className="block text-sm font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>
-                                Threshold Amount
+                                {t('management.threshold.label')}
                             </label>
                             <div className="relative group">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors group-focus-within:text-lime" style={{ color: 'var(--text-dim)' }}>
@@ -101,7 +103,7 @@ const POThresholdPage = () => {
                                 />
                             </div>
                             <p className="text-xs transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                All purchase orders with an amount equal to or greater than this value will require additional approval levels.
+                                {t('management.threshold.helperText')}
                             </p>
                         </div>
 
@@ -113,7 +115,7 @@ const POThresholdPage = () => {
 
                         {success && (
                             <div className="flex items-center gap-3 p-4 rounded-xl text-sm transition-colors animate-in slide-in-from-top-2" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e' }}>
-                                <CheckCircle2 size={18} /> Settings updated successfully!
+                                <CheckCircle2 size={18} /> {t('management.threshold.success')}
                             </div>
                         )}
 
@@ -129,7 +131,7 @@ const POThresholdPage = () => {
                                 ) : (
                                     <Save size={20} />
                                 )}
-                                {saving ? 'Saving...' : 'Save Changes'}
+                                {saving ? t('management.threshold.saving') : t('management.threshold.saveBtn')}
                             </button>
                         </div>
                     </form>
@@ -140,10 +142,10 @@ const POThresholdPage = () => {
             <div className="p-6 rounded-2xl transition-colors" style={{ background: 'rgba(200,230,0,0.03)', border: '1px border-dashed var(--border-main)' }}>
                 <h3 className="text-sm font-bold flex items-center gap-2 mb-2" style={{ color: 'var(--text-main)' }}>
                     <AlertTriangle size={16} style={{ color: 'var(--brand-lime)' }} />
-                    Important Note
+                    {t('management.threshold.noteTitle')}
                 </h3>
                 <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-                    Changing the purchase order threshold is a global action. New thresholds take effect immediately for all subsequent purchase order submissions. Pending orders will be subject to the threshold that was active at the time of their submission.
+                    {t('management.threshold.noteText')}
                 </p>
             </div>
         </div>

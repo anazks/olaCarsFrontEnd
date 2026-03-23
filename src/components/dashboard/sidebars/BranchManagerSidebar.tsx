@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Clock, ClipboardList, Wallet, BellRing, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface BranchManagerSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface BranchManagerSidebarProps {
 const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: BranchManagerSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,23 +22,23 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
     };
 
     const navItems = [
-        { icon: <ShieldCheck size={20} />, label: 'Finance Staff', path: '/admin/branch-manager/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: 'Ground Ops Staff', path: '/admin/branch-manager/manage-operation-staff' },
-        { icon: <Wrench size={20} />, label: 'Workshop Staff', path: '/admin/branch-manager/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: 'Suppliers', path: '/admin/branch-manager/manage-suppliers' },
-        { icon: <Shield size={20} />, label: 'Insurance Management', path: '/admin/branch-manager/insurances' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-manager/purchase-orders' },
-        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/branch-manager/purchase-bills' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/branch-manager/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-manager/drivers' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/branch-manager/manage-finance-staff' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/branch-manager/manage-operation-staff' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers' },
+        { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/branch-manager/insurances' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-manager/purchase-orders' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers' },
     ];
 
     const branchOpsItems = [
-        { icon: <Users size={20} />, label: 'My Team', path: '/admin/branch-manager/team' },
-        { icon: <Clock size={20} />, label: 'Shift Schedule' },
-        { icon: <ClipboardList size={20} />, label: 'Task Assignments' },
-        { icon: <Wallet size={20} />, label: 'Branch Revenue' },
-        { icon: <BellRing size={20} />, label: 'Local Alerts' },
+        { icon: <Users size={20} />, label: t('sidebar.items.myTeam'), path: '/admin/branch-manager/team' },
+        { icon: <Clock size={20} />, label: t('sidebar.items.shiftSchedule') },
+        { icon: <ClipboardList size={20} />, label: t('sidebar.items.taskAssignments') },
+        { icon: <Wallet size={20} />, label: t('sidebar.items.branchRevenue') },
+        { icon: <BellRing size={20} />, label: t('sidebar.items.localAlerts') },
     ];
 
     const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -112,15 +114,15 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="Branch Overview"
+                    label={t('sidebar.items.branchOverview')}
                     active={location.pathname === '/admin/branch-manager'}
                     onClick={() => navigate('/admin/branch-manager')}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="Staff Management" items={navItems} />
-                <SidebarSection title="Local Operations" items={branchOpsItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.localOperations')} items={branchOpsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -130,10 +132,10 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -141,10 +143,10 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>

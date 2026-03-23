@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { History, X, User, Shield, FileText } from 'lucide-react';
 import agreementService from '../../services/agreementService';
 import type { Agreement, AgreementVersion } from '../../services/agreementService';
@@ -9,6 +10,7 @@ interface AgreementHistoryProps {
 }
 
 const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
+    const { t } = useTranslation();
     const [history, setHistory] = useState<AgreementVersion[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedVersion, setSelectedVersion] = useState<AgreementVersion | null>(null);
@@ -45,7 +47,7 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                             <History size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-main">Version History</h2>
+                            <h2 className="text-xl font-bold text-main">{t('management.agreements.history.title')}</h2>
                             <p className="text-sm text-dim">{agreement.title} ({agreement.country})</p>
                         </div>
                     </div>
@@ -68,7 +70,7 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                             </div>
                         ) : history.length === 0 ? (
                             <div className="p-8 text-center text-dim text-sm italic">
-                                No past versions found.
+                                {t('management.agreements.history.noVersions')}
                             </div>
                         ) : (
                             <div className="p-4 space-y-2">
@@ -113,22 +115,22 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                                 <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
                                     <div className="flex items-center gap-4 text-sm">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">Version Info</span>
-                                            <span className="font-bold text-main">Version {selectedVersion.version}</span>
+                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.version')}</span>
+                                            <span className="font-bold text-main">{t('management.agreements.history.info', { version: selectedVersion.version })}</span>
                                         </div>
                                         <div className="w-px h-8 bg-white/10 mx-2" />
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">Created By</span>
+                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.createdBy')}</span>
                                             <span className="font-medium text-main">{selectedVersion.updatedBy} ({selectedVersion.updaterRole})</span>
                                         </div>
                                         <div className="w-px h-8 bg-white/10 mx-2" />
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">Date</span>
+                                            <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.date')}</span>
                                             <span className="font-medium text-main">{new Date(selectedVersion.createdAt).toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <div className="p-2 rounded-lg bg-lime text-black font-bold text-xs">
-                                        {selectedVersion.status}
+                                    <div className="p-2 rounded-lg bg-lime text-black font-bold text-xs uppercase tracking-wider">
+                                        {t(`management.agreements.statusLabels.${selectedVersion.status}`)}
                                     </div>
                                 </div>
 
@@ -140,7 +142,7 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-dim gap-4">
                                 <FileText size={48} className="opacity-10" />
-                                <p>Select a version to preview its content.</p>
+                                <p>{t('management.agreements.history.previewPlaceholder')}</p>
                             </div>
                         )}
                     </div>

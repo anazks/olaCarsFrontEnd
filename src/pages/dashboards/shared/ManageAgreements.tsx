@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import AgreementList from '../../../components/agreements/AgreementList';
 import AgreementHistory from '../../../components/agreements/AgreementHistory';
 import type { Agreement } from '../../../services/agreementService';
 import { FileText, ShieldCheck, Info } from 'lucide-react';
 
 const ManageAgreements = () => {
+    const { t } = useTranslation();
     const [selectedAgreementForHistory, setSelectedAgreementForHistory] = useState<Agreement | null>(null);
 
     return (
@@ -14,11 +16,10 @@ const ManageAgreements = () => {
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <ShieldCheck size={36} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
-                        Legal Agreements
+                        {t('management.agreements.title')}
                     </h1>
                     <p className="text-dim max-w-2xl">
-                        Manage versioned legal and system documents. Changes to published agreements 
-                        automatically create new versions and preserve history.
+                        {t('management.agreements.subtitle')}
                     </p>
                 </div>
             </div>
@@ -30,9 +31,9 @@ const ManageAgreements = () => {
                         <Info size={24} />
                     </div>
                     <div className="space-y-1">
-                        <h3 className="font-bold text-sm text-main">Version Control</h3>
+                        <h3 className="font-bold text-sm text-main">{t('management.agreements.cards.versionControl.title')}</h3>
                         <p className="text-xs text-dim leading-relaxed">
-                            Updates to content, title, or country increment the version number automatically.
+                            {t('management.agreements.cards.versionControl.description')}
                         </p>
                     </div>
                 </div>
@@ -41,9 +42,9 @@ const ManageAgreements = () => {
                         <FileText size={24} />
                     </div>
                     <div className="space-y-1">
-                        <h3 className="font-bold text-sm text-main">TipTap Extension</h3>
+                        <h3 className="font-bold text-sm text-main">{t('management.agreements.cards.tiptap.title')}</h3>
                         <p className="text-xs text-dim leading-relaxed">
-                            Use the rich text editor to format policies with headings, lists, and links.
+                            {t('management.agreements.cards.tiptap.description')}
                         </p>
                     </div>
                 </div>
@@ -52,9 +53,9 @@ const ManageAgreements = () => {
                         <ShieldCheck size={24} />
                     </div>
                     <div className="space-y-1">
-                        <h3 className="font-bold text-sm text-main">Audit Trail</h3>
+                        <h3 className="font-bold text-sm text-main">{t('management.agreements.cards.auditTrail.title')}</h3>
                         <p className="text-xs text-dim leading-relaxed">
-                            View a full history of changes including who updated the agreement and when.
+                            {t('management.agreements.cards.auditTrail.description')}
                         </p>
                     </div>
                 </div>

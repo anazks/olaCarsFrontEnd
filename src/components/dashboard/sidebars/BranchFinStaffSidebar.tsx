@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Wallet, Receipt, CreditCard, History, FileText, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users, Calculator, BookMarked, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface BranchFinStaffSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -11,6 +12,7 @@ interface BranchFinStaffSidebarProps {
 const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: BranchFinStaffSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -20,22 +22,22 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     };
 
     const navItems = [
-        { icon: <Wallet size={20} />, label: 'Daily Collection' },
-        { icon: <Receipt size={20} />, label: 'Invoices' },
-        { icon: <CreditCard size={20} />, label: 'Payments' },
-        { icon: <History size={20} />, label: 'Transaction History' },
-        { icon: <FileText size={20} />, label: 'Reports' },
-        { icon: <Package size={20} />, label: 'Purchase Orders', path: '/admin/branch-fin-staff/purchase-orders' },
-        { icon: <Car size={20} />, label: 'Manage Vehicles', path: '/admin/branch-fin-staff/vehicles' },
-        { icon: <Users size={20} />, label: 'Drivers', path: '/admin/branch-fin-staff/drivers' },
+        { icon: <Wallet size={20} />, label: t('sidebar.items.dailyCollection') },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.invoices') },
+        { icon: <CreditCard size={20} />, label: t('sidebar.items.payments') },
+        { icon: <History size={20} />, label: t('sidebar.items.transactionHistory') },
+        { icon: <FileText size={20} />, label: t('sidebar.items.reports') },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-fin-staff/purchase-orders' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-fin-staff/vehicles' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-fin-staff/drivers' },
     ];
 
     const financeItems = [
-        { icon: <BarChart3 size={20} />, label: 'Finance Dashboard', path: '/admin/branch-fin-staff/finance-dashboard' },
-        { icon: <Calculator size={20} />, label: 'Tax Management', path: '/admin/branch-fin-staff/taxes' },
-        { icon: <BookMarked size={20} />, label: 'Chart of Accounts', path: '/admin/branch-fin-staff/chart-of-accounts' },
-        { icon: <FileText size={20} />, label: 'General Ledger', path: '/admin/branch-fin-staff/ledger' },
-        { icon: <Receipt size={20} />, label: 'Purchase Bills', path: '/admin/branch-fin-staff/purchase-bills' },
+        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/branch-fin-staff/finance-dashboard' },
+        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/branch-fin-staff/taxes' },
+        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/branch-fin-staff/chart-of-accounts' },
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/branch-fin-staff/ledger' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-fin-staff/purchase-bills' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -112,15 +114,15 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
                 <SidebarItem
                     icon={<LayoutDashboard size={20} />}
-                    label="Fin Overview"
+                    label={t('sidebar.items.finOverview')}
                     active={true}
                     onClick={() => { }}
                 />
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title="General Ledger & Tax" items={financeItems} />
-                <SidebarSection title="Financial Tasks" items={navItems} />
+                <SidebarSection title={t('sidebar.sections.generalLedgerTax')} items={financeItems} />
+                <SidebarSection title={t('sidebar.sections.financialTasks')} items={navItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
@@ -130,10 +132,10 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Settings" : ""}
+                    title={isSidebarCollapsed ? t('common.settings') : ""}
                 >
                     <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Settings</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
                 </div>
                 <div
                     onClick={handleLogout}
@@ -141,10 +143,10 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? "Logout" : ""}
+                    title={isSidebarCollapsed ? t('common.logout') : ""}
                 >
                     <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
                 </div>
             </div>
         </aside>
