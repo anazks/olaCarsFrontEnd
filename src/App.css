@@ -196,6 +196,37 @@
   .divider-lime {
     @apply h-px bg-gradient-to-r from-transparent via-lime to-transparent opacity-30 my-1;
   }
+
+  /* ── Responsive Container ─────────────────────────────────── */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: 1280px; /* default 7xl */
+    transition: max-width 0.3s ease-in-out;
+  }
+
+  @media (min-width: 1536px) { /* 2xl */
+    .container-responsive {
+      max-width: 1440px;
+    }
+  }
+
+  @media (min-width: 1920px) { /* 3xl */
+    .container-responsive {
+      max-width: 1800px;
+    }
+  }
+
+  @media (min-width: 2560px) { /* 4xl */
+    .container-responsive {
+      max-width: 2400px;
+    }
+  }
+
+  @media (min-width: 3840px) { /* uw */
+    .container-responsive {
+      max-width: 3600px;
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════

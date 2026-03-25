@@ -3,9 +3,49 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Calendar, Briefcase, FileText, ChevronLeft, Building2, ShieldCheck, ChevronRight } from 'lucide-react';
 import { driverService } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
+import { getUser, getUserRole } from '../../../utils/auth';
+
+const InputField = ({ icon, label, name, type = "text", placeholder, options, required = true, formData, onChange }: any) => (
+    <div className="space-y-1.5 flex-1 min-w-[280px]">
+        <label className="text-xs font-bold uppercase tracking-widest ml-1" style={{ color: 'var(--text-dim)' }}>{label}</label>
+        <div className="relative group">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-brand-lime" style={{ color: 'var(--text-dim)' }}>
+                {icon}
+            </div>
+            {options ? (
+                <select
+                    name={name}
+                    required={required}
+                    value={formData[name as keyof typeof formData]}
+                    onChange={onChange}
+                    className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all appearance-none cursor-pointer font-medium"
+                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                >
+                    <option value="">{placeholder}</option>
+                    {options.map((opt: any) => (
+                        <option key={opt.id || opt.value || opt._id} value={opt._id || opt.id || opt.value}>{opt.name || opt.label}</option>
+                    ))}
+                </select>
+            ) : (
+                <input
+                    type={type}
+                    name={name}
+                    required={required}
+                    placeholder={placeholder}
+                    value={formData[name as keyof typeof formData]}
+                    onChange={onChange}
+                    className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all font-medium"
+                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                />
+            )}
+        </div>
+    </div>
+);
 
 const CreateDriver = () => {
     const navigate = useNavigate();
+    const user = getUser();
+    const role = getUserRole();
     const [loading, setLoading] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [formData, setFormData] = useState({
@@ -13,12 +53,17 @@ const CreateDriver = () => {
         lastName: '',
         email: '',
         phoneNumber: '',
+        whatsappNumber: '',
+        dateOfBirth: '',
+        nationality: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        emergencyContactRelationship: '',
+        idType: '',
+        idNumber: '',
         licenseNumber: '',
         licenseExpiry: '',
-        branchId: '',
-        dateOfBirth: '',
-        emergencyContactName: '',
-        emergencyContactPhone: ''
+        branchId: ''
     });
 
     useEffect(() => {
@@ -27,9 +72,20 @@ const CreateDriver = () => {
 
     const fetchBranches = async () => {
         try {
-            const data = await getAllBranches();
-            console.log('Fetched branches:', data);
-            setBranches(Array.isArray(data) ? data : []);
+            const response = await getAllBranches();
+            console.log('Fetched branches:', response);
+            const fetchedBranches = Array.isArray(response.data) ? response.data : [];
+            setBranches(fetchedBranches);
+
+            // Auto-select branch for Branch Manager
+            if (role === 'branchmanager' && user?.branch) {
+                const branchId = typeof user.branch === 'object' ? user.branch._id : user.branch;
+                if (branchId) {
+                    setFormData(prev => ({ ...prev, branchId }));
+                }
+            } else if (role === 'branchmanager' && fetchedBranches.length === 1) {
+                setFormData(prev => ({ ...prev, branchId: fetchedBranches[0]._id }));
+            }
         } catch (error) {
             console.error('Error fetching branches:', error);
             setBranches([]);
@@ -52,11 +108,18 @@ const CreateDriver = () => {
                     fullName: `${formData.firstName} ${formData.lastName}`.trim(),
                     email: formData.email,
                     phone: formData.phoneNumber,
-                    dateOfBirth: formData.dateOfBirth
+                    whatsappNumber: formData.whatsappNumber,
+                    dateOfBirth: formData.dateOfBirth,
+                    nationality: formData.nationality
                 },
                 emergencyContact: {
                     name: formData.emergencyContactName,
-                    phone: formData.emergencyContactPhone
+                    phone: formData.emergencyContactPhone,
+                    relationship: formData.emergencyContactRelationship
+                },
+                identityDocs: {
+                    idType: formData.idType,
+                    idNumber: formData.idNumber
                 },
                 drivingLicense: {
                     licenseNumber: formData.licenseNumber,
@@ -74,43 +137,6 @@ const CreateDriver = () => {
             setLoading(false);
         }
     };
-
-    const InputField = ({ icon, label, name, type = "text", placeholder, options, required = true }: any) => (
-        <div className="space-y-1.5 flex-1 min-w-[280px]">
-            <label className="text-xs font-bold uppercase tracking-widest ml-1" style={{ color: 'var(--text-dim)' }}>{label}</label>
-            <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-brand-lime" style={{ color: 'var(--text-dim)' }}>
-                    {icon}
-                </div>
-                {options ? (
-                    <select
-                        name={name}
-                        required={required}
-                        value={formData[name as keyof typeof formData]}
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all appearance-none cursor-pointer font-medium"
-                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    >
-                        <option value="">{placeholder}</option>
-                        {options.map((opt: any) => (
-                            <option key={opt.id || opt.value} value={opt._id || opt.id || opt.value}>{opt.name || opt.label}</option>
-                        ))}
-                    </select>
-                ) : (
-                    <input
-                        type={type}
-                        name={name}
-                        required={required}
-                        placeholder={placeholder}
-                        value={formData[name as keyof typeof formData]}
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-lime/20 focus:border-brand-lime transition-all font-medium"
-                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    />
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
@@ -141,21 +167,21 @@ const CreateDriver = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-6">
-                        <InputField icon={<User size={18} />} label="First Name" name="firstName" placeholder="e.g. John" />
-                        <InputField icon={<User size={18} />} label="Last Name" name="lastName" placeholder="e.g. Doe" />
-                        <InputField icon={<Mail size={18} />} label="Email Address" name="email" type="email" placeholder="john.doe@example.com" />
-                        <InputField icon={<Phone size={18} />} label="Phone Number" name="phoneNumber" placeholder="+254 700 000000" />
-                        <InputField icon={<Phone size={18} />} label="WhatsApp Number" name="whatsappNumber" placeholder="+254 700 000000 (Optional)" required={false} />
-                        <InputField icon={<Calendar size={18} />} label="Date of Birth" name="dateOfBirth" type="date" />
-                        <InputField icon={<Building2 size={18} />} label="Nationality" name="nationality" placeholder="e.g. Kenyan" />
+                        <InputField icon={<User size={18} />} label="First Name" name="firstName" placeholder="e.g. John" formData={formData} onChange={handleChange} />
+                        <InputField icon={<User size={18} />} label="Last Name" name="lastName" placeholder="e.g. Doe" formData={formData} onChange={handleChange} />
+                        <InputField icon={<Mail size={18} />} label="Email Address" name="email" type="email" placeholder="john.doe@example.com" formData={formData} onChange={handleChange} />
+                        <InputField icon={<Phone size={18} />} label="Phone Number" name="phoneNumber" placeholder="+254 700 000000" formData={formData} onChange={handleChange} />
+                        <InputField icon={<Phone size={18} />} label="WhatsApp Number" name="whatsappNumber" placeholder="+254 700 000000 (Optional)" required={false} formData={formData} onChange={handleChange} />
+                        <InputField icon={<Calendar size={18} />} label="Date of Birth" name="dateOfBirth" type="date" formData={formData} onChange={handleChange} />
+                        <InputField icon={<Building2 size={18} />} label="Nationality" name="nationality" placeholder="e.g. Kenyan" formData={formData} onChange={handleChange} />
                     </div>
 
                     <div className="border-t pt-4 mt-6" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
                         <h3 className="font-bold uppercase tracking-wider text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Emergency Contact</h3>
                         <div className="flex flex-wrap gap-6">
-                            <InputField icon={<User size={18} />} label="Contact Name" name="emergencyContactName" placeholder="e.g. Jane Doe" />
-                            <InputField icon={<Phone size={18} />} label="Contact Phone" name="emergencyContactPhone" placeholder="+254 700 000000" />
-                            <InputField icon={<User size={18} />} label="Relationship" name="emergencyContactRelationship" placeholder="e.g. Spouse / Brother" />
+                            <InputField icon={<User size={18} />} label="Contact Name" name="emergencyContactName" placeholder="e.g. Jane Doe" formData={formData} onChange={handleChange} />
+                            <InputField icon={<Phone size={18} />} label="Contact Phone" name="emergencyContactPhone" placeholder="+254 700 000000" formData={formData} onChange={handleChange} />
+                            <InputField icon={<User size={18} />} label="Relationship" name="emergencyContactRelationship" placeholder="e.g. Spouse / Brother" formData={formData} onChange={handleChange} />
                         </div>
                     </div>
                 </div>
@@ -175,16 +201,20 @@ const CreateDriver = () => {
                             label="ID Document Type" 
                             name="idType" 
                             options={[{ id: 'National ID', name: 'National ID' }, { id: 'Passport', name: 'Passport' }]} 
+                            formData={formData}
+                            onChange={handleChange}
                         />
-                        <InputField icon={<FileText size={18} />} label="ID Number" name="idNumber" placeholder="Enter ID/Passport Number" />
-                        <InputField icon={<FileText size={18} />} label="License Number" name="licenseNumber" placeholder="DL-XXXXX" />
-                        <InputField icon={<Calendar size={18} />} label="License Expiry" name="licenseExpiry" type="date" />
+                        <InputField icon={<FileText size={18} />} label="ID Number" name="idNumber" placeholder="Enter ID/Passport Number" formData={formData} onChange={handleChange} />
+                        <InputField icon={<FileText size={18} />} label="License Number" name="licenseNumber" placeholder="DL-XXXXX" formData={formData} onChange={handleChange} />
+                        <InputField icon={<Calendar size={18} />} label="License Expiry" name="licenseExpiry" type="date" formData={formData} onChange={handleChange} />
                         <InputField
                             icon={<Building2 size={18} />}
                             label="Assigned Branch"
                             name="branchId"
                             placeholder="Select Branch"
                             options={branches}
+                            formData={formData}
+                            onChange={handleChange}
                         />
                     </div>
                 </div>

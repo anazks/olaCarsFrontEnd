@@ -6,7 +6,7 @@ const BranchFinStaffDashboard = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="container-responsive space-y-6">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('dashboards.branchFin.title')}</h1>
                 <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('dashboards.branchFin.subtitle')}</p>

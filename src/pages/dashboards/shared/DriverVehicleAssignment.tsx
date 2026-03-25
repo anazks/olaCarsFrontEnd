@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Car, Search, CheckCircle2, ShieldCheck, Route as RouteIcon, Tag } from 'lucide-react';
-import { getDriverById } from '../../../services/driverService';
+import { getDriverById, progressDriver, uploadDriverDocument } from '../../../services/driverService';
 import { getAvailableVehicles, assignVehicleToDriver } from '../../../services/vehicleService';
+import agreementService from '../../../services/agreementService';
+import { jsPDF } from 'jspdf';
+import toast from 'react-hot-toast';
 import type { Driver } from '../../../services/driverService';
 import type { Vehicle } from '../../../services/vehicleService';
 
@@ -56,22 +59,79 @@ const DriverVehicleAssignment = () => {
     const handleAssign = async () => {
         if (!id || !selectedVehicleId) return;
         
+        const toastId = toast.loading('Generating Assignment Agreement...');
         try {
             setAssigning(true);
             setError(null);
+
+            // 1. Fetch Template
+            const templates = await agreementService.getAgreements({ type: 'VEHICLE_ASSIGNMENT_AGREEMENT' });
+            if (!templates || templates.length === 0) {
+                throw new Error('No Vehicle Assignment Agreement template found.');
+            }
+            const templateId = templates[0]._id;
+
+            // 2. Render Template
+            const rendered = await agreementService.getRenderedAgreement(templateId);
+
+            // 3. Generate PDF
+            const doc = new jsPDF({
+                unit: 'pt',
+                format: 'a4',
+                orientation: 'portrait'
+            });
+
+            const container = document.createElement('div');
+            container.style.width = '550pt';
+            container.style.padding = '40pt';
+            container.style.color = '#111';
+            container.style.fontFamily = 'serif';
+            container.style.lineHeight = '1.6';
+            container.innerHTML = rendered.renderedContent;
             
-            // Advance the driver to CONTRACT PENDING and assign the vehicle
+            const style = document.createElement('style');
+            style.innerHTML = `
+                h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
+                p { margin-bottom: 1em; }
+                table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+                th, td { border: 1pt solid #eee; padding: 8pt; text-align: left; }
+            `;
+            container.appendChild(style);
+            document.body.appendChild(container);
+
+            await doc.html(container, {
+                x: 20,
+                y: 20,
+                width: 550,
+                windowWidth: 800
+            });
+
+            const pdfBlob = doc.output('blob');
+            document.body.removeChild(container);
+
+            // 4. Upload PDF
+            const formData = new FormData();
+            formData.append('contractPDF', pdfBlob, `Assignment_Contract_${driver?.personalInfo.fullName.replace(/\s+/g, '_')}.pdf`);
+            await uploadDriverDocument(id, formData);
+            
+            // 5. Assign the vehicle to the driver
             await assignVehicleToDriver(selectedVehicleId, id, {
                 leaseDuration: Number(leaseDetails.leaseDuration),
                 monthlyRent: Number(leaseDetails.monthlyRent),
                 notes: leaseDetails.notes
             });
+
+            // 6. Advance the driver status to CONTRACT PENDING
+            await progressDriver(id, 'CONTRACT PENDING', { notes: 'Automated: Vehicle assigned and contract generated' });
             
+            toast.success('Vehicle assigned and contract generated successfully', { id: toastId });
             // Navigate back to the driver detail page
             navigate('..');
         } catch (err: any) {
             console.error("Error assigning vehicle:", err);
-            setError(err.response?.data?.message || 'Failed to assign vehicle.');
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to assign vehicle.';
+            setError(errorMessage);
+            toast.error(errorMessage, { id: toastId });
             setAssigning(false);
         }
     };
@@ -96,7 +156,7 @@ const DriverVehicleAssignment = () => {
     }
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-6 container-responsive space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <button onClick={() => navigate('..')} className="p-2 hover:opacity-70 rounded-xl border border-transparent transition-all group">

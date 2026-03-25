@@ -6,7 +6,7 @@ const ExecutiveDashboard = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="container-responsive space-y-6">
 
             {/* Header Area */}
             <div className="flex justify-between items-end mb-6">

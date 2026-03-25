@@ -65,6 +65,12 @@ export interface Driver {
         notes?: string;
         date?: string;
     };
+    approvedBy?: {
+        id: string;
+        name: string;
+        role: string;
+    };
+    approvedAt?: string;
     medicalFitness: {
         isRequired: boolean;
         status?: 'PENDING' | 'COMPLETED' | 'FAILED';

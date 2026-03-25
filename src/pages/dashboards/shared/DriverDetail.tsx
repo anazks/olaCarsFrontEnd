@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertTriangle, AlertCircle, FileCheck, Car, Tag } from 'lucide-react';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
-import { getUserRole } from '../../../utils/auth';
+import agreementService from '../../../services/agreementService';
+import { jsPDF } from 'jspdf';
+import toast from 'react-hot-toast';
+import { getUser, getUserRole } from '../../../utils/auth';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -14,8 +17,6 @@ const DriverDetail = () => {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
-    const [creditScore, setCreditScore] = useState<number>(0);
-    const [fraudAlert, setFraudAlert] = useState<boolean>(false);
     const [reviewNotes, setReviewNotes] = useState<string>('');
     const [rejectionReason, setRejectionReason] = useState<string>('OTHER');
     const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
@@ -24,9 +25,12 @@ const DriverDetail = () => {
         credentialsSent: false,
         gpsMonitoringActive: false
     });
+    const currentUser = getUser();
     const userRole = getUserRole();
     const isManager = ['branchmanager', 'countrymanager', 'admin', 'financeadmin', 'operationadmin'].includes(userRole || '');
-    const isStaff = userRole === 'financestaff' || userRole === 'operationstaff' || isManager;
+    const isFinanceStaff = userRole === 'financestaff';
+    const isOpsStaff = userRole === 'operationstaff';
+    const isStaff = isFinanceStaff || isOpsStaff || isManager;
 
     useEffect(() => {
         if (id) fetchDriver();
@@ -37,10 +41,8 @@ const DriverDetail = () => {
             setLoading(true);
             const data = await getDriverById(id!);
             setDriver(data);
-            if (data.creditCheck?.score) setCreditScore(data.creditCheck.score);
-            if (data.creditCheck?.fraudAlert) setFraudAlert(data.creditCheck.fraudAlert);
             if (data.creditCheck?.reviewNotes) setReviewNotes(data.creditCheck.reviewNotes);
-            
+
             if (data.currentVehicle) {
                 try {
                     setLoadingVehicle(true);
@@ -78,6 +80,78 @@ const DriverDetail = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const generateAndUploadContract = async (templateType: string, fileName: string) => {
+        const toastId = toast.loading(`Generating ${templateType.replace(/_/g, ' ')}...`);
+        try {
+            // 1. Fetch Template
+            const templates = await agreementService.getAgreements({ type: templateType });
+            if (!templates || templates.length === 0) {
+                throw new Error(`No agreement template found for type: ${templateType}`);
+            }
+            const templateId = templates[0]._id;
+
+            // 2. Render Template
+            const rendered = await agreementService.getRenderedAgreement(templateId);
+            
+            // 3. Generate PDF
+            const doc = new jsPDF({
+                unit: 'pt',
+                format: 'a4',
+                orientation: 'portrait'
+            });
+
+            const container = document.createElement('div');
+            container.style.width = '550pt';
+            container.style.padding = '40pt';
+            container.style.color = '#111';
+            container.style.fontFamily = 'serif';
+            container.style.lineHeight = '1.6';
+            container.innerHTML = rendered.renderedContent;
+            
+            // Basic styling for the PDF
+            const style = document.createElement('style');
+            style.innerHTML = `
+                h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
+                p { margin-bottom: 1em; }
+                table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+                th, td { border: 1pt solid #eee; padding: 8pt; text-align: left; }
+            `;
+            container.appendChild(style);
+            document.body.appendChild(container);
+
+            await doc.html(container, {
+                x: 20,
+                y: 20,
+                width: 550,
+                windowWidth: 800
+            });
+
+            const pdfBlob = doc.output('blob');
+            document.body.removeChild(container);
+
+            // 4. Upload PDF
+            const formData = new FormData();
+            formData.append('contractPDF', pdfBlob, `${fileName}.pdf`);
+            await uploadDriverDocument(id!, formData);
+            
+            toast.success('Contract generated and uploaded successfully', { id: toastId });
+            return true;
+        } catch (error: any) {
+            console.error('Contract generation failed:', error);
+            toast.error(error.message || 'Failed to generate contract', { id: toastId });
+            return false;
+        }
+    };
+
+    const handleIssueContract = async () => {
+        setLoading(true);
+        const success = await generateAndUploadContract('DRIVER_AGREEMENT', `Driver_Contract_${driver?.personalInfo.fullName.replace(/\s+/g, '_')}`);
+        if (success) {
+            await handleProgress('CONTRACT PENDING', { notes: 'Automated: Contract generated and issued' });
+        }
+        setLoading(false);
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -122,11 +196,11 @@ const DriverDetail = () => {
             const updateObject: any = {};
             const parts = fieldPath.split('.');
             if (parts.length === 2) {
-                const updatedGroup = { 
-                    ...(driver![parts[0] as keyof Driver] as any), 
-                    [parts[1]]: value 
+                const updatedGroup = {
+                    ...(driver![parts[0] as keyof Driver] as any),
+                    [parts[1]]: value
                 };
-                
+
                 // Auto-set dates based on the guide
                 if (fieldPath === 'drivingLicense.verificationStatus' && value === 'VERIFIED') {
                     updatedGroup.verifiedDate = new Date().toISOString().split('T')[0];
@@ -134,7 +208,7 @@ const DriverDetail = () => {
                 if (fieldPath === 'backgroundCheck.status' && value === 'CLEARED') {
                     updatedGroup.issuedDate = new Date().toISOString().split('T')[0];
                 }
-                
+
                 updateObject[parts[0]] = updatedGroup;
             } else {
                 updateObject[fieldPath] = value;
@@ -153,37 +227,251 @@ const DriverDetail = () => {
     if (loading && !driver) return <div className="p-8 text-center animate-pulse font-bold text-gray-500 uppercase tracking-widest">Loading driver profile...</div>;
     if (!driver) return <div className="p-8 text-center">Driver not found</div>;
 
-    const currentStepIndex = ['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE'].indexOf(driver.status);
+    const statusList = ['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE', 'REJECTED'];
+    const currentStepIndex = statusList.indexOf(driver.status);
 
     const steps = [
         { id: 'DRAFT', label: 'Draft', sub: 'Initial Entry' },
         { id: 'PENDING REVIEW', label: 'Pending', sub: 'Awaiting Review' },
         { id: 'VERIFICATION', label: 'Verification', sub: 'Docs Check' },
         { id: 'CREDIT CHECK', label: 'Credit Check', sub: 'Risk Assessment' },
-        { id: 'APPROVED', label: 'Approved', sub: 'Ready for Ops' }
+        { id: 'APPROVED', label: 'Approved', sub: 'Policy Pass' },
+        { id: 'CONTRACT PENDING', label: 'Contracting', sub: 'Signature' },
+        { id: 'ACTIVE', label: 'Active', sub: 'Ready' }
     ];
 
     // Find the mapped index for the visual stepper
     let visualStepIndex = steps.findIndex(s => s.id === driver.status);
+    if (driver.status === 'MANAGER REVIEW') visualStepIndex = 3; // Treat as part of Credit Check stage
     if (visualStepIndex === -1 && currentStepIndex > 0) {
         // Fallback for statuses not explicitly in visual stepper
         visualStepIndex = steps.length - 1;
     }
 
+    const RenderActionCenter = () => {
+        const canProgress = () => {
+            if (driver.status === 'DRAFT') {
+                return !!(driver.personalInfo?.fullName && driver.personalInfo?.email && driver.drivingLicense?.licenseNumber && driver.drivingLicense?.frontImage && driver.identityDocs?.idFrontImage);
+            }
+            if (driver.status === 'PENDING REVIEW') {
+                return driver.drivingLicense?.verificationStatus === 'VERIFIED';
+            }
+            if (driver.status === 'VERIFICATION') {
+                return !!(driver.backgroundCheck?.status === 'CLEARED');
+            }
+            if (driver.status === 'MANAGER REVIEW') {
+                return !!reviewNotes;
+            }
+            if (driver.status === 'CONTRACT PENDING') {
+                return !!(driver.contract?.signedS3Key && activationChecks.credentialsSent && activationChecks.gpsMonitoringActive);
+            }
+            return true;
+        };
+
+        const renderRequirements = () => {
+            const reqs = [];
+            if (driver.status === 'DRAFT') {
+                reqs.push({ label: 'Basic Info', met: !!driver.personalInfo?.fullName });
+                reqs.push({ label: 'License Photo', met: !!driver.drivingLicense?.frontImage });
+                reqs.push({ label: 'ID Photo', met: !!driver.identityDocs?.idFrontImage });
+            } else if (driver.status === 'PENDING REVIEW') {
+                reqs.push({ label: 'License Verified', met: driver.drivingLicense?.verificationStatus === 'VERIFIED' });
+            } else if (driver.status === 'VERIFICATION') {
+                reqs.push({ label: 'Background Cleared', met: driver.backgroundCheck?.status === 'CLEARED' });
+            } else if (driver.status === 'CONTRACT PENDING') {
+                reqs.push({ label: 'Signed Contract', met: !!driver.contract?.signedS3Key });
+                reqs.push({ label: 'Activation Checklist', met: activationChecks.credentialsSent && activationChecks.gpsMonitoringActive });
+            }
+
+            if (reqs.length === 0) return null;
+
+            return (
+                <div className="flex flex-wrap gap-4 mt-4 py-3 border-t border-white/5">
+                    {reqs.map((r, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                            {r.met ? <CheckCircle2 size={14} className="text-brand-lime" /> : <AlertCircle size={14} className="text-yellow-500" />}
+                            <span className={`text-[10px] font-bold uppercase tracking-tight ${r.met ? 'text-brand-lime' : 'text-dim'}`}>{r.label}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        return (
+            <div className="p-8 rounded-[2rem] border shadow-2xl relative overflow-hidden transition-all duration-500 hover:shadow-brand-lime/5" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-lime/5 rounded-full blur-3xl -mr-32 -mt-32 animate-pulse" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-2xl bg-brand-lime/10 text-brand-lime">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                                    Current Stage: {driver.status.replace(/_/g, ' ')}
+                                </h2>
+                                <p className="text-xs font-medium opacity-60">Complete the tasks below to progress the application.</p>
+                            </div>
+                        </div>
+                        {renderRequirements()}
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                        {/* Status-Specific Actions */}
+                        {driver.status === 'DRAFT' && isStaff && (
+                            <button
+                                onClick={() => handleProgress('PENDING REVIEW', { notes: 'Automated: Draft submission' })}
+                                disabled={!canProgress()}
+                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                            >
+                                <PlayCircle size={20} />
+                                Submit for Review
+                            </button>
+                        )}
+
+                        {driver.status === 'PENDING REVIEW' && isFinanceStaff && (
+                            <button
+                                onClick={() => handleProgress('VERIFICATION', { notes: 'Finance Review Completed' })}
+                                disabled={!canProgress()}
+                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
+                            >
+                                <ShieldCheck size={20} />
+                                Complete Verification
+                            </button>
+                        )}
+
+                        {driver.status === 'VERIFICATION' && isFinanceStaff && (
+                            <button
+                                onClick={() => handleProgress('CREDIT CHECK', { notes: 'Automated: Triggering credit assessment' })}
+                                disabled={!canProgress()}
+                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                            >
+                                <FileCheck size={20} />
+                                Start Credit Assessment
+                            </button>
+                        )}
+
+                        {driver.status === 'CREDIT CHECK' && isFinanceStaff && (
+                            <div className="px-6 py-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center gap-3">
+                                <Clock size={20} className="text-yellow-500 animate-spin" />
+                                <span className="text-xs font-black text-yellow-500 uppercase">System Assessment in Progress</span>
+                            </div>
+                        )}
+
+                        {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && isManager && (
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => handleProgress('APPROVED', {
+                                        updateData: {
+                                            approvedBy: { id: currentUser?._id, name: currentUser?.fullName, role: userRole },
+                                            approvedAt: new Date().toISOString()
+                                        },
+                                        notes: 'Manager Final Approval'
+                                    })}
+                                    disabled={driver.status === 'MANAGER REVIEW' && !reviewNotes}
+                                    className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                                >
+                                    <CheckCircle2 size={20} />
+                                    Approve Application
+                                </button>
+                                <button
+                                    onClick={() => handleProgress('REJECTED', {
+                                        updateData: { rejection: { reason: rejectionReason, notes: reviewNotes } }
+                                    })}
+                                    className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                                >
+                                    <XCircle size={20} />
+                                    Reject
+                                </button>
+                            </div>
+                        )}
+
+                        {driver.status === 'APPROVED' && isStaff && (
+                            <button
+                                onClick={handleIssueContract}
+                                className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
+                            >
+                                <FileText size={20} />
+                                Issue Contract
+                            </button>
+                        )}
+
+                        {driver.status === 'CONTRACT PENDING' && isManager && (
+                            <div className="flex flex-col gap-4">
+                                {!driver.contract?.signedS3Key && (
+                                    <label className="flex items-center gap-3 px-6 py-4 rounded-2xl border-2 border-dashed cursor-pointer hover:border-brand-lime transition-all" style={{ borderColor: 'var(--border-main)' }}>
+                                        <Upload size={20} className={uploading === 'signedContract' ? 'animate-bounce' : ''} />
+                                        <span className="text-xs font-black uppercase tracking-widest">
+                                            {uploading === 'signedContract' ? 'Uploading...' : 'Upload Signed Contract'}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            onChange={(e) => handleFileUpload(e, 'signedContract')}
+                                            accept=".pdf"
+                                        />
+                                    </label>
+                                )}
+                                <button
+                                    onClick={() => handleProgress('ACTIVE', { notes: 'Final activation' })}
+                                    disabled={!canProgress()}
+                                    className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
+                                >
+                                    <ShieldCheck size={20} />
+                                    Final Activation
+                                </button>
+                            </div>
+                        )}
+
+                        {driver.status === 'ACTIVE' && isStaff && (
+                            <button
+                                onClick={() => navigate('assign-vehicle')}
+                                className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
+                            >
+                                <Car size={20} />
+                                Assign Vehicle
+                            </button>
+                        )}
+
+                        {/* Helpful Status Messages */}
+                        {isFinanceStaff && (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
+                            <div className="px-6 py-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3">
+                                <Clock size={20} className="text-blue-500" />
+                                <span className="text-xs font-black text-blue-500 uppercase">Awaiting Manager Approval</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-8">
+        <div className="p-6 container-responsive space-y-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('..')} className="p-2 hover:bg-white rounded-xl border border-transparent hover:border-gray-200 transition-all group">
-                        <ChevronLeft size={24} className="text-gray-400 group-hover:text-black" />
+                    <button
+                        onClick={() => navigate('..')}
+                        className="p-3 rounded-2xl border transition-all hover:bg-black/5 dark:hover:bg-white/5 group"
+                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <ChevronLeft size={24} className="group-hover:scale-110 transition-transform" />
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
-                            <span className="px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-wider" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
-                                {driver.status.replace(/_/g, ' ')}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-wider w-fit" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
+                                    {driver.status.replace(/_/g, ' ')}
+                                </span>
+                                {driver.approvedBy && (
+                                    <span className="text-[10px] mt-1 opacity-60 font-medium">
+                                        Approved by {driver.approvedBy.name} ({driver.approvedBy.role})
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <p className="flex items-center gap-2 text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                             <FileText size={14} />
@@ -193,136 +481,11 @@ const DriverDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* Role-based Actions */}
-                    {isStaff && driver.status === 'DRAFT' && (
-                        <button
-                            onClick={() => handleProgress('PENDING REVIEW', { notes: 'All documents collected and uploaded.' })}
-                            className="px-6 py-2.5 bg-brand-lime text-black font-bold rounded-xl hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                        >
-                            <PlayCircle size={18} />
-                            Submit for Review
-                        </button>
-                    )}
-
-                    {isStaff && driver.status === 'PENDING REVIEW' && (
-                        <button
-                            onClick={() => handleProgress('VERIFICATION', { notes: 'License and background checks reviewed.' })}
-                            disabled={driver.drivingLicense?.verificationStatus !== 'VERIFIED'}
-                            className={`px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg active:scale-95 ${driver.drivingLicense?.verificationStatus === 'VERIFIED' ? 'bg-brand-lime text-black hover:bg-opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                        >
-                            <ShieldCheck size={18} />
-                            Complete Verification
-                        </button>
-                    )}
-
-                    {isStaff && driver.status === 'VERIFICATION' && (
-                        <button
-                            onClick={() => handleProgress('CREDIT CHECK', { 
-                                updateData: { 
-                                    creditCheck: { 
-                                        score: creditScore,
-                                        fraudAlert: fraudAlert
-                                    } 
-                                },
-                                notes: 'Experian credit check completed.' 
-                            })}
-                            disabled={!creditScore}
-                            className={`px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg active:scale-95 ${creditScore ? 'bg-black text-white hover:bg-gray-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                        >
-                            <PlayCircle size={18} />
-                            Submit Credit Result
-                        </button>
-                    )}
-
-                    {isStaff && driver.status === 'CREDIT CHECK' && (
-                        <div className="flex gap-2">
-                            {driver.creditCheck?.decision === 'AUTO_APPROVED' && (
-                                <button
-                                    onClick={() => handleProgress('APPROVED', { notes: 'Auto-approved based on credit score.' })}
-                                    className="px-6 py-2.5 bg-brand-lime text-black font-bold rounded-xl hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                                >
-                                    <CheckCircle2 size={18} />
-                                    Advance to Approved
-                                </button>
-                            )}
-                            {driver.creditCheck?.decision === 'MANUAL_REVIEW' && (
-                                <button
-                                    onClick={() => handleProgress('MANAGER REVIEW', { notes: 'Borderline score submitted for manager review.' })}
-                                    className="px-6 py-2.5 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                                >
-                                    <AlertTriangle size={18} />
-                                    Submit for Manager Review
-                                </button>
-                            )}
-                            {driver.creditCheck?.decision === 'DECLINED' && (
-                                <button
-                                    onClick={() => handleProgress('REJECTED', { 
-                                        updateData: { rejection: { reason: 'CREDIT DECLINED', notes: 'Declined due to low credit score.' } } 
-                                    })}
-                                    className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                                >
-                                    <XCircle size={18} />
-                                    Reject Application
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {isManager && driver.status === 'MANAGER REVIEW' && (
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => handleProgress('APPROVED', { 
-                                    updateData: { creditCheck: { reviewNotes: reviewNotes } },
-                                    notes: 'Approved after manager review.'
-                                })}
-                                disabled={!reviewNotes}
-                                className={`px-6 py-2.5 font-bold rounded-xl transition-all shadow-lg active:scale-95 ${reviewNotes ? 'bg-brand-lime text-black hover:bg-opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                            >
-                                Approve Driver
-                            </button>
-                            <button
-                                onClick={() => handleProgress('REJECTED', { 
-                                    updateData: { rejection: { reason: rejectionReason, notes: reviewNotes } }
-                                })}
-                                className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all shadow-lg active:scale-95"
-                            >
-                                Decline Driver
-                            </button>
-                        </div>
-                    )}
-
-                    {isStaff && driver.status === 'APPROVED' && !driver.currentVehicle && (
-                        <button
-                            onClick={() => navigate('assign-vehicle')}
-                            className="px-6 py-2.5 bg-black text-white font-bold rounded-xl hover:bg-gray-900 transition-all flex items-center gap-2"
-                        >
-                            <Car size={18} />
-                            Assign Vehicle
-                        </button>
-                    )}
-
-                    {isManager && driver.status === 'CONTRACT PENDING' && (
-                        <button
-                            onClick={() => handleProgress('ACTIVE', { 
-                                updateData: { 
-                                    activation: { 
-                                        credentialsSent: activationChecks.credentialsSent, 
-                                        gpsMonitoringActive: activationChecks.gpsMonitoringActive 
-                                    } 
-                                },
-                                notes: 'Driver activated.'
-                            })}
-                            disabled={!activationChecks.credentialsSent || !activationChecks.gpsMonitoringActive}
-                            className={`px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg ${activationChecks.credentialsSent && activationChecks.gpsMonitoringActive ? 'bg-brand-lime text-black hover:bg-opacity-90 transition-all' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                        >
-                            <ShieldCheck size={18} />
-                            Activate Driver
-                        </button>
-                    )}
-
                     <button
                         onClick={() => handleProgress('REJECTED', { rejection: { reason: 'OTHER', notes: 'Manually disqualified' } })}
-                        className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-all flex items-center gap-2" style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.2)' }}>
+                        className="px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 border hover:bg-red-500/10 active:scale-95"
+                        style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.2)', color: 'var(--brand-danger, #ef4444)' }}
+                    >
                         <Ban size={18} />
                         Disqualify
                     </button>
@@ -340,107 +503,112 @@ const DriverDetail = () => {
                 </div>
             )}
 
-            {/* Stepper */}
-            <div className="p-6 rounded-2xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="flex justify-between relative">
-                    <div className="absolute top-1/2 left-0 w-full h-0.5 -translate-y-1/2" style={{ backgroundColor: 'var(--border-main)' }} />
-                    <div
-                        className="absolute top-1/2 left-0 h-0.5 bg-brand-lime -translate-y-1/2 transition-all duration-500"
-                        style={{ width: `${(Math.max(0, visualStepIndex) / (steps.length - 1)) * 100}%` }}
-                    />
-                    {steps.map((step, index) => {
-                        const isCompleted = index < visualStepIndex;
-                        const isCurrent = index === visualStepIndex;
-                        return (
-                            <div key={step.id} className="relative z-10 flex flex-col items-center">
-                                <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-brand-lime border-brand-lime text-black' :
-                                        isCurrent ? 'bg-transparent border-brand-lime text-brand-lime shadow-lg shadow-brand-lime/20' :
-                                            'bg-transparent border-gray-200 text-gray-300'
-                                        }`}
-                                    style={{ borderColor: !isCompleted && !isCurrent ? 'var(--border-main)' : '' }}
-                                >
-                                    {isCompleted ? <CheckCircle2 size={24} /> : <span className="font-bold text-sm">{index + 1}</span>}
+            {/* Stepper - Visible for all onboarding stages */}
+            {currentStepIndex !== -1 && driver.status !== 'REJECTED' && (
+                <div className="p-6 rounded-2xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex justify-between relative">
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 -translate-y-1/2" style={{ backgroundColor: 'var(--border-main)' }} />
+                        <div
+                            className="absolute top-1/2 left-0 h-0.5 bg-brand-lime -translate-y-1/2 transition-all duration-500"
+                            style={{ width: `${(Math.max(0, visualStepIndex) / (steps.length - 1)) * 100}%` }}
+                        />
+                        {steps.map((step, index) => {
+                            const isCompleted = index < visualStepIndex;
+                            const isCurrent = index === visualStepIndex;
+                            return (
+                                <div key={step.id} className="relative z-10 flex flex-col items-center">
+                                    <div
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-brand-lime border-brand-lime text-black' :
+                                            isCurrent ? 'bg-transparent border-brand-lime text-brand-lime shadow-lg shadow-brand-lime/20' :
+                                                'bg-transparent border-gray-200 text-gray-300'
+                                            }`}
+                                        style={{ borderColor: !isCompleted && !isCurrent ? 'var(--border-main)' : '' }}
+                                    >
+                                        {isCompleted ? <CheckCircle2 size={24} /> : <span className="font-bold text-sm">{index + 1}</span>}
+                                    </div>
+                                    <div className="mt-3 text-center">
+                                        <div className={`text-xs font-bold uppercase tracking-wider ${isCurrent ? 'text-brand-lime' : ''}`} style={{ color: isCurrent ? 'var(--brand-lime)' : 'var(--text-dim)' }}>{step.label}</div>
+                                        {!isCurrent && <div className="text-[10px] font-medium uppercase mt-0.5" style={{ color: 'var(--text-dim)' }}>{step.sub}</div>}
+                                        {isCurrent && <div className="text-[10px] font-bold uppercase mt-0.5 animate-pulse" style={{ color: 'var(--brand-lime)' }}>In Progress</div>}
+                                    </div>
                                 </div>
-                                <div className="mt-3 text-center">
-                                    <div className={`text-xs font-bold uppercase tracking-wider ${isCurrent ? 'text-brand-lime' : ''}`} style={{ color: isCurrent ? 'var(--brand-lime)' : 'var(--text-dim)' }}>{step.label}</div>
-                                    {!isCurrent && <div className="text-[10px] font-medium uppercase mt-0.5" style={{ color: 'var(--text-dim)' }}>{step.sub}</div>}
-                                    {isCurrent && <div className="text-[10px] font-bold uppercase mt-0.5 animate-pulse" style={{ color: 'var(--brand-lime)' }}>In Progress</div>}
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            )}
 
-                {/* Assigned Vehicle Section */}
-                {loadingVehicle ? (
-                    <div className="p-6 rounded-2xl border animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 rounded-lg bg-gray-200" style={{ backgroundColor: 'var(--bg-input)' }} />
-                            <div className="h-4 w-48 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />
+            {/* Stage Action Center */}
+            <RenderActionCenter />
+
+            {/* Assigned Vehicle Section */}
+            {loadingVehicle ? (
+                <div className="p-6 rounded-2xl border animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-10 h-10 rounded-lg bg-gray-200" style={{ backgroundColor: 'var(--bg-input)' }} />
+                        <div className="h-4 w-48 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />
+                    </div>
+                    <div className="grid grid-cols-4 gap-8">
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />)}
+                    </div>
+                </div>
+            ) : assignedVehicle ? (
+                <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--brand-lime-subtle, rgba(200,230,0,0.1))' }}>
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] -mr-12 -mt-12" style={{ backgroundColor: 'rgba(200,230,0,0.05)' }} />
+                    <div className="flex items-center justify-between mb-6 border-b pb-4 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                                <Car size={20} />
+                            </div>
+                            <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Assigned Vehicle</h2>
                         </div>
-                        <div className="grid grid-cols-4 gap-8">
-                            {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />)}
+                        <div className="px-3 py-1 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-tighter shadow-sm border border-brand-lime/20 animate-pulse">
+                            Active Rental
                         </div>
                     </div>
-                ) : assignedVehicle ? (
-                    <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--brand-lime-subtle, rgba(200,230,0,0.1))' }}>
-                        <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] -mr-12 -mt-12" style={{ backgroundColor: 'rgba(200,230,0,0.05)' }} />
-                        <div className="flex items-center justify-between mb-6 border-b pb-4 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                                    <Car size={20} />
-                                </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Assigned Vehicle</h2>
-                            </div>
-                            <div className="px-3 py-1 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-tighter shadow-sm border border-brand-lime/20 animate-pulse">
-                                Active Rental
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-                            <div className="flex gap-4 items-start">
-                                <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 shrink-0" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                    {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
-                                        <img 
-                                            src={assignedVehicle.purchaseDetails.purchaseReceipt.startsWith('http') ? assignedVehicle.purchaseDetails.purchaseReceipt : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${assignedVehicle.purchaseDetails.purchaseReceipt}`} 
-                                            alt="Vehicle" 
-                                            className="w-full h-full object-cover" 
-                                        />
-                                    ) : (
-                                        <Car size={24} style={{ color: 'var(--text-dim)', opacity: 0.3 }} />
-                                    )}
-                                </div>
-                                <InfoCard 
-                                    label="Vehicle Model" 
-                                    value={`${assignedVehicle.basicDetails.make} ${assignedVehicle.basicDetails.model}`} 
-                                    icon={<Tag size={14} />} 
-                                />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                        <div className="flex gap-4 items-start">
+                            <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 shrink-0" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
+                                    <img
+                                        src={assignedVehicle.purchaseDetails.purchaseReceipt.startsWith('http') ? assignedVehicle.purchaseDetails.purchaseReceipt : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${assignedVehicle.purchaseDetails.purchaseReceipt}`}
+                                        alt="Vehicle"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <Car size={24} style={{ color: 'var(--text-dim)', opacity: 0.3 }} />
+                                )}
                             </div>
-                            <InfoCard label="Registration" value={assignedVehicle.legalDocs?.registrationNumber || 'N/A'} />
-                            <InfoCard label="VIN Number" value={assignedVehicle.basicDetails.vin} />
-                            <InfoCard 
-                                label="Monthly Rent" 
-                                value={assignedVehicle.basicDetails.monthlyRent ? `$${assignedVehicle.basicDetails.monthlyRent.toLocaleString()}` : 'N/A'} 
-                                icon={<FileText size={14} />}
+                            <InfoCard
+                                label="Vehicle Model"
+                                value={`${assignedVehicle.basicDetails.make} ${assignedVehicle.basicDetails.model}`}
+                                icon={<Tag size={14} />}
                             />
                         </div>
-                        
-                        <div className="mt-6 flex justify-end">
-                            <button 
-                                onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
-                                className="text-xs font-bold text-brand-lime uppercase hover:underline flex items-center gap-1"
-                            >
-                                View Vehicle Details <ChevronLeft size={14} className="rotate-180" />
-                            </button>
-                        </div>
+                        <InfoCard label="Registration" value={assignedVehicle.legalDocs?.registrationNumber || 'N/A'} />
+                        <InfoCard label="VIN Number" value={assignedVehicle.basicDetails.vin} />
+                        <InfoCard
+                            label="Monthly Rent"
+                            value={assignedVehicle.basicDetails.monthlyRent ? `$${assignedVehicle.basicDetails.monthlyRent.toLocaleString()}` : 'N/A'}
+                            icon={<FileText size={14} />}
+                        />
                     </div>
-                ) : null}
 
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
+                            className="text-xs font-bold text-brand-lime uppercase hover:underline flex items-center gap-1"
+                        >
+                            View Vehicle Details <ChevronLeft size={14} className="rotate-180" />
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
+            <div className="space-y-8">
+                {/* Information Sections */}
                 <div className="space-y-8">
-                    {/* Information Sections */}
-                    <div className="space-y-8">
                     {/* Basic Info */}
                     <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -mr-8 -mt-8" style={{ backgroundColor: 'rgba(200,230,0,0.03)' }} />
@@ -552,16 +720,16 @@ const DriverDetail = () => {
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Verification Panel</h2>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider opacity-50">Driving License Verification</h3>
                                     <div className="flex gap-4 p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         {driver.drivingLicense?.frontImage && (
                                             <div className="w-16 h-16 rounded-lg overflow-hidden border shrink-0 bg-white">
-                                                <img 
-                                                    src={driver.drivingLicense.frontImage.startsWith('http') ? driver.drivingLicense.frontImage : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${driver.drivingLicense.frontImage}`} 
-                                                    alt="License" 
+                                                <img
+                                                    src={driver.drivingLicense.frontImage.startsWith('http') ? driver.drivingLicense.frontImage : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${driver.drivingLicense.frontImage}`}
+                                                    alt="License"
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -572,13 +740,13 @@ const DriverDetail = () => {
                                                 <p className="text-[10px] opacity-60 font-medium italic">Status: {driver.drivingLicense?.verificationStatus}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button 
+                                                <button
                                                     onClick={() => handleVerifyField('drivingLicense.verificationStatus', 'VERIFIED')}
                                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'VERIFIED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Mark Verified
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => handleVerifyField('drivingLicense.verificationStatus', 'REJECTED')}
                                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'REJECTED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
@@ -595,9 +763,9 @@ const DriverDetail = () => {
                                         <div className="flex items-center gap-4">
                                             {driver.backgroundCheck?.document && (
                                                 <div className="w-16 h-16 rounded-lg overflow-hidden border shrink-0 bg-white">
-                                                    <img 
-                                                        src={driver.backgroundCheck.document.startsWith('http') ? driver.backgroundCheck.document : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${driver.backgroundCheck.document}`} 
-                                                        alt="Background" 
+                                                    <img
+                                                        src={driver.backgroundCheck.document.startsWith('http') ? driver.backgroundCheck.document : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${driver.backgroundCheck.document}`}
+                                                        alt="Background"
                                                         className="w-full h-full object-cover"
                                                     />
                                                 </div>
@@ -608,15 +776,15 @@ const DriverDetail = () => {
                                                     {driver.backgroundCheck?.issuedDate ? `Issued: ${new Date(driver.backgroundCheck.issuedDate).toLocaleDateString()}` : 'Date Not Recorded'}
                                                 </p>
                                             </div>
-                                            
+
                                             <div className="flex gap-2 shrink-0">
-                                                <button 
+                                                <button
                                                     onClick={() => handleVerifyField('backgroundCheck.status', 'CLEARED')}
                                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.backgroundCheck?.status === 'CLEARED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Clear
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => handleVerifyField('backgroundCheck.status', 'FAILED')}
                                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.backgroundCheck?.status === 'FAILED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
@@ -643,8 +811,8 @@ const DriverDetail = () => {
                         </div>
                     )}
 
-                    {/* Credit Check Entry Panel (VERIFICATION Stage) */}
-                    {driver.status === 'VERIFICATION' && (
+                    {/* Credit Check Entry Panel (VERIFICATION or CREDIT CHECK Stage) */}
+                    {(driver.status === 'VERIFICATION' || driver.status === 'CREDIT CHECK') && (
                         <div className="p-6 rounded-2xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.1)', color: 'var(--text-main)' }}>
@@ -652,19 +820,16 @@ const DriverDetail = () => {
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Experian Credit Check Result</h2>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <label className="text-xs font-bold uppercase tracking-wider opacity-50 block">Experian Score (300-850)</label>
-                                    <input 
-                                        type="number" 
-                                        value={creditScore || ''} 
-                                        onChange={(e) => setCreditScore(parseInt(e.target.value) || 0)}
-                                        className="w-full bg-black/5 border p-3 rounded-xl font-bold outline-none focus:border-brand-lime transition-all"
-                                        style={{ borderColor: 'var(--border-main)' }}
-                                        placeholder="Enter score..."
-                                    />
-                                    
+                                    <div className="p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Experian Score</p>
+                                        <p className="text-2xl font-black" style={{ color: driver.creditCheck?.score ? 'var(--text-main)' : 'var(--text-dim)' }}>
+                                            {driver.creditCheck?.score || 'PENDING'}
+                                        </p>
+                                    </div>
+
                                     <div className="grid grid-cols-1 gap-3 pt-2">
                                         <label className="flex items-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all w-fit">
                                             <Upload size={12} className={uploading === 'consentForm' ? 'animate-bounce' : ''} />
@@ -672,30 +837,23 @@ const DriverDetail = () => {
                                             <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'consentForm')} />
                                         </label>
 
-                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100">
-                                            <input 
-                                                type="checkbox" 
-                                                id="fraudAlert" 
-                                                checked={fraudAlert} 
-                                                onChange={(e) => setFraudAlert(e.target.checked)}
-                                                className="w-4 h-4 accent-red-600"
-                                            />
-                                            <label htmlFor="fraudAlert" className="text-[10px] font-bold text-red-600 cursor-pointer">Flag as Potential Fraud Alert</label>
-                                        </div>
+                                        {driver.creditCheck?.fraudAlert && (
+                                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 italic">
+                                                <AlertCircle size={14} className="text-red-600" />
+                                                <span className="text-[10px] font-bold text-red-600">FRAUD ALERT DETECTED</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex flex-col justify-center p-6 rounded-2xl border bg-brand-lime/5 border-brand-lime/20">
                                     <p className="text-xs font-bold uppercase tracking-widest text-brand-lime mb-2">Policy Outcome</p>
-                                    {creditScore ? (
+                                    {driver.creditCheck?.decision ? (
                                         <>
-                                            <p className="text-2xl font-black">
-                                                {creditScore >= 650 ? 'AUTO APPROVED' : 
-                                                 creditScore >= 500 ? 'MANUAL REVIEW' : 'DECLINED'}
-                                            </p>
+                                            <p className="text-2xl font-black">{driver.creditCheck.decision.replace(/_/g, ' ')}</p>
                                             <p className="text-xs opacity-60 mt-2">Based on system score brackets</p>
                                         </>
                                     ) : (
-                                        <p className="font-bold opacity-40 italic">Waiting for score input...</p>
+                                        <p className="font-bold opacity-40 italic">Waiting for system assessment...</p>
                                     )}
                                 </div>
                             </div>
@@ -707,15 +865,15 @@ const DriverDetail = () => {
                         <div className="p-6 rounded-2xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: 'var(--brand-danger)' }}>
-                                    <AlertTriangle size={20} />
+                                    <AlertCircle size={20} />
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Manager Evaluation</h2>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <label className="text-xs font-bold uppercase tracking-wider opacity-50 block">Review / Rejection Notes</label>
-                                <textarea 
-                                    value={reviewNotes} 
+                                <textarea
+                                    value={reviewNotes}
                                     onChange={(e) => setReviewNotes(e.target.value)}
                                     className="w-full bg-black/5 border p-4 rounded-2xl font-medium outline-none focus:border-brand-lime transition-all min-h-[120px]"
                                     style={{ borderColor: 'var(--border-main)' }}
@@ -723,7 +881,7 @@ const DriverDetail = () => {
                                 />
                                 {driver.status === 'MANAGER REVIEW' && (
                                     <div className="flex items-center gap-4">
-                                        <select 
+                                        <select
                                             value={rejectionReason}
                                             onChange={(e) => setRejectionReason(e.target.value)}
                                             className="bg-black/5 border p-2 rounded-lg text-xs font-bold outline-none"
@@ -756,23 +914,23 @@ const DriverDetail = () => {
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Final Activation Checklist</h2>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3 p-4 rounded-2xl border bg-black/5 transition-all" style={{ borderColor: activationChecks.credentialsSent ? 'var(--brand-lime)' : 'var(--border-main)' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        id="credSent" 
-                                        checked={activationChecks.credentialsSent} 
+                                    <input
+                                        type="checkbox"
+                                        id="credSent"
+                                        checked={activationChecks.credentialsSent}
                                         onChange={(e) => setActivationChecks(prev => ({ ...prev, credentialsSent: e.target.checked }))}
                                         className="w-5 h-5 accent-brand-lime"
                                     />
                                     <label htmlFor="credSent" className="font-bold cursor-pointer">Login Credentials Sent to Driver</label>
                                 </div>
                                 <div className="flex items-center gap-3 p-4 rounded-2xl border bg-black/5 transition-all" style={{ borderColor: activationChecks.gpsMonitoringActive ? 'var(--brand-lime)' : 'var(--border-main)' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        id="gpsActive" 
-                                        checked={activationChecks.gpsMonitoringActive} 
+                                    <input
+                                        type="checkbox"
+                                        id="gpsActive"
+                                        checked={activationChecks.gpsMonitoringActive}
                                         onChange={(e) => setActivationChecks(prev => ({ ...prev, gpsMonitoringActive: e.target.checked }))}
                                         className="w-5 h-5 accent-brand-lime"
                                     />

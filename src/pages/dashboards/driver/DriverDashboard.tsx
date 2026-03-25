@@ -43,7 +43,7 @@ const DriverDashboard = () => {
     }, [user?.id]);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="container-responsive space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header */}
             <div>
                 <h1 className="text-4xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>

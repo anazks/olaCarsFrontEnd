@@ -43,13 +43,13 @@ const CreatePurchaseOrder = () => {
             }
 
             // 2. Conditional API calls
-            const suppliersData = await getAllSuppliers();
-            setSuppliers(suppliersData);
+            const suppliersRes = await getAllSuppliers();
+            setSuppliers(suppliersRes.data || []);
 
             // Only fetch branches if user is Country Manager (Level 3) or higher
             if (currentLevel >= 3) {
-                const branchesData = await getAllBranches();
-                setBranches(branchesData);
+                const branchesRes = await getAllBranches();
+                setBranches(branchesRes.data || []);
             }
         } catch (err) {
             console.error('Failed to fetch initial data:', err);

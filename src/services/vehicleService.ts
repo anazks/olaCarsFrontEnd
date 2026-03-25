@@ -308,6 +308,27 @@ export const createVehicle = async (payload: CreateVehiclePayload): Promise<Vehi
 
 // POST upload documents (multipart/form-data)
 export const uploadVehicleDocuments = async (id: string, formData: FormData): Promise<Record<string, string | string[]>> => {
+    console.group('--- API Call [START]: uploadVehicleDocuments ---');
+    console.log('Vehicle ID:', id);
+    console.log('API URL:', `/api/vehicle/${id}/upload-documents`);
+    
+    // Log each part of the FormData
+    const formDataEntries: Record<string, any> = {};
+    formData.forEach((value, key) => {
+        if (value instanceof File) {
+            formDataEntries[key] = {
+                name: value.name,
+                size: `${(value.size / 1024).toFixed(2)} KB`,
+                type: value.type
+            };
+        } else {
+            formDataEntries[key] = value;
+        }
+    });
+    console.table(formDataEntries);
+    console.groupEnd();
+
+    // Must explicitly set Content-Type to override the base api default of 'application/json'
     const response = await api.post(`/api/vehicle/${id}/upload-documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });

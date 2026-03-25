@@ -97,7 +97,7 @@ const EditAgreement = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('..')}
-                        className="p-3 rounded-2xl border hover:bg-white/5 text-dim transition-all"
+                        className="p-3 rounded-2xl border hover:bg-black/5 dark:hover:bg-white/5 text-dim transition-all"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
                         <ArrowLeft size={24} />
@@ -116,7 +116,7 @@ const EditAgreement = () => {
                     <button
                         type="button"
                         onClick={() => navigate('..')}
-                        className="flex-1 md:flex-none px-6 py-3 rounded-2xl font-bold border transition-all hover:bg-white/5"
+                        className="flex-1 md:flex-none px-6 py-3 rounded-2xl font-bold border transition-all hover:bg-black/5 dark:hover:bg-white/5"
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
                         Cancel
@@ -188,6 +188,9 @@ const EditAgreement = () => {
                                 <option value="TERMS_AND_CONDITIONS">Terms & Conditions</option>
                                 <option value="PRIVACY_POLICY">Privacy Policy</option>
                                 <option value="RETURN_POLICY">Return Policy</option>
+                                <option value="DRIVER_AGREEMENT">Driver Agreement</option>
+                                <option value="LEGAL_AGREEMENT">Legal Agreement</option>
+                                <option value="VEHICLE_ASSIGNMENT_AGREEMENT">Vehicle Assignment Agreement</option>
                                 <option value="OTHER">Other</option>
                             </select>
                         </div>
@@ -205,7 +208,7 @@ const EditAgreement = () => {
                                                 ? (s === 'PUBLISHED' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 
                                                    s === 'DRAFT' ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500' :
                                                    'bg-red-500/20 border-red-500/50 text-red-500')
-                                                : 'border-white/5 text-dim hover:bg-white/5'
+                                                : 'border-white/10 dark:border-white/5 text-dim hover:bg-black/5 dark:hover:bg-white/5'
                                         }`}
                                     >
                                         {s}
@@ -219,7 +222,7 @@ const EditAgreement = () => {
                 {/* Middle Section: Available Tags */}
                 <div className="rounded-3xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 text-blue-400 uppercase text-[10px] font-black tracking-widest">
+                        <div className="flex items-center gap-2 text-blue-500 dark:text-blue-400 uppercase text-[10px] font-black tracking-widest">
                             <Hash size={14} /> Available Tags
                         </div>
                         <p className="text-[10px] text-dim italic">
@@ -228,13 +231,13 @@ const EditAgreement = () => {
                     </div>
 
                     {/* Sticky Category Grid */}
-                    <div className="sticky top-0 z-40 bg-[#1c1c1c]/90 backdrop-blur-xl -mx-6 px-6 pt-0 pb-4 border-b border-white/5 transition-all">
+                    <div className="sticky top-0 z-40 backdrop-blur-xl -mx-6 px-6 pt-0 pb-4 border-b transition-all" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {[
-                                { id: 'driver', label: 'Driver Details', icon: User, color: 'text-blue-400', bg: 'bg-blue-400/10', pattern: 'DRIVER_' },
-                                { id: 'vehicle', label: 'Vehicle Details', icon: Car, color: 'text-purple-400', bg: 'bg-purple-400/10', pattern: 'VEHICLE_' },
-                                { id: 'lease', label: 'Lease & Rent', icon: ShieldCheck, color: 'text-brand-lime', bg: 'bg-brand-lime/10', pattern: 'LEASE_' },
-                                { id: 'general', label: 'General Info', icon: Globe, color: 'text-gray-400', bg: 'bg-white/5', pattern: null }
+                                { id: 'driver', label: 'Driver Details', icon: User, color: 'text-blue-500 dark:text-blue-400', bg: 'bg-blue-500/10 dark:bg-blue-400/10', pattern: 'DRIVER_' },
+                                { id: 'vehicle', label: 'Vehicle Details', icon: Car, color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-500/10 dark:bg-purple-400/10', pattern: 'VEHICLE_' },
+                                { id: 'lease', label: 'Lease & Rent', icon: ShieldCheck, color: 'text-green-600 dark:text-brand-lime', bg: 'bg-green-500/10 dark:bg-brand-lime/10', pattern: 'LEASE_' },
+                                { id: 'general', label: 'General Info', icon: Globe, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-black/5 dark:bg-white/5', pattern: null }
                             ].map((cat) => {
                                 const matchedTags = (Array.isArray(placeholders) ? placeholders : []).filter(t => 
                                     cat.pattern ? t.startsWith(cat.pattern) : (
@@ -249,7 +252,7 @@ const EditAgreement = () => {
                                 return (
                                     <div key={cat.id} className="relative">
                                         <div className="space-y-2">
-                                            <div className={`p-4 rounded-xl flex items-center justify-between cursor-pointer transition-all border ${cat.bg} border-white/5 hover:border-white/20`}
+                                            <div className={`p-4 rounded-xl flex items-center justify-between cursor-pointer transition-all border ${cat.bg} border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20`}
                                                  onClick={() => setExpandedCategory(expandedCategory === cat.id ? null : cat.id)}
                                             >
                                                 <div className="flex items-center gap-3">
@@ -261,10 +264,10 @@ const EditAgreement = () => {
                                             
                                             {/* Dropdown Content */}
                                             {expandedCategory === cat.id && (
-                                                <div className="absolute left-0 right-0 top-full mt-2 p-4 rounded-2xl border bg-[#111] shadow-2xl z-[100] grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-200" style={{ borderColor: 'var(--border-main)' }}>
+                                                <div className="absolute left-0 right-0 top-full mt-2 p-4 rounded-2xl border shadow-2xl z-[100] grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-dim">Select Tag</span>
-                                                        <button onClick={() => setExpandedCategory(null)} className="text-dim hover:text-white">
+                                                        <button onClick={() => setExpandedCategory(null)} className="text-dim hover:text-main" style={{ color: 'var(--text-dim)', transition: 'color 0.2s' }}>
                                                             <Hash size={12} />
                                                         </button>
                                                     </div>
@@ -278,10 +281,11 @@ const EditAgreement = () => {
                                                                     toast.success(`Copied {{${tag}}}`);
                                                                     setExpandedCategory(null);
                                                                 }}
-                                                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border bg-white/5 border-white/5 hover:border-brand-lime/50 text-left transition-all group/tag"
+                                                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all group/tag"
+                                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                                                             >
-                                                                <span className="text-[11px] font-mono text-white/80 group-hover/tag:text-brand-lime transition-colors">{"{{" + tag + "}}"}</span>
-                                                                <div className="p-1 rounded bg-white/5 opacity-0 group-hover/tag:opacity-100 transition-opacity">
+                                                                <span className="text-[11px] font-mono transition-colors group-hover/tag:text-brand-lime" style={{ color: 'var(--text-main)', opacity: 0.8 }}>{"{{" + tag + "}}"}</span>
+                                                                <div className="p-1 rounded opacity-0 group-hover/tag:opacity-100 transition-opacity" style={{ background: 'var(--bg-input)' }}>
                                                                     <FileText size={10} className="text-brand-lime" />
                                                                 </div>
                                                             </button>
@@ -296,6 +300,7 @@ const EditAgreement = () => {
                         </div>
                     </div>
                 </div>
+
 
                 {/* Bottom Section: Document Content (Full Width) */}
                 <div className="rounded-3xl border p-1 min-h-[700px] flex flex-col" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>

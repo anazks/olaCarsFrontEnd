@@ -45,9 +45,9 @@ export interface UpdateAgreementData {
 }
 
 const agreementService = {
-  getAgreements: async (country?: string): Promise<Agreement[]> => {
+  getAgreements: async (filters: { country?: string; type?: string } = {}): Promise<Agreement[]> => {
     const response = await api.get('/api/agreements', {
-      params: { country },
+      params: filters,
     });
     return response.data.data;
   },

@@ -190,11 +190,22 @@ const VehicleDetail = () => {
 
     // ── Actions ────────────────────────────────────────────────────────────
     const handleProgress = async (targetStatus: VehicleStatus, updateData?: Record<string, any>) => {
-        if (!id) return;
+        console.log(`[ACTION] handleProgress: Initiated for "${targetStatus}"`);
+        if (!id) { console.error('handleProgress failed: ID is missing'); return; }
         setActionLoading(true); setActionError(null); setActionSuccess(null);
         try {
+            // Check if there are pending uploads and we are submitting for review
+            if (targetStatus === 'DOCUMENTS REVIEW' && Object.keys(uploadFiles).length > 0) {
+                console.log('Pending documents found. Uploading before progress...');
+                await handleUpload();
+            }
             const payload: any = { targetStatus, notes: notes || undefined };
             if (updateData) payload.updateData = updateData;
+            
+            console.log('--- Status Progress Payload ---');
+            console.log('Vehicle ID:', id);
+            console.log('Payload:', payload);
+
             const updatedVehicle = await progressVehicle(id, payload);
 
             // Handle Inspection logic specifically
@@ -220,7 +231,8 @@ const VehicleDetail = () => {
     };
 
     const handleUpload = async () => {
-        if (!id) return;
+        console.log('[ACTION] handleUpload: Initiated');
+        if (!id) { console.error('handleUpload failed: ID is missing'); return; }
         const fd = new FormData();
         let hasFiles = false;
         Object.entries(uploadFiles).forEach(([key, val]) => {
@@ -228,9 +240,29 @@ const VehicleDetail = () => {
             else if (val) { fd.append(key, val); hasFiles = true; }
         });
         if (!hasFiles) { setActionError('Please select at least one file'); return; }
+        
+        console.group('--- Document Upload: Preparing Payload ---');
+        console.log('Vehicle ID:', id);
+        for (const [key, val] of Object.entries(uploadFiles)) {
+            if (Array.isArray(val)) {
+                console.log(`Field [${key}]: ${val.length} files`, val.map(f => (f as File).name));
+            } else if (val) {
+                console.log(`Field [${key}]: 1 file`, (val as File).name);
+            }
+        }
+        console.groupEnd();
+
         setUploadLoading(true); setActionError(null);
         try {
+            console.log('--- EXECUTING API CALL: uploadVehicleDocuments ---');
+            console.log('Vehicle ID:', id);
+            // Verify fd contents one last time
+            for (let [key, value] of (fd as any).entries()) {
+                console.log(`FormData Entry -> ${key}:`, value instanceof File ? value.name : value);
+            }
+            
             await uploadVehicleDocuments(id, fd);
+            console.log('--- API CALL SUCCESS: uploadVehicleDocuments ---');
             setActionSuccess('Documents uploaded successfully!');
             setUploadFiles({});
             await fetchVehicle();
@@ -259,7 +291,7 @@ const VehicleDetail = () => {
     const currentIdx = PIPELINE.indexOf(vehicle.status);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="container-responsive space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -282,18 +314,18 @@ const VehicleDetail = () => {
             {!(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Zap size={16} />} title="Onboarding Pipeline" />
-                    <div className="flex items-center gap-1 overflow-x-auto pb-2">
+                    <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">
                         {PIPELINE.map((st, i) => {
                             const done = currentIdx >= 0 && i <= currentIdx;
                             const active = vehicle.status === st;
                             return (
-                                <div key={st} className="flex items-center gap-1 min-w-0">
+                                <div key={st} className={`flex items-center gap-1 ${i < PIPELINE.length - 1 ? 'flex-1' : ''}`}>
                                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
                                         style={{ background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)', color: done ? '#C8E600' : 'var(--text-dim)' }}>
                                         {done && i < currentIdx ? <CheckCircle size={12} /> : null}
                                         {st.replace('ACTIVE — ', '')}
                                     </div>
-                                    {i < PIPELINE.length - 1 && <div className="w-4 h-px flex-shrink-0" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
+                                    {i < PIPELINE.length - 1 && <div className="flex-1 h-px min-w-[20px]" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
                                 </div>
                             );
                         })}
@@ -302,8 +334,8 @@ const VehicleDetail = () => {
             )}
 
             {/* Vehicle Details & Purchase Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className={`${cardClass} lg:col-span-2`} style={cardStyle}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
+                <div className={`${cardClass} lg:col-span-2 3xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
                     <SectionHeader icon={<Car size={16} />} title="Vehicle Overview" />
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                         <InfoRow label="Make" value={vehicle.basicDetails.make} />
@@ -340,7 +372,7 @@ const VehicleDetail = () => {
 
             {/* Comprehensive Details for Onboarded Vehicles */}
             {(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                     {/* Legal Documents */}
                     <div className={cardClass} style={cardStyle}>
                         <SectionHeader icon={<Shield size={16} />} title="Legal Documents" />
@@ -516,13 +548,27 @@ const VehicleDetail = () => {
                         <div className={cardClass} style={cardStyle}>
                             <SectionHeader icon={<Upload size={16} />} title="Step 2: Upload Documents" />
                             <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Upload all required documents before submitting for review.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
                                 {DOC_FIELDS.map(df => (
                                     <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                                         <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{df.label}</span>
                                         <div className="flex items-center gap-2">
                                             {(uploadFiles[df.key] as File)?.name && <span className="text-[10px] text-green-500 truncate max-w-[100px]">{(uploadFiles[df.key] as File).name}</span>}
-                                            <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden" onChange={e => { if (e.target.files?.[0]) setUploadFiles(prev => ({ ...prev, [df.key]: e.target.files![0] })); }} />
+                                            <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden" 
+                                                onChange={e => { 
+                                                    if (e.target.files?.[0]) {
+                                                        const file = e.target.files[0];
+                                                        setUploadFiles(prev => {
+                                                            const next = { ...prev, [df.key]: file };
+                                                            // TEST AUTO-FILL: Fill all empty doc fields with this file
+                                                            DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = file; });
+                                                            if (!next.exteriorPhotos) next.exteriorPhotos = [file];
+                                                            if (!next.interiorPhotos) next.interiorPhotos = [file];
+                                                            return next;
+                                                        });
+                                                    } 
+                                                }} 
+                                            />
                                             <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                 Choose
                                             </button>
@@ -536,7 +582,20 @@ const VehicleDetail = () => {
                                         <div className="flex items-center gap-2">
                                             {Array.isArray(uploadFiles[key]) && <span className="text-[10px] text-green-500">{(uploadFiles[key] as File[]).length} files</span>}
                                             <input type="file" multiple ref={key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef} className="hidden"
-                                                onChange={e => { if (e.target.files) setUploadFiles(prev => ({ ...prev, [key]: Array.from(e.target.files!) })); }} />
+                                                onChange={e => { 
+                                                    if (e.target.files) {
+                                                        const files = Array.from(e.target.files!);
+                                                        setUploadFiles(prev => {
+                                                            const next = { ...prev, [key]: files };
+                                                            // TEST AUTO-FILL: Fill empty doc fields with the first file from photos
+                                                            DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = files[0]; });
+                                                            if (key === 'exteriorPhotos' && !next.interiorPhotos) next.interiorPhotos = files;
+                                                            if (key === 'interiorPhotos' && !next.exteriorPhotos) next.exteriorPhotos = files;
+                                                            return next;
+                                                        });
+                                                    } 
+                                                }} 
+                                            />
                                             <button type="button" onClick={() => (key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef).current?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                 Choose
                                             </button>
@@ -544,10 +603,30 @@ const VehicleDetail = () => {
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex flex-wrap gap-3">
                                 <button onClick={handleUpload} disabled={uploadLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
                                     {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} /> Upload All</>}
                                 </button>
+                                
+                                {/* TEST BUTTON: Auto-fill all fields with the first selected file */}
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        const firstVal = Object.values(uploadFiles).find(v => v && (v instanceof File || (Array.isArray(v) && v.length > 0)));
+                                        if (!firstVal) { alert('Please select at least one file first.'); return; }
+                                        const fileToUse = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+                                        const autoFilled: any = {};
+                                        DOC_FIELDS.forEach(df => autoFilled[df.key] = fileToUse);
+                                        autoFilled.exteriorPhotos = [fileToUse, fileToUse];
+                                        autoFilled.interiorPhotos = [fileToUse, fileToUse];
+                                        setUploadFiles(autoFilled);
+                                        console.log('TEST: Auto-filled all fields with:', (fileToUse as File).name);
+                                    }}
+                                    className="px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer border border-dashed border-lime/30 text-lime bg-lime/5 hover:bg-lime/10"
+                                >
+                                    Test: Fill All Fields
+                                </button>
+
                                 <button onClick={() => setVehicle(p => p ? ({ ...p, basicDetails: { ...p.basicDetails, vin: '' } } as any) : null)} className="px-6 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer" style={{ color: 'var(--text-dim)', background: 'transparent' }}>
                                     Back to Specs
                                 </button>
@@ -566,6 +645,98 @@ const VehicleDetail = () => {
                     )}
                 </div>
             )}
+
+            {/* DOCUMENTS REVIEW */}
+            {vehicle.status === 'DOCUMENTS REVIEW' && (() => {
+                const S3_BASE = import.meta.env.VITE_S3_BASE_URL || '';
+                const toFullUrl = (path?: string) => path ? (path.startsWith('http') ? path : `${S3_BASE}/${path}`) : undefined;
+                return (
+                <div className={cardClass} style={cardStyle}>
+                    <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review the uploaded documents for accuracy and completeness.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-4 mt-4">
+                        {DOC_FIELDS.map(df => {
+                            const rawUrl = df.key === 'purchaseReceipt' 
+                                ? vehicle.purchaseDetails?.purchaseReceipt 
+                                : df.key === 'odometerPhoto' 
+                                    ? vehicle.inspection?.odometerPhoto 
+                                    : df.key === 'customsClearanceCertificate' || df.key === 'importPermit'
+                                        ? (vehicle.importationDetails as any)?.[df.key]
+                                        : (vehicle.legalDocs as any)?.[df.key];
+                            const docUrl = toFullUrl(rawUrl);
+
+                            return (
+                                <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
+                                        {docUrl ? (
+                                            <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
+                                                <FileText size={10} /> View Document
+                                            </a>
+                                        ) : (
+                                            <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                <XCircle size={10} /> Not Uploaded
+                                            </span>
+                                        )}
+                                    </div>
+                                    {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
+                                </div>
+                            );
+                        })}
+                        {/* Photos Review */}
+                        {['exteriorPhotos', 'interiorPhotos'].map(key => {
+                            const photos: string[] = ((vehicle.inspection as any)?.[key] || []).map((p: string) => toFullUrl(p) || p);
+                            return (
+                                <div key={key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{key === 'exteriorPhotos' ? 'Exterior Photos' : 'Interior Photos'}</span>
+                                        {photos.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {photos.map((p: string, idx: number) => (
+                                                    <a key={idx} href={p} target="_blank" rel="noopener noreferrer" className="text-[9px] px-1.5 py-0.5 rounded bg-lime/10 text-lime font-bold hover:bg-lime/20">
+                                                        #{idx + 1}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                <XCircle size={10} /> No Photos
+                                            </span>
+                                        )}
+                                    </div>
+                                    {photos.length > 0 && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        {canApprove ? (
+                            <>
+                                <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                                <div className="flex gap-3">
+                                    <button onClick={() => handleProgress('INSURANCE VERIFICATION')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Approve & Proceed to Insurance</>}
+                                    </button>
+                                    <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                        {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                                <Clock size={20} />
+                                <div className="text-sm">
+                                    <p className="font-bold">Awaiting Manager Review</p>
+                                    <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                );
+            })()}
 
             {/* INSURANCE VERIFICATION */}
             {vehicle.status === 'INSURANCE VERIFICATION' && (
@@ -617,7 +788,7 @@ const VehicleDetail = () => {
                         </div>
 
                         {importation.isImported && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
                                 {[
                                     { k: 'countryOfOrigin', l: 'Country of Origin' }, { k: 'shippingReference', l: 'Shipping Reference' },
                                     { k: 'portOfEntry', l: 'Port of Entry' }, { k: 'customsDeclarationNumber', l: 'Customs Declaration #' },
@@ -723,7 +894,7 @@ const VehicleDetail = () => {
             {vehicle.status === 'ACCOUNTING SETUP' && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Calculator size={16} />} title="Accounting Setup" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Depreciation Method</label>
                             <select value={accounting.depreciationMethod} onChange={e => setAccounting(p => ({ ...p, depreciationMethod: e.target.value }))} className={inputClass} style={inputStyle}>
@@ -749,7 +920,7 @@ const VehicleDetail = () => {
             {vehicle.status === 'GPS ACTIVATION' && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Satellite size={16} />} title="GPS Configuration" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
                         <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Geofence Zone</label>
                             <input type="text" placeholder="e.g. Accra Metro" value={gps.geofenceZone} onChange={e => setGps(p => ({ ...p, geofenceZone: e.target.value }))} className={inputClass} style={inputStyle} /></div>
                         <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Speed Limit (km/h)</label>

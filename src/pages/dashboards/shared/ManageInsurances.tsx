@@ -156,7 +156,7 @@ const ManageInsurances = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="container-responsive space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>

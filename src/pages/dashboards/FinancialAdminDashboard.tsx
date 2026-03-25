@@ -6,7 +6,7 @@ const FinancialAdminDashboard = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="container-responsive space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{t('dashboards.financial.title')}</h1>
