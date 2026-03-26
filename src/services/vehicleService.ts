@@ -5,7 +5,6 @@ import api from './api';
 export type VehicleStatus =
     | 'PENDING ENTRY'
     | 'DOCUMENTS REVIEW'
-    | 'INSURANCE VERIFICATION'
     | 'INSPECTION REQUIRED'
     | 'INSPECTION FAILED'
     | 'REPAIR IN PROGRESS'
@@ -99,6 +98,14 @@ export interface InsurancePolicy {
     claimsHistory?: string;
 }
 
+export interface InsuranceDetails {
+    plan?: string;
+    insuranceNumber?: string;
+    fromDate?: string;
+    toDate?: string;
+    certificate?: string;
+}
+
 export interface ImportationDetails {
     isImported?: boolean;
     countryOfOrigin?: string;
@@ -185,6 +192,7 @@ export interface Vehicle {
     basicDetails: BasicDetails;
     legalDocs?: LegalDocs;
     insurancePolicy?: InsurancePolicy;
+    insuranceDetails?: InsuranceDetails;
     importationDetails?: ImportationDetails;
     inspection?: Inspection;
     accountingSetup?: AccountingSetup;
@@ -230,7 +238,7 @@ export interface CreateVehiclePayload {
         odometer?: number;
         gpsSerialNumber?: string;
     };
-    insuranceId: string;
+    insuranceId?: string;
 }
 
 export interface ProgressVehiclePayload {

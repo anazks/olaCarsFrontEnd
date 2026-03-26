@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
@@ -11,13 +12,12 @@ import { getUserRole } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
 import type { Insurance } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
-import { ChevronRight } from 'lucide-react';
+import InsuranceManagementModal from './InsuranceManagementModal';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'PENDING ENTRY': { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
     'DOCUMENTS REVIEW': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' },
-    'INSURANCE VERIFICATION': { bg: 'rgba(139,92,246,0.1)', text: '#8b5cf6', border: 'rgba(139,92,246,0.3)' },
     'INSPECTION REQUIRED': { bg: 'rgba(236,72,153,0.1)', text: '#ec4899', border: 'rgba(236,72,153,0.3)' },
     'INSPECTION FAILED': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' },
     'REPAIR IN PROGRESS': { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: 'rgba(249,115,22,0.3)' },
@@ -34,7 +34,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }
 };
 
 const PIPELINE: VehicleStatus[] = [
-    'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSURANCE VERIFICATION', 'INSPECTION REQUIRED',
+    'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSPECTION REQUIRED',
     'ACCOUNTING SETUP', 'GPS ACTIVATION', 'BRANCH MANAGER APPROVAL', 'ACTIVE — AVAILABLE',
 ];
 
@@ -86,6 +86,7 @@ const InfoRow = ({ label, value }: { label: string; value?: string | number | nu
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const VehicleDetail = () => {
+    const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -95,8 +96,17 @@ const VehicleDetail = () => {
     const [actionError, setActionError] = useState<string | null>(null);
     const [actionSuccess, setActionSuccess] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
+    const [isInsuranceManagerOpen, setIsInsuranceManagerOpen] = useState(false);
     const userRole = getUserRole();
     const canApprove = userRole === 'branchmanager' || userRole === 'countrymanager';
+
+    const S3_BASE = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
+    const toFullUrl = (path?: string) => {
+        if (!path) return undefined;
+        if (path.startsWith('http')) return path;
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+        return `${S3_BASE}/${cleanPath}`;
+    };
 
     // Vehicle Spec form state (for PENDING ENTRY)
     const [specData, setSpecData] = useState({
@@ -176,6 +186,28 @@ const VehicleDetail = () => {
                     gpsSerialNumber: data.basicDetails.gpsSerialNumber || '',
                 });
             }
+
+            // Sync insurance details if they exist
+            if (data.insuranceDetails) {
+                setInsurance({
+                    insuranceId: data.insuranceDetails.plan || '',
+                    insuranceNumber: data.insuranceDetails.insuranceNumber || '',
+                    fromDate: data.insuranceDetails.fromDate || '',
+                    toDate: data.insuranceDetails.toDate || '',
+                });
+            } else if (data.insurancePolicy) {
+                // Fallback for transition period
+                setInsurance({
+                    insuranceId: '', // We don't have the plan ID yet
+                    insuranceNumber: data.insurancePolicy.policyNumber || '',
+                    fromDate: data.insurancePolicy.startDate || '',
+                    toDate: data.insurancePolicy.expiryDate || '',
+                });
+            }
+            // Sync inspection checklist if it exists
+            if (data.inspection?.checklistItems && data.inspection.checklistItems.length > 0) {
+                setChecklist(data.inspection.checklistItems);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load vehicle');
         } finally {
@@ -187,6 +219,10 @@ const VehicleDetail = () => {
         fetchVehicle(); 
         fetchEligibleInsurances();
     }, [fetchVehicle, fetchEligibleInsurances]);
+
+    const getStatusTranslation = (status: string) => {
+        return t(`management.vehicles.statusLabels.${status}`, status);
+    };
 
     // ── Actions ────────────────────────────────────────────────────────────
     const handleProgress = async (targetStatus: VehicleStatus, updateData?: Record<string, any>) => {
@@ -261,13 +297,15 @@ const VehicleDetail = () => {
                 console.log(`FormData Entry -> ${key}:`, value instanceof File ? value.name : value);
             }
             
-            await uploadVehicleDocuments(id, fd);
-            console.log('--- API CALL SUCCESS: uploadVehicleDocuments ---');
+            const uploadedDocs = await uploadVehicleDocuments(id, fd);
+            console.log('--- API CALL SUCCESS: uploadVehicleDocuments ---', uploadedDocs);
             setActionSuccess('Documents uploaded successfully!');
             setUploadFiles({});
             await fetchVehicle();
+            return uploadedDocs;
         } catch (err: any) {
             setActionError(err.response?.data?.message || 'Upload failed');
+            return null;
         } finally {
             setUploadLoading(false);
         }
@@ -282,8 +320,10 @@ const VehicleDetail = () => {
     if (error || !vehicle) return (
         <div className="max-w-4xl mx-auto py-20 text-center space-y-4">
             <AlertTriangle size={48} className="mx-auto text-red-500 opacity-60" />
-            <p className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>{error || 'Vehicle not found'}</p>
-            <button onClick={() => navigate('..')} className="px-6 py-2 rounded-xl text-sm font-medium cursor-pointer" style={{ background: '#C8E600', color: '#0A0A0A' }}>Back to List</button>
+            <p className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>{error || t('management.vehicles.empty.noVehicles')}</p>
+            <button onClick={() => navigate('..')} className="px-6 py-2 rounded-xl text-sm font-medium cursor-pointer" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                {t('management.vehicles.vehicleDetail.actions.backToList')}
+            </button>
         </div>
     );
 
@@ -302,18 +342,18 @@ const VehicleDetail = () => {
                         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
                             {vehicle.basicDetails.make} {vehicle.basicDetails.model} {vehicle.basicDetails.year}
                         </h1>
-                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>VIN: {vehicle.basicDetails.vin}</p>
+                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails.vin}</p>
                     </div>
                 </div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border" style={{ background: s.bg, color: s.text, borderColor: s.border }}>
-                    {vehicle.status}
+                    {getStatusTranslation(vehicle.status)}
                 </div>
             </div>
 
             {/* Pipeline Progress - Only show if NOT active/rented */}
             {!(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Zap size={16} />} title="Onboarding Pipeline" />
+                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.onboardingPipeline')} />
                     <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">
                         {PIPELINE.map((st, i) => {
                             const done = currentIdx >= 0 && i <= currentIdx;
@@ -323,7 +363,7 @@ const VehicleDetail = () => {
                                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
                                         style={{ background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)', color: done ? '#C8E600' : 'var(--text-dim)' }}>
                                         {done && i < currentIdx ? <CheckCircle size={12} /> : null}
-                                        {st.replace('ACTIVE — ', '')}
+                                        {getStatusTranslation(st).replace('Active — ', '').replace('ACTIVE — ', '')}
                                     </div>
                                     {i < PIPELINE.length - 1 && <div className="flex-1 h-px min-w-[20px]" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
                                 </div>
@@ -336,35 +376,35 @@ const VehicleDetail = () => {
             {/* Vehicle Details & Purchase Info */}
             <div className="grid grid-cols-1 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                 <div className={`${cardClass} lg:col-span-2 3xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
-                    <SectionHeader icon={<Car size={16} />} title="Vehicle Overview" />
+                    <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.vehicleOverview')} />
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                        <InfoRow label="Make" value={vehicle.basicDetails.make} />
-                        <InfoRow label="Model" value={vehicle.basicDetails.model} />
-                        <InfoRow label="Year" value={vehicle.basicDetails.year} />
-                        <InfoRow label="VIN" value={vehicle.basicDetails.vin} />
-                        <InfoRow label="Category" value={vehicle.basicDetails.category} />
-                        <InfoRow label="Fuel" value={vehicle.basicDetails.fuelType} />
-                        <InfoRow label="Transmission" value={vehicle.basicDetails.transmission} />
-                        <InfoRow label="Colour" value={vehicle.basicDetails.colour} />
-                        <InfoRow label="Seats" value={vehicle.basicDetails.seats} />
-                        <InfoRow label="Body" value={vehicle.basicDetails.bodyType} />
-                        <InfoRow label="Engine #" value={vehicle.basicDetails.engineNumber} />
-                        <InfoRow label="Odometer" value={vehicle.basicDetails.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} km` : '0 km'} />
-                        <InfoRow label="GPS Serial" value={vehicle.basicDetails.gpsSerialNumber} />
-                        <InfoRow label="Monthly Rent" value={vehicle.basicDetails.monthlyRent ? `$${vehicle.basicDetails.monthlyRent.toLocaleString()}` : (vehicle.basicDetails as any)['monthlyRent '] ? `$${(vehicle.basicDetails as any)['monthlyRent '].toLocaleString()}` : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails.make} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails.model} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails.year} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vin')} value={vehicle.basicDetails.vin} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.category')} value={t(`management.vehicles.categories.${vehicle.basicDetails.category}`, vehicle.basicDetails.category)} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.fuel')} value={t(`management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}`, vehicle.basicDetails.fuelType)} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.transmission')} value={vehicle.basicDetails.transmission ? t(`management.vehicles.transmissions.${vehicle.basicDetails.transmission}`, vehicle.basicDetails.transmission) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.colour')} value={vehicle.basicDetails.colour} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails.seats} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails.engineNumber} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.gpsSerial')} value={vehicle.basicDetails.gpsSerialNumber} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.monthlyRent')} value={vehicle.basicDetails.monthlyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.monthlyRent.toLocaleString()}` : (vehicle.basicDetails as any)['monthlyRent '] ? `${t('common.currency.usd')}${(vehicle.basicDetails as any)['monthlyRent '].toLocaleString()}` : '—'} />
                     </div>
                 </div>
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<FileText size={16} />} title="Purchase Information" />
+                    <SectionHeader icon={<FileText size={16} />} title={t('management.vehicles.vehicleDetail.purchaseInformation')} />
                     <div className="space-y-4">
-                        <InfoRow label="Vendor / Supplier" value={vehicle.purchaseDetails.vendorName} />
-                        <InfoRow label="Purchase Date" value={vehicle.purchaseDetails.purchaseDate ? new Date(vehicle.purchaseDetails.purchaseDate).toLocaleDateString() : undefined} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vendor')} value={vehicle.purchaseDetails.vendorName} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.purchaseDate')} value={vehicle.purchaseDetails.purchaseDate ? new Date(vehicle.purchaseDetails.purchaseDate).toLocaleDateString() : undefined} />
                         <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label="Price" value={`${vehicle.purchaseDetails.currency} ${vehicle.purchaseDetails.purchasePrice.toLocaleString()}`} />
-                            <InfoRow label="Method" value={vehicle.purchaseDetails.paymentMethod} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.price')} value={`${vehicle.purchaseDetails.currency} ${vehicle.purchaseDetails.purchasePrice.toLocaleString()}`} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.method')} value={vehicle.purchaseDetails.paymentMethod} />
                         </div>
                         {vehicle.purchaseDetails.branch && typeof vehicle.purchaseDetails.branch !== 'string' && (
-                            <InfoRow label="Assigned Branch" value={vehicle.purchaseDetails.branch.name} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.assignedBranch')} value={vehicle.purchaseDetails.branch.name} />
                         )}
                     </div>
                 </div>
@@ -375,83 +415,116 @@ const VehicleDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                     {/* Legal Documents */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Shield size={16} />} title="Legal Documents" />
+                        <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.legalDocuments')} />
                         <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label="Reg Number" value={vehicle.legalDocs?.registrationNumber} />
-                            <InfoRow label="Reg Expiry" value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label="Road Tax Expiry" value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label="Roadworthiness" value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regNumber')} value={vehicle.legalDocs?.registrationNumber} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regExpiry')} value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadTaxExpiry')} value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadworthiness')} value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
                         </div>
                     </div>
 
                     {/* Insurance Policy */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Shield size={16} />} title="Insurance Policy" />
+                        <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.insurancePolicy')} />
                         <div className="space-y-4">
                             <div className="flex justify-between items-start">
-                                <InfoRow label="Provider" value={vehicle.insurancePolicy?.providerName} />
-                                <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>VAlID</div>
+                                <InfoRow 
+                                    label={t('management.vehicles.vehicleDetail.labels.provider')} 
+                                    value={(() => {
+                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                        return plan?.provider || (vehicle.insurancePolicy as any)?.providerName || '—';
+                                    })()} 
+                                />
+                                <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
+                                    {vehicle.insuranceDetails?.insuranceNumber ? t('management.vehicles.statusLabels.ACTIVE') : 'MISSING'}
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label="Policy #" value={vehicle.insurancePolicy?.policyNumber} />
-                                <InfoRow label="Type" value={vehicle.insurancePolicy?.insuranceType} />
-                                <InfoRow label="Premium" value={vehicle.insurancePolicy?.premiumAmount ? `$${vehicle.insurancePolicy.premiumAmount.toLocaleString()}` : '—'} />
-                                <InfoRow label="Expiry" value={vehicle.insurancePolicy?.expiryDate ? new Date(vehicle.insurancePolicy.expiryDate).toLocaleDateString() : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehicle.insuranceDetails?.insuranceNumber || '—'} />
+                                <InfoRow 
+                                    label={t('management.vehicles.vehicleDetail.labels.type')} 
+                                    value={(() => {
+                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                        return plan?.policyType || '—';
+                                    })()} 
+                                />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toLocaleDateString() : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toLocaleDateString() : '—'} />
                             </div>
+                            {vehicle.insuranceDetails?.certificate && (
+                                <a 
+                                    href={toFullUrl(vehicle.insuranceDetails.certificate)} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
+                                >
+                                    <FileText size={10} /> View Insurance Certificate
+                                </a>
+                            )}
+                            {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION') && (
+                                <button 
+                                    onClick={() => setIsInsuranceManagerOpen(true)}
+                                    className="mt-5 w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                >
+                                    {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
+                                </button>
+                            )}
                         </div>
                     </div>
 
                     {/* GPS Configuration */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Satellite size={16} />} title="GPS & Tracking" />
+                        <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsTracking')} />
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${vehicle.gpsConfiguration?.isActivated ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                <span className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-main)' }}>{vehicle.gpsConfiguration?.isActivated ? 'Active Configuration' : 'Disabled'}</span>
+                                <span className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-main)' }}>{vehicle.gpsConfiguration?.isActivated ? t('management.vehicles.vehicleDetail.gpsConfiguration') : t('management.common.status.disabled')}</span>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label="Geofence Zone" value={vehicle.gpsConfiguration?.geofenceZone || 'Global'} />
-                                <InfoRow label="Speed Limit" value={vehicle.gpsConfiguration?.speedLimitThreshold ? `${vehicle.gpsConfiguration.speedLimitThreshold} km/h` : '—'} />
-                                <InfoRow label="Idle Alert" value={vehicle.gpsConfiguration?.idleTimeAlertMins ? `${vehicle.gpsConfiguration.idleTimeAlertMins} mins` : '—'} />
-                                <InfoRow label="Sync Freq" value={vehicle.gpsConfiguration?.mileageSyncFrequencyHrs ? `${vehicle.gpsConfiguration.mileageSyncFrequencyHrs} hrs` : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.geofenceZone')} value={vehicle.gpsConfiguration?.geofenceZone || t('common.all')} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.speedLimit')} value={vehicle.gpsConfiguration?.speedLimitThreshold ? `${vehicle.gpsConfiguration.speedLimitThreshold} ${t('common.units.kmh')}` : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.idleAlert')} value={vehicle.gpsConfiguration?.idleTimeAlertMins ? `${vehicle.gpsConfiguration.idleTimeAlertMins} mins` : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.syncFreq')} value={vehicle.gpsConfiguration?.mileageSyncFrequencyHrs ? `${vehicle.gpsConfiguration.mileageSyncFrequencyHrs} ${t('common.units.hrs')}` : '—'} />
                             </div>
                         </div>
                     </div>
 
                     {/* Accounting Setup */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Calculator size={16} />} title="Accounting & Valuation" />
+                        <SectionHeader icon={<Calculator size={16} />} title={t('management.vehicles.vehicleDetail.accountingValuation')} />
                         <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label="Depreciation" value={vehicle.accountingSetup?.depreciationMethod} />
-                            <InfoRow label="Useful Life" value={vehicle.accountingSetup?.usefulLifeYears ? `${vehicle.accountingSetup.usefulLifeYears} Years` : '—'} />
-                            <InfoRow label="Residual Value" value={vehicle.accountingSetup?.residualValue ? `$${vehicle.accountingSetup.residualValue.toLocaleString()}` : '—'} />
-                            <InfoRow label="Setup Status" value={vehicle.accountingSetup?.isSetupComplete ? 'Complete' : 'Pending'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.depreciation')} value={vehicle.accountingSetup?.depreciationMethod} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.usefulLife')} value={vehicle.accountingSetup?.usefulLifeYears ? `${vehicle.accountingSetup.usefulLifeYears} years` : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.residualValue')} value={vehicle.accountingSetup?.residualValue ? `${t('common.currency.usd')}${vehicle.accountingSetup.residualValue.toLocaleString()}` : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.setupStatus')} value={vehicle.accountingSetup?.isSetupComplete ? t('management.common.status.enabled') : t('management.common.status.disabled')} />
                         </div>
                     </div>
 
                     {/* Inspection Summary */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<ClipboardCheck size={16} />} title="Last Inspection" />
+                        <SectionHeader icon={<ClipboardCheck size={16} />} title={t('management.vehicles.vehicleDetail.lastInspection')} />
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <InfoRow label="Result" value={vehicle.inspection?.status || 'Passed'} />
-                                <InfoRow label="Date" value={vehicle.inspection?.date ? new Date(vehicle.inspection.date).toLocaleDateString() : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.result')} value={vehicle.inspection?.status || t('management.vehicles.vehicleDetail.inspectionPassed')} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.date')} value={vehicle.inspection?.date ? new Date(vehicle.inspection.date).toLocaleDateString() : '—'} />
                             </div>
                             <div className="pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center justify-between text-[10px] font-bold uppercase mb-2" style={{ color: 'var(--text-dim)' }}>
-                                    <span>Highlights</span>
-                                    <span className="text-green-500">23 Items Checked</span>
+                                    <span>{t('management.vehicles.vehicleDetail.labels.highlights')}</span>
+                                    <span className="text-green-500">{t('management.vehicles.vehicleDetail.vehicleInspection', { count: 23 })}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                     {vehicle.inspection?.checklistItems?.slice(0, 4).map((item, i) => (
                                         <div key={i} className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-main)' }}>
                                             <div className="w-1 h-1 rounded-full bg-green-500" />
-                                            <span className="truncate">{item.name}</span>
+                                            <span className="truncate">{t(`management.vehicles.checklist.${item.name}`, item.name)}</span>
                                         </div>
                                     ))}
                                     {vehicle.inspection?.checklistItems && vehicle.inspection.checklistItems.length > 4 && (
                                         <div className="text-[9px] font-bold" style={{ color: 'var(--brand-lime)' }}>
-                                            + {vehicle.inspection.checklistItems.length - 4} more items
+                                            + {vehicle.inspection.checklistItems.length - 4} {t('common.viewAll')}
                                         </div>
                                     )}
                                 </div>
@@ -461,12 +534,12 @@ const VehicleDetail = () => {
 
                     {/* Metadata */}
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Clock size={16} />} title="Onboarding Meta" />
+                        <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.onboardingMeta')} />
                         <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label="Onboarded By" value={vehicle.creatorRole?.replace(/([A-Z])/g, ' $1')} />
-                            <InfoRow label="Created Date" value={vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : '—'} />
-                            <InfoRow label="Last Update" value={vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleDateString() : '—'} />
-                            <InfoRow label="Imports" value={vehicle.importationDetails?.isImported ? 'Yes' : 'No'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.onboardedBy')} value={vehicle.creatorRole?.replace(/([A-Z])/g, ' $1')} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.createdDate')} value={vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.lastUpdate')} value={vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.imports')} value={vehicle.importationDetails?.isImported ? t('common.yes') : t('common.no')} />
                         </div>
                     </div>
                 </div>
@@ -479,57 +552,57 @@ const VehicleDetail = () => {
                     {/* Step 1: Vehicle Specifications */}
                     {(!vehicle.basicDetails?.make || !vehicle.basicDetails?.vin) ? (
                         <div className={cardClass} style={cardStyle}>
-                            <SectionHeader icon={<Car size={16} />} title="Step 1: Vehicle Specifications" />
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Enter the vehicle's basic details to start the onboarding process.</p>
+                            <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.step1')} />
+                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.step1Desc')}</p>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Make *</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.make')} *</label>
                                     <input type="text" placeholder="e.g. Toyota" value={specData.make} onChange={e => setSpecData(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Model *</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.model')} *</label>
                                     <input type="text" placeholder="e.g. Corolla" value={specData.model} onChange={e => setSpecData(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Year *</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.year')} *</label>
                                     <input type="number" min="1900" max="2100" value={specData.year} onChange={e => setSpecData(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>VIN *</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')} *</label>
                                     <input type="text" placeholder="JTDKN..." value={specData.vin} onChange={e => setSpecData(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Category</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.category')}</label>
                                     <select value={specData.category} onChange={e => setSpecData(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        {CATEGORIES.map(c => <option key={c} value={c}>{t(`management.vehicles.categories.${c}`, c)}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Fuel Type</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.fuel')}</label>
                                     <select value={specData.fuelType} onChange={e => setSpecData(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
-                                        {FUEL_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
+                                        {FUEL_TYPES.map(f => <option key={f} value={f}>{t(`management.vehicles.fuelTypes.${f}`, f)}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Transmission</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.transmission')}</label>
                                     <select value={specData.transmission} onChange={e => setSpecData(p => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
-                                        {TRANSMISSIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                        {TRANSMISSIONS.map(tOption => <option key={tOption} value={tOption}>{t(`management.vehicles.transmissions.${tOption}`, tOption)}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Body Type</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.body')}</label>
                                     <select value={specData.bodyType} onChange={e => setSpecData(p => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
-                                        <option value="">Select Type</option>
-                                        {BODY_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                                        <option value="">{t('common.search')}</option>
+                                        {BODY_TYPES.map(b => <option key={b} value={b}>{t(`management.vehicles.bodyTypes.${b}`, b)}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Engine (cc)</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineCapacity')}</label>
                                     <input type="number" value={specData.engineCapacity} onChange={e => setSpecData(p => ({ ...p, engineCapacity: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>Colour</label>
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.colour')}</label>
                                     <input type="text" value={specData.colour} onChange={e => setSpecData(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
                                 </div>
                             </div>
@@ -540,18 +613,18 @@ const VehicleDetail = () => {
                                 className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
                                 style={{ background: '#C8E600', color: '#0A0A0A' }}
                             >
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Save Specifications'}
+                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
                             </button>
                         </div>
                     ) : (
                         /* Step 2: Document Upload */
                         <div className={cardClass} style={cardStyle}>
-                            <SectionHeader icon={<Upload size={16} />} title="Step 2: Upload Documents" />
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Upload all required documents before submitting for review.</p>
+                            <SectionHeader icon={<Upload size={16} />} title={t('management.vehicles.vehicleDetail.step2')} />
+                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.step2Desc')}</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
                                 {DOC_FIELDS.map(df => (
                                     <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{df.label}</span>
+                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.documents.${df.key}`, df.label)}</span>
                                         <div className="flex items-center gap-2">
                                             {(uploadFiles[df.key] as File)?.name && <span className="text-[10px] text-green-500 truncate max-w-[100px]">{(uploadFiles[df.key] as File).name}</span>}
                                             <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden" 
@@ -570,7 +643,7 @@ const VehicleDetail = () => {
                                                 }} 
                                             />
                                             <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                Choose
+                                                {t('common.search').split('...')[0]}
                                             </button>
                                         </div>
                                     </div>
@@ -578,9 +651,9 @@ const VehicleDetail = () => {
                                 {/* Multi-file: Exterior & Interior */}
                                 {['exteriorPhotos', 'interiorPhotos'].map(key => (
                                     <div key={key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{key === 'exteriorPhotos' ? 'Exterior Photos' : 'Interior Photos'}</span>
+                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.documents.${key}`, key === 'exteriorPhotos' ? 'Exterior Photos' : 'Interior Photos')}</span>
                                         <div className="flex items-center gap-2">
-                                            {Array.isArray(uploadFiles[key]) && <span className="text-[10px] text-green-500">{(uploadFiles[key] as File[]).length} files</span>}
+                                            {Array.isArray(uploadFiles[key]) && <span className="text-[10px] text-green-500">{t('management.dashboard.common.last12Months', { value: (uploadFiles[key] as File[]).length }).replace('Last 12 months', (uploadFiles[key] as File[]).length.toString())} files</span>}
                                             <input type="file" multiple ref={key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef} className="hidden"
                                                 onChange={e => { 
                                                     if (e.target.files) {
@@ -597,7 +670,7 @@ const VehicleDetail = () => {
                                                 }} 
                                             />
                                             <button type="button" onClick={() => (key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef).current?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                Choose
+                                                {t('common.search').split('...')[0]}
                                             </button>
                                         </div>
                                     </div>
@@ -605,7 +678,7 @@ const VehicleDetail = () => {
                             </div>
                             <div className="flex flex-wrap gap-3">
                                 <button onClick={handleUpload} disabled={uploadLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
-                                    {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} /> Upload All</>}
+                                    {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} /> {t('management.vehicles.vehicleDetail.actions.uploadAll')}</>}
                                 </button>
                                 
                                 {/* TEST BUTTON: Auto-fill all fields with the first selected file */}
@@ -624,20 +697,20 @@ const VehicleDetail = () => {
                                     }}
                                     className="px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer border border-dashed border-lime/30 text-lime bg-lime/5 hover:bg-lime/10"
                                 >
-                                    Test: Fill All Fields
+                                    {t('management.vehicles.vehicleDetail.actions.fillAll')}
                                 </button>
 
                                 <button onClick={() => setVehicle(p => p ? ({ ...p, basicDetails: { ...p.basicDetails, vin: '' } } as any) : null)} className="px-6 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer" style={{ color: 'var(--text-dim)', background: 'transparent' }}>
-                                    Back to Specs
+                                    {t('management.vehicles.vehicleDetail.actions.backToSpecs')}
                                 </button>
                             </div>
 
                             <div className="border-t pt-5" style={{ borderColor: 'var(--border-main)' }}>
-                                <SectionHeader icon={<Send size={16} />} title="Submit for Documents Review" />
+                                <SectionHeader icon={<Send size={16} />} title={t('management.vehicles.vehicleDetail.actions.submitForReview')} />
                                 <div className="flex flex-col gap-3 mt-3">
-                                    <textarea placeholder="Final notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                                    <textarea placeholder={t('management.purchaseOrders.filters.anyUsage')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                                     <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> Submit for Review</>}
+                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
                                     </button>
                                 </div>
                             </div>
@@ -648,8 +721,6 @@ const VehicleDetail = () => {
 
             {/* DOCUMENTS REVIEW */}
             {vehicle.status === 'DOCUMENTS REVIEW' && (() => {
-                const S3_BASE = import.meta.env.VITE_S3_BASE_URL || '';
-                const toFullUrl = (path?: string) => path ? (path.startsWith('http') ? path : `${S3_BASE}/${path}`) : undefined;
                 return (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
@@ -711,13 +782,37 @@ const VehicleDetail = () => {
                         })}
                     </div>
 
+                    {/* Importation details (moved from Insurance stage) */}
+                    <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
+                        </div>
+
+                        {importation.isImported && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
+                                {[
+                                    { k: 'countryOfOrigin', l: t('management.vehicles.vehicleDetail.labels.countryOfOrigin') }, { k: 'shippingReference', l: t('management.vehicles.vehicleDetail.labels.shippingReference') },
+                                    { k: 'portOfEntry', l: t('management.vehicles.vehicleDetail.labels.portOfEntry') }, { k: 'customsDeclarationNumber', l: t('management.vehicles.vehicleDetail.labels.customsDeclaration') },
+                                    { k: 'arrivalDate', l: t('management.vehicles.vehicleDetail.labels.arrivalDate'), t: 'date' }, { k: 'shippingCost', l: t('management.vehicles.vehicleDetail.labels.shippingCost'), t: 'number' },
+                                    { k: 'customsDuty', l: t('management.vehicles.vehicleDetail.labels.customsDuty'), t: 'number' }, { k: 'portHandling', l: t('management.vehicles.vehicleDetail.labels.portHandling'), t: 'number' },
+                                ].map(f => (
+                                    <div key={f.k} className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
+                                        <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
                         {canApprove ? (
                             <>
                                 <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                                 <div className="flex gap-3">
-                                    <button onClick={() => handleProgress('INSURANCE VERIFICATION')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Approve & Proceed to Insurance</>}
+                                    <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
                                     </button>
                                     <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
                                         {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
@@ -738,143 +833,181 @@ const VehicleDetail = () => {
                 );
             })()}
 
-            {/* INSURANCE VERIFICATION */}
-            {vehicle.status === 'INSURANCE VERIFICATION' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Shield size={16} />} title="Insurance Verification" />
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Select an active insurance policy for this vehicle.</p>
-                    
-                    <div className="space-y-4 mt-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Select Policy *</label>
-                            <button
-                                type="button"
-                                onClick={() => setIsInsuranceModalOpen(true)}
-                                className={`flex items-center justify-between ${inputClass}`}
-                                style={{ ...inputStyle, textAlign: 'left' }}
-                            >
-                                {insurance.insuranceId ? (() => {
-                                    const ins = eligibleInsurances.find(i => i._id === insurance.insuranceId);
-                                    return ins ? `${ins.provider} — ${ins.policyNumber}` : 'Select an Insurance Policy';
-                                })() : (
-                                    <span style={{ color: 'var(--text-dim)' }}>Select an Insurance Policy</span>
-                                )}
-                                <ChevronRight size={16} style={{ color: 'var(--text-dim)' }} />
-                            </button>
+
+
+
+            {vehicle.status === 'INSPECTION REQUIRED' && (() => {
+                const odometerCount = vehicle?.inspection?.odometerPhoto ? 1 : 0;
+                const totalExterior = (vehicle?.inspection?.exteriorPhotos?.length || 0);
+                const totalInterior = (vehicle?.inspection?.interiorPhotos?.length || 0);
+                const totalPhotos = totalExterior + totalInterior + odometerCount;
+
+                const PhotoPreview = ({ url, label }: { url: string; label: string }) => {
+                    const fullUrl = toFullUrl(url);
+                    const isPdf = url.toLowerCase().endsWith('.pdf');
+                    return (
+                        <div className="aspect-square rounded-lg border overflow-hidden relative group" style={{ borderColor: 'var(--border-main)' }}>
+                            {isPdf ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-red-500/5 text-red-500">
+                                    <FileText size={20} />
+                                    <span className="text-[8px] font-bold mt-1 uppercase">PDF</span>
+                                </div>
+                            ) : (
+                                <img src={fullUrl} alt={label} className="w-full h-full object-cover" />
+                            )}
+                            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-bold gap-1">
+                                <FileText size={10} /> View
+                            </a>
                         </div>
+                    );
+                };
 
-                        {/* Policy Details Preview */}
-                        {insurance.insuranceId && (
-                            <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                {(() => {
-                                    const selected = eligibleInsurances.find(i => i._id === insurance.insuranceId);
-                                    if (!selected) return null;
-                                    return (
-                                        <div className="grid grid-cols-2 gap-4 text-xs">
-                                            <InfoRow label="Provider" value={selected.provider} />
-                                            <InfoRow label="Policy #" value={selected.policyNumber} />
-                                            <InfoRow label="Expiry" value={new Date(selected.expiryDate).toLocaleDateString()} />
-                                            <InfoRow label="Insured Value" value={selected.insuredValue} />
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
-
-                        {/* Importation toggle */}
-                        <div className="flex items-center gap-3">
-                            <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
-                            <span className="text-sm" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
-                        </div>
-
-                        {importation.isImported && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
-                                {[
-                                    { k: 'countryOfOrigin', l: 'Country of Origin' }, { k: 'shippingReference', l: 'Shipping Reference' },
-                                    { k: 'portOfEntry', l: 'Port of Entry' }, { k: 'customsDeclarationNumber', l: 'Customs Declaration #' },
-                                    { k: 'arrivalDate', l: 'Arrival Date', t: 'date' }, { k: 'shippingCost', l: 'Shipping Cost', t: 'number' },
-                                    { k: 'customsDuty', l: 'Customs Duty', t: 'number' }, { k: 'portHandling', l: 'Port Handling', t: 'number' },
-                                ].map(f => (
-                                    <div key={f.k} className="space-y-1.5">
-                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
-                                        <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <textarea placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-4`} style={inputStyle} />
-                    <button 
-                        onClick={() => handleProgress('INSPECTION REQUIRED', { 
-                            insuranceId: insurance.insuranceId, 
-                            ...(importation.isImported ? { importationDetails: importation } : {}) 
-                        })} 
-                        disabled={actionLoading || !insurance.insuranceId} 
-                        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50 mt-4" 
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
-                    >
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Verify Insurance</>}
-                    </button>
-                </div>
-            )}
-
-            {/* INSPECTION REQUIRED */}
-            {vehicle.status === 'INSPECTION REQUIRED' && (
-                <div className={cardClass} style={cardStyle}>
-                    {vehicle.inspection?.status === 'Passed' ? (
-                        <div className="flex flex-col items-center gap-6 py-8 text-center">
-                            <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
-                                <CheckCircle size={32} />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Inspection Passed</h3>
-                                <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-dim)' }}>
-                                    The technical inspection has been completed and verified successfully. 
-                                    You can now proceed to set up the accounting details for this vehicle.
-                                </p>
-                            </div>
-                            <button 
-                                onClick={() => handleProgress('ACCOUNTING SETUP')} 
-                                disabled={actionLoading} 
-                                className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50 transition-all hover:scale-105" 
-                                style={{ background: '#C8E600', color: '#0A0A0A' }}
-                            >
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ArrowLeft className="rotate-180" size={16} /> Proceed to Accounting Setup</>}
-                            </button>
-                        </div>
-                    ) : (
-                        <>
+                return (
+                    <div className={cardClass} style={cardStyle}>
+                        <div className="flex justify-between items-center mb-4">
                             <SectionHeader icon={<ClipboardCheck size={16} />} title="Vehicle Inspection (23 Items)" />
-                            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-                                {checklist.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: item.condition === 'Poor' ? 'rgba(239,68,68,0.05)' : 'var(--bg-sidebar)' }}>
-                                        <span className="text-xs font-medium flex-1" style={{ color: 'var(--text-main)' }}>{item.name}</span>
-                                        <select value={item.condition} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], condition: e.target.value as InspectionCondition }; setChecklist(c); }}
-                                            className="px-3 py-1.5 rounded-lg text-xs outline-none" style={{ ...inputStyle, width: '90px' }}>
-                                            {['Good', 'Fair', 'Poor'].map(v => <option key={v} value={v}>{v}</option>)}
-                                        </select>
-                                        <input placeholder="Notes" value={item.notes || ''} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], notes: e.target.value }; setChecklist(c); }}
-                                            className="px-3 py-1.5 rounded-lg text-xs outline-none w-32" style={inputStyle} />
+                            {vehicle.inspection?.status === 'Passed' && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
+                                    <CheckCircle size={12} /> Passed
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                            {checklist.map((item, i) => (
+                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: item.condition === 'Poor' ? 'rgba(239,68,68,0.05)' : 'var(--bg-sidebar)' }}>
+                                    <span className="text-xs font-medium flex-1" style={{ color: 'var(--text-main)' }}>{item.name}</span>
+                                    <select value={item.condition} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], condition: e.target.value as InspectionCondition }; setChecklist(c); }}
+                                        className="px-3 py-1.5 rounded-lg text-xs outline-none" style={{ ...inputStyle, width: '90px' }}>
+                                        {['Good', 'Fair', 'Poor'].map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                    <input placeholder="Notes" value={item.notes || ''} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], notes: e.target.value }; setChecklist(c); }}
+                                        className="px-3 py-1.5 rounded-lg text-xs outline-none w-32" style={inputStyle} />
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <textarea placeholder="Overall inspection notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
+
+                        {/* Technical Photos Section */}
+                        <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <SectionHeader icon={<Upload size={16} />} title={`Technical Photos (${totalPhotos} / Min 6)`} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                {/* Exterior Photos */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Exterior Photos</label>
+                                        <input type="file" ref={extPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
+                                            const files = Array.from(e.target.files || []);
+                                            setUploadFiles(p => ({ ...p, exteriorPhotos: [...(Array.isArray(p.exteriorPhotos) ? p.exteriorPhotos : []), ...files] }));
+                                        }} />
+                                        <button onClick={() => extPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline">+ Add Photos</button>
                                     </div>
-                                ))}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(vehicle.inspection?.exteriorPhotos || []).map((url, i) => (
+                                            <PhotoPreview key={i} url={url} label={`Exterior ${i}`} />
+                                        ))}
+                                        {(Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos : []).map((file, i) => (
+                                            <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{file.name}</div>
+                                                <button onClick={() => setUploadFiles(p => ({ ...p, exteriorPhotos: (p.exteriorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Interior Photos */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Interior Photos</label>
+                                        <input type="file" ref={intPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
+                                            const files = Array.from(e.target.files || []);
+                                            setUploadFiles(p => ({ ...p, interiorPhotos: [...(Array.isArray(p.interiorPhotos) ? p.interiorPhotos : []), ...files] }));
+                                        }} />
+                                        <button onClick={() => intPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline">+ Add Photos</button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(vehicle.inspection?.interiorPhotos || []).map((url, i) => (
+                                            <PhotoPreview key={i} url={url} label={`Interior ${i}`} />
+                                        ))}
+                                        {(Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos : []).map((file, i) => (
+                                            <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{file.name}</div>
+                                                <button onClick={() => setUploadFiles(p => ({ ...p, interiorPhotos: (p.interiorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                            <textarea placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
-                            <button onClick={() => handleProgress('INSPECTION REQUIRED', { inspection: { date: new Date().toISOString(), checklistItems: checklist } })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> Submit Inspection</>}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <button 
+                                onClick={async () => {
+                                    let photoData = {};
+                                    if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos) {
+                                        const uploaded = await handleUpload();
+                                        if (uploaded) {
+                                            photoData = { exteriorPhotos: uploaded.exteriorPhotos, interiorPhotos: uploaded.interiorPhotos };
+                                        }
+                                    }
+                                    const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
+                                    console.group('--- [DEBUG] Save Progress Payload ---');
+                                    console.log('Target Status: INSPECTION REQUIRED');
+                                    console.log('Inspection Data:', inspectionPayload);
+                                    console.log('Checklist Count:', checklist.length);
+                                    console.groupEnd();
+                                    
+                                    await handleProgress('INSPECTION REQUIRED', { 
+                                        inspection: inspectionPayload 
+                                    });
+                                }} 
+                                disabled={actionLoading || uploadLoading} 
+                                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer border"
+                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)', color: 'var(--text-main)' }}
+                            >
+                                {(actionLoading || uploadLoading) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> Save Progress</>}
                             </button>
-                        </>
-                    )}
-                </div>
-            )}
+
+                            <div className="flex-1 flex flex-col gap-2">
+                                <button 
+                                    onClick={async () => {
+                                        let photoData = {};
+                                        if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos) {
+                                            const uploaded = await handleUpload();
+                                            if (uploaded) {
+                                                photoData = { exteriorPhotos: uploaded.exteriorPhotos, interiorPhotos: uploaded.interiorPhotos };
+                                            }
+                                        }
+                                        const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
+                                        console.group('--- [DEBUG] Submit & Proceed Payload ---');
+                                        console.log('Target Status: ACCOUNTING SETUP');
+                                        console.log('Inspection Data:', inspectionPayload);
+                                        console.groupEnd();
+                                        
+                                        await handleProgress('ACCOUNTING SETUP', {
+                                            inspection: inspectionPayload
+                                        });
+                                    }} 
+                                    disabled={actionLoading} 
+                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 text-black" 
+                                    style={{ background: '#C8E600' }}
+                                >
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ArrowLeft className="rotate-180" size={16} /> Submit & Proceed to Accounting</>}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* INSPECTION FAILED */}
             {vehicle.status === 'INSPECTION FAILED' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<XCircle size={16} />} title="Inspection Failed — Send for Repair" />
-                    <textarea placeholder="Describe the repair needed..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
+                    <SectionHeader icon={<XCircle size={16} />} title={t('management.vehicles.vehicleDetail.inspectionFailedTitle')} />
+                    <textarea placeholder={t('management.vehicles.vehicleDetail.repairNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
                     <button onClick={() => handleProgress('REPAIR IN PROGRESS')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#f97316', color: '#fff' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Wrench size={16} /> Send to Workshop / Repair</>}
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Wrench size={16} /> {t('management.vehicles.vehicleDetail.actions.sendToRepair')}</>}
                     </button>
                 </div>
             )}
@@ -882,10 +1015,10 @@ const VehicleDetail = () => {
             {/* REPAIR IN PROGRESS */}
             {vehicle.status === 'REPAIR IN PROGRESS' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Wrench size={16} />} title="Repair Complete — Re-Inspect" />
-                    <textarea placeholder="Repair notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
+                    <SectionHeader icon={<Wrench size={16} />} title={t('management.vehicles.vehicleDetail.repairCompleteTitle')} />
+                    <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
                     <button onClick={() => handleProgress('INSPECTION REQUIRED')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> Re-Inspect Vehicle</>}
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.reInspect')}</>}
                     </button>
                 </div>
             )}
@@ -893,25 +1026,25 @@ const VehicleDetail = () => {
             {/* ACCOUNTING SETUP */}
             {vehicle.status === 'ACCOUNTING SETUP' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Calculator size={16} />} title="Accounting Setup" />
+                    <SectionHeader icon={<Calculator size={16} />} title={t('management.vehicles.vehicleDetail.accountingSetup')} />
                     <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Depreciation Method</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.depreciation')}</label>
                             <select value={accounting.depreciationMethod} onChange={e => setAccounting(p => ({ ...p, depreciationMethod: e.target.value }))} className={inputClass} style={inputStyle}>
                                 <option value="Straight-Line">Straight-Line</option><option value="Reducing Balance">Reducing Balance</option>
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Useful Life (Years)</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.usefulLife')}</label>
                             <input type="number" min="1" value={accounting.usefulLifeYears} onChange={e => setAccounting(p => ({ ...p, usefulLifeYears: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Residual Value</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.residualValue')}</label>
                             <input type="number" min="0" value={accounting.residualValue} onChange={e => setAccounting(p => ({ ...p, residualValue: parseFloat(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                         </div>
                     </div>
                     <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> Save Accounting Setup</>}
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> {t('management.vehicles.vehicleDetail.actions.saveAccounting')}</>}
                     </button>
                 </div>
             )}
@@ -919,19 +1052,19 @@ const VehicleDetail = () => {
             {/* GPS ACTIVATION */}
             {vehicle.status === 'GPS ACTIVATION' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Satellite size={16} />} title="GPS Configuration" />
+                    <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsConfiguration')} />
                     <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Geofence Zone</label>
+                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.geofenceZone')}</label>
                             <input type="text" placeholder="e.g. Accra Metro" value={gps.geofenceZone} onChange={e => setGps(p => ({ ...p, geofenceZone: e.target.value }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Speed Limit (km/h)</label>
+                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.speedLimit')} (km/h)</label>
                             <input type="number" value={gps.speedLimitThreshold} onChange={e => setGps(p => ({ ...p, speedLimitThreshold: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Idle Alert (mins)</label>
+                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.idleAlert')} (mins)</label>
                             <input type="number" value={gps.idleTimeAlertMins} onChange={e => setGps(p => ({ ...p, idleTimeAlertMins: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Mileage Sync (hrs)</label>
+                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.syncFreq')}</label>
                             <input type="number" value={gps.mileageSyncFrequencyHrs} onChange={e => setGps(p => ({ ...p, mileageSyncFrequencyHrs: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
                     </div>
                     <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> Activate GPS</>}
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> {t('management.vehicles.vehicleDetail.actions.activateGps')}</>}
                     </button>
                 </div>
             )}
@@ -939,24 +1072,24 @@ const VehicleDetail = () => {
             {/* BRANCH MANAGER APPROVAL */}
             {vehicle.status === 'BRANCH MANAGER APPROVAL' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<UserCheck size={16} />} title="Branch Manager Approval" />
+                    <SectionHeader icon={<UserCheck size={16} />} title={t('management.vehicles.vehicleDetail.branchManagerApproval')} />
                     {canApprove ? (
                         <>
-                            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review all stages above and approve this vehicle for the active fleet.</p>
-                            <textarea placeholder="Approval notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> Approve &amp; Proceed</>}
+                            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
+                            <textarea placeholder={t('management.vehicles.vehicleDetail.approvalNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceed')}</>}
                             </button>
                         </>
                     ) : (
                         <div className="flex flex-col items-center gap-4 py-4 text-center">
                             <Clock size={40} className="text-[#f59e0b] opacity-60" />
                             <div className="space-y-1">
-                                <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Waiting for Authority Approval</p>
-                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Only Branch Manager or Country Manager can approve this vehicle.</p>
+                                <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthority')}</p>
+                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
                             </div>
                             <button disabled className="px-6 py-3 rounded-xl text-sm font-bold opacity-50 cursor-not-allowed" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                                Approval Pending
+                                {t('management.vehicles.vehicleDetail.actions.approvalPending')}
                             </button>
                         </div>
                     )}
@@ -966,61 +1099,67 @@ const VehicleDetail = () => {
             {/* ACTIVE — AVAILABLE: Fleet Actions */}
             {vehicle.status === 'ACTIVE — AVAILABLE' && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Zap size={16} />} title="Fleet Actions" />
+                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.fleetActions')} />
                     <div className="flex items-center gap-2 mb-2">
                         <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} className="px-4 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                            ✓ Active
+                            ✓ {t('management.vehicles.statusLabels.ACTIVE')}
                         </button>
                     </div>
-                    <textarea placeholder="Notes for action..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                    <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
                             className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
-                            <Wrench size={14} /> Pull for Maintenance
+                            <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
                         </button>
                         <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
                             className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
-                            <Ban size={14} /> Suspend Vehicle
+                            <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
                         </button>
                         <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
                             className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
-                            <ArrowRightLeft size={14} /> Transfer
+                            <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
                         </button>
                         <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
                             className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
-                            <Trash2 size={14} /> Retire
+                            <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* SUSPENDED / MAINTENANCE — Return to Available */}
-            {(vehicle.status === 'SUSPENDED' || vehicle.status === 'ACTIVE — MAINTENANCE') && (
+            {/* Fleet Actions (For Active/Rented/Other) */}
+            {(vehicle.status.startsWith('ACTIVE') || vehicle.status === 'SUSPENDED' || vehicle.status === 'ACTIVE — MAINTENANCE' || vehicle.status === 'TRANSFER PENDING' || vehicle.status === 'TRANSFER COMPLETE' || vehicle.status === 'RETIRED') && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={vehicle.status === 'SUSPENDED' ? <Ban size={16} /> : <Wrench size={16} />} title={vehicle.status === 'SUSPENDED' ? 'Vehicle Suspended' : 'In Maintenance'} />
-                    <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                    <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Return to Available</>}
-                    </button>
-                </div>
-            )}
-
-            {/* TRANSFER PENDING / COMPLETE */}
-            {vehicle.status === 'TRANSFER PENDING' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<ArrowRightLeft size={16} />} title="Transfer Pending — Mark Received" />
-                    <textarea placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                    <button onClick={() => handleProgress('TRANSFER COMPLETE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Mark Received</>}
-                    </button>
-                </div>
-            )}
-            {vehicle.status === 'TRANSFER COMPLETE' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<ArrowRightLeft size={16} />} title="Transfer Complete — Activate" />
-                    <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Activate at New Branch</>}
-                    </button>
+                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.fleetActions')} />
+                    <div className="flex flex-wrap gap-3 mt-4">
+                        {vehicle.status === 'SUSPENDED' && (
+                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                {t('management.vehicles.vehicleDetail.vehicleSuspended')}
+                            </button>
+                        )}
+                        {vehicle.status === 'ACTIVE — MAINTENANCE' && (
+                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                                {t('management.vehicles.vehicleDetail.actions.returnToAvailable')}
+                            </button>
+                        )}
+                        {vehicle.status === 'TRANSFER PENDING' && (
+                            <button onClick={() => handleProgress('TRANSFER COMPLETE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+                                {t('management.vehicles.vehicleDetail.transferPending')}
+                            </button>
+                        )}
+                        {vehicle.status === 'TRANSFER COMPLETE' && (
+                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                                {t('management.vehicles.vehicleDetail.transferComplete')}
+                            </button>
+                        )}
+                        
+                        {/* If inspection passed but accounting/gps missing */}
+                        {vehicle.status === 'ACTIVE — AVAILABLE' && !vehicle.accountingSetup?.isSetupComplete && (
+                            <button onClick={() => handleProgress('ACCOUNTING SETUP')} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                {t('management.vehicles.vehicleDetail.actions.proceedAccounting')}
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -1039,24 +1178,8 @@ const VehicleDetail = () => {
             {/* Status History */}
             {vehicle.statusHistory && vehicle.statusHistory.length > 0 && (
                 <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Clock size={16} />} title="Status History" />
-                    <div className="space-y-3">
-                        {vehicle.statusHistory.slice().reverse().map((h, i) => {
-                            const hs = STATUS_STYLES[h.status] || STATUS_STYLES['PENDING ENTRY'];
-                            return (
-                                <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-sidebar)' }}>
-                                    <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: hs.text }} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-xs font-bold" style={{ color: hs.text }}>{h.status}</span>
-                                            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{new Date(h.changedAt).toLocaleString()}</span>
-                                        </div>
-                                        {h.notes && <p className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>{h.notes}</p>}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.statusHistory')} />
+                    <VehicleStatusHistory history={vehicle.statusHistory} />
                 </div>
             )}
 
@@ -1070,6 +1193,44 @@ const VehicleDetail = () => {
                     setIsInsuranceModalOpen(false);
                 }}
             />
+
+            <InsuranceManagementModal
+                isOpen={isInsuranceManagerOpen}
+                onClose={() => setIsInsuranceManagerOpen(false)}
+                vehicle={vehicle}
+                eligibleInsurances={eligibleInsurances}
+                onSuccess={() => {
+                    fetchVehicle();
+                    setActionSuccess('Insurance tracking details updated successfully');
+                    setTimeout(() => setActionSuccess(null), 3000);
+                }}
+            />
+        </div>
+    );
+};
+
+const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
+    const { t } = useTranslation();
+    if (!history?.length) return <p className="text-xs italic mt-4" style={{ color: 'var(--text-dim)' }}>{t('management.audit.empty')}</p>;
+    
+    return (
+        <div className="mt-4 space-y-4">
+            {history.slice().reverse().map((h, i) => (
+                <div key={i} className="flex gap-3 relative">
+                    {i < history.length - 1 && <div className="absolute left-1.5 top-4 bottom-[-16px] w-[1px]" style={{ background: 'var(--border-main)' }} />}
+                    <div className="w-3 h-3 rounded-full mt-1 border-2 border-brand" style={{ background: 'var(--bg-main)', borderColor: '#C8E600' }} />
+                    <div className="flex-1 pb-4">
+                        <div className="flex justify-between items-start">
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                {t('management.vehicles.vehicleDetail.history.statusUpdated')} <span style={{ color: '#C8E600' }}>{t(`management.vehicles.statusLabels.${h.status}`, h.status)}</span>
+                            </p>
+                            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{new Date(h.changedAt || h.timestamp).toLocaleString()}</span>
+                        </div>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.history.updatedBy')}: {h.updatedByRole || h.changedBy}</p>
+                        {h.notes && <p className="text-[10px] mt-2 p-2 rounded bg-opacity-30 italic" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-dim)' }}>"{h.notes}"</p>}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 };
