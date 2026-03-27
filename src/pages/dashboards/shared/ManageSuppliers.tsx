@@ -17,6 +17,7 @@ type ModalMode = 'create' | 'edit' | null;
 
 const CATEGORIES = [
     "Vehicles",
+    "Insurance",
     "Spare Parts",
     "Services",
     "Office Supplies",

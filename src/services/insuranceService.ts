@@ -12,30 +12,34 @@ export interface ProviderContact {
 
 export interface Insurance {
     _id: string;
-    provider: string;
-    policyNumber: string;
+    supplier?: string | { _id: string; name: string };
+    provider?: string;
+    policyNumber?: string;
     policyType: PolicyType;
     coverageType: CoverageType;
-    startDate: string;
-    expiryDate: string;
+    startDate?: string;
+    expiryDate?: string;
     insuredValue: number;
     providerContact: ProviderContact;
     status: InsuranceStatus;
     documents?: {
         policyDocumentUrl?: string;
     };
+    country?: string;
     vehicles?: string[];
     createdAt?: string;
     updatedAt?: string;
 }
 
 export interface CreateInsurancePayload {
-    provider: string;
-    policyNumber: string;
+    supplier: string;
+    provider?: string;
+    country: string;
+    policyNumber?: string;
     policyType: PolicyType;
     coverageType: CoverageType;
-    startDate: string;
-    expiryDate: string;
+    startDate?: string;
+    expiryDate?: string;
     insuredValue: number;
     providerContact: ProviderContact;
 }

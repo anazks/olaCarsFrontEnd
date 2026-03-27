@@ -222,7 +222,7 @@ export interface CreateVehiclePayload {
         financeDetails?: FinanceDetails;
         branch: string;
     };
-    basicDetails: {
+    basicDetails?: {
         make: string;
         model: string;
         year: number;

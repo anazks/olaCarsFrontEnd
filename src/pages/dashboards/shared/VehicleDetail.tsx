@@ -57,7 +57,6 @@ const DOC_FIELDS = [
     { key: 'transferOfOwnership', label: 'Transfer of Ownership' },
     { key: 'customsClearanceCertificate', label: 'Customs Clearance' },
     { key: 'importPermit', label: 'Import Permit' },
-    { key: 'odometerPhoto', label: 'Odometer Photo' },
 ];
 
 const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
@@ -340,9 +339,9 @@ const VehicleDetail = () => {
                     </button>
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-                            {vehicle.basicDetails.make} {vehicle.basicDetails.model} {vehicle.basicDetails.year}
+                            {vehicle.basicDetails?.make || 'New'} {vehicle.basicDetails?.model || 'Vehicle'} {vehicle.basicDetails?.year || ''}
                         </h1>
-                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails.vin}</p>
+                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</p>
                     </div>
                 </div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border" style={{ background: s.bg, color: s.text, borderColor: s.border }}>
@@ -378,20 +377,20 @@ const VehicleDetail = () => {
                 <div className={`${cardClass} lg:col-span-2 3xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
                     <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.vehicleOverview')} />
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails.make} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails.model} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails.year} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vin')} value={vehicle.basicDetails.vin} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.category')} value={t(`management.vehicles.categories.${vehicle.basicDetails.category}`, vehicle.basicDetails.category)} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.fuel')} value={t(`management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}`, vehicle.basicDetails.fuelType)} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.transmission')} value={vehicle.basicDetails.transmission ? t(`management.vehicles.transmissions.${vehicle.basicDetails.transmission}`, vehicle.basicDetails.transmission) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.colour')} value={vehicle.basicDetails.colour} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails.seats} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails.engineNumber} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.gpsSerial')} value={vehicle.basicDetails.gpsSerialNumber} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.monthlyRent')} value={vehicle.basicDetails.monthlyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.monthlyRent.toLocaleString()}` : (vehicle.basicDetails as any)['monthlyRent '] ? `${t('common.currency.usd')}${(vehicle.basicDetails as any)['monthlyRent '].toLocaleString()}` : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vin')} value={vehicle.basicDetails?.vin || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.category')} value={vehicle.basicDetails?.category ? t(`management.vehicles.categories.${vehicle.basicDetails.category}`, vehicle.basicDetails.category) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.fuel')} value={vehicle.basicDetails?.fuelType ? t(`management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}`, vehicle.basicDetails.fuelType) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.transmission')} value={vehicle.basicDetails?.transmission ? t(`management.vehicles.transmissions.${vehicle.basicDetails.transmission}`, vehicle.basicDetails.transmission) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.colour')} value={vehicle.basicDetails?.colour || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails?.seats || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails?.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.gpsSerial')} value={vehicle.basicDetails?.gpsSerialNumber || '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.monthlyRent')} value={vehicle.basicDetails?.monthlyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.monthlyRent.toLocaleString()}` : '—'} />
                     </div>
                 </div>
                 <div className={cardClass} style={cardStyle}>
@@ -635,41 +634,12 @@ const VehicleDetail = () => {
                                                             const next = { ...prev, [df.key]: file };
                                                             // TEST AUTO-FILL: Fill all empty doc fields with this file
                                                             DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = file; });
-                                                            if (!next.exteriorPhotos) next.exteriorPhotos = [file];
-                                                            if (!next.interiorPhotos) next.interiorPhotos = [file];
                                                             return next;
                                                         });
                                                     } 
                                                 }} 
                                             />
                                             <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                {t('common.search').split('...')[0]}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {/* Multi-file: Exterior & Interior */}
-                                {['exteriorPhotos', 'interiorPhotos'].map(key => (
-                                    <div key={key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.documents.${key}`, key === 'exteriorPhotos' ? 'Exterior Photos' : 'Interior Photos')}</span>
-                                        <div className="flex items-center gap-2">
-                                            {Array.isArray(uploadFiles[key]) && <span className="text-[10px] text-green-500">{t('management.dashboard.common.last12Months', { value: (uploadFiles[key] as File[]).length }).replace('Last 12 months', (uploadFiles[key] as File[]).length.toString())} files</span>}
-                                            <input type="file" multiple ref={key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef} className="hidden"
-                                                onChange={e => { 
-                                                    if (e.target.files) {
-                                                        const files = Array.from(e.target.files!);
-                                                        setUploadFiles(prev => {
-                                                            const next = { ...prev, [key]: files };
-                                                            // TEST AUTO-FILL: Fill empty doc fields with the first file from photos
-                                                            DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = files[0]; });
-                                                            if (key === 'exteriorPhotos' && !next.interiorPhotos) next.interiorPhotos = files;
-                                                            if (key === 'interiorPhotos' && !next.exteriorPhotos) next.exteriorPhotos = files;
-                                                            return next;
-                                                        });
-                                                    } 
-                                                }} 
-                                            />
-                                            <button type="button" onClick={() => (key === 'exteriorPhotos' ? extPhotoRef : intPhotoRef).current?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                 {t('common.search').split('...')[0]}
                                             </button>
                                         </div>
@@ -690,8 +660,6 @@ const VehicleDetail = () => {
                                         const fileToUse = Array.isArray(firstVal) ? firstVal[0] : firstVal;
                                         const autoFilled: any = {};
                                         DOC_FIELDS.forEach(df => autoFilled[df.key] = fileToUse);
-                                        autoFilled.exteriorPhotos = [fileToUse, fileToUse];
-                                        autoFilled.interiorPhotos = [fileToUse, fileToUse];
                                         setUploadFiles(autoFilled);
                                         console.log('TEST: Auto-filled all fields with:', (fileToUse as File).name);
                                     }}
@@ -700,7 +668,7 @@ const VehicleDetail = () => {
                                     {t('management.vehicles.vehicleDetail.actions.fillAll')}
                                 </button>
 
-                                <button onClick={() => setVehicle(p => p ? ({ ...p, basicDetails: { ...p.basicDetails, vin: '' } } as any) : null)} className="px-6 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer" style={{ color: 'var(--text-dim)', background: 'transparent' }}>
+                                <button onClick={() => setVehicle(p => p ? ({ ...p, basicDetails: { ...p.basicDetails!, vin: '' } } as any) : null)} className="px-6 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer" style={{ color: 'var(--text-dim)', background: 'transparent' }}>
                                     {t('management.vehicles.vehicleDetail.actions.backToSpecs')}
                                 </button>
                             </div>
@@ -752,31 +720,6 @@ const VehicleDetail = () => {
                                         )}
                                     </div>
                                     {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
-                                </div>
-                            );
-                        })}
-                        {/* Photos Review */}
-                        {['exteriorPhotos', 'interiorPhotos'].map(key => {
-                            const photos: string[] = ((vehicle.inspection as any)?.[key] || []).map((p: string) => toFullUrl(p) || p);
-                            return (
-                                <div key={key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{key === 'exteriorPhotos' ? 'Exterior Photos' : 'Interior Photos'}</span>
-                                        {photos.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {photos.map((p: string, idx: number) => (
-                                                    <a key={idx} href={p} target="_blank" rel="noopener noreferrer" className="text-[9px] px-1.5 py-0.5 rounded bg-lime/10 text-lime font-bold hover:bg-lime/20">
-                                                        #{idx + 1}
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                                                <XCircle size={10} /> No Photos
-                                            </span>
-                                        )}
-                                    </div>
-                                    {photos.length > 0 && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
                                 </div>
                             );
                         })}
@@ -837,9 +780,9 @@ const VehicleDetail = () => {
 
 
             {vehicle.status === 'INSPECTION REQUIRED' && (() => {
-                const odometerCount = vehicle?.inspection?.odometerPhoto ? 1 : 0;
-                const totalExterior = (vehicle?.inspection?.exteriorPhotos?.length || 0);
-                const totalInterior = (vehicle?.inspection?.interiorPhotos?.length || 0);
+                const odometerCount = (vehicle?.inspection?.odometerPhoto || uploadFiles.odometerPhoto) ? 1 : 0;
+                const totalExterior = (vehicle?.inspection?.exteriorPhotos?.length || 0) + (Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos.length : 0);
+                const totalInterior = (vehicle?.inspection?.interiorPhotos?.length || 0) + (Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos.length : 0);
                 const totalPhotos = totalExterior + totalInterior + odometerCount;
 
                 const PhotoPreview = ({ url, label }: { url: string; label: string }) => {
@@ -938,6 +881,37 @@ const VehicleDetail = () => {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Odometer Photo */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Odometer Photo *</label>
+                                        <input type="file" ref={el => { if (fileInputRefs.current) fileInputRefs.current['odometerPhoto'] = el; }} className="hidden" accept="image/*" onChange={e => {
+                                            if (e.target.files?.[0]) {
+                                                setUploadFiles(p => ({ ...p, odometerPhoto: e.target.files![0] }));
+                                            }
+                                        }} />
+                                        <button onClick={() => fileInputRefs.current['odometerPhoto']?.click()} className="text-[10px] text-lime font-bold hover:underline">
+                                            {uploadFiles.odometerPhoto || vehicle.inspection?.odometerPhoto ? 'Change Photo' : '+ Add Photo'}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {vehicle.inspection?.odometerPhoto && (
+                                            <PhotoPreview url={vehicle.inspection.odometerPhoto} label="Odometer" />
+                                        )}
+                                        {uploadFiles.odometerPhoto && !(uploadFiles.odometerPhoto instanceof Array) && (
+                                            <div className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{(uploadFiles.odometerPhoto as File).name}</div>
+                                                <button onClick={() => setUploadFiles(p => { const n = { ...p }; delete n.odometerPhoto; return n; })} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!uploadFiles.odometerPhoto && !vehicle.inspection?.odometerPhoto && (
+                                        <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 mt-1">
+                                            <AlertTriangle size={10} /> Odometer photo is required before proceeding
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -945,10 +919,14 @@ const VehicleDetail = () => {
                             <button 
                                 onClick={async () => {
                                     let photoData = {};
-                                    if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos) {
+                                    if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
                                         const uploaded = await handleUpload();
                                         if (uploaded) {
-                                            photoData = { exteriorPhotos: uploaded.exteriorPhotos, interiorPhotos: uploaded.interiorPhotos };
+                                            photoData = { 
+                                                exteriorPhotos: uploaded.exteriorPhotos, 
+                                                interiorPhotos: uploaded.interiorPhotos,
+                                                odometerPhoto: uploaded.odometerPhoto
+                                            };
                                         }
                                     }
                                     const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
@@ -973,10 +951,20 @@ const VehicleDetail = () => {
                                 <button 
                                     onClick={async () => {
                                         let photoData = {};
-                                        if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos) {
+                                        // Validation: Odometer photo is mandatory
+                                        if (!uploadFiles.odometerPhoto && !vehicle?.inspection?.odometerPhoto) {
+                                            setActionError('Odometer photo is required before proceeding to accounting.');
+                                            return;
+                                        }
+
+                                        if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
                                             const uploaded = await handleUpload();
                                             if (uploaded) {
-                                                photoData = { exteriorPhotos: uploaded.exteriorPhotos, interiorPhotos: uploaded.interiorPhotos };
+                                                photoData = { 
+                                                    exteriorPhotos: uploaded.exteriorPhotos, 
+                                                    interiorPhotos: uploaded.interiorPhotos,
+                                                    odometerPhoto: uploaded.odometerPhoto
+                                                };
                                             }
                                         }
                                         const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
@@ -1215,14 +1203,14 @@ const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
     
     return (
         <div className="mt-4 space-y-4">
-            {history.slice().reverse().map((h, i) => (
+            {(history || []).slice().reverse().map((h: any, i: number) => (
                 <div key={i} className="flex gap-3 relative">
                     {i < history.length - 1 && <div className="absolute left-1.5 top-4 bottom-[-16px] w-[1px]" style={{ background: 'var(--border-main)' }} />}
                     <div className="w-3 h-3 rounded-full mt-1 border-2 border-brand" style={{ background: 'var(--bg-main)', borderColor: '#C8E600' }} />
                     <div className="flex-1 pb-4">
                         <div className="flex justify-between items-start">
                             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                {t('management.vehicles.vehicleDetail.history.statusUpdated')} <span style={{ color: '#C8E600' }}>{t(`management.vehicles.statusLabels.${h.status}`, h.status)}</span>
+                                {t('management.vehicles.vehicleDetail.history.statusUpdated')} <span style={{ color: '#C8E600' }}>{t(`management.vehicles.statusLabels.${h.status}`, h.status) as string}</span>
                             </p>
                             <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{new Date(h.changedAt || h.timestamp).toLocaleString()}</span>
                         </div>

@@ -327,24 +327,28 @@ const VehicleList = () => {
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails.make} {v.basicDetails.model}
-                                                    {v.basicDetails.colour && (
+                                                    {v.basicDetails?.make || '—'} {v.basicDetails?.model || ''}
+                                                    {v.basicDetails?.colour && (
                                                         <div className="w-3 h-3 rounded-full border border-white/10" style={{ background: v.basicDetails.colour.toLowerCase() }} />
                                                     )}
                                                 </div>
                                                 <div className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">{t(`management.vehicles.fuelTypes.${v.basicDetails.fuelType}`)}</span>
-                                                    <span>{v.basicDetails.transmission}</span>
+                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">
+                                                        {v.basicDetails?.fuelType ? t(`management.vehicles.fuelTypes.${v.basicDetails.fuelType}`) : '—'}
+                                                    </span>
+                                                    <span>{v.basicDetails?.transmission || '—'}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails.vin}</div>
+                                                <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails?.vin || '—'}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{v.basicDetails.year}</div>
+                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{v.basicDetails?.year || '—'}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.categories.${v.basicDetails.category}`)}</div>
+                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>
+                                                    {v.basicDetails?.category ? t(`management.vehicles.categories.${v.basicDetails.category}`) : '—'}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <StatusBadge status={v.status} />

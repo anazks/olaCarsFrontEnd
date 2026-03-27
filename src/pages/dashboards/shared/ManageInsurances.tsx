@@ -11,6 +11,7 @@ import {
     type PolicyType,
     type CoverageType
 } from '../../../services/insuranceService';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 
 const ManageInsurances = () => {
     const { t } = useTranslation();
@@ -40,8 +41,12 @@ const ManageInsurances = () => {
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [supplierLoading, setSupplierLoading] = useState(false);
     const [formData, setFormData] = useState<CreateInsurancePayload>({
+        supplier: '',
         provider: '',
+        country: 'Global',
         policyNumber: '',
         policyType: 'INDIVIDUAL',
         coverageType: 'COMPREHENSIVE',
@@ -56,6 +61,22 @@ const ManageInsurances = () => {
     });
 
     const [policyFile, setPolicyFile] = useState<File | null>(null);
+
+    // Fetch suppliers for insurance category
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                setSupplierLoading(true);
+                const resp = await getAllSuppliers({ category: 'Insurance', limit: 100 });
+                if (resp.success) setSuppliers(resp.data);
+            } catch (err) {
+                console.error('Failed to fetch insurance suppliers:', err);
+            } finally {
+                setSupplierLoading(false);
+            }
+        };
+        fetchSuppliers();
+    }, []);
 
     const fetchInsurances = useCallback(async () => {
         try {
@@ -102,7 +123,9 @@ const ManageInsurances = () => {
 
     const handleOpenCreateModal = () => {
         setFormData({
+            supplier: '',
             provider: '',
+            country: 'Global',
             policyNumber: '',
             policyType: 'INDIVIDUAL',
             coverageType: 'COMPREHENSIVE',
@@ -118,13 +141,18 @@ const ManageInsurances = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            setLoading(true);
             const fd = new FormData();
-            fd.append('provider', formData.provider);
-            fd.append('policyNumber', formData.policyNumber);
+            fd.append('supplier', formData.supplier);
+            fd.append('country', formData.country);
+            if (formData.provider) fd.append('provider', formData.provider);
+            if (formData.policyNumber) fd.append('policyNumber', formData.policyNumber);
             fd.append('policyType', formData.policyType);
             fd.append('coverageType', formData.coverageType);
-            fd.append('startDate', new Date(formData.startDate).toISOString());
-            fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
+            
+            if (formData.startDate) fd.append('startDate', new Date(formData.startDate).toISOString());
+            if (formData.expiryDate) fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
+            
             fd.append('insuredValue', formData.insuredValue.toString());
             fd.append('providerContact[name]', formData.providerContact.name);
             fd.append('providerContact[phone]', formData.providerContact.phone);
@@ -138,8 +166,8 @@ const ManageInsurances = () => {
             setIsModalOpen(false);
             setPolicyFile(null);
             fetchInsurances();
-        } catch (err) {
-            setError(t('management.insurances.saveFailed'));
+        } catch (err: any) {
+            setError(err.response?.data?.error || t('management.insurances.saveFailed'));
         } finally {
             setLoading(false);
         }
@@ -421,26 +449,56 @@ const ManageInsurances = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyInfo')}</h3>
+                                    
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Provider</label>
+                                        <label className="text-xs text-dim uppercase">Supplier *</label>
+                                        <select
+                                            required
+                                            disabled={supplierLoading}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm disabled:opacity-50"
+                                            value={formData.supplier}
+                                            onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                                        >
+                                            <option value="">{supplierLoading ? 'Loading Suppliers...' : 'Select Insurance Supplier'}</option>
+                                            {suppliers.map(s => (
+                                                <option key={s._id} value={s._id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs text-dim uppercase">Country *</label>
                                         <input
                                             required
                                             type="text"
+                                            placeholder="e.g. Global, UAE, India"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            value={formData.country}
+                                            onChange={(e) => setFormData({...formData, country: e.target.value})}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs text-dim uppercase">Provider (Optional)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Leave empty to use Supplier name"
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
                                             value={formData.provider}
                                             onChange={(e) => setFormData({...formData, provider: e.target.value})}
                                         />
                                     </div>
+
                                     <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyNumber')}</label>
+                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyNumber')} (Optional)</label>
                                         <input
-                                            required
                                             type="text"
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
                                             value={formData.policyNumber}
                                             onChange={(e) => setFormData({...formData, policyNumber: e.target.value})}
                                         />
                                     </div>
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyType')}</label>
@@ -481,9 +539,8 @@ const ManageInsurances = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.startDate')}</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.startDate')} (Opt)</label>
                                             <input
-                                                required
                                                 type="date"
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
                                                 value={formData.startDate}
@@ -491,9 +548,8 @@ const ManageInsurances = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.expiryDate')}</label>
+                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.expiryDate')} (Opt)</label>
                                             <input
-                                                required
                                                 type="date"
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
                                                 value={formData.expiryDate}

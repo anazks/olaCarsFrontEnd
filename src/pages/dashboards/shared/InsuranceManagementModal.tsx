@@ -68,8 +68,8 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
             await progressVehicle(vehicle._id, {
                 targetStatus: vehicle.status,
                 updateData: {
+                    insuranceId,
                     insuranceDetails: {
-                        plan: insuranceId,
                         insuranceNumber,
                         fromDate,
                         toDate
