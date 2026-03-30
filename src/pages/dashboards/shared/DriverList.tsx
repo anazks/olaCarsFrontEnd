@@ -21,7 +21,7 @@ const DriverList = () => {
     const [endDate, setEndDate] = useState('');
 
     // Sorting State
-    const [sortBy, setSortBy] = useState<string>('appliedAt');
+    const [sortBy, setSortBy] = useState<string>('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // Pagination State
@@ -250,9 +250,9 @@ const DriverList = () => {
                                 <th className="px-6 py-4">
                                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.license')}</span>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('appliedAt')}>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('createdAt')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.drivers.table.applied')} <SortIcon field="appliedAt" />
+                                        {t('management.drivers.table.applied')} <SortIcon field="createdAt" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>

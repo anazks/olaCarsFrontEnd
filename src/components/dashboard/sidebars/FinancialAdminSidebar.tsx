@@ -21,7 +21,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         navigate('/admin/login');
     };
 
-    const navItems = [
+    const adminItems = [
         { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/financial-admin/manage-country-managers' },
         { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/financial-admin/manage-branches' },
         { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/financial-admin/manage-branch-managers' },
@@ -29,6 +29,9 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/financial-admin/manage-operation-staff' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/financial-admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/financial-admin/manage-suppliers' },
+    ];
+
+    const operationsItems = [
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers' },
@@ -40,12 +43,6 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts' },
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/financial-admin/purchase-bills' },
-        { icon: <DollarSign size={20} />, label: t('sidebar.items.revenueStreams') },
-        { icon: <PieChart size={20} />, label: t('sidebar.items.profitAnalysis') },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.billingInvoices') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.taxCompliance') },
-        { icon: <Banknote size={20} />, label: t('sidebar.items.payoutRegistry') },
-        { icon: <ShieldAlert size={20} />, label: t('sidebar.items.riskAudit') },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -129,8 +126,9 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
-                <SidebarSection title={t('sidebar.sections.financeOperations')} items={financeItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
+                <SidebarSection title={t('sidebar.sections.finance')} items={financeItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

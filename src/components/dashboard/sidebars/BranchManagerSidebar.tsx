@@ -21,24 +21,19 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         navigate('/admin/login');
     };
 
-    const navItems = [
+    const adminItems = [
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/branch-manager/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/branch-manager/manage-operation-staff' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers' },
+    ];
+
+    const operationsItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/branch-manager/insurances' },
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-manager/purchase-orders' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers' },
-    ];
-
-    const branchOpsItems = [
-        { icon: <Users size={20} />, label: t('sidebar.items.myTeam'), path: '/admin/branch-manager/team' },
-        { icon: <Clock size={20} />, label: t('sidebar.items.shiftSchedule') },
-        { icon: <ClipboardList size={20} />, label: t('sidebar.items.taskAssignments') },
-        { icon: <Wallet size={20} />, label: t('sidebar.items.branchRevenue') },
-        { icon: <BellRing size={20} />, label: t('sidebar.items.localAlerts') },
     ];
 
     const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -121,8 +116,8 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
-                <SidebarSection title={t('sidebar.sections.localOperations')} items={branchOpsItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

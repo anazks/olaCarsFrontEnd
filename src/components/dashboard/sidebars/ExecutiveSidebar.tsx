@@ -21,7 +21,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         navigate('/admin/login');
     };
 
-    const navItems = [
+    const adminItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.operationalAdmins'), path: '/admin/admin/manage-operational-admins' },
         { icon: <DollarSign size={20} />, label: t('sidebar.items.financialAdmins'), path: '/admin/admin/manage-financial-admins' },
         { icon: <Globe size={20} />, label: t('sidebar.items.countryManagers'), path: '/admin/admin/manage-country-managers' },
@@ -31,34 +31,14 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/admin/manage-operation-staff' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers' },
+    ];
+
+    const operationsItems = [
         { icon: <DollarSign size={20} />, label: t('sidebar.items.poThreshold'), path: '/admin/admin/po-threshold' },
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders' },
         { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/admin/agreements' },
-    ];
-
-    const monitoringItems = [
-        { icon: <TrendingUp size={20} />, label: t('sidebar.items.collectionsBoard') },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.gpsRiskDashboard') },
-    ];
-
-    const alertItems = [
-        { icon: <AlertTriangle size={20} />, label: t('sidebar.items.viewAlerts') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.taskDetails') },
-    ];
-
-    const taskItems = [
-        { icon: <ListTodo size={20} />, label: t('sidebar.items.pendingTasks') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.taskDetails') },
-    ];
-
-    const agendaItems = [
-        { icon: <CarFront size={20} />, label: t('sidebar.items.vehicleList') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.registerVehicle') },
-        { icon: <Calendar size={20} />, label: t('sidebar.items.importRecords') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.assignments') },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.insuranceClaims') },
     ];
 
     const financeItems = [
@@ -152,12 +132,9 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
                 <SidebarSection title={t('sidebar.sections.finance')} items={financeItems} />
-                <SidebarSection title={t('sidebar.sections.monitoring')} items={monitoringItems} />
-                <SidebarSection title={t('sidebar.sections.alertCenter')} items={alertItems} />
-                <SidebarSection title={t('sidebar.sections.tasks')} items={taskItems} />
-                <SidebarSection title={t('sidebar.sections.agendaCalendar')} items={agendaItems} />
             </div>
 
             {/* Footer */}

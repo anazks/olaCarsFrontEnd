@@ -21,12 +21,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         navigate('/admin/login');
     };
 
-    const navItems = [
-        { icon: <CheckSquare size={20} />, label: t('sidebar.items.dailyTasks') },
-        { icon: <KeySquare size={20} />, label: t('sidebar.items.driverHandovers') },
-        { icon: <Sparkles size={20} />, label: t('sidebar.items.cleaningSchedule') },
-        { icon: <Navigation2 size={20} />, label: t('sidebar.items.vehicleCheckin') },
-        { icon: <FilePlus size={20} />, label: t('sidebar.items.logDamage') },
+    const operationsItems = [
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-op-staff/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-op-staff/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-op-staff/drivers' },
@@ -71,7 +66,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                             key={i}
                             icon={item.icon}
                             label={item.label}
-                            active={item.path ? isActive(item.path) : (i === 0)} // Temp active for demo
+                            active={item.path ? isActive(item.path) : false}
                             onClick={item.path ? () => navigate(item.path) : undefined}
                         />
                     ))}
@@ -112,7 +107,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.operationalTasks')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag } from 'lucide-react';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
@@ -21,10 +21,7 @@ const DriverDetail = () => {
     const [rejectionReason, setRejectionReason] = useState<string>('OTHER');
     const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
-    const [activationChecks, setActivationChecks] = useState({
-        credentialsSent: false,
-        gpsMonitoringActive: false
-    });
+    const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
     const currentUser = getUser();
     const userRole = getUserRole();
     const isManager = ['branchmanager', 'countrymanager', 'admin', 'financeadmin', 'operationadmin'].includes(userRole || '');
@@ -82,20 +79,104 @@ const DriverDetail = () => {
         }
     };
 
-    const generateAndUploadContract = async (templateType: string, fileName: string) => {
-        const toastId = toast.loading(`Generating ${templateType.replace(/_/g, ' ')}...`);
+    const handlePreviewContract = async () => {
+        const toastId = toast.loading('Fetching contract template...');
         try {
-            // 1. Fetch Template
-            const templates = await agreementService.getAgreements({ type: templateType });
+            const templates = await agreementService.getAgreements({ type: 'DRIVER_AGREEMENT' });
             if (!templates || templates.length === 0) {
-                throw new Error(`No agreement template found for type: ${templateType}`);
+                throw new Error('No agreement template found for type: DRIVER_AGREEMENT');
             }
-            const templateId = templates[0]._id;
-
-            // 2. Render Template
-            const rendered = await agreementService.getRenderedAgreement(templateId);
+            const template = await agreementService.getAgreement(templates[0]._id);
             
-            // 3. Generate PDF
+            let content = template.content || '';
+            content = content.replace(/{{DRIVER_NAME}}/g, driver?.personalInfo?.fullName || "");
+            content = content.replace(/{{DRIVER_EMAIL}}/g, driver?.personalInfo?.email || "");
+            content = content.replace(/{{DRIVER_PHONE}}/g, driver?.personalInfo?.phone || "");
+            content = content.replace(/{{DRIVER_NATIONALITY}}/g, driver?.personalInfo?.nationality || "");
+            content = content.replace(/{{DRIVER_DOB}}/g, driver?.personalInfo?.dateOfBirth ? new Date(driver.personalInfo.dateOfBirth).toLocaleDateString() : "");
+            content = content.replace(/{{DRIVER_LICENSE_NUMBER}}/g, driver?.drivingLicense?.licenseNumber || "");
+            content = content.replace(/{{DRIVER_LICENSE_EXPIRY}}/g, driver?.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : "");
+            content = content.replace(/{{DRIVER_ID_NUMBER}}/g, driver?.identityDocs?.idNumber || "");
+            content = content.replace(/{{BRANCH_NAME}}/g, "Main Branch");
+            content = content.replace(/{{CURRENT_DATE}}/g, new Date().toLocaleDateString());
+
+            setContractPreviewHTML(content);
+            toast.dismiss(toastId);
+        } catch (error: any) {
+            console.error('Contract preview failed:', error);
+            toast.error(error.message || 'Failed to fetch contract', { id: toastId });
+        }
+    };
+
+    const handlePrintContract = () => {
+        if (!contractPreviewHTML) return;
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print Contract</title>
+                        <style>
+                            body { font-family: serif; line-height: 1.6; color: #111; padding: 40px; }
+                            h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; }
+                            table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+                            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                            @media print {
+                                body { padding: 0; }
+                            }
+                        </style>
+                    </head>
+                    <body>${contractPreviewHTML}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+    };
+
+    const handleDownloadContract = async () => {
+        if (!contractPreviewHTML) return;
+        const toastId = toast.loading('Downloading Contract...');
+        try {
+            const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+            const container = document.createElement('div');
+            container.style.width = '550pt';
+            container.style.padding = '40pt';
+            container.style.color = '#111';
+            container.style.fontFamily = 'serif';
+            container.style.lineHeight = '1.6';
+            container.innerHTML = contractPreviewHTML;
+            
+            const style = document.createElement('style');
+            style.innerHTML = `
+                h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
+                p { margin-bottom: 1em; }
+                table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+                th, td { border: 1pt solid #eee; padding: 8pt; text-align: left; }
+            `;
+            container.appendChild(style);
+            document.body.appendChild(container);
+
+            await doc.html(container, { x: 20, y: 20, width: 550, windowWidth: 800 });
+            doc.save(`Driver_Contract_${driver?.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Preview'}.pdf`);
+            document.body.removeChild(container);
+            toast.success('Download complete', { id: toastId });
+        } catch (error: any) {
+            toast.error('Failed to download', { id: toastId });
+        }
+    };
+
+    const confirmAndIssueContract = async () => {
+        if (!contractPreviewHTML) return;
+        const toastId = toast.loading('Generating & Uploading Contract...');
+        try {
+            setLoading(true);
+            const fileName = `Driver_Contract_${driver?.personalInfo?.fullName.replace(/\s+/g, '_')}`;
+            
             const doc = new jsPDF({
                 unit: 'pt',
                 format: 'a4',
@@ -108,9 +189,8 @@ const DriverDetail = () => {
             container.style.color = '#111';
             container.style.fontFamily = 'serif';
             container.style.lineHeight = '1.6';
-            container.innerHTML = rendered.renderedContent;
+            container.innerHTML = contractPreviewHTML;
             
-            // Basic styling for the PDF
             const style = document.createElement('style');
             style.innerHTML = `
                 h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
@@ -131,27 +211,20 @@ const DriverDetail = () => {
             const pdfBlob = doc.output('blob');
             document.body.removeChild(container);
 
-            // 4. Upload PDF
             const formData = new FormData();
             formData.append('contractPDF', pdfBlob, `${fileName}.pdf`);
             await uploadDriverDocument(id!, formData);
             
+            await handleProgress('CONTRACT PENDING', { notes: 'Automated: Contract generated and issued' });
+            
             toast.success('Contract generated and uploaded successfully', { id: toastId });
-            return true;
+            setContractPreviewHTML(null);
         } catch (error: any) {
             console.error('Contract generation failed:', error);
             toast.error(error.message || 'Failed to generate contract', { id: toastId });
-            return false;
+        } finally {
+            setLoading(false);
         }
-    };
-
-    const handleIssueContract = async () => {
-        setLoading(true);
-        const success = await generateAndUploadContract('DRIVER_AGREEMENT', `Driver_Contract_${driver?.personalInfo.fullName.replace(/\s+/g, '_')}`);
-        if (success) {
-            await handleProgress('CONTRACT PENDING', { notes: 'Automated: Contract generated and issued' });
-        }
-        setLoading(false);
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -170,6 +243,38 @@ const DriverDetail = () => {
             await fetchDriver();
         } catch (error) {
             console.error(`Error uploading ${fieldName}:`, error);
+        } finally {
+            setUploading(null);
+        }
+    };
+
+    const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !id) return;
+
+        const formData = new FormData();
+        const fields = [
+            'photograph',
+            'licenseFront',
+            'licenseBack',
+            'idFrontImage',
+            'idBackImage',
+            'addressProofDocument',
+            'medicalCertificate',
+            'consentForm'
+        ];
+
+        fields.forEach(field => formData.append(field, file));
+
+        try {
+            setUploading('bulk');
+            const toastId = toast.loading('Bulk uploading documents...');
+            await uploadDriverDocument(id, formData);
+            await fetchDriver();
+            toast.success('Bulk upload successful (Testing)', { id: toastId });
+        } catch (error) {
+            console.error('Bulk upload failed:', error);
+            toast.error('Bulk upload failed');
         } finally {
             setUploading(null);
         }
@@ -248,39 +353,49 @@ const DriverDetail = () => {
         visualStepIndex = steps.length - 1;
     }
 
+    const canProgress = () => {
+        if (!driver) return false;
+        if (driver.status === 'DRAFT') {
+            return !!(driver.personalInfo?.fullName && driver.personalInfo?.email && driver.personalInfo?.phone && driver.drivingLicense?.licenseNumber && driver.drivingLicense?.frontImage && driver.drivingLicense?.backImage && driver.identityDocs?.idFrontImage && driver.identityDocs?.idBackImage && driver.emergencyContact?.name && driver.emergencyContact?.phone);
+        }
+        if (driver.status === 'PENDING REVIEW') {
+            return driver.drivingLicense?.verificationStatus === 'VERIFIED' && !!driver.backgroundCheck?.document && driver.backgroundCheck?.status !== 'NOT PROVIDED';
+        }
+        if (driver.status === 'VERIFICATION') {
+            return !!driver.creditCheck?.consentForm;
+        }
+        if (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') {
+            return !!driver.creditCheck?.score && driver.creditCheck?.decision !== 'DECLINED';
+        }
+        if (driver.status === 'APPROVED') {
+            return !!driver.contract?.generatedS3Key;
+        }
+        if (driver.status === 'CONTRACT PENDING') {
+            return !!driver.contract?.signedS3Key;
+        }
+        return true;
+    };
+
     const RenderActionCenter = () => {
-        const canProgress = () => {
-            if (driver.status === 'DRAFT') {
-                return !!(driver.personalInfo?.fullName && driver.personalInfo?.email && driver.drivingLicense?.licenseNumber && driver.drivingLicense?.frontImage && driver.identityDocs?.idFrontImage);
-            }
-            if (driver.status === 'PENDING REVIEW') {
-                return driver.drivingLicense?.verificationStatus === 'VERIFIED';
-            }
-            if (driver.status === 'VERIFICATION') {
-                return !!(driver.backgroundCheck?.status === 'CLEARED');
-            }
-            if (driver.status === 'MANAGER REVIEW') {
-                return !!reviewNotes;
-            }
-            if (driver.status === 'CONTRACT PENDING') {
-                return !!(driver.contract?.signedS3Key && activationChecks.credentialsSent && activationChecks.gpsMonitoringActive);
-            }
-            return true;
-        };
 
         const renderRequirements = () => {
             const reqs = [];
             if (driver.status === 'DRAFT') {
-                reqs.push({ label: 'Basic Info', met: !!driver.personalInfo?.fullName });
-                reqs.push({ label: 'License Photo', met: !!driver.drivingLicense?.frontImage });
-                reqs.push({ label: 'ID Photo', met: !!driver.identityDocs?.idFrontImage });
+                reqs.push({ label: 'Basic Info', met: !!(driver.personalInfo?.fullName && driver.personalInfo?.email && driver.personalInfo?.phone) });
+                reqs.push({ label: 'ID Docs', met: !!(driver.identityDocs?.idFrontImage && driver.identityDocs?.idBackImage) });
+                reqs.push({ label: 'License Docs', met: !!(driver.drivingLicense?.frontImage && driver.drivingLicense?.backImage && driver.drivingLicense?.licenseNumber) });
+                reqs.push({ label: 'Emergency Contact', met: !!(driver.emergencyContact?.name && driver.emergencyContact?.phone) });
             } else if (driver.status === 'PENDING REVIEW') {
                 reqs.push({ label: 'License Verified', met: driver.drivingLicense?.verificationStatus === 'VERIFIED' });
+                reqs.push({ label: 'BG Check Uploaded', met: !!driver.backgroundCheck?.document });
             } else if (driver.status === 'VERIFICATION') {
-                reqs.push({ label: 'Background Cleared', met: driver.backgroundCheck?.status === 'CLEARED' });
+                reqs.push({ label: 'Consent Form', met: !!driver.creditCheck?.consentForm });
+            } else if (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') {
+                reqs.push({ label: 'Credit Score Recorded', met: !!driver.creditCheck?.score });
+            } else if (driver.status === 'APPROVED') {
+                reqs.push({ label: 'Contract Generated', met: !!driver.contract?.generatedS3Key });
             } else if (driver.status === 'CONTRACT PENDING') {
                 reqs.push({ label: 'Signed Contract', met: !!driver.contract?.signedS3Key });
-                reqs.push({ label: 'Activation Checklist', met: activationChecks.credentialsSent && activationChecks.gpsMonitoringActive });
             }
 
             if (reqs.length === 0) return null;
@@ -343,7 +458,16 @@ const DriverDetail = () => {
 
                         {driver.status === 'VERIFICATION' && isFinanceStaff && (
                             <button
-                                onClick={() => handleProgress('CREDIT CHECK', { notes: 'Automated: Triggering credit assessment' })}
+                                onClick={() => {
+                                    const input = document.getElementById('test-score-input') as HTMLInputElement;
+                                    const val = parseInt(input?.value);
+                                    handleProgress('CREDIT CHECK', { 
+                                        updateData: {
+                                            creditCheck: !isNaN(val) ? { score: val } : {}
+                                        },
+                                        notes: 'Triggering credit assessment' 
+                                    });
+                                }}
                                 disabled={!canProgress()}
                                 className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
                             >
@@ -389,7 +513,7 @@ const DriverDetail = () => {
 
                         {driver.status === 'APPROVED' && isStaff && (
                             <button
-                                onClick={handleIssueContract}
+                                onClick={handlePreviewContract}
                                 className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
                                 <FileText size={20} />
@@ -397,32 +521,7 @@ const DriverDetail = () => {
                             </button>
                         )}
 
-                        {driver.status === 'CONTRACT PENDING' && isManager && (
-                            <div className="flex flex-col gap-4">
-                                {!driver.contract?.signedS3Key && (
-                                    <label className="flex items-center gap-3 px-6 py-4 rounded-2xl border-2 border-dashed cursor-pointer hover:border-brand-lime transition-all" style={{ borderColor: 'var(--border-main)' }}>
-                                        <Upload size={20} className={uploading === 'signedContract' ? 'animate-bounce' : ''} />
-                                        <span className="text-xs font-black uppercase tracking-widest">
-                                            {uploading === 'signedContract' ? 'Uploading...' : 'Upload Signed Contract'}
-                                        </span>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) => handleFileUpload(e, 'signedContract')}
-                                            accept=".pdf"
-                                        />
-                                    </label>
-                                )}
-                                <button
-                                    onClick={() => handleProgress('ACTIVE', { notes: 'Final activation' })}
-                                    disabled={!canProgress()}
-                                    className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
-                                >
-                                    <ShieldCheck size={20} />
-                                    Final Activation
-                                </button>
-                            </div>
-                        )}
+
 
                         {driver.status === 'ACTIVE' && isStaff && (
                             <button
@@ -503,8 +602,7 @@ const DriverDetail = () => {
                 </div>
             )}
 
-            {/* Stepper - Visible for all onboarding stages */}
-            {currentStepIndex !== -1 && driver.status !== 'REJECTED' && (
+            {currentStepIndex !== -1 && !['REJECTED', 'ACTIVE', 'SUSPENDED'].includes(driver.status) && (
                 <div className="p-6 rounded-2xl shadow-sm border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex justify-between relative">
                         <div className="absolute top-1/2 left-0 w-full h-0.5 -translate-y-1/2" style={{ backgroundColor: 'var(--border-main)' }} />
@@ -825,17 +923,68 @@ const DriverDetail = () => {
                                 <div className="space-y-4">
                                     <div className="p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Experian Score</p>
-                                        <p className="text-2xl font-black" style={{ color: driver.creditCheck?.score ? 'var(--text-main)' : 'var(--text-dim)' }}>
-                                            {driver.creditCheck?.score || 'PENDING'}
-                                        </p>
+                                        <div className="flex items-center gap-4">
+                                            <input 
+                                                type="number"
+                                                id="test-score-input"
+                                                defaultValue={driver.creditCheck?.score}
+                                                className="text-2xl font-black bg-transparent outline-none border-b-2 border-brand-lime/20 focus:border-brand-lime transition-all w-24 px-2"
+                                                style={{ color: 'var(--text-main)' }}
+                                                placeholder="---"
+                                            />
+                                            <button 
+                                                onClick={() => {
+                                                    const input = document.getElementById('test-score-input') as HTMLInputElement;
+                                                    const val = parseInt(input.value);
+                                                    if (!isNaN(val)) {
+                                                        if (driver.status === 'VERIFICATION') {
+                                                            handleProgress('CREDIT CHECK', { 
+                                                                updateData: { creditCheck: { score: val } },
+                                                                notes: 'Manual score entry triggered assessment' 
+                                                            });
+                                                        } else {
+                                                            handleVerifyField('creditCheck.score', val);
+                                                        }
+                                                    } else {
+                                                        toast.error('Enter a valid score');
+                                                    }
+                                                }}
+                                                className="px-3 py-1 bg-brand-lime text-black text-[10px] font-black uppercase rounded-lg hover:scale-105 active:scale-95 transition-all"
+                                            >
+                                                {driver.status === 'VERIFICATION' ? 'Submit & Process' : 'Update Score'}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-3 pt-2">
                                         <label className="flex items-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all w-fit">
                                             <Upload size={12} className={uploading === 'consentForm' ? 'animate-bounce' : ''} />
-                                            {uploading === 'consentForm' ? 'Uploading...' : driver.creditCheck?.reportS3Key ? 'Update Consent Form' : 'Upload Consent Form'}
+                                            {uploading === 'consentForm' ? 'Uploading...' : driver.creditCheck?.consentForm ? 'Update Consent Form' : 'Upload Consent Form'}
                                             <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'consentForm')} />
                                         </label>
+
+                                        <div className="flex flex-col gap-2 p-3 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-dim">Manual Decision (Testing)</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['AUTO_APPROVED', 'MANUAL_REVIEW', 'DECLINED'].map(decision => (
+                                                    <button
+                                                        key={decision}
+                                                        onClick={() => handleVerifyField('creditCheck.decision', decision)}
+                                                        className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border transition-all ${driver.creditCheck?.decision === decision ? 'bg-brand-lime border-brand-lime text-black' : 'border-white/10 text-dim hover:border-white/30'}`}
+                                                    >
+                                                        {decision.replace('_', ' ')}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleVerifyField('creditCheck.fraudAlert', !driver.creditCheck?.fraudAlert)}
+                                            className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${driver.creditCheck?.fraudAlert ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-black/5 border-white/10 text-dim'}`}
+                                        >
+                                            <AlertCircle size={14} />
+                                            <span className="text-[10px] font-black uppercase">Fraud Alert: {driver.creditCheck?.fraudAlert ? 'ON' : 'OFF'}</span>
+                                        </button>
 
                                         {driver.creditCheck?.fraudAlert && (
                                             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 italic">
@@ -905,51 +1054,40 @@ const DriverDetail = () => {
                         </div>
                     )}
 
-                    {/* Activation Checklist (CONTRACT PENDING Stage) */}
+                    {/* Activation Upload (CONTRACT PENDING Stage) */}
                     {driver.status === 'CONTRACT PENDING' && (
                         <div className="p-6 rounded-2xl shadow-sm border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--brand-lime-subtle, rgba(200,230,0,0.1))', color: 'var(--brand-lime)' }}>
                                     <FileCheck size={20} />
                                 </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Final Activation Checklist</h2>
+                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Finalize Activation</h2>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3 p-4 rounded-2xl border bg-black/5 transition-all" style={{ borderColor: activationChecks.credentialsSent ? 'var(--brand-lime)' : 'var(--border-main)' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="credSent"
-                                        checked={activationChecks.credentialsSent}
-                                        onChange={(e) => setActivationChecks(prev => ({ ...prev, credentialsSent: e.target.checked }))}
-                                        className="w-5 h-5 accent-brand-lime"
-                                    />
-                                    <label htmlFor="credSent" className="font-bold cursor-pointer">Login Credentials Sent to Driver</label>
-                                </div>
-                                <div className="flex items-center gap-3 p-4 rounded-2xl border bg-black/5 transition-all" style={{ borderColor: activationChecks.gpsMonitoringActive ? 'var(--brand-lime)' : 'var(--border-main)' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="gpsActive"
-                                        checked={activationChecks.gpsMonitoringActive}
-                                        onChange={(e) => setActivationChecks(prev => ({ ...prev, gpsMonitoringActive: e.target.checked }))}
-                                        className="w-5 h-5 accent-brand-lime"
-                                    />
-                                    <label htmlFor="gpsActive" className="font-bold cursor-pointer">GPS Monitoring System Activated</label>
-                                </div>
+                            <div className="flex flex-col gap-6">
+                                <label className="flex items-center justify-center gap-4 px-6 py-8 border-2 border-dashed rounded-xl cursor-pointer hover:border-brand-lime transition-all" style={{ borderColor: driver.contract?.signedS3Key ? 'var(--brand-lime)' : 'var(--border-main)', backgroundColor: driver.contract?.signedS3Key ? 'rgba(200,230,0,0.05)' : 'transparent' }}>
+                                    <Upload size={28} className={uploading === 'signedContract' ? 'animate-bounce text-brand-lime' : driver.contract?.signedS3Key ? 'text-brand-lime' : 'text-white'} />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-black uppercase tracking-widest text-white">
+                                            {uploading === 'signedContract' ? 'Uploading...' : driver.contract?.signedS3Key ? 'Change Signed Contract' : 'Upload Signed Contract'}
+                                        </span>
+                                        <span className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>PDF or image of the signed agreement</span>
+                                    </div>
+                                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'signedContract')} />
+                                </label>
 
-                                {/* Contract Uploads in Activation Panel */}
-                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                    <label className="flex items-center justify-center gap-2 px-3 py-3 bg-black border border-white/10 rounded-xl text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all">
-                                        <Upload size={14} className={uploading === 'contractPDF' ? 'animate-bounce' : ''} />
-                                        {uploading === 'contractPDF' ? 'Uploading...' : driver.contract?.pdfS3Key ? 'Update Contract PDF' : 'Upload Contract PDF'}
-                                        <input type="file" className="hidden" accept=".pdf" onChange={(e) => handleFileUpload(e, 'contractPDF')} />
-                                    </label>
-                                    <label className="flex items-center justify-center gap-2 px-3 py-3 bg-black border border-white/10 rounded-xl text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all">
-                                        <Upload size={14} className={uploading === 'signedContract' ? 'animate-bounce' : ''} />
-                                        {uploading === 'signedContract' ? 'Uploading...' : driver.contract?.signedS3Key ? 'Update Signed Copy' : 'Upload Signed Copy'}
-                                        <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'signedContract')} />
-                                    </label>
-                                </div>
+                                {isStaff && (
+                                    <div className="flex justify-end pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                        <button
+                                            onClick={() => handleProgress('ACTIVE', { notes: 'Activated via signed contract submission' })}
+                                            disabled={!canProgress()}
+                                            className={`px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed'}`}
+                                        >
+                                            <ShieldCheck size={20} />
+                                            Submit
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -958,11 +1096,26 @@ const DriverDetail = () => {
                 {/* Documents Section */}
                 <div className="space-y-6">
                     <div className="p-6 rounded-2xl shadow-sm border h-full" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
-                            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                                <FileText size={20} />
+                        <div className="flex items-center justify-between mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                                    <FileText size={20} />
+                                </div>
+                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Required Documents</h2>
                             </div>
-                            <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Required Documents</h2>
+                            
+                            <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime/10 border border-brand-lime/20 cursor-pointer hover:bg-brand-lime/20 transition-all">
+                                <Upload size={14} className={uploading === 'bulk' ? 'animate-bounce text-brand-lime' : 'text-brand-lime'} />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">
+                                    {uploading === 'bulk' ? 'Uploading All...' : 'Bulk Upload (Testing)'}
+                                </span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleBulkUpload}
+                                    disabled={!!uploading}
+                                />
+                            </label>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <DocUploadRow
@@ -1029,6 +1182,47 @@ const DriverDetail = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Contract Preview Modal */}
+            {contractPreviewHTML && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm">
+                    <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
+                        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <FileText className="text-brand-lime" size={24} />
+                                <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Contract Preview</h2>
+                            </div>
+                            <button onClick={() => setContractPreviewHTML(null)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                                <XCircle size={24} style={{ color: 'var(--text-dim)' }} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 bg-white text-black prose max-w-none">
+                            <div dangerouslySetInnerHTML={{ __html: contractPreviewHTML }} />
+                        </div>
+                        <div className="p-6 border-t flex justify-between gap-4" style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex gap-4">
+                                <button onClick={handlePrintContract} className="px-6 py-3 border rounded-xl font-bold flex items-center gap-2 hover:bg-white/5 transition-all" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    <Printer size={18} />
+                                    Print
+                                </button>
+                                <button onClick={handleDownloadContract} className="px-6 py-3 border rounded-xl font-bold flex items-center gap-2 hover:bg-white/5 transition-all" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    <Download size={18} />
+                                    Download PDF
+                                </button>
+                            </div>
+                            <div className="flex gap-4">
+                                <button onClick={() => setContractPreviewHTML(null)} className="px-6 py-3 rounded-xl font-bold transition-all hover:bg-white/5" style={{ color: 'var(--text-main)' }}>
+                                    Cancel
+                                </button>
+                                <button onClick={confirmAndIssueContract} className="px-8 py-3 bg-brand-lime text-black rounded-xl font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                                    <CheckCircle2 size={18} />
+                                    Confirm & Issue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

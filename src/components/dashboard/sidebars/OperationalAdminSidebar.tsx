@@ -21,7 +21,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         navigate('/admin/login');
     };
 
-    const navItems = [
+    const adminItems = [
         { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/operational-admin/manage-country-managers' },
         { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches' },
         { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers' },
@@ -29,18 +29,13 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers' },
+    ];
+
+    const operationsItems = [
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements' },
-    ];
-
-    const monitoringItems = [
-        { icon: <MapPin size={20} />, label: t('sidebar.items.liveGpsTracking') },
-        { icon: <Car size={20} />, label: t('sidebar.items.fleetInventory') },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.maintenanceHub') },
-        { icon: <Users size={20} />, label: t('sidebar.items.driverRoster') },
-        { icon: <CalendarSync size={20} />, label: t('sidebar.items.assignments') },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -124,8 +119,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
-                <SidebarSection title={t('sidebar.sections.operations')} items={monitoringItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

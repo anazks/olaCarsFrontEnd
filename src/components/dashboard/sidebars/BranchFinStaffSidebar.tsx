@@ -21,12 +21,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
         navigate('/admin/login');
     };
 
-    const navItems = [
-        { icon: <Wallet size={20} />, label: t('sidebar.items.dailyCollection') },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.invoices') },
-        { icon: <CreditCard size={20} />, label: t('sidebar.items.payments') },
-        { icon: <History size={20} />, label: t('sidebar.items.transactionHistory') },
-        { icon: <FileText size={20} />, label: t('sidebar.items.reports') },
+    const operationsItems = [
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-fin-staff/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-fin-staff/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-fin-staff/drivers' },
@@ -79,7 +74,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                             key={i}
                             icon={item.icon}
                             label={item.label}
-                            active={item.path ? isActive(item.path) : (i === 0)} // Temp active for demo
+                            active={item.path ? isActive(item.path) : false}
                             onClick={item.path ? () => navigate(item.path) : undefined}
                         />
                     ))}
@@ -121,8 +116,8 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.generalLedgerTax')} items={financeItems} />
-                <SidebarSection title={t('sidebar.sections.financialTasks')} items={navItems} />
+                <SidebarSection title={t('sidebar.sections.finance')} items={financeItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

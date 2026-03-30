@@ -21,26 +21,22 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         navigate('/admin/login');
     };
 
-    const navItems = [
+    const adminItems = [
         { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/country-manager/manage-branches' },
         { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/country-manager/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/country-manager/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/country-manager/manage-operation-staff' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers' },
+    ];
+
+    const operationsItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/country-manager/insurances' },
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/country-manager/purchase-orders' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/country-manager/purchase-bills' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements' },
-    ];
-
-    const performanceItems = [
-        { icon: <Map size={20} />, label: t('sidebar.items.regionalPerformance'), path: '/admin/country-manager/regional-performance' },
-        { icon: <TrendingUp size={20} />, label: t('sidebar.items.revenueGrowth'), path: '/admin/country-manager/revenue-growth' },
-        { icon: <FileCheck size={20} />, label: t('sidebar.items.complianceReports'), path: '/admin/country-manager/compliance-reports' },
-        { icon: <AlertOctagon size={20} />, label: t('sidebar.items.criticalEscalations'), path: '/admin/country-manager/critical-escalations' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -124,8 +120,8 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={navItems} />
-                <SidebarSection title={t('sidebar.sections.performance')} items={performanceItems} />
+                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>

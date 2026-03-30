@@ -44,6 +44,7 @@ export interface Driver {
         notes?: string;
     };
     creditCheck?: {
+        consentForm?: string;
         score?: number;
         rating?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'VERY POOR' | 'FRAUD';
         decision?: 'AUTO_APPROVED' | 'MANUAL_REVIEW' | 'DECLINED';
@@ -56,6 +57,7 @@ export interface Driver {
         issuedDate?: string;
         signedDate?: string;
         pdfS3Key?: string;
+        generatedS3Key?: string;
         signedS3Key?: string;
     };
     assignedVehicle?: string | any;
@@ -76,9 +78,10 @@ export interface Driver {
         status?: 'PENDING' | 'COMPLETED' | 'FAILED';
         certificate?: string;
     };
-    activation: {
-        credentialsSent: boolean;
-        gpsMonitoringActive: boolean;
+    activation?: {
+        checklistDocument?: string;
+        credentialsSent?: boolean;
+        gpsMonitoringActive?: boolean;
         activatedDate?: string;
     };
     status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
