@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Car, Wrench, MapPin, Users, CalendarSync, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, Car, Wrench, MapPin, Users, CalendarSync, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, UserCog } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +27,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/operational-admin/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/operational-admin/manage-workshop-managers' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers' },
     ];

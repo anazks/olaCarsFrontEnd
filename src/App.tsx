@@ -35,6 +35,7 @@ import ManageBranches from './pages/dashboards/shared/ManageBranches';
 import ManageBranchManagers from './pages/dashboards/shared/ManageBranchManagers';
 import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
+import ManageWorkshopManagers from './pages/dashboards/shared/ManageWorkshopManagers';
 import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
@@ -123,6 +124,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
               <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="po-threshold" element={<POThresholdPage />} />
@@ -153,6 +155,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
               <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
@@ -176,6 +179,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
               <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
@@ -201,6 +205,7 @@ function App() {
               <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
               <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />
@@ -227,6 +232,7 @@ function App() {
               <Route index element={<BranchManagerDashboard />} />
               <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
               <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
+              <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
               <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
               <Route path="manage-suppliers" element={<ManageSuppliers />} />
               <Route path="purchase-orders" element={<PurchaseOrderList />} />

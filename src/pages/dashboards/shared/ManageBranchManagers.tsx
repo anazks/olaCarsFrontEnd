@@ -91,7 +91,7 @@ const ManageBranchManagers = () => {
     const fetchBranches = useCallback(async () => {
         try {
             const branchesData = await getAllBranches();
-            setBranches(Array.isArray(branchesData) ? branchesData : []);
+            setBranches(branchesData.data || []);
         } catch (err) {
             console.error('Failed to fetch branches', err);
         }

@@ -97,7 +97,7 @@ const ManageWorkshopStaff = () => {
             ]);
             setWorkshopStaff(staffRes.data || []);
             setPagination(staffRes.pagination);
-            setBranches(Array.isArray(branchesData) ? branchesData : []);
+            setBranches(branchesData.data || []);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || t('management.workshopStaff.fetchFailed', { defaultValue: 'Failed to fetch data' }));
         } finally {

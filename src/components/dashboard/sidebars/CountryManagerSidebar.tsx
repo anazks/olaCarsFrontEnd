@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Map, FileCheck, Building2, TrendingUp, AlertOctagon, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench } from 'lucide-react';
+import { LayoutDashboard, Map, FileCheck, Building2, TrendingUp, AlertOctagon, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +26,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/country-manager/manage-branch-managers' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/country-manager/manage-finance-staff' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/country-manager/manage-operation-staff' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/country-manager/manage-workshop-managers' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers' },
     ];
