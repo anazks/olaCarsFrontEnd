@@ -22,7 +22,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
     const fetchAgreements = async () => {
         setLoading(true);
         try {
-            const data = await agreementService.getAgreements(countryFilter || undefined);
+            const data = await agreementService.getAgreements({ country: countryFilter || undefined });
             setAgreements(data);
         } catch (error) {
             console.error('Failed to fetch agreements:', error);

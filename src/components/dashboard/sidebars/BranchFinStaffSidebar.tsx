@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wallet, Receipt, CreditCard, History, FileText, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users, Calculator, BookMarked, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users, Calculator, BookMarked, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
