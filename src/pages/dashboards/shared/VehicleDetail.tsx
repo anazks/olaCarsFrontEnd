@@ -126,7 +126,7 @@ const VehicleDetail = () => {
     });
 
     // Stage-specific form state
-    const [legalDocs, setLegalDocs] = useState<Record<string, string>>({});
+
     const [insurance, setInsurance] = useState<Record<string, any>>({});
     const [isInsuranceModalOpen, setIsInsuranceModalOpen] = useState(false);
     const [importation, setImportation] = useState<Record<string, any>>({ isImported: false });

@@ -1,0 +1,18 @@
+﻿src/components/agreements/AgreementList.tsx(25,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type '{ country?: string | undefined; type?: string | undefined; } | undefined'.
+  Type 'string' has no properties in common with type '{ country?: string | undefined; type?: string | undefined; }'.
+src/components/dashboard/sidebars/BranchFinStaffSidebar.tsx(3,27): error TS6133: 'Wallet' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchFinStaffSidebar.tsx(3,44): error TS6133: 'CreditCard' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchFinStaffSidebar.tsx(3,56): error TS6133: 'History' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchManagerSidebar.tsx(3,34): error TS6133: 'Clock' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchManagerSidebar.tsx(3,41): error TS6133: 'ClipboardList' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchManagerSidebar.tsx(3,56): error TS6133: 'Wallet' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchManagerSidebar.tsx(3,64): error TS6133: 'BellRing' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchOpStaffSidebar.tsx(3,27): error TS6133: 'KeySquare' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchOpStaffSidebar.tsx(3,38): error TS6133: 'CheckSquare' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchOpStaffSidebar.tsx(3,51): error TS6133: 'Sparkles' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchOpStaffSidebar.tsx(3,61): error TS6133: 'Navigation2' is declared but its value is never read.
+src/components/dashboard/sidebars/BranchOpStaffSidebar.tsx(3,74): error TS6133: 'FilePlus' is declared but its value is never read.
+src/components/dashboard/sidebars/CountryManagerSidebar.tsx(3,27): error TS6133: 'Map' is declared but its value is never read.
+src/components/dashboard/sidebars/CountryManagerSidebar.tsx(3,32): error TS6133: 'FileCheck' is declared but its value is never read.
+src/components/dashboard/sidebars/CountryManagerSidebar.tsx(3,54): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/components/dashboard/sidebars/CountryManagerSidebar.tsx(3,66): error TS6133: 'AlertOctagon' is declared but its value is never read.
