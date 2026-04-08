@@ -21,7 +21,7 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
     );
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-300">
             <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5 flex-shrink-0">
                     <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>

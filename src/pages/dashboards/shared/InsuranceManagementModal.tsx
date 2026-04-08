@@ -34,6 +34,10 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
     const [fromDate, setFromDate] = useState(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
     const [toDate, setToDate] = useState(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
     const [insuranceCertificate, setInsuranceCertificate] = useState<File | null>(null);
+    const [provider, setProvider] = useState(vehicle.insuranceDetails?.provider || '');
+    const [policyType, setPolicyType] = useState(vehicle.insuranceDetails?.policyType || '');
+    const [coverageType, setCoverageType] = useState(vehicle.insuranceDetails?.coverageType || '');
+    const [supplier, setSupplier] = useState(vehicle.insuranceDetails?.supplier || null);
     
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -46,6 +50,10 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
             setInsuranceNumber(vehicle.insuranceDetails?.insuranceNumber || '');
             setFromDate(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
             setToDate(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
+            setProvider(vehicle.insuranceDetails?.provider || '');
+            setPolicyType(vehicle.insuranceDetails?.policyType || '');
+            setCoverageType(vehicle.insuranceDetails?.coverageType || '');
+            setSupplier(vehicle.insuranceDetails?.supplier || null);
             setInsuranceCertificate(null);
             setError(null);
         }
@@ -64,18 +72,26 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                 await uploadVehicleDocuments(vehicle._id, formData);
             }
             
-            // Progress vehicle to update schema details
-            await progressVehicle(vehicle._id, {
+            const payload = {
                 targetStatus: vehicle.status,
                 updateData: {
-                    insuranceId,
+                    insurance: insuranceId,
                     insuranceDetails: {
+                        plan: insuranceId,
                         insuranceNumber,
                         fromDate,
-                        toDate
+                        toDate,
+                        provider,
+                        policyType,
+                        coverageType,
+                        supplier
                     }
                 }
-            });
+            };
+            console.log('[DEBUG] InsuranceManagementModal - Saving Payload:', JSON.stringify(payload, null, 2));
+
+            // Progress vehicle to update schema details
+            await progressVehicle(vehicle._id, payload);
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -86,7 +102,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all" style={{ background: 'rgba(0,0,0,0.8)' }}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all" style={{ background: 'rgba(0,0,0,0.8)' }}>
             <div className="w-full max-w-3xl rounded-3xl border flex flex-col max-h-[90vh] shadow-2xl" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -248,6 +264,15 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         selectedId={insuranceId}
                         onSelect={(ins) => {
                             setInsuranceId(ins._id);
+                            setProvider(ins.provider || '');
+                            setPolicyType(ins.policyType || '');
+                            setCoverageType(ins.coverageType || '');
+                            setSupplier({
+                                _id: typeof ins.supplier === 'object' ? (ins.supplier as any)._id : ins.supplier,
+                                name: ins.provider || '',
+                                email: (typeof ins.supplier === 'object' ? (ins.supplier as any).email : '') || ins.providerContact?.email || '',
+                                phone: (typeof ins.supplier === 'object' ? (ins.supplier as any).phone : '') || ins.providerContact?.phone || ''
+                            });
                             setIsSelectorOpen(false);
                         }}
                     />

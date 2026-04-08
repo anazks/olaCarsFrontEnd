@@ -13,6 +13,7 @@ import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, Vehicl
 import type { Insurance } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
 import InsuranceManagementModal from './InsuranceManagementModal';
+import VehicleGpsMap from '../../../components/maps/VehicleGpsMap';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -214,8 +215,19 @@ const VehicleDetail = () => {
         }
     }, [id]);
 
-    useEffect(() => { 
-        fetchVehicle(); 
+    useEffect(() => {
+        if (vehicle) {
+            console.log('[DEBUG] Vehicle Detail - Insurance Context:', {
+                vehicleId: vehicle._id,
+                status: vehicle.status,
+                insuranceDetails: vehicle.insuranceDetails,
+                eligibleInsurances: eligibleInsurances,
+            });
+        }
+    }, [vehicle, eligibleInsurances]);
+
+    useEffect(() => {
+        fetchVehicle();
         fetchEligibleInsurances();
     }, [fetchVehicle, fetchEligibleInsurances]);
 
@@ -236,7 +248,7 @@ const VehicleDetail = () => {
             }
             const payload: any = { targetStatus, notes: notes || undefined };
             if (updateData) payload.updateData = updateData;
-            
+
             console.log('--- Status Progress Payload ---');
             console.log('Vehicle ID:', id);
             console.log('Payload:', payload);
@@ -275,7 +287,7 @@ const VehicleDetail = () => {
             else if (val) { fd.append(key, val); hasFiles = true; }
         });
         if (!hasFiles) { setActionError('Please select at least one file'); return; }
-        
+
         console.group('--- Document Upload: Preparing Payload ---');
         console.log('Vehicle ID:', id);
         for (const [key, val] of Object.entries(uploadFiles)) {
@@ -295,7 +307,7 @@ const VehicleDetail = () => {
             for (let [key, value] of (fd as any).entries()) {
                 console.log(`FormData Entry -> ${key}:`, value instanceof File ? value.name : value);
             }
-            
+
             const uploadedDocs = await uploadVehicleDocuments(id, fd);
             console.log('--- API CALL SUCCESS: uploadVehicleDocuments ---', uploadedDocs);
             setActionSuccess('Documents uploaded successfully!');
@@ -413,27 +425,20 @@ const VehicleDetail = () => {
             {(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                     {/* Legal Documents */}
-                    <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.legalDocuments')} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regNumber')} value={vehicle.legalDocs?.registrationNumber} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regExpiry')} value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadTaxExpiry')} value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadworthiness')} value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
-                        </div>
-                    </div>
+
 
                     {/* Insurance Policy */}
-                    <div className={cardClass} style={cardStyle}>
+                    <div className={`${cardClass} flex flex-col`} style={cardStyle}>
                         <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.insurancePolicy')} />
-                        <div className="space-y-4">
+                        <div className="flex-1 flex flex-col">
+                            <div className="space-y-4 flex-1">
                             <div className="flex justify-between items-start">
-                                <InfoRow 
-                                    label={t('management.vehicles.vehicleDetail.labels.provider')} 
-                                    value={(() => {
+                                <InfoRow
+                                    label={t('management.vehicles.vehicleDetail.labels.provider')}
+                                    value={vehicle.insuranceDetails?.provider || (() => {
                                         const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
                                         return plan?.provider || (vehicle.insurancePolicy as any)?.providerName || '—';
-                                    })()} 
+                                    })()}
                                 />
                                 <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
                                     {vehicle.insuranceDetails?.insuranceNumber ? t('management.vehicles.statusLabels.ACTIVE') : 'MISSING'}
@@ -441,52 +446,106 @@ const VehicleDetail = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehicle.insuranceDetails?.insuranceNumber || '—'} />
-                                <InfoRow 
-                                    label={t('management.vehicles.vehicleDetail.labels.type')} 
-                                    value={(() => {
+                                <InfoRow
+                                    label={t('management.vehicles.vehicleDetail.labels.type')}
+                                    value={vehicle.insuranceDetails?.policyType || (() => {
                                         const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
                                         return plan?.policyType || '—';
-                                    })()} 
+                                    })()}
+                                />
+                                <InfoRow
+                                    label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
+                                    value={vehicle.insuranceDetails?.coverageType || (() => {
+                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                        return plan?.coverageType || '—';
+                                    })()}
                                 />
                                 <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toLocaleDateString() : '—'} />
                                 <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toLocaleDateString() : '—'} />
                             </div>
+
+                            {/* Supplier Contact Info */}
+                            {vehicle.insuranceDetails?.supplier && (
+                                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <p className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Supplier Contact Info</p>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span style={{ color: 'var(--text-dim)' }}>Name</span>
+                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.name || '—'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span style={{ color: 'var(--text-dim)' }}>Email</span>
+                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.email || '—'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span style={{ color: 'var(--text-dim)' }}>Phone</span>
+                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.phone || '—'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             {vehicle.insuranceDetails?.certificate && (
-                                <a 
-                                    href={toFullUrl(vehicle.insuranceDetails.certificate)} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
+                                <a
+                                    href={toFullUrl(vehicle.insuranceDetails.certificate)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
                                 >
                                     <FileText size={10} /> View Insurance Certificate
                                 </a>
                             )}
+                            </div>
                             {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION') && (
-                                <button 
-                                    onClick={() => setIsInsuranceManagerOpen(true)}
-                                    className="mt-5 w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
-                                >
-                                    {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
-                                </button>
+                                <div className="mt-5">
+                                    <button
+                                        onClick={() => setIsInsuranceManagerOpen(true)}
+                                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                    >
+                                        {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* GPS Configuration */}
-                    <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsTracking')} />
-                        <div className="space-y-4">
+                    {/* GPS Configuration & Live Map */}
+
+                    <div className={`${cardClass} lg:col-span-2 2xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
+                        <div className="flex items-center justify-between mb-2">
+                            <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsTracking')} />
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${vehicle.gpsConfiguration?.isActivated ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                <span className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-main)' }}>{vehicle.gpsConfiguration?.isActivated ? t('management.vehicles.vehicleDetail.gpsConfiguration') : t('management.common.status.disabled')}</span>
+                                <span className="text-[10px] font-bold uppercase" style={{ color: vehicle.gpsConfiguration?.isActivated ? '#22c55e' : '#ef4444' }}>
+                                    {vehicle.gpsConfiguration?.isActivated ? t('management.vehicles.vehicleDetail.gpsConfiguration') : t('management.common.status.disabled')}
+                                </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.geofenceZone')} value={vehicle.gpsConfiguration?.geofenceZone || t('common.all')} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.speedLimit')} value={vehicle.gpsConfiguration?.speedLimitThreshold ? `${vehicle.gpsConfiguration.speedLimitThreshold} ${t('common.units.kmh')}` : '—'} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.idleAlert')} value={vehicle.gpsConfiguration?.idleTimeAlertMins ? `${vehicle.gpsConfiguration.idleTimeAlertMins} mins` : '—'} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.syncFreq')} value={vehicle.gpsConfiguration?.mileageSyncFrequencyHrs ? `${vehicle.gpsConfiguration.mileageSyncFrequencyHrs} ${t('common.units.hrs')}` : '—'} />
-                            </div>
+                        </div>
+
+                        {/* Leaflet Map */}
+                        <VehicleGpsMap
+                            vehicleId={vehicle._id || id || 'unknown'}
+                            vehicleName={`${vehicle.basicDetails?.make || ''} ${vehicle.basicDetails?.model || ''} ${vehicle.basicDetails?.year || ''}`}
+                            isActivated={vehicle.gpsConfiguration?.isActivated}
+                            height="320px"
+                        />
+
+                        {/* GPS Config Details */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.geofenceZone')} value={vehicle.gpsConfiguration?.geofenceZone || t('common.all')} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.speedLimit')} value={vehicle.gpsConfiguration?.speedLimitThreshold ? `${vehicle.gpsConfiguration.speedLimitThreshold} ${t('common.units.kmh')}` : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.idleAlert')} value={vehicle.gpsConfiguration?.idleTimeAlertMins ? `${vehicle.gpsConfiguration.idleTimeAlertMins} mins` : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.syncFreq')} value={vehicle.gpsConfiguration?.mileageSyncFrequencyHrs ? `${vehicle.gpsConfiguration.mileageSyncFrequencyHrs} ${t('common.units.hrs')}` : '—'} />
+                        </div>
+                    </div>
+
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.legalDocuments')} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regNumber')} value={vehicle.legalDocs?.registrationNumber} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regExpiry')} value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadTaxExpiry')} value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadworthiness')} value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
                         </div>
                     </div>
 
@@ -530,6 +589,7 @@ const VehicleDetail = () => {
                             </div>
                         </div>
                     </div>
+
 
                     {/* Metadata */}
                     <div className={cardClass} style={cardStyle}>
@@ -626,8 +686,8 @@ const VehicleDetail = () => {
                                         <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.documents.${df.key}`, df.label)}</span>
                                         <div className="flex items-center gap-2">
                                             {(uploadFiles[df.key] as File)?.name && <span className="text-[10px] text-green-500 truncate max-w-[100px]">{(uploadFiles[df.key] as File).name}</span>}
-                                            <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden" 
-                                                onChange={e => { 
+                                            <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden"
+                                                onChange={e => {
                                                     if (e.target.files?.[0]) {
                                                         const file = e.target.files[0];
                                                         setUploadFiles(prev => {
@@ -636,8 +696,8 @@ const VehicleDetail = () => {
                                                             DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = file; });
                                                             return next;
                                                         });
-                                                    } 
-                                                }} 
+                                                    }
+                                                }}
                                             />
                                             <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                 {t('common.search').split('...')[0]}
@@ -650,9 +710,9 @@ const VehicleDetail = () => {
                                 <button onClick={handleUpload} disabled={uploadLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
                                     {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} /> {t('management.vehicles.vehicleDetail.actions.uploadAll')}</>}
                                 </button>
-                                
+
                                 {/* TEST BUTTON: Auto-fill all fields with the first selected file */}
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         const firstVal = Object.values(uploadFiles).find(v => v && (v instanceof File || (Array.isArray(v) && v.length > 0)));
@@ -690,89 +750,89 @@ const VehicleDetail = () => {
             {/* DOCUMENTS REVIEW */}
             {vehicle.status === 'DOCUMENTS REVIEW' && (() => {
                 return (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review the uploaded documents for accuracy and completeness.</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-4 mt-4">
-                        {DOC_FIELDS.map(df => {
-                            const rawUrl = df.key === 'purchaseReceipt' 
-                                ? vehicle.purchaseDetails?.purchaseReceipt 
-                                : df.key === 'odometerPhoto' 
-                                    ? vehicle.inspection?.odometerPhoto 
-                                    : df.key === 'customsClearanceCertificate' || df.key === 'importPermit'
-                                        ? (vehicle.importationDetails as any)?.[df.key]
-                                        : (vehicle.legalDocs as any)?.[df.key];
-                            const docUrl = toFullUrl(rawUrl);
+                    <div className={cardClass} style={cardStyle}>
+                        <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
+                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review the uploaded documents for accuracy and completeness.</p>
 
-                            return (
-                                <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
-                                        {docUrl ? (
-                                            <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
-                                                <FileText size={10} /> View Document
-                                            </a>
-                                        ) : (
-                                            <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                                                <XCircle size={10} /> Not Uploaded
-                                            </span>
-                                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-4 mt-4">
+                            {DOC_FIELDS.map(df => {
+                                const rawUrl = df.key === 'purchaseReceipt'
+                                    ? vehicle.purchaseDetails?.purchaseReceipt
+                                    : df.key === 'odometerPhoto'
+                                        ? vehicle.inspection?.odometerPhoto
+                                        : df.key === 'customsClearanceCertificate' || df.key === 'importPermit'
+                                            ? (vehicle.importationDetails as any)?.[df.key]
+                                            : (vehicle.legalDocs as any)?.[df.key];
+                                const docUrl = toFullUrl(rawUrl);
+
+                                return (
+                                    <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
+                                            {docUrl ? (
+                                                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
+                                                    <FileText size={10} /> View Document
+                                                </a>
+                                            ) : (
+                                                <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                    <XCircle size={10} /> Not Uploaded
+                                                </span>
+                                            )}
+                                        </div>
+                                        {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
                                     </div>
-                                    {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Importation details (moved from Insurance stage) */}
-                    <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-3">
-                            <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
-                            <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
+                                );
+                            })}
                         </div>
 
-                        {importation.isImported && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
-                                {[
-                                    { k: 'countryOfOrigin', l: t('management.vehicles.vehicleDetail.labels.countryOfOrigin') }, { k: 'shippingReference', l: t('management.vehicles.vehicleDetail.labels.shippingReference') },
-                                    { k: 'portOfEntry', l: t('management.vehicles.vehicleDetail.labels.portOfEntry') }, { k: 'customsDeclarationNumber', l: t('management.vehicles.vehicleDetail.labels.customsDeclaration') },
-                                    { k: 'arrivalDate', l: t('management.vehicles.vehicleDetail.labels.arrivalDate'), t: 'date' }, { k: 'shippingCost', l: t('management.vehicles.vehicleDetail.labels.shippingCost'), t: 'number' },
-                                    { k: 'customsDuty', l: t('management.vehicles.vehicleDetail.labels.customsDuty'), t: 'number' }, { k: 'portHandling', l: t('management.vehicles.vehicleDetail.labels.portHandling'), t: 'number' },
-                                ].map(f => (
-                                    <div key={f.k} className="space-y-1.5">
-                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
-                                        <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
-                                    </div>
-                                ))}
+                        {/* Importation details (moved from Insurance stage) */}
+                        <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
+                                <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
                             </div>
-                        )}
-                    </div>
 
-                    <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        {canApprove ? (
-                            <>
-                                <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                <div className="flex gap-3">
-                                    <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
-                                    </button>
-                                    <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
-                                    </button>
+                            {importation.isImported && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
+                                    {[
+                                        { k: 'countryOfOrigin', l: t('management.vehicles.vehicleDetail.labels.countryOfOrigin') }, { k: 'shippingReference', l: t('management.vehicles.vehicleDetail.labels.shippingReference') },
+                                        { k: 'portOfEntry', l: t('management.vehicles.vehicleDetail.labels.portOfEntry') }, { k: 'customsDeclarationNumber', l: t('management.vehicles.vehicleDetail.labels.customsDeclaration') },
+                                        { k: 'arrivalDate', l: t('management.vehicles.vehicleDetail.labels.arrivalDate'), t: 'date' }, { k: 'shippingCost', l: t('management.vehicles.vehicleDetail.labels.shippingCost'), t: 'number' },
+                                        { k: 'customsDuty', l: t('management.vehicles.vehicleDetail.labels.customsDuty'), t: 'number' }, { k: 'portHandling', l: t('management.vehicles.vehicleDetail.labels.portHandling'), t: 'number' },
+                                    ].map(f => (
+                                        <div key={f.k} className="space-y-1.5">
+                                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
+                                            <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
+                                        </div>
+                                    ))}
                                 </div>
-                            </>
-                        ) : (
-                            <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
-                                <Clock size={20} />
-                                <div className="text-sm">
-                                    <p className="font-bold">Awaiting Manager Review</p>
-                                    <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            {canApprove ? (
+                                <>
+                                    <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                                    <div className="flex gap-3">
+                                        <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
+                                        </button>
+                                        <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                            {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                                    <Clock size={20} />
+                                    <div className="text-sm">
+                                        <p className="font-bold">Awaiting Manager Review</p>
+                                        <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
                 );
             })()}
 
@@ -829,7 +889,7 @@ const VehicleDetail = () => {
                                 </div>
                             ))}
                         </div>
-                        
+
                         <textarea placeholder="Overall inspection notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
 
                         {/* Technical Photos Section */}
@@ -916,14 +976,14 @@ const VehicleDetail = () => {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                            <button 
+                            <button
                                 onClick={async () => {
                                     let photoData = {};
                                     if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
                                         const uploaded = await handleUpload();
                                         if (uploaded) {
-                                            photoData = { 
-                                                exteriorPhotos: uploaded.exteriorPhotos, 
+                                            photoData = {
+                                                exteriorPhotos: uploaded.exteriorPhotos,
                                                 interiorPhotos: uploaded.interiorPhotos,
                                                 odometerPhoto: uploaded.odometerPhoto
                                             };
@@ -935,12 +995,12 @@ const VehicleDetail = () => {
                                     console.log('Inspection Data:', inspectionPayload);
                                     console.log('Checklist Count:', checklist.length);
                                     console.groupEnd();
-                                    
-                                    await handleProgress('INSPECTION REQUIRED', { 
-                                        inspection: inspectionPayload 
+
+                                    await handleProgress('INSPECTION REQUIRED', {
+                                        inspection: inspectionPayload
                                     });
-                                }} 
-                                disabled={actionLoading || uploadLoading} 
+                                }}
+                                disabled={actionLoading || uploadLoading}
                                 className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer border"
                                 style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)', color: 'var(--text-main)' }}
                             >
@@ -948,7 +1008,7 @@ const VehicleDetail = () => {
                             </button>
 
                             <div className="flex-1 flex flex-col gap-2">
-                                <button 
+                                <button
                                     onClick={async () => {
                                         let photoData = {};
                                         // Validation: Odometer photo is mandatory
@@ -960,8 +1020,8 @@ const VehicleDetail = () => {
                                         if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
                                             const uploaded = await handleUpload();
                                             if (uploaded) {
-                                                photoData = { 
-                                                    exteriorPhotos: uploaded.exteriorPhotos, 
+                                                photoData = {
+                                                    exteriorPhotos: uploaded.exteriorPhotos,
                                                     interiorPhotos: uploaded.interiorPhotos,
                                                     odometerPhoto: uploaded.odometerPhoto
                                                 };
@@ -972,13 +1032,13 @@ const VehicleDetail = () => {
                                         console.log('Target Status: ACCOUNTING SETUP');
                                         console.log('Inspection Data:', inspectionPayload);
                                         console.groupEnd();
-                                        
+
                                         await handleProgress('ACCOUNTING SETUP', {
                                             inspection: inspectionPayload
                                         });
-                                    }} 
-                                    disabled={actionLoading} 
-                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 text-black" 
+                                    }}
+                                    disabled={actionLoading}
+                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 text-black"
                                     style={{ background: '#C8E600' }}
                                 >
                                     {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ArrowLeft className="rotate-180" size={16} /> Submit & Proceed to Accounting</>}
@@ -1140,7 +1200,7 @@ const VehicleDetail = () => {
                                 {t('management.vehicles.vehicleDetail.transferComplete')}
                             </button>
                         )}
-                        
+
                         {/* If inspection passed but accounting/gps missing */}
                         {vehicle.status === 'ACTIVE — AVAILABLE' && !vehicle.accountingSetup?.isSetupComplete && (
                             <button onClick={() => handleProgress('ACCOUNTING SETUP')} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
@@ -1200,7 +1260,7 @@ const VehicleDetail = () => {
 const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
     const { t } = useTranslation();
     if (!history?.length) return <p className="text-xs italic mt-4" style={{ color: 'var(--text-dim)' }}>{t('management.audit.empty')}</p>;
-    
+
     return (
         <div className="mt-4 space-y-4">
             {(history || []).slice().reverse().map((h: any, i: number) => (
