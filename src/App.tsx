@@ -42,6 +42,7 @@ import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
+import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -171,7 +172,7 @@ function App() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['financialadmin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
               <Route path="manage-country-managers" element={<ManageCountryManagers />} />
@@ -187,6 +188,7 @@ function App() {
               <Route path="purchase-bills" element={<PurchaseBillList />} />
               <Route path="vehicles" element={<VehicleList />} />
               <Route path="vehicles/:id" element={<VehicleDetail />} />
+              <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />

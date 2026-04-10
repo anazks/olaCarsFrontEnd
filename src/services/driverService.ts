@@ -87,6 +87,37 @@ export interface Driver {
     status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
     branch: string | Branch;
     experienceYears?: number;
+    performance?: {
+        avgSpeed: number;
+        totalDistance: number;
+        drivingScore: number;
+        fuelEfficiency: number;
+        safetyEvents: {
+            braking: number;
+            speeding: number;
+            acceleration: number;
+        };
+        lastUpdated: string;
+    };
+    rentTracking?: Array<{
+        weekNumber: number;
+        weekLabel: string;
+        amount: number;
+        carryOver?: number;
+        totalDue?: number;
+        amountPaid?: number;
+        balance?: number;
+        status: 'PAID' | 'PARTIAL' | 'PENDING';
+        paidAt?: string;
+        dueDate?: string;
+        payments?: Array<{
+            amount: number;
+            paidAt: string;
+            paymentMethod?: string;
+            transactionId?: string;
+            note?: string;
+        }>;
+    }>;
     appliedAt: string;
     createdAt?: string;
     updatedAt?: string;
@@ -150,6 +181,11 @@ export const uploadDriverDocument = async (id: string, formData: FormData): Prom
     return response.data.data;
 };
 
+export const markRentAsPaid = async (id: string, paymentData: any): Promise<Driver> => {
+    const response = await api.put(`/api/driver/${id}/rent/pay`, paymentData);
+    return response.data.data;
+};
+
 export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
@@ -163,6 +199,7 @@ export const driverService = {
     updateDriver,
     progressDriver,
     uploadDocument: uploadDriverDocument,
+    markRentAsPaid,
     deleteDriver
 };
 

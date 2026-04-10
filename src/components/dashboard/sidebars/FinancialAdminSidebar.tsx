@@ -35,6 +35,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     const operationsItems = [
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles' },
+        { icon: <Car size={20} />, label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers' },
     ];
 

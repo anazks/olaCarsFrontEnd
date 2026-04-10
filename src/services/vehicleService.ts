@@ -61,7 +61,7 @@ export interface BasicDetails {
     category: VehicleCategory;
     fuelType: FuelType;
     transmission: Transmission;
-    monthlyRent?: number;
+    weeklyRent?: number;
     engineCapacity?: number;
     colour?: string;
     seats?: number;
@@ -69,6 +69,7 @@ export interface BasicDetails {
     bodyType?: BodyType;
     odometer?: number;
     gpsSerialNumber?: string;
+    leaseDurationWeeks?: number;
 }
 
 export interface LegalDocs {
@@ -302,8 +303,8 @@ export const assignVehicleToDriver = async (
     vehicleId: string, 
     driverId: string,
     leaseDetails: {
-        leaseDuration: number;
-        monthlyRent: number;
+        durationWeeks: number;
+        weeklyRent: number;
         notes?: string;
     }
 ): Promise<any> => {
@@ -355,5 +356,14 @@ export const uploadVehicleDocuments = async (id: string, formData: FormData): Pr
 // PUT progress vehicle status
 export const progressVehicle = async (id: string, payload: ProgressVehiclePayload): Promise<Vehicle> => {
     const response = await api.put(`/api/vehicle/${id}/progress`, payload);
+    return response.data.data;
+};
+
+// PUT update vehicle lease settings
+export const updateVehicleLeaseSettings = async (
+    id: string, 
+    payload: { durationWeeks: number, weeklyRent: number }
+): Promise<Vehicle> => {
+    const response = await api.put(`/api/vehicle/${id}/lease-settings`, payload);
     return response.data.data;
 };

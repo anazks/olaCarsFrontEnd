@@ -7,7 +7,7 @@ import api from './api';
 export const ROLE_ENDPOINTS: Record<string, string> = {
     'admin': 'api/admin/login',
     'operationaladmin': 'api/operational-admin/login',
-    'financialadmin': 'api/financial-admin/login',
+    'financialadmin': 'api/finance-admin/login',
     'countrymanager': 'api/country-manager/login',
     'branchmanager': 'api/branch-manager/login',
     'branchopstaff': 'api/operation-staff/login',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer } from 'lucide-react';
-import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History } from 'lucide-react';
+import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, markRentAsPaid } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
@@ -22,6 +22,9 @@ const DriverDetail = () => {
     const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
+    const [rentActiveTab, setRentActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+    const [paymentAmounts, setPaymentAmounts] = useState<Record<number, string>>({});
+    const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
     const currentUser = getUser();
     const userRole = getUserRole();
     const isManager = ['branchmanager', 'countrymanager', 'admin', 'financeadmin', 'operationadmin'].includes(userRole || '');
@@ -79,34 +82,6 @@ const DriverDetail = () => {
         }
     };
 
-    const handlePreviewContract = async () => {
-        const toastId = toast.loading('Fetching contract template...');
-        try {
-            const templates = await agreementService.getAgreements({ type: 'DRIVER_AGREEMENT' });
-            if (!templates || templates.length === 0) {
-                throw new Error('No agreement template found for type: DRIVER_AGREEMENT');
-            }
-            const template = await agreementService.getAgreement(templates[0]._id);
-            
-            let content = template.content || '';
-            content = content.replace(/{{DRIVER_NAME}}/g, driver?.personalInfo?.fullName || "");
-            content = content.replace(/{{DRIVER_EMAIL}}/g, driver?.personalInfo?.email || "");
-            content = content.replace(/{{DRIVER_PHONE}}/g, driver?.personalInfo?.phone || "");
-            content = content.replace(/{{DRIVER_NATIONALITY}}/g, driver?.personalInfo?.nationality || "");
-            content = content.replace(/{{DRIVER_DOB}}/g, driver?.personalInfo?.dateOfBirth ? new Date(driver.personalInfo.dateOfBirth).toLocaleDateString() : "");
-            content = content.replace(/{{DRIVER_LICENSE_NUMBER}}/g, driver?.drivingLicense?.licenseNumber || "");
-            content = content.replace(/{{DRIVER_LICENSE_EXPIRY}}/g, driver?.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : "");
-            content = content.replace(/{{DRIVER_ID_NUMBER}}/g, driver?.identityDocs?.idNumber || "");
-            content = content.replace(/{{BRANCH_NAME}}/g, "Main Branch");
-            content = content.replace(/{{CURRENT_DATE}}/g, new Date().toLocaleDateString());
-
-            setContractPreviewHTML(content);
-            toast.dismiss(toastId);
-        } catch (error: any) {
-            console.error('Contract preview failed:', error);
-            toast.error(error.message || 'Failed to fetch contract', { id: toastId });
-        }
-    };
 
     const handlePrintContract = () => {
         if (!contractPreviewHTML) return;
@@ -150,7 +125,7 @@ const DriverDetail = () => {
             container.style.fontFamily = 'serif';
             container.style.lineHeight = '1.6';
             container.innerHTML = contractPreviewHTML;
-            
+
             const style = document.createElement('style');
             style.innerHTML = `
                 h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
@@ -176,7 +151,7 @@ const DriverDetail = () => {
         try {
             setLoading(true);
             const fileName = `Driver_Contract_${driver?.personalInfo?.fullName.replace(/\s+/g, '_')}`;
-            
+
             const doc = new jsPDF({
                 unit: 'pt',
                 format: 'a4',
@@ -190,7 +165,7 @@ const DriverDetail = () => {
             container.style.fontFamily = 'serif';
             container.style.lineHeight = '1.6';
             container.innerHTML = contractPreviewHTML;
-            
+
             const style = document.createElement('style');
             style.innerHTML = `
                 h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
@@ -214,9 +189,9 @@ const DriverDetail = () => {
             const formData = new FormData();
             formData.append('contractPDF', pdfBlob, `${fileName}.pdf`);
             await uploadDriverDocument(id!, formData);
-            
+
             await handleProgress('CONTRACT PENDING', { notes: 'Automated: Contract generated and issued' });
-            
+
             toast.success('Contract generated and uploaded successfully', { id: toastId });
             setContractPreviewHTML(null);
         } catch (error: any) {
@@ -295,6 +270,26 @@ const DriverDetail = () => {
         }
     };
 
+    const handlePartialPayment = async (weekNumber: number, payAmount: number) => {
+        if (!payAmount || payAmount <= 0) {
+            toast.error('Enter a valid payment amount');
+            return;
+        }
+        const toastId = toast.loading(`Recording $${payAmount.toLocaleString()} for Week ${weekNumber}...`);
+        try {
+            setLoading(true);
+            await markRentAsPaid(id!, { weekNumber, amount: payAmount, paymentMethod: 'Cash' });
+            toast.success(`Payment of $${payAmount.toLocaleString()} recorded for Week ${weekNumber}`, { id: toastId });
+            setPaymentAmounts(prev => ({ ...prev, [weekNumber]: '' }));
+            await fetchDriver();
+        } catch (error: any) {
+            console.error('Error recording payment:', error);
+            toast.error(error.response?.data?.message || 'Failed to record payment', { id: toastId });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleVerifyField = async (fieldPath: string, value: any) => {
         try {
             setLoading(true);
@@ -332,7 +327,7 @@ const DriverDetail = () => {
     if (loading && !driver) return <div className="p-8 text-center animate-pulse font-bold text-gray-500 uppercase tracking-widest">Loading driver profile...</div>;
     if (!driver) return <div className="p-8 text-center">Driver not found</div>;
 
-    const statusList = ['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE', 'REJECTED'];
+    const statusList = ['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'ACTIVE', 'REJECTED'];
     const currentStepIndex = statusList.indexOf(driver.status);
 
     const steps = [
@@ -341,7 +336,6 @@ const DriverDetail = () => {
         { id: 'VERIFICATION', label: 'Verification', sub: 'Docs Check' },
         { id: 'CREDIT CHECK', label: 'Credit Check', sub: 'Risk Assessment' },
         { id: 'APPROVED', label: 'Approved', sub: 'Policy Pass' },
-        { id: 'CONTRACT PENDING', label: 'Contracting', sub: 'Signature' },
         { id: 'ACTIVE', label: 'Active', sub: 'Ready' }
     ];
 
@@ -368,10 +362,7 @@ const DriverDetail = () => {
             return !!driver.creditCheck?.score && driver.creditCheck?.decision !== 'DECLINED';
         }
         if (driver.status === 'APPROVED') {
-            return !!driver.contract?.generatedS3Key;
-        }
-        if (driver.status === 'CONTRACT PENDING') {
-            return !!driver.contract?.signedS3Key;
+            return true; // Now allows direct activation
         }
         return true;
     };
@@ -393,9 +384,7 @@ const DriverDetail = () => {
             } else if (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') {
                 reqs.push({ label: 'Credit Score Recorded', met: !!driver.creditCheck?.score });
             } else if (driver.status === 'APPROVED') {
-                reqs.push({ label: 'Contract Generated', met: !!driver.contract?.generatedS3Key });
-            } else if (driver.status === 'CONTRACT PENDING') {
-                reqs.push({ label: 'Signed Contract', met: !!driver.contract?.signedS3Key });
+                reqs.push({ label: 'Policy Approved', met: true });
             }
 
             if (reqs.length === 0) return null;
@@ -445,9 +434,9 @@ const DriverDetail = () => {
                             </button>
                         )}
 
-                        {driver.status === 'PENDING REVIEW' && isFinanceStaff && (
+                        {driver.status === 'PENDING REVIEW' && (isFinanceStaff || userRole === 'countrymanager' || userRole === 'branchmanager') && (
                             <button
-                                onClick={() => handleProgress('VERIFICATION', { notes: 'Finance Review Completed' })}
+                                onClick={() => handleProgress('VERIFICATION', { notes: 'Finance/Manager Review Completed' })}
                                 disabled={!canProgress()}
                                 className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
                             >
@@ -456,16 +445,16 @@ const DriverDetail = () => {
                             </button>
                         )}
 
-                        {driver.status === 'VERIFICATION' && isFinanceStaff && (
+                        {driver.status === 'VERIFICATION' && (isFinanceStaff || userRole === 'countrymanager') && (
                             <button
                                 onClick={() => {
                                     const input = document.getElementById('test-score-input') as HTMLInputElement;
                                     const val = parseInt(input?.value);
-                                    handleProgress('CREDIT CHECK', { 
+                                    handleProgress('CREDIT CHECK', {
                                         updateData: {
                                             creditCheck: !isNaN(val) ? { score: val } : {}
                                         },
-                                        notes: 'Triggering credit assessment' 
+                                        notes: 'Triggering credit assessment'
                                     });
                                 }}
                                 disabled={!canProgress()}
@@ -476,7 +465,7 @@ const DriverDetail = () => {
                             </button>
                         )}
 
-                        {driver.status === 'CREDIT CHECK' && isFinanceStaff && (
+                        {driver.status === 'CREDIT CHECK' && (isFinanceStaff || userRole === 'countrymanager') && (
                             <div className="px-6 py-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center gap-3">
                                 <Clock size={20} className="text-yellow-500 animate-spin" />
                                 <span className="text-xs font-black text-yellow-500 uppercase">System Assessment in Progress</span>
@@ -513,17 +502,17 @@ const DriverDetail = () => {
 
                         {driver.status === 'APPROVED' && isStaff && (
                             <button
-                                onClick={handlePreviewContract}
+                                onClick={() => handleProgress('ACTIVE', { notes: 'Activated after Policy Approval' })}
                                 className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
-                                <FileText size={20} />
-                                Issue Contract
+                                <CheckCircle2 size={20} />
+                                Activate Application
                             </button>
                         )}
 
 
 
-                        {driver.status === 'ACTIVE' && isStaff && (
+                        {driver.status === 'ACTIVE' && isStaff && !driver.currentVehicle && (
                             <button
                                 onClick={() => navigate('assign-vehicle')}
                                 className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
@@ -534,7 +523,7 @@ const DriverDetail = () => {
                         )}
 
                         {/* Helpful Status Messages */}
-                        {isFinanceStaff && (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
+                        {(isFinanceStaff || userRole === 'countrymanager') && (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
                             <div className="px-6 py-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3">
                                 <Clock size={20} className="text-blue-500" />
                                 <span className="text-xs font-black text-blue-500 uppercase">Awaiting Manager Approval</span>
@@ -687,8 +676,8 @@ const DriverDetail = () => {
                         <InfoCard label="Registration" value={assignedVehicle.legalDocs?.registrationNumber || 'N/A'} />
                         <InfoCard label="VIN Number" value={assignedVehicle.basicDetails.vin} />
                         <InfoCard
-                            label="Monthly Rent"
-                            value={assignedVehicle.basicDetails.monthlyRent ? `$${assignedVehicle.basicDetails.monthlyRent.toLocaleString()}` : 'N/A'}
+                            label="Weekly Rent"
+                            value={assignedVehicle.basicDetails.weeklyRent ? `$${assignedVehicle.basicDetails.weeklyRent.toLocaleString()}` : 'N/A'}
                             icon={<FileText size={14} />}
                         />
                     </div>
@@ -703,6 +692,383 @@ const DriverDetail = () => {
                     </div>
                 </div>
             ) : null}
+
+            {/* Performance & Rent Tracking Section */}
+            {driver.status === 'ACTIVE' && assignedVehicle && (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* Performance Metrics */}
+                    <div className="xl:col-span-2 p-8 rounded-3xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-lime/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                        
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 rounded-2xl bg-brand-lime/10 text-brand-lime">
+                                    <Gauge size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Driver Performance</h2>
+                                    <p className="text-xs font-medium opacity-60">Real-time telematics & driving behavior</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-black/20 rounded-xl border border-white/5">
+                                <History size={14} className="text-dim" />
+                                <span className="text-[10px] font-bold uppercase text-dim">Last Sync: {driver.performance?.lastUpdated ? new Date(driver.performance.lastUpdated).toLocaleTimeString() : 'Just now'}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
+                            <PerformanceCard 
+                                label="Avg Speed" 
+                                value={`${driver.performance?.avgSpeed || 0} km/h`} 
+                                icon={<Zap size={20} />} 
+                                color="text-brand-lime" 
+                                trend="+2.4%"
+                            />
+                            <PerformanceCard 
+                                label="Total Distance" 
+                                value={`${(driver.performance?.totalDistance || 0).toLocaleString()} km`} 
+                                icon={<TrendingUp size={20} />} 
+                                color="text-blue-500" 
+                            />
+                            <PerformanceCard 
+                                label="Driving Score" 
+                                value={`${driver.performance?.drivingScore || 100}/100`} 
+                                icon={<ShieldCheck size={20} />} 
+                                color="text-green-500" 
+                                sub="Excellent"
+                            />
+                            <PerformanceCard 
+                                label="Fuel Efficiency" 
+                                value={`${driver.performance?.fuelEfficiency || 0} km/L`} 
+                                icon={<Gauge size={20} />} 
+                                color="text-yellow-500" 
+                            />
+                        </div>
+
+                        {/* Safety Events */}
+                        <div className="mt-8 pt-8 border-t border-white/5 relative z-10">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-dim mb-6">Safety Incident Alerts</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <SafetyBadge label="Harsh Braking" count={driver.performance?.safetyEvents?.braking || 0} color="red" />
+                                <SafetyBadge label="Speeding Violations" count={driver.performance?.safetyEvents?.speeding || 0} color="orange" />
+                                <SafetyBadge label="Rapid Acceleration" count={driver.performance?.safetyEvents?.acceleration || 0} color="yellow" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Rent Payments */}
+                    <div className="p-8 rounded-3xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-3 rounded-2xl bg-brand-lime/10 text-brand-lime">
+                                <CreditCard size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Weekly Rent</h2>
+                                <p className="text-xs font-medium opacity-60">Payment status & history</p>
+                            </div>
+                        </div>
+                        {/* Rent Analytics & Summary */}
+                        {driver.rentTracking && driver.rentTracking.length > 0 && (
+                            <>
+                                <div className="mb-8 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                                        {(() => {
+                                            const pendingRaw = [...driver.rentTracking]
+                                                .filter(r => r.status === 'PENDING' || r.status === 'PARTIAL')
+                                                .sort((a, b) => {
+                                                    if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                                                    return a.weekNumber - b.weekNumber;
+                                                });
+                                            
+                                            // Deduplicate pending weeks
+                                            const pending = pendingRaw.reduce((acc: any[], current) => {
+                                                if (!acc.find(item => item.weekNumber === current.weekNumber)) {
+                                                    acc.push(current);
+                                                }
+                                                return acc;
+                                            }, []);
+                                            
+                                            // Deduplicate the entire tracking list for accurate summary metrics
+                                            const deduplicatedTracking = driver.rentTracking.reduce((acc: any[], current) => {
+                                                const existing = acc.find(item => item.weekNumber === current.weekNumber);
+                                                if (!existing) acc.push(current);
+                                                else if ((current.amountPaid || 0) > (existing.amountPaid || 0)) {
+                                                    const idx = acc.indexOf(existing);
+                                                    acc[idx] = current;
+                                                }
+                                                return acc;
+                                            }, []);
+
+                                            const totalBalance = deduplicatedTracking.reduce((acc, curr) => {
+                                                const baseInstallment = curr.amount || 0;
+                                                const paid = curr.amountPaid || 0;
+                                                return acc + Math.max(0, baseInstallment - paid);
+                                            }, 0);
+
+                                            const overdueBalance = deduplicatedTracking
+                                                .filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date())
+                                                .reduce((acc, curr) => {
+                                                    const baseInstallment = curr.amount || 0;
+                                                    const paid = curr.amountPaid || 0;
+                                                    return acc + Math.max(0, baseInstallment - paid);
+                                                }, 0);
+                                            
+                                            const next = pending[0];
+                                            
+                                            return (
+                                                <>
+                                                    <div className="p-5 rounded-3xl bg-brand-lime/5 border border-brand-lime/20 shadow-sm relative overflow-hidden group">
+                                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-lime/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                                                        <p className="text-[10px] font-black uppercase text-brand-lime/60 mb-2 flex items-center gap-1.5">
+                                                            <AlertCircle size={10} /> Total Outstanding
+                                                        </p>
+                                                        <div className="flex items-end justify-between">
+                                                            <p className="text-3xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                                                                ${totalBalance.toLocaleString()}
+                                                            </p>
+                                                            {overdueBalance > 0 && (
+                                                                <div className="px-2 py-1 rounded-lg bg-red-500/10 text-red-500 text-[9px] font-black uppercase border border-red-500/20">
+                                                                    ${overdueBalance.toLocaleString()} Overdue
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/20 shadow-sm relative overflow-hidden">
+                                                        <p className="text-[10px] font-black uppercase text-blue-500/60 mb-2">Next Payment Due</p>
+                                                        {next ? (
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="text-2xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                                                                        {next.dueDate ? new Date(next.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : `Week ${next.weekNumber}`}
+                                                                    </p>
+                                                                    <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate).getFullYear() : ''}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-xl font-black text-blue-500">${(next.balance || next.totalDue || next.amount).toLocaleString()}</p>
+                                                                    <p className="text-[8px] font-black uppercase text-dim">Week {next.weekNumber}</p>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm font-bold text-dim py-2">No pending payments</p>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                                {/* Rent Payment Reminder */}
+                                {driver.rentTracking && driver.status === 'ACTIVE' && (() => {
+                                    const overdue = driver.rentTracking.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date());
+                                    const upcoming = driver.rentTracking.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) >= new Date()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+                                    const nextDue = upcoming[0];
+                                    if (overdue.length > 0) {
+                                        return (
+                                            <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                                                <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20">
+                                                    <AlertCircle size={24} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Urgent Reminder</p>
+                                                    <p className="text-sm font-black text-white">Payment is Overdue by {overdue.length} week(s). Total Debt: ${overdue.reduce((acc, curr) => acc + (curr.balance || curr.amount), 0).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    if (nextDue) {
+                                        const daysUntil = Math.ceil((new Date(nextDue.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                        if (daysUntil <= 3) {
+                                            return (
+                                                <div className="mb-6 p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="w-12 h-12 rounded-xl bg-brand-lime text-black flex items-center justify-center shrink-0 shadow-lg shadow-brand-lime/20">
+                                                        <Zap size={24} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Upcoming Payment</p>
+                                                        <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${nextDue.totalDue.toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })()}
+                                {/* Tabs */}
+                                <div className="flex gap-2 mb-6 p-1 rounded-2xl bg-black/20 border border-white/5 w-fit">
+                                    <button 
+                                        onClick={() => setRentActiveTab('upcoming')}
+                                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${rentActiveTab === 'upcoming' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'}`}
+                                    >
+                                        Upcoming
+                                    </button>
+                                    <button 
+                                        onClick={() => setRentActiveTab('history')}
+                                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${rentActiveTab === 'history' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'}`}
+                                    >
+                                        History
+                                    </button>
+                                </div>
+                                <div className="space-y-4 pr-2 custom-scrollbar max-h-[150px] overflow-y-auto">
+                                    {(() => {
+                                        const baseListRaw = driver.rentTracking?.filter(r => {
+                                            if (rentActiveTab === 'upcoming') return r.status === 'PENDING' || r.status === 'PARTIAL';
+                                            return r.status === 'PAID';
+                                        }) || [];
+
+                                        // Deduplicate by weekNumber (keep the one with most payment or just the first one found)
+                                        const deduplicated = baseListRaw.reduce((acc: any[], current) => {
+                                            const existing = acc.find(item => item.weekNumber === current.weekNumber);
+                                            if (!existing) {
+                                                acc.push(current);
+                                            } else if ((current.amountPaid || 0) > (existing.amountPaid || 0)) {
+                                                // If we find a duplicate with more payment, swap it
+                                                const idx = acc.indexOf(existing);
+                                                acc[idx] = current;
+                                            }
+                                            return acc;
+                                        }, []);
+
+                                        const baseList = deduplicated.sort((a, b) => {
+                                            if (rentActiveTab === 'upcoming') {
+                                                if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                                                return a.weekNumber - b.weekNumber;
+                                            } else {
+                                                if (a.dueDate && b.dueDate) return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+                                                return b.weekNumber - a.weekNumber;
+                                            }
+                                        });
+
+                                        const displayList = rentActiveTab === 'upcoming' ? baseList.slice(0, 2) : baseList;
+                                        return (
+                                            <>
+                                                {displayList.map((rent, idx) => {
+                                                    const today = new Date();
+                                                    const rentDate = rent.dueDate ? new Date(rent.dueDate) : today;
+                                                    const isOverdue = rent.status !== 'PAID' && rentDate < today;
+                                                    const totalDue = rent.totalDue || rent.amount;
+                                                    const paid = rent.amountPaid || 0;
+                                                    const remaining = rent.balance ?? (totalDue - paid);
+                                                    const progressPct = totalDue > 0 ? Math.min(100, (paid / totalDue) * 100) : 0;
+                                                    const isExpanded = expandedWeek === rent.weekNumber;
+                                                    return (
+                                                        <div key={idx} className={`rounded-2xl border transition-all ${isOverdue ? 'bg-red-500/5 border-red-500/30' : rent.status === 'PAID' ? 'bg-brand-lime/5 border-brand-lime/10' : 'bg-black/10 border-white/5'}`}>
+                                                            <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedWeek(isExpanded ? null : rent.weekNumber)}>
+                                                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${rent.status === 'PAID' ? 'bg-brand-lime/20 text-brand-lime' : rent.status === 'PARTIAL' ? 'bg-yellow-500/20 text-yellow-400' : isOverdue ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-dim'}`}>
+                                                                        {rent.weekNumber}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                            <p className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>{rent.weekLabel || `Week ${rent.weekNumber}`}</p>
+                                                                            {isOverdue && <span className="text-[8px] font-black text-red-500 uppercase bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 animate-pulse">OVERDUE</span>}
+                                                                            {rent.status === 'PARTIAL' && <span className="text-[8px] font-black text-yellow-400 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">PARTIAL</span>}
+                                                                            {(rent.carryOver || 0) > 0 && <span className="text-[8px] font-black text-orange-400 uppercase bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">+${rent.carryOver?.toLocaleString()} DEBT CARRYOVER</span>}
+                                                                            {rentActiveTab === 'upcoming' && idx === 0 && <span className="text-[8px] font-black text-brand-lime uppercase bg-brand-lime/10 px-1.5 py-0.5 rounded border border-brand-lime/20">CURRENT DUE</span>}
+                                                                            {rentActiveTab === 'upcoming' && idx === 1 && <span className="text-[8px] font-black text-dim uppercase bg-white/5 px-1.5 py-0.5 rounded border border-white/10">UPCOMING NEXT</span>}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-4 mt-1">
+                                                                            <p className="text-[10px] font-bold text-dim">
+                                                                                Due: {rent.dueDate ? new Date(rent.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'}
+                                                                            </p>
+                                                                            <p className="text-[10px] font-black text-brand-lime opacity-80">
+                                                                                Total Owed: ${totalDue.toLocaleString()}
+                                                                            </p>
+                                                                        </div>
+                                                                        {isExpanded && (rent.carryOver || 0) > 0 && (
+                                                                            <div className="mt-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-[10px]">
+                                                                                <div className="flex justify-between items-center opacity-70">
+                                                                                    <span>Standard Weekly Rent:</span>
+                                                                                    <span className="font-bold">${rent.amount.toLocaleString()}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between items-center text-orange-400 mt-1">
+                                                                                    <span>Previous Unpaid Balance:</span>
+                                                                                    <span className="font-bold">+${rent.carryOver.toLocaleString()}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between items-center border-t border-orange-500/20 mt-2 pt-2 text-white">
+                                                                                    <span className="font-black uppercase tracking-widest">Total Weekly Payment:</span>
+                                                                                    <span className="font-black text-xs">${totalDue.toLocaleString()}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {rent.status !== 'PAID' && (
+                                                                            <div className="mt-2 w-full">
+                                                                                <div className="flex justify-between text-[9px] font-bold mb-1">
+                                                                                    <span className="text-dim">Paid: ${paid.toLocaleString()}</span>
+                                                                                    <span className={remaining > 0 ? 'text-orange-400' : 'text-brand-lime'}>Remaining: ${remaining.toLocaleString()}</span>
+                                                                                </div>
+                                                                                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                                                                    <div className={`h-full rounded-full transition-all duration-500 ${progressPct >= 100 ? 'bg-brand-lime' : progressPct > 0 ? 'bg-yellow-400' : 'bg-white/5'}`} style={{ width: `${progressPct}%` }} />
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="shrink-0 ml-4">
+                                                                    {rent.status === 'PAID' ? (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className="text-[10px] font-black text-brand-lime uppercase flex items-center gap-1">
+                                                                                <CheckCircle2 size={12} /> PAID
+                                                                            </span>
+                                                                            {rent.paidAt && <span className="text-[9px] text-dim font-medium">{new Date(rent.paidAt).toLocaleDateString()}</span>}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                            <input 
+                                                                                type="number"
+                                                                                placeholder="Amount"
+                                                                                value={paymentAmounts[rent.weekNumber] || ''}
+                                                                                onChange={(e) => setPaymentAmounts(prev => ({ ...prev, [rent.weekNumber]: e.target.value }))}
+                                                                                className="w-24 px-2 py-1.5 text-xs font-bold rounded-lg border outline-none focus:border-brand-lime transition-all"
+                                                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                                            />
+                                                                            <button 
+                                                                                onClick={() => handlePartialPayment(rent.weekNumber, Number(paymentAmounts[rent.weekNumber] || remaining))}
+                                                                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl hover:scale-105 active:scale-95 transition-all ${isOverdue ? 'bg-red-500 text-white' : 'bg-brand-lime text-black'}`}
+                                                                            >
+                                                                                Pay
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {isExpanded && rent.payments && rent.payments.length > 0 && (
+                                                                <div className="px-4 pb-4 pt-0">
+                                                                    <div className="border-t pt-3 space-y-2" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1"><History size={10} /> Payment History ({rent.payments.length})</p>
+                                                                        {rent.payments.map((p, pIdx) => (
+                                                                            <div key={pIdx} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="w-6 h-6 rounded-full bg-brand-lime/10 text-brand-lime flex items-center justify-center text-[9px] font-bold">{pIdx + 1}</div>
+                                                                                    <div>
+                                                                                        <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>${p.amount.toLocaleString()}</p>
+                                                                                        <p className="text-[9px] text-dim">{p.paymentMethod || 'Cash'}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <span className="text-[9px] text-dim font-medium">{new Date(p.paidAt).toLocaleDateString()}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {displayList.length === 0 && (
+                                                    <div className="py-12 text-center">
+                                                        <AlertCircle size={32} className="mx-auto text-dim opacity-20 mb-4" />
+                                                        <p className="text-xs font-bold text-dim uppercase">No {rentActiveTab} payments</p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </>
+                        )}
+
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-8">
                 {/* Information Sections */}
@@ -924,7 +1290,7 @@ const DriverDetail = () => {
                                     <div className="p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Experian Score</p>
                                         <div className="flex items-center gap-4">
-                                            <input 
+                                            <input
                                                 type="number"
                                                 id="test-score-input"
                                                 defaultValue={driver.creditCheck?.score}
@@ -932,15 +1298,15 @@ const DriverDetail = () => {
                                                 style={{ color: 'var(--text-main)' }}
                                                 placeholder="---"
                                             />
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     const input = document.getElementById('test-score-input') as HTMLInputElement;
                                                     const val = parseInt(input.value);
                                                     if (!isNaN(val)) {
                                                         if (driver.status === 'VERIFICATION') {
-                                                            handleProgress('CREDIT CHECK', { 
+                                                            handleProgress('CREDIT CHECK', {
                                                                 updateData: { creditCheck: { score: val } },
-                                                                notes: 'Manual score entry triggered assessment' 
+                                                                notes: 'Manual score entry triggered assessment'
                                                             });
                                                         } else {
                                                             handleVerifyField('creditCheck.score', val);
@@ -1054,43 +1420,7 @@ const DriverDetail = () => {
                         </div>
                     )}
 
-                    {/* Activation Upload (CONTRACT PENDING Stage) */}
-                    {driver.status === 'CONTRACT PENDING' && (
-                        <div className="p-6 rounded-2xl shadow-sm border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-2 mb-6 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--brand-lime-subtle, rgba(200,230,0,0.1))', color: 'var(--brand-lime)' }}>
-                                    <FileCheck size={20} />
-                                </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Finalize Activation</h2>
-                            </div>
 
-                            <div className="flex flex-col gap-6">
-                                <label className="flex items-center justify-center gap-4 px-6 py-8 border-2 border-dashed rounded-xl cursor-pointer hover:border-brand-lime transition-all" style={{ borderColor: driver.contract?.signedS3Key ? 'var(--brand-lime)' : 'var(--border-main)', backgroundColor: driver.contract?.signedS3Key ? 'rgba(200,230,0,0.05)' : 'transparent' }}>
-                                    <Upload size={28} className={uploading === 'signedContract' ? 'animate-bounce text-brand-lime' : driver.contract?.signedS3Key ? 'text-brand-lime' : 'text-white'} />
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-black uppercase tracking-widest text-white">
-                                            {uploading === 'signedContract' ? 'Uploading...' : driver.contract?.signedS3Key ? 'Change Signed Contract' : 'Upload Signed Contract'}
-                                        </span>
-                                        <span className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>PDF or image of the signed agreement</span>
-                                    </div>
-                                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'signedContract')} />
-                                </label>
-
-                                {isStaff && (
-                                    <div className="flex justify-end pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                        <button
-                                            onClick={() => handleProgress('ACTIVE', { notes: 'Activated via signed contract submission' })}
-                                            disabled={!canProgress()}
-                                            className={`px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed'}`}
-                                        >
-                                            <ShieldCheck size={20} />
-                                            Submit
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Documents Section */}
@@ -1103,7 +1433,8 @@ const DriverDetail = () => {
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Required Documents</h2>
                             </div>
-                            
+
+
                             <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime/10 border border-brand-lime/20 cursor-pointer hover:bg-brand-lime/20 transition-all">
                                 <Upload size={14} className={uploading === 'bulk' ? 'animate-bounce text-brand-lime' : 'text-brand-lime'} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">
@@ -1236,6 +1567,36 @@ const InfoCard = ({ label, value, icon }: { label: string; value: any; icon?: Re
         </div>
     </div>
 );
+
+const PerformanceCard = ({ label, value, icon, color, sub, trend }: { label: string; value: string; icon: React.ReactNode; color: string; sub?: string; trend?: string }) => (
+    <div className="p-5 rounded-2xl bg-black/10 border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between group">
+        <div className="flex justify-between items-start mb-4">
+            <div className={`p-2 rounded-xl bg-white/5 ${color} group-hover:scale-110 transition-transform`}>
+                {icon}
+            </div>
+            {trend && <span className="text-[9px] font-black text-brand-lime bg-brand-lime/10 px-2 py-0.5 rounded-full">{trend}</span>}
+        </div>
+        <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase text-dim tracking-widest">{label}</p>
+            <p className="text-xl font-black truncate" style={{ color: 'var(--text-main)' }}>{value}</p>
+            {sub && <p className="text-[9px] font-bold text-brand-lime uppercase">{sub}</p>}
+        </div>
+    </div>
+);
+
+const SafetyBadge = ({ label, count, color }: { label: string; count: number; color: 'red' | 'orange' | 'yellow' }) => {
+    const colors = {
+        red: 'bg-red-500/10 text-red-500 border-red-500/20',
+        orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+        yellow: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+    };
+    return (
+        <div className={`flex items-center justify-between p-4 rounded-xl border ${colors[color]}`}>
+            <span className="text-[10px] font-black uppercase tracking-tight">{label}</span>
+            <span className="text-sm font-black">{count}</span>
+        </div>
+    );
+};
 
 const DocUploadRow = ({ label, status, url, uploading, onUpload, fieldName }: {
     label: string;

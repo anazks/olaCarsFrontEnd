@@ -85,8 +85,9 @@ const agreementService = {
     return response.data.data;
   },
 
-  getRenderedAgreement: async (id: string): Promise<{ renderedContent: string, title: string, version: number }> => {
-    const response = await api.get(`/api/agreements/${id}/render`);
+  getRenderedAgreement: async (id: string, overrides: { driverId?: string; vehicleId?: string; durationWeeks?: string | number; weeklyRent?: string | number } = {}): Promise<{ renderedContent: string, title: string, version: number }> => {
+    const params = new URLSearchParams(overrides as any).toString();
+    const response = await api.get(`/api/agreements/${id}/render${params ? `?${params}` : ''}`);
     return response.data.data;
   },
 
