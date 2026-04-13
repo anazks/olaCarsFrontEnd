@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
@@ -29,6 +29,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/country-manager/manage-workshop-managers' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/country-manager/staff-performance' },
     ];
 
     const operationsItems = [
@@ -37,6 +38,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/country-manager/purchase-bills' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/country-manager/driver-performance' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements' },
     ];
 

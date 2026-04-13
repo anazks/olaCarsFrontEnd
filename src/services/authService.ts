@@ -12,7 +12,26 @@ export const ROLE_ENDPOINTS: Record<string, string> = {
     'branchmanager': 'api/branch-manager/login',
     'branchopstaff': 'api/operation-staff/login',
     'branchfinstaff': 'api/finance-staff/login',
+    'workshopmanager': 'api/workshop-manager/login',
+    'workshopstaff': 'api/workshop-staff/login',
 };
+
+/**
+ * Endpoint mapping for refreshing tokens by role.
+ * Note the difference in naming patterns (/refresh vs /refresh-token)
+ */
+export const REFRESH_ENDPOINTS: Record<string, string> = {
+    'admin': 'api/admin/refresh',
+    'operationaladmin': 'api/operational-admin/refresh',
+    'financialadmin': 'api/finance-admin/refresh',
+    'countrymanager': 'api/country-manager/refresh',
+    'branchmanager': 'api/branch-manager/refresh',
+    'branchopstaff': 'api/operation-staff/refresh-token',
+    'branchfinstaff': 'api/finance-staff/refresh',
+    'workshopmanager': 'api/workshop-manager/refresh-token',
+    'workshopstaff': 'api/workshop-staff/refresh-token',
+};
+
 
 /**
  * Maps the friendly UI role key (used in dropdown & route)
@@ -26,6 +45,8 @@ export const UI_ROLE_TO_API_ROLE: Record<string, string> = {
     'branch-manager': 'branchmanager',
     'branch-op-staff': 'branchopstaff',
     'branch-fin-staff': 'branchfinstaff',
+    'workshop-manager': 'workshopmanager',
+    'workshop-staff': 'workshopstaff',
 };
 
 /**
@@ -87,7 +108,28 @@ export const loginByRole = async (
     return { ...data, token };
 };
 
+export const refreshTokens = async (apiRole: string, refreshToken: string): Promise<{ accessToken: string, refreshToken: string }> => {
+    const endpoint = REFRESH_ENDPOINTS[apiRole];
+    if (!endpoint) throw new Error(`No refresh endpoint for role: ${apiRole}`);
+
+    // We use axios directly or a separate instance if possible to avoid interceptor recursion, 
+    // but for now, we'll let api.ts handle the logic or provide a way to skip interceptor.
+    // Actually, calling it through 'api' is fine as long as we handle it in api.ts interceptor 
+    // to NOT retry the refresh call itself.
+    const response = await api.post(endpoint, { refreshToken }, { 
+        // @ts-ignore
+        skipToast: true,
+        headers: { 'X-Skip-Interceptor': 'true' } 
+    });
+    
+    return {
+        accessToken: response.data.accessToken || response.data.token,
+        refreshToken: response.data.refreshToken
+    };
+};
+
 export const changePassword = async (userId: string, data: any) => {
+
     return await api.post(`api/user/${userId}/change-password`, data);
 };
 

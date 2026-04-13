@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, Menu, ChevronDown, ChevronRight, LogOut, Package, Car, Users, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +25,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-op-staff/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-op-staff/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-op-staff/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

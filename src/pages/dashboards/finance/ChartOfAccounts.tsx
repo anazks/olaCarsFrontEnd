@@ -37,7 +37,7 @@ const ChartOfAccounts = () => {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const userRole = getUserRole() || '';
-    const canManageCodes = ['admin', 'financialadmin'].includes(userRole);
+    const canManageCodes = ['admin', 'financeadmin'].includes(userRole);
 
     const fetchCodes = useCallback(async () => {
         setLoading(true);
@@ -233,13 +233,12 @@ const ChartOfAccounts = () => {
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Code</label>
                                 <input
-                                    required
+                                    readOnly
                                     type="text"
                                     placeholder="e.g. 4000"
                                     value={editPayload.code}
-                                    onChange={e => setEditPayload({ ...editPayload, code: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors cursor-not-allowed opacity-60"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                                 />
                             </div>
                             <div>

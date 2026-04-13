@@ -3,9 +3,12 @@ import { Activity, ArrowUpRight, ArrowDownRight, RefreshCw, BarChart3, AlertTria
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const FinanceDashboard = () => {
     const [recentEntries, setRecentEntries] = useState<LedgerEntry[]>([]);
+    const [monthlyData, setMonthlyData] = useState<any[]>([]);
+    const [totals, setTotals] = useState({ income: 0, expense: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
@@ -14,17 +17,76 @@ const FinanceDashboard = () => {
         setLoading(true);
         setError(null);
         try {
-            // In a real app, this might be a specialized /api/finance/dashboard endpoint.
-            // But we will use the ledger for recent transactions.
             const ledgerData = await getLedgerEntries();
             
-            // Assume the API returns chronologically or we sort them newest first.
-            // Limit to 10 most recent for the dashboard view.
             const sorted = Array.isArray(ledgerData) 
-                ? [...ledgerData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                ? [...ledgerData].sort((a, b) => new Date(b.date || b.entryDate || '').getTime() - new Date(a.date || a.entryDate || '').getTime())
                 : [];
             
+            // Keep the last 10 entries for the bottom table preview
             setRecentEntries(sorted.slice(0, 10));
+
+            // Aggregate all historical ledger entries for charts & global totals
+            const monthMap = new Map<string, { month: string; income: number; expense: number }>();
+            
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            sorted.forEach((entry: any) => {
+                const eDate = new Date(entry.entryDate || entry.date);
+                if (isNaN(eDate.getTime())) return;
+                
+                const monthKey = eDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+                
+                let amt = 0;
+                let isDebit = false;
+                
+                if (entry.amount !== undefined) {
+                    amt = entry.amount;
+                    isDebit = entry.type === 'DEBIT';
+                } else {
+                    if ((entry.credit || 0) > 0) {
+                        amt = entry.credit || 0;
+                        isDebit = false;
+                    } else if ((entry.debit || 0) > 0) {
+                        amt = entry.debit || 0;
+                        isDebit = true;
+                    }
+                }
+
+                // Determine effective money directional flow utilizing Accounting Codes
+                const cat = entry.accountingCode?.category?.toUpperCase();
+                
+                let incomeToAdd = 0;
+                let expenseToAdd = 0;
+
+                // Broaden expense calculation to include Assets (like vehicle purchases) 
+                // and fallback to transaction type if category is missing
+                if (cat === 'INCOME') {
+                    incomeToAdd = isDebit ? -amt : amt; // debit to income account decreases overall income
+                } else if (cat === 'EXPENSE' || cat === 'ASSET') {
+                    expenseToAdd = isDebit ? amt : -amt; // credit to expense/asset account decreases overall expense
+                } else {
+                    // Fallback to cash basis
+                    if (isDebit) expenseToAdd = amt;
+                    else incomeToAdd = amt;
+                }
+
+                totalIncome += incomeToAdd;
+                totalExpense += expenseToAdd;
+
+                const current = monthMap.get(monthKey) || { month: monthKey, income: 0, expense: 0, netProfit: 0 };
+                current.income += incomeToAdd;
+                current.expense += expenseToAdd;
+                current.netProfit = current.income - current.expense;
+                monthMap.set(monthKey, current);
+            });
+
+            // Convert to array and reverse so the oldest month plots on the left
+            const chartData = Array.from(monthMap.values()).reverse();
+            setMonthlyData(chartData);
+            setTotals({ income: totalIncome, expense: totalExpense });
+
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch dashboard data');
         } finally {
@@ -36,44 +98,24 @@ const FinanceDashboard = () => {
         fetchDashboardData();
     }, []);
 
-    // Calculate quick high level stats (Based on ALL recent entries fetched, or from a dedicated stats endpoint)
-    // Here we'll just demonstrate the UI metrics based on the subset we loaded.
-    const monthIncome = recentEntries
-        .filter(e => e.accountingCode && e.accountingCode.category === 'INCOME')
-        .reduce((sum, e) => {
-            if (e.amount !== undefined) {
-                return sum + (e.type === 'CREDIT' ? e.amount : -e.amount);
-            }
-            return sum + (e.credit || 0) - (e.debit || 0);
-        }, 0);
-
-    const monthExpense = recentEntries
-        .filter(e => e.accountingCode && e.accountingCode.category === 'EXPENSE')
-        .reduce((sum, e) => {
-            if (e.amount !== undefined) {
-                return sum + (e.type === 'DEBIT' ? e.amount : -e.amount);
-            }
-            return sum + (e.debit || 0) - (e.credit || 0);
-        }, 0);
-
     const summaryCards = [
         {
-            title: 'Monthly Income',
-            value: monthIncome.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            title: 'Overall Income',
+            value: totals.income.toLocaleString(undefined, { minimumFractionDigits: 2 }),
             icon: ArrowUpRight,
             color: '#22c55e',
             bg: 'rgba(34,197,94,0.1)'
         },
         {
-            title: 'Monthly Expenses',
-            value: monthExpense.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            title: 'Overall Expenses',
+            value: totals.expense.toLocaleString(undefined, { minimumFractionDigits: 2 }),
             icon: ArrowDownRight,
             color: '#ef4444',
             bg: 'rgba(239,68,68,0.1)'
         },
         {
-            title: 'Net Profit',
-            value: (monthIncome - monthExpense).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            title: 'Overall Net Profit',
+            value: (totals.income - totals.expense).toLocaleString(undefined, { minimumFractionDigits: 2 }),
             icon: Activity,
             color: '#3b82f6',
             bg: 'rgba(59,130,246,0.1)'
@@ -122,6 +164,83 @@ const FinanceDashboard = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Profit/Loss Chart */}
+                <div className="rounded-2xl border transition-colors duration-300 flex flex-col p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                     <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <BarChart3 size={20} style={{ color: '#C8E600' }} />
+                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Monthly Profit & Loss</h2>
+                        </div>
+                     </div>
+                     
+                     <div style={{ width: '100%', height: 350 }}>
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : monthlyData.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--text-dim)' }}>
+                                No financial data available to chart
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
+                                    <Tooltip 
+                                        cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                        contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)' }}
+                                        itemStyle={{ fontSize: '13px', fontWeight: 600 }}
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                                    <Bar dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                    <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
+                     </div>
+                </div>
+
+                {/* Net Profit Trend Line Chart */}
+                <div className="rounded-2xl border transition-colors duration-300 flex flex-col p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <Activity size={20} style={{ color: '#C8E600' }} />
+                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Net Profit Trend</h2>
+                        </div>
+                    </div>
+                    
+                    <div style={{ width: '100%', height: 350 }}>
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : monthlyData.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--text-dim)' }}>
+                                No financial data available to chart
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)' }}
+                                        itemStyle={{ fontSize: '13px', fontWeight: 600 }}
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                                    <Line type="monotone" dataKey="netProfit" name="Net Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "var(--bg-card)" }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Recent Transactions */}

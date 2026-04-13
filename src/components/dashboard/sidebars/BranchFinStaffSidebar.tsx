@@ -25,6 +25,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-fin-staff/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-fin-staff/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-fin-staff/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-fin-staff/driver-performance' },
     ];
 
     const financeItems = [

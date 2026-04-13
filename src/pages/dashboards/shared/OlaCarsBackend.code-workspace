@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../../../OlaCarsWorkShopUI"
+		},
+		{
+			"path": "../../../../../olaDriverApp"
 		}
 	]
 }

@@ -24,7 +24,7 @@ const OperationalAdminDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    superTitle={t('dashboards.common.totalVehicles')}
+                    superTitle={t('dashboards.executive.stats.fleetTotal')}
                     title={t('dashboards.operational.stats.activeFleet')}
                     value="450"
                     color="#4F46E5" // Indigo

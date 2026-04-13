@@ -149,6 +149,7 @@
       "activeVehicles": "Active Vehicles",
       "assignedVehicles": "Assigned Vehicles",
       "unassignedVehicles": "Unassigned Vehicles",
+      "refreshData": "Refresh Data",
       "monthlyTarget": "Monthly Target",
       "weekChange": "{{value}} this week",
       "last12Months": "Last 12 months"

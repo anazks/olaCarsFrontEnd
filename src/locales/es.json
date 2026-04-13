@@ -149,6 +149,7 @@
       "activeVehicles": "Vehículos Activos",
       "assignedVehicles": "Vehículos Asignados",
       "unassignedVehicles": "Vehículos No Asignados",
+      "refreshData": "Actualizar Datos",
       "monthlyTarget": "Objetivo Mensual",
       "weekChange": "{{value}} esta semana",
       "last12Months": "Últimos 12 meses"

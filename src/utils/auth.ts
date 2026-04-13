@@ -28,10 +28,29 @@ export const setToken = (token: string): void => {
     localStorage.setItem('token', token);
 };
 
+export const setRefreshToken = (token: string): void => {
+    localStorage.setItem('refreshToken', token);
+};
+
+export const getRefreshToken = (): string | null => {
+    return localStorage.getItem('refreshToken');
+};
+
+export const setAPIRole = (role: string): void => {
+    localStorage.setItem('apiRole', role);
+};
+
+export const getAPIRole = (): string | null => {
+    return localStorage.getItem('apiRole');
+};
+
 export const removeToken = (): void => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('apiRole');
     localStorage.removeItem('user');
 };
+
 
 import toast from 'react-hot-toast';
 

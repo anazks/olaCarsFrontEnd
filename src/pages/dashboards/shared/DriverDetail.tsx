@@ -541,7 +541,7 @@ const DriverDetail = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('..')}
+                        onClick={() => navigate(-1)}
                         className="p-3 rounded-2xl border transition-all hover:bg-black/5 dark:hover:bg-white/5 group"
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >

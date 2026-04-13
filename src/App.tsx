@@ -60,6 +60,8 @@ import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
 import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
+import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerformanceDashboard';
+import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import Profile from './pages/dashboards/shared/Profile';
@@ -137,6 +139,8 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
+              <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
@@ -165,6 +169,8 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
+              <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
@@ -192,6 +198,8 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
+              <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
@@ -221,6 +229,8 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
+              <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
               <Route path="agreements" element={<ManageAgreements />} />
@@ -248,6 +258,8 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
+              <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
             </Route>
@@ -262,6 +274,7 @@ function App() {
               <Route path="vehicles/:id" element={<VehicleDetail />} />
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
@@ -278,6 +291,7 @@ function App() {
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
+              <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />

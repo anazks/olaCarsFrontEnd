@@ -32,6 +32,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/admin/manage-workshop-managers' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/admin/staff-performance' },
     ];
 
     const operationsItems = [
@@ -39,6 +40,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders' },
         { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/admin/driver-performance' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/admin/agreements' },
     ];
 

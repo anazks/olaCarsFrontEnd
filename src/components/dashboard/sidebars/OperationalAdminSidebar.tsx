@@ -36,6 +36,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements' },
     ];
 

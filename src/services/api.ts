@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { REFRESH_ENDPOINTS } from './authService';
+
 
 // Create an Axios instance with base URL from environment variables
 const api = axios.create({
@@ -79,19 +81,52 @@ api.interceptors.response.use(
         const errorCode = errorData?.code || errorData?.error;
 
         // 1. Handle Authentication Errors (always show toast and logout)
-        if (status === 401) {
-            toast.error('Session expired or unauthorized. Please login again.');
-            logout();
-            return Promise.reject(error);
-        } 
-        
-        if (status === 403 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN')) {
-            toast.error('Your session has expired. Please login again.');
-            logout();
+        if (status === 401 || (status === 403 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN'))) {
+            const refreshToken = localStorage.getItem('refreshToken');
+            const apiRole = localStorage.getItem('apiRole');
+
+            if (refreshToken && apiRole && !config._retry) {
+                config._retry = true;
+
+                return new Promise((resolve, reject) => {
+                    const endpoint = REFRESH_ENDPOINTS[apiRole];
+                    if (!endpoint) {
+                         toast.error('Session expired. Please login again.');
+                         logout();
+                         return reject(error);
+                    }
+
+                    // Try to refresh the token
+                    axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/${endpoint}`, { refreshToken })
+                        .then((res) => {
+                            const { accessToken, refreshToken: newRefreshToken } = res.data;
+                            
+                            localStorage.setItem('token', accessToken);
+                            if (newRefreshToken) {
+                                localStorage.setItem('refreshToken', newRefreshToken);
+                            }
+
+                            // Retry the original request
+                            config.headers.Authorization = `Bearer ${accessToken}`;
+                            resolve(api(config));
+                        })
+                        .catch((err) => {
+                            toast.error('Session expired. Please login again.');
+                            logout();
+                            reject(err);
+                        });
+                });
+            }
+
+            if (!config._retry) {
+                toast.error('Session expired or unauthorized. Please login again.');
+                logout();
+            }
             return Promise.reject(error);
         }
 
         // 2. Handle Other Errors (if not explicitly skipped)
+
         if (!skipToast) {
             toast.error(errorMessage);
         }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, UserCheck } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +27,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/branch-manager/manage-workshop-managers' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/branch-manager/staff-performance' },
     ];
 
     const operationsItems = [
@@ -35,6 +36,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-manager/driver-performance' },
     ];
 
     const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {

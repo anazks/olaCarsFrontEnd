@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { loginByRole, API_ROLE_TO_ROUTE } from '../../services/authService';
-import { setToken, getDecodedToken } from '../../utils/auth';
+import { loginByRole, API_ROLE_TO_ROUTE, UI_ROLE_TO_API_ROLE } from '../../services/authService';
+import { setToken, getDecodedToken, setRefreshToken, setAPIRole } from '../../utils/auth';
 import loginBgVideo from '../../assets/loginbgvideo.mp4';
 
 import { useTranslation } from 'react-i18next';
@@ -37,10 +37,20 @@ const AdminLogin = () => {
 
         try {
             const response = await loginByRole(role, { email, password });
-            const { token } = response;
+            const { token, refreshToken } = response;
 
             // Persist the token
             setToken(token);
+            if (refreshToken) {
+                setRefreshToken(refreshToken);
+            }
+
+            // Save the API role for token refresh mapping
+            const apiRole = UI_ROLE_TO_API_ROLE[role];
+            if (apiRole) {
+                setAPIRole(apiRole);
+            }
+
 
             // Store user info if available
             if (response.user) {
