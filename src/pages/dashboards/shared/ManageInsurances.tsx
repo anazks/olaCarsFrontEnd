@@ -45,19 +45,12 @@ const ManageInsurances = () => {
     const [supplierLoading, setSupplierLoading] = useState(false);
     const [formData, setFormData] = useState<CreateInsurancePayload>({
         supplier: '',
-        provider: '',
         country: 'Global',
-        policyNumber: '',
         policyType: 'INDIVIDUAL',
         coverageType: 'COMPREHENSIVE',
         startDate: '',
         expiryDate: '',
         insuredValue: 0,
-        providerContact: {
-            name: '',
-            phone: '',
-            email: ''
-        }
     });
 
     const [policyFile, setPolicyFile] = useState<File | null>(null);
@@ -124,15 +117,12 @@ const ManageInsurances = () => {
     const handleOpenCreateModal = () => {
         setFormData({
             supplier: '',
-            provider: '',
             country: 'Global',
-            policyNumber: '',
             policyType: 'INDIVIDUAL',
             coverageType: 'COMPREHENSIVE',
             startDate: '',
             expiryDate: '',
             insuredValue: 0,
-            providerContact: { name: '', phone: '', email: '' }
         });
         setPolicyFile(null);
         setIsModalOpen(true);
@@ -145,8 +135,6 @@ const ManageInsurances = () => {
             const fd = new FormData();
             fd.append('supplier', formData.supplier);
             fd.append('country', formData.country);
-            if (formData.provider) fd.append('provider', formData.provider);
-            if (formData.policyNumber) fd.append('policyNumber', formData.policyNumber);
             fd.append('policyType', formData.policyType);
             fd.append('coverageType', formData.coverageType);
             
@@ -154,9 +142,6 @@ const ManageInsurances = () => {
             if (formData.expiryDate) fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
             
             fd.append('insuredValue', formData.insuredValue.toString());
-            fd.append('providerContact[name]', formData.providerContact.name);
-            fd.append('providerContact[phone]', formData.providerContact.phone);
-            fd.append('providerContact[email]', formData.providerContact.email);
             
             if (policyFile) {
                 fd.append('policyDocument', policyFile);
@@ -320,7 +305,9 @@ const ManageInsurances = () => {
                                 {insurances.map(ins => (
                                     <tr key={ins._id} className="hover:bg-white/5 transition-colors group">
                                         <td className="px-6 py-4">
-                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{ins.provider || 'N/A'}</div>
+                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {typeof ins.supplier === 'object' ? ins.supplier?.name : 'N/A'}
+                                            </div>
                                             <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{ins.policyNumber || 'No Policy #'}</div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -465,7 +452,6 @@ const ManageInsurances = () => {
                                             ))}
                                         </select>
                                     </div>
-
                                     <div className="space-y-1.5">
                                         <label className="text-xs text-dim uppercase">Country *</label>
                                         <input
@@ -475,27 +461,6 @@ const ManageInsurances = () => {
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
                                             value={formData.country}
                                             onChange={(e) => setFormData({...formData, country: e.target.value})}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Provider (Optional)</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Leave empty to use Supplier name"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
-                                            value={formData.provider}
-                                            onChange={(e) => setFormData({...formData, provider: e.target.value})}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyNumber')} (Optional)</label>
-                                        <input
-                                            type="text"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
-                                            value={formData.policyNumber}
-                                            onChange={(e) => setFormData({...formData, policyNumber: e.target.value})}
                                         />
                                     </div>
 
@@ -559,52 +524,6 @@ const ManageInsurances = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="bg-white/5 p-4 rounded-2xl space-y-4">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.providerContact')}</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">{t('management.insurances.form.name')}</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
-                                            value={formData.providerContact.name}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                providerContact: { ...formData.providerContact, name: e.target.value }
-                                            })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">{t('management.common.modal.phone')}</label>
-                                        <input
-                                            required
-                                            type="tel"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
-                                            value={formData.providerContact.phone}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                providerContact: { ...formData.providerContact, phone: e.target.value }
-                                            })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">{t('management.common.modal.officialEmailLabel')}</label>
-                                        <input
-                                            required
-                                            type="email"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
-                                            value={formData.providerContact.email}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                providerContact: { ...formData.providerContact, email: e.target.value }
-                                            })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
                                 <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
                                     <div className="flex items-center gap-4">

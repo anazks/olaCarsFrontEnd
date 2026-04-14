@@ -818,8 +818,6 @@
           "numberPlateRear": "Number Plate (Rear)",
           "roadworthinessCertificate": "Roadworthiness Certificate",
           "transferOfOwnership": "Transfer of Ownership",
-          "customsClearanceCertificate": "Customs Clearance",
-          "importPermit": "Import Permit",
           "odometerPhoto": "Odometer Photo",
           "exteriorPhotos": "Exterior Photos",
           "interiorPhotos": "Interior Photos"
@@ -984,8 +982,6 @@
         "numberPlateRear": "Number Plate (Rear)",
         "roadworthinessCertificate": "Roadworthiness Certificate",
         "transferOfOwnership": "Transfer of Ownership",
-        "customsClearanceCertificate": "Customs Clearance",
-        "importPermit": "Import Permit",
         "odometerPhoto": "Odometer Photo",
         "exteriorPhotos": "Exterior Photos",
         "interiorPhotos": "Interior Photos"

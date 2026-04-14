@@ -34,7 +34,6 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
     const [fromDate, setFromDate] = useState(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
     const [toDate, setToDate] = useState(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
     const [insuranceCertificate, setInsuranceCertificate] = useState<File | null>(null);
-    const [provider, setProvider] = useState(vehicle.insuranceDetails?.provider || '');
     const [policyType, setPolicyType] = useState(vehicle.insuranceDetails?.policyType || '');
     const [coverageType, setCoverageType] = useState(vehicle.insuranceDetails?.coverageType || '');
     const [supplier, setSupplier] = useState(vehicle.insuranceDetails?.supplier || null);
@@ -50,7 +49,6 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
             setInsuranceNumber(vehicle.insuranceDetails?.insuranceNumber || '');
             setFromDate(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
             setToDate(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
-            setProvider(vehicle.insuranceDetails?.provider || '');
             setPolicyType(vehicle.insuranceDetails?.policyType || '');
             setCoverageType(vehicle.insuranceDetails?.coverageType || '');
             setSupplier(vehicle.insuranceDetails?.supplier || null);
@@ -81,7 +79,6 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         insuranceNumber,
                         fromDate,
                         toDate,
-                        provider,
                         policyType,
                         coverageType,
                         supplier
@@ -142,7 +139,8 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                 >
                                     {insuranceId ? (() => {
                                         const ins = eligibleInsurances.find(i => i._id === insuranceId);
-                                        return ins ? `${ins.provider} — ${ins.policyNumber}` : t('management.vehicles.vehicleDetail.labels.selectPlanPlaceholder');
+                                        const displayName = ins ? (typeof ins.supplier === 'object' ? ins.supplier?.name : ins.provider) : '';
+                                        return ins ? `${displayName} — ${ins.policyNumber}` : t('management.vehicles.vehicleDetail.labels.selectPlanPlaceholder');
                                     })() : (
                                         <span style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.selectPlanPlaceholder')}</span>
                                     )}
@@ -264,12 +262,11 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         selectedId={insuranceId}
                         onSelect={(ins) => {
                             setInsuranceId(ins._id);
-                            setProvider(ins.provider || '');
                             setPolicyType(ins.policyType || '');
                             setCoverageType(ins.coverageType || '');
                             setSupplier({
                                 _id: typeof ins.supplier === 'object' ? (ins.supplier as any)._id : ins.supplier,
-                                name: ins.provider || '',
+                                name: typeof ins.supplier === 'object' ? (ins.supplier as any).name : (ins.provider || ''),
                                 email: (typeof ins.supplier === 'object' ? (ins.supplier as any).email : '') || ins.providerContact?.email || '',
                                 phone: (typeof ins.supplier === 'object' ? (ins.supplier as any).phone : '') || ins.providerContact?.phone || ''
                             });

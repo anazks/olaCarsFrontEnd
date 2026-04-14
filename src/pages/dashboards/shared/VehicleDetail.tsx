@@ -56,8 +56,6 @@ const DOC_FIELDS = [
     { key: 'numberPlateRear', label: 'Number Plate (Rear)' },
     { key: 'roadworthinessCertificate', label: 'Roadworthiness Certificate' },
     { key: 'transferOfOwnership', label: 'Transfer of Ownership' },
-    { key: 'customsClearanceCertificate', label: 'Customs Clearance' },
-    { key: 'importPermit', label: 'Import Permit' },
 ];
 
 const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
@@ -422,7 +420,10 @@ const VehicleDetail = () => {
             </div>
 
             {/* Comprehensive Details for Onboarded Vehicles */}
-            {(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
+            {(vehicle.status === 'ACTIVE — AVAILABLE' || 
+              vehicle.status === 'ACTIVE — RENTED' || 
+              vehicle.status === 'GPS ACTIVATION' || 
+              vehicle.status === 'BRANCH MANAGER APPROVAL') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                     {/* Legal Documents */}
 
@@ -435,9 +436,10 @@ const VehicleDetail = () => {
                             <div className="flex justify-between items-start">
                                 <InfoRow
                                     label={t('management.vehicles.vehicleDetail.labels.provider')}
-                                    value={vehicle.insuranceDetails?.provider || (() => {
+                                    value={vehicle.insuranceDetails?.provider || (typeof vehicle.insuranceDetails?.supplier === 'object' ? vehicle.insuranceDetails?.supplier?.name : '') || (() => {
                                         const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        return plan?.provider || (vehicle.insurancePolicy as any)?.providerName || '—';
+                                        const supplierName = typeof plan?.supplier === 'object' ? (plan?.supplier as any)?.name : '';
+                                        return plan?.provider || supplierName || (vehicle.insurancePolicy as any)?.providerName || '—';
                                     })()}
                                 />
                                 <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
@@ -508,6 +510,8 @@ const VehicleDetail = () => {
                             )}
                         </div>
                     </div>
+
+
 
                     {/* GPS Configuration & Live Map */}
 

@@ -12,7 +12,12 @@ export interface ProviderContact {
 
 export interface Insurance {
     _id: string;
-    supplier?: string | { _id: string; name: string };
+    supplier?: { 
+        _id: string; 
+        name: string;
+        email?: string;
+        phone?: string;
+    } | string;
     provider?: string;
     policyNumber?: string;
     policyType: PolicyType;
@@ -20,7 +25,7 @@ export interface Insurance {
     startDate?: string;
     expiryDate?: string;
     insuredValue: number;
-    providerContact: ProviderContact;
+    providerContact?: ProviderContact;
     status: InsuranceStatus;
     documents?: {
         policyDocumentUrl?: string;
@@ -33,15 +38,12 @@ export interface Insurance {
 
 export interface CreateInsurancePayload {
     supplier: string;
-    provider?: string;
     country: string;
-    policyNumber?: string;
     policyType: PolicyType;
     coverageType: CoverageType;
     startDate?: string;
     expiryDate?: string;
     insuredValue: number;
-    providerContact: ProviderContact;
 }
 
 export interface PaginationMetadata {

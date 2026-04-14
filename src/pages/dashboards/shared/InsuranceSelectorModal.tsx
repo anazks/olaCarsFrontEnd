@@ -15,10 +15,12 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
 
     if (!isOpen) return null;
 
-    const filtered = insurances.filter(ins => 
-        ins.provider?.toLowerCase().includes(search.toLowerCase()) || 
-        ins.policyNumber?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = insurances.filter(ins => {
+        const supplierName = typeof ins.supplier === 'object' ? ins.supplier?.name : '';
+        return supplierName?.toLowerCase().includes(search.toLowerCase()) || 
+               ins.provider?.toLowerCase().includes(search.toLowerCase()) || 
+               ins.policyNumber?.toLowerCase().includes(search.toLowerCase());
+    });
 
     return (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-300">
@@ -71,7 +73,9 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
                                     )}
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
-                                            <h3 className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{ins.provider}</h3>
+                                            <h3 className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>
+                                                {typeof ins.supplier === 'object' ? ins.supplier?.name : ins.provider || 'Insurance Policy'}
+                                            </h3>
                                             <p className="text-xs font-mono" style={{ color: 'var(--text-dim)' }}>{ins.policyNumber}</p>
                                         </div>
                                         <div className="flex flex-col gap-1 items-end">
@@ -97,8 +101,12 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
                                         </div>
                                         <div>
                                             <p className="font-bold mb-0.5 uppercase tracking-wider text-[10px]" style={{ color: 'var(--text-dim)' }}>Contact details</p>
-                                            <p className="font-medium truncate" style={{ color: 'var(--text-main)' }}>{ins.providerContact?.name}</p>
-                                            <p className="font-medium truncate" style={{ color: 'var(--text-dim)' }}>{ins.providerContact?.phone}</p>
+                                            <p className="font-medium truncate" style={{ color: 'var(--text-main)' }}>
+                                                {typeof ins.supplier === 'object' ? ins.supplier?.name : ins.providerContact?.name || '—'}
+                                            </p>
+                                            <p className="font-medium truncate" style={{ color: 'var(--text-dim)' }}>
+                                                {typeof ins.supplier === 'object' ? ins.supplier?.phone : ins.providerContact?.phone || '—'}
+                                            </p>
                                         </div>
                                     </div>
                                     
