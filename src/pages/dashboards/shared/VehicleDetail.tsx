@@ -400,7 +400,7 @@ const VehicleDetail = () => {
                         <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
                         <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
                         <InfoRow label={t('management.vehicles.vehicleDetail.labels.gpsSerial')} value={vehicle.basicDetails?.gpsSerialNumber || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.monthlyRent')} value={vehicle.basicDetails?.monthlyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.monthlyRent.toLocaleString()}` : '—'} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.weeklyRent')} value={vehicle.basicDetails?.weeklyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.weeklyRent.toLocaleString()}` : '—'} />
                     </div>
                 </div>
                 <div className={cardClass} style={cardStyle}>

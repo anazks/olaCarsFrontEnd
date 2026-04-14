@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
-    Users, Briefcase, Activity, Clock, FileCheck, Search, ChevronDown, CheckCircle, 
-    XCircle, Clock3, MapPin, AlignLeft, TrendingUp, Calendar, ArrowRight, UserCheck
+    Users, Briefcase, Activity, Clock, Search, ChevronDown, CheckCircle, 
+    Clock3, MapPin, AlignLeft, TrendingUp, UserCheck
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
@@ -13,9 +13,8 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 
 const StaffPerformanceDashboard = () => {
-    const { t } = useTranslation();
     const userRole = getUserRole() || '';
-    const user = getUser();
+    
     
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -705,19 +704,19 @@ const StaffPerformanceDashboard = () => {
                                                             Stage Breakdown (All Time)
                                                         </h4>
                                                         <div className="space-y-3">
-                                                            {Object.entries(staff.metrics.stageBreakdown || {}).sort((a, b) => b[1] - (a[1] as number)).map(([stage, count], i) => (
+                                                            {(Object.entries(staff.metrics.stageBreakdown || {}) as [string, number][]).sort((a, b) => b[1] - a[1]).map(([stage, count], i) => (
                                                                 <div key={i} className="flex items-center gap-3">
                                                                     <div className="flex-1 text-sm font-medium">{stage}</div>
                                                                     <div className="w-1/2 bg-black/10 dark:bg-white/10 rounded-full h-2 overflow-hidden">
                                                                         <div 
                                                                             className="h-full rounded-full" 
                                                                             style={{ 
-                                                                                width: `${((count as number) / Math.max(...Object.values(staff.metrics.stageBreakdown as Record<string,number>))) * 100}%`,
+                                                                                width: `${(count / Math.max(...(Object.values(staff.metrics.stageBreakdown || {}) as number[]))) * 100}%`,
                                                                                 backgroundColor: 'var(--brand-lime)'
                                                                             }}
                                                                         ></div>
                                                                     </div>
-                                                                    <div className="w-10 text-right font-bold text-sm tracking-widest">{count as number}</div>
+                                                                    <div className="w-10 text-right font-bold text-sm tracking-widest">{count}</div>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -735,7 +734,7 @@ const StaffPerformanceDashboard = () => {
                                             
                                             {staff.recentActivity && staff.recentActivity.length > 0 ? (
                                                 <div className="space-y-5 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
-                                                    {staff.recentActivity.map((log, idx) => (
+                                                    {staff.recentActivity.map((log: any, idx: number) => (
                                                         <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                                                             <div className="flex items-center justify-center w-5 h-5 rounded-full border-[3px] shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10"
                                                                 style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--brand-lime)' }}>
