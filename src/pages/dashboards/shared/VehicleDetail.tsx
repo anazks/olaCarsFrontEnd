@@ -360,17 +360,25 @@ const VehicleDetail = () => {
             </div>
 
             {/* Pipeline Progress - Only show if NOT active/rented */}
-            {!(vehicle.status === 'ACTIVE — AVAILABLE' || vehicle.status === 'ACTIVE — RENTED') && (
+            {!(vehicle.status === 'ACTIVE — RENTED') && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.onboardingPipeline')} />
                     <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">
                         {PIPELINE.map((st, i) => {
-                            const done = currentIdx >= 0 && i <= currentIdx;
+                            const isCompleted = currentIdx >= 0 && i < currentIdx;
                             const active = vehicle.status === st;
+                            const done = i <= currentIdx;
+
                             return (
                                 <div key={st} className={`flex items-center gap-1 ${i < PIPELINE.length - 1 ? 'flex-1' : ''}`}>
-                                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
-                                        style={{ background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)', color: done ? '#C8E600' : 'var(--text-dim)' }}>
+                                    <div
+                                        onClick={() => isCompleted && !actionLoading && handleProgress(st)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''} ${isCompleted ? 'hover:bg-[#C8E600]/20 cursor-pointer' : ''}`}
+                                        style={{
+                                            background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)',
+                                            color: done ? '#C8E600' : 'var(--text-dim)',
+                                        }}
+                                    >
                                         {done && i < currentIdx ? <CheckCircle size={12} /> : null}
                                         {getStatusTranslation(st).replace('Active — ', '').replace('ACTIVE — ', '')}
                                     </div>
@@ -419,11 +427,8 @@ const VehicleDetail = () => {
                 </div>
             </div>
 
-            {/* Comprehensive Details for Onboarded Vehicles */}
-            {(vehicle.status === 'ACTIVE — AVAILABLE' || 
-              vehicle.status === 'ACTIVE — RENTED' || 
-              vehicle.status === 'GPS ACTIVATION' || 
-              vehicle.status === 'BRANCH MANAGER APPROVAL') && (
+            {/* Comprehensive Details for Onboarded Vehicles - Show once past initial entry */}
+            {(vehicle.status !== 'PENDING ENTRY' && vehicle.status !== 'DOCUMENTS REVIEW') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                     {/* Legal Documents */}
 
@@ -497,7 +502,7 @@ const VehicleDetail = () => {
                                 </a>
                             )}
                             </div>
-                            {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION') && (
+                            {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION' || (vehicle.status as string) === 'BRANCH MANAGER APPROVAL') && (
                                 <div className="mt-5">
                                     <button
                                         onClick={() => setIsInsuranceManagerOpen(true)}
@@ -751,8 +756,9 @@ const VehicleDetail = () => {
                 </div>
             )}
 
-            {/* DOCUMENTS REVIEW */}
-            {vehicle.status === 'DOCUMENTS REVIEW' && (() => {
+            {/* DOCUMENTS REVIEW / VERIFICATION */}
+            {(vehicle.status === 'DOCUMENTS REVIEW' || currentIdx > PIPELINE.indexOf('DOCUMENTS REVIEW')) && (() => {
+                const isReadOnly = vehicle.status !== 'DOCUMENTS REVIEW';
                 return (
                     <div className={cardClass} style={cardStyle}>
                         <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
@@ -813,29 +819,31 @@ const VehicleDetail = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                            {canApprove ? (
-                                <>
-                                    <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                    <div className="flex gap-3">
-                                        <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
-                                        </button>
-                                        <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                            {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
-                                        </button>
+                        {!isReadOnly && (
+                            <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                {canApprove ? (
+                                    <>
+                                        <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                                        <div className="flex gap-3">
+                                            <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                                {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
+                                            </button>
+                                            <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                                {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                                        <Clock size={20} />
+                                        <div className="text-sm">
+                                            <p className="font-bold">Awaiting Manager Review</p>
+                                            <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
+                                        </div>
                                     </div>
-                                </>
-                            ) : (
-                                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
-                                    <Clock size={20} />
-                                    <div className="text-sm">
-                                        <p className="font-bold">Awaiting Manager Review</p>
-                                        <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 );
             })()}
@@ -994,12 +1002,6 @@ const VehicleDetail = () => {
                                         }
                                     }
                                     const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
-                                    console.group('--- [DEBUG] Save Progress Payload ---');
-                                    console.log('Target Status: INSPECTION REQUIRED');
-                                    console.log('Inspection Data:', inspectionPayload);
-                                    console.log('Checklist Count:', checklist.length);
-                                    console.groupEnd();
-
                                     await handleProgress('INSPECTION REQUIRED', {
                                         inspection: inspectionPayload
                                     });
@@ -1008,14 +1010,13 @@ const VehicleDetail = () => {
                                 className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer border"
                                 style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)', color: 'var(--text-main)' }}
                             >
-                                {(actionLoading || uploadLoading) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> Save Progress</>}
+                                {(actionLoading || uploadLoading) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.saveProgress')}</>}
                             </button>
 
                             <div className="flex-1 flex flex-col gap-2">
                                 <button
                                     onClick={async () => {
                                         let photoData = {};
-                                        // Validation: Odometer photo is mandatory
                                         if (!uploadFiles.odometerPhoto && !vehicle?.inspection?.odometerPhoto) {
                                             setActionError('Odometer photo is required before proceeding to accounting.');
                                             return;
@@ -1032,11 +1033,6 @@ const VehicleDetail = () => {
                                             }
                                         }
                                         const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
-                                        console.group('--- [DEBUG] Submit & Proceed Payload ---');
-                                        console.log('Target Status: ACCOUNTING SETUP');
-                                        console.log('Inspection Data:', inspectionPayload);
-                                        console.groupEnd();
-
                                         await handleProgress('ACCOUNTING SETUP', {
                                             inspection: inspectionPayload
                                         });
@@ -1095,9 +1091,11 @@ const VehicleDetail = () => {
                             <input type="number" min="0" value={accounting.residualValue} onChange={e => setAccounting(p => ({ ...p, residualValue: parseFloat(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                         </div>
                     </div>
-                    <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> {t('management.vehicles.vehicleDetail.actions.saveAccounting')}</>}
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                            {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> {t('management.vehicles.vehicleDetail.actions.saveAccounting')}</>}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -1115,9 +1113,11 @@ const VehicleDetail = () => {
                         <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.syncFreq')}</label>
                             <input type="number" value={gps.mileageSyncFrequencyHrs} onChange={e => setGps(p => ({ ...p, mileageSyncFrequencyHrs: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
                     </div>
-                    <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> {t('management.vehicles.vehicleDetail.actions.activateGps')}</>}
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                            {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> {t('management.vehicles.vehicleDetail.actions.activateGps')}</>}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -1129,9 +1129,24 @@ const VehicleDetail = () => {
                         <>
                             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
                             <textarea placeholder={t('management.vehicles.vehicleDetail.approvalNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceed')}</>}
-                            </button>
+                            <div className="flex gap-3">
+                                <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceed')}</>}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (!notes.trim()) {
+                                            setActionError('Please provide a reason for rejection in the notes.');
+                                            return;
+                                        }
+                                        handleProgress('DOCUMENTS REVIEW');
+                                    }}
+                                    disabled={actionLoading} 
+                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" 
+                                    style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.reject', 'Reject')}</>}
+                                </button>
+                            </div>
                         </>
                     ) : (
                         <div className="flex flex-col items-center gap-4 py-4 text-center">

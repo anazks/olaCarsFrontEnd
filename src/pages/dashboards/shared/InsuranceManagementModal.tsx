@@ -27,7 +27,7 @@ interface InsuranceManagementModalProps {
 
 export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eligibleInsurances, onSuccess }: InsuranceManagementModalProps) {
     const { t } = useTranslation();
-    
+
     // Manage state locally
     const [insuranceId, setInsuranceId] = useState<string | undefined>(vehicle.insuranceDetails?.plan);
     const [insuranceNumber, setInsuranceNumber] = useState(vehicle.insuranceDetails?.insuranceNumber || '');
@@ -37,7 +37,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
     const [policyType, setPolicyType] = useState(vehicle.insuranceDetails?.policyType || '');
     const [coverageType, setCoverageType] = useState(vehicle.insuranceDetails?.coverageType || '');
     const [supplier, setSupplier] = useState(vehicle.insuranceDetails?.supplier || null);
-    
+
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                 formData.append('insuranceCertificate', insuranceCertificate);
                 await uploadVehicleDocuments(vehicle._id, formData);
             }
-            
+
             const payload = {
                 targetStatus: vehicle.status,
                 updateData: {
@@ -117,13 +117,13 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                     <p className="text-sm mb-6 pb-6 border-b" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
                         {t('management.vehicles.vehicleDetail.insuranceManagementDesc')}
                     </p>
-                    
+
                     {error && (
                         <div className="p-4 rounded-xl mb-6 text-sm flex items-center gap-3 bg-red-500/10 text-red-500 border border-red-500/20">
                             <Shield size={18} /> {error}
                         </div>
                     )}
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Form Left Side */}
                         <div className="space-y-5">
@@ -152,12 +152,12 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                     {t('management.vehicles.vehicleDetail.labels.policyNumber', 'Policy Number')}
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={insuranceNumber} 
-                                    onChange={e => setInsuranceNumber(e.target.value)} 
-                                    className={inputClass} 
-                                    style={inputStyle} 
+                                <input
+                                    type="text"
+                                    value={insuranceNumber}
+                                    onChange={e => setInsuranceNumber(e.target.value)}
+                                    className={inputClass}
+                                    style={inputStyle}
                                     placeholder="Enter policy number"
                                 />
                             </div>
@@ -165,22 +165,22 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.validFrom')}</label>
-                                    <input 
-                                        type="date" 
-                                        value={fromDate} 
-                                        onChange={e => setFromDate(e.target.value)} 
-                                        className={inputClass} 
-                                        style={inputStyle} 
+                                    <input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={e => setFromDate(e.target.value)}
+                                        className={inputClass}
+                                        style={inputStyle}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.validTo')}</label>
-                                    <input 
-                                        type="date" 
-                                        value={toDate} 
-                                        onChange={e => setToDate(e.target.value)} 
-                                        className={inputClass} 
-                                        style={inputStyle} 
+                                    <input
+                                        type="date"
+                                        value={toDate}
+                                        onChange={e => setToDate(e.target.value)}
+                                        className={inputClass}
+                                        style={inputStyle}
                                     />
                                 </div>
                             </div>
@@ -197,10 +197,10 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                         <div className="flex flex-col items-center gap-2">
                                             <CheckCircle className="text-green-500" size={32} />
                                             <p className="text-sm font-bold mt-2" style={{ color: 'var(--text-main)' }}>Certificate Logged</p>
-                                            <a 
-                                                href={toFullUrl(vehicle.insuranceDetails.certificate)} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
+                                            <a
+                                                href={toFullUrl(vehicle.insuranceDetails.certificate)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="text-xs text-lime font-bold hover:underline"
                                             >
                                                 View Current File
@@ -241,10 +241,10 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                     <button onClick={onClose} disabled={loading} className="px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer border hover:opacity-70" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                         {t('common.cancel')}
                     </button>
-                    <button 
-                        onClick={handleSave} 
-                        disabled={loading} 
-                        className="flex items-center justify-center gap-2 min-w-[140px] px-8 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" 
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 min-w-[140px] px-8 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >
                         {loading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveInsurance')}
