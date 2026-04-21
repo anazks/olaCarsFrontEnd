@@ -27,7 +27,7 @@ const FinanceDashboard = () => {
             setRecentEntries(sorted.slice(0, 10));
 
             // Aggregate all historical ledger entries for charts & global totals
-            const monthMap = new Map<string, { month: string; income: number; expense: number }>();
+            const monthMap = new Map<string, { month: string; income: number; expense: number; netProfit: number }>();
             
             let totalIncome = 0;
             let totalExpense = 0;

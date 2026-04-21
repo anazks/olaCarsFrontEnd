@@ -9,6 +9,7 @@ export interface BranchManager {
     branchId: string;
     status: 'ACTIVE' | 'INACTIVE';
     twoFactorEnabled: boolean;
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -46,6 +47,7 @@ export interface CreateBranchManagerPayload {
     branchId: string;
     status?: 'ACTIVE' | 'INACTIVE';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 export interface UpdateBranchManagerPayload extends Partial<CreateBranchManagerPayload> {

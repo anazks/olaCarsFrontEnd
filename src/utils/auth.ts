@@ -118,3 +118,17 @@ export const getUserRole = (): string | null => {
     return normalized;
 };
 
+/**
+ * Checks if the current user has a specific granular permission.
+ * Admins are granted all permissions by default.
+ */
+export const hasPermission = (permission: string): boolean => {
+    const userRole = getUserRole();
+    if (userRole === 'admin') return true;
+
+    const user = getUser();
+    if (!user || !user.permissions) return false;
+
+    return user.permissions.includes(permission);
+};
+

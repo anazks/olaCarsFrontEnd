@@ -8,6 +8,7 @@ export interface FinanceStaff {
     branchId: any; // Can be object or string depending on population
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -43,6 +44,7 @@ export interface CreateFinanceStaffPayload {
     phone: string;
     branchId: string;
     status?: string;
+    permissions?: string[];
 }
 
 export interface UpdateFinanceStaffPayload {
@@ -53,6 +55,7 @@ export interface UpdateFinanceStaffPayload {
     phone?: string;
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions?: string[];
 }
 
 // GET all finance staff with filters

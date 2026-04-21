@@ -9,6 +9,7 @@ export interface CountryManager {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled: boolean;
+    permissions: string[];
     lastLoginAt?: string;
     isDeleted: boolean;
     createdBy?: string;
@@ -50,6 +51,7 @@ export interface CreateCountryManagerPayload {
     country: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 export interface UpdateCountryManagerPayload {
@@ -61,6 +63,7 @@ export interface UpdateCountryManagerPayload {
     country?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 // GET all country managers with filters

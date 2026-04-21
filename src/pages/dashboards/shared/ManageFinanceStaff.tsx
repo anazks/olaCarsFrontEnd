@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, ShieldCheck, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import {
     getAllFinanceStaff,
     createFinanceStaff,
@@ -12,6 +12,8 @@ import {
     type StaffFilters,
     type PaginationMetadata
 } from '../../../services/financeStaffService';
+import PermissionSelector from '../../../components/common/PermissionSelector';
+import { getUser, getUserRole } from '../../../utils/auth';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -52,9 +54,16 @@ const ManageFinanceStaff = () => {
         phone: '',
         branchId: '',
         status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'LOCKED',
+        permissions: [] as string[]
     });
+    const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+
+    const currentUser = getUser();
+    const userRole = getUserRole();
+    const isAdmin = userRole === 'admin';
+    const userPermissions = currentUser?.permissions || [];
 
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<FinanceStaff | null>(null);
@@ -108,7 +117,9 @@ const ManageFinanceStaff = () => {
             phone: '',
             branchId: '',
             status: 'ACTIVE',
+            permissions: []
         });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -122,7 +133,9 @@ const ManageFinanceStaff = () => {
             phone: staff.phone || '',
             branchId: typeof staff.branchId === 'object' ? staff.branchId?._id || '' : staff.branchId,
             status: staff.status,
+            permissions: staff.permissions || []
         });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -145,7 +158,8 @@ const ManageFinanceStaff = () => {
                     password: formData.password,
                     phone: formData.phone,
                     branchId: formData.branchId,
-                    status: formData.status
+                    status: formData.status,
+                    permissions: formData.permissions
                 };
                 await createFinanceStaff(payload);
             } else if (modalMode === 'edit' && selectedStaff) {
@@ -156,13 +170,12 @@ const ManageFinanceStaff = () => {
                     phone: formData.phone,
                     branchId: formData.branchId,
                     status: formData.status,
+                    permissions: formData.permissions
                 };
                 if (formData.password) {
                     payload.password = formData.password;
                 }
                 await updateFinanceStaff(payload);
-                console.log(payload);
-
             }
             fetchData();
             closeModal();
@@ -527,112 +540,151 @@ const ManageFinanceStaff = () => {
                             </div>
                         )}
 
+                        {/* Tabs */}
+                        <div className="flex gap-4 border-b mb-6 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('details')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'details' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.details', { defaultValue: 'Basic Details' })}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('permissions')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'permissions' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.permissions', { defaultValue: 'Permissions' })}
+                                {formData.permissions.length > 0 && (
+                                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-brand-lime text-black text-[10px] font-black">
+                                        {formData.permissions.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
                         <form onSubmit={handleFormSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.fullName')}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        placeholder={t('management.common.modal.enterFullName')}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.officialEmailLabel')}
-                                    </label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        placeholder="email@example.com"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    {modalMode === 'create' && (
+                            {activeTab === 'details' ? (
+                                <div className="space-y-6 max-h-[400px] overflow-y-auto pr-1">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                                {t('management.common.modal.password')}
+                                                {t('management.common.modal.fullName')}
                                             </label>
                                             <input
-                                                type="password"
+                                                type="text"
                                                 required
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                value={formData.fullName}
+                                                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                                 className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
                                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                placeholder="••••••••"
+                                                placeholder={t('management.common.modal.enterFullName')}
                                             />
                                         </div>
-                                    )}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                {t('management.common.modal.officialEmailLabel')}
+                                            </label>
+                                            <input
+                                                type="email"
+                                                required
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                placeholder="email@example.com"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        {(modalMode === 'create' || modalMode === 'edit') && (
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                    {modalMode === 'create' 
+                                                        ? t('management.common.modal.password') 
+                                                        : t('management.common.modal.newPasswordOptional', { defaultValue: 'New Password (Optional)' })
+                                                    }
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    required={modalMode === 'create'}
+                                                    value={formData.password}
+                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                    className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                    placeholder="••••••••"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                {t('management.common.modal.phone')}
+                                            </label>
+                                            <PhoneInput
+                                                country={'in'}
+                                                value={formData.phone}
+                                                onChange={phone => setFormData({ ...formData, phone })}
+                                                containerStyle={{ width: '100%' }}
+                                                inputStyle={{
+                                                    width: '100%',
+                                                    height: '48px',
+                                                    borderRadius: '12px',
+                                                    background: 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    color: 'var(--text-main)'
+                                                }}
+                                                buttonStyle={{
+                                                    background: 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    borderRadius: '12px 0 0 12px'
+                                                }}
+                                                dropdownStyle={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                            />
+                                        </div>
+                                    </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            {t('management.common.modal.phone')}
+                                            {t('management.common.modal.assignBranch')}
                                         </label>
-                                        <PhoneInput
-                                            country={'in'}
-                                            value={formData.phone}
-                                            onChange={phone => setFormData({ ...formData, phone })}
-                                            containerStyle={{ width: '100%' }}
-                                            inputStyle={{
-                                                width: '100%',
-                                                height: '48px',
-                                                borderRadius: '12px',
-                                                background: 'var(--bg-input)',
-                                                border: '1px solid var(--border-main)',
-                                                color: 'var(--text-main)'
-                                            }}
-                                            buttonStyle={{
-                                                background: 'var(--bg-input)',
-                                                border: '1px solid var(--border-main)',
-                                                borderRadius: '12px 0 0 12px'
-                                            }}
-                                            dropdownStyle={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                        />
+                                        <select
+                                            required
+                                            value={formData.branchId}
+                                            onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">{t('management.common.modal.selectBranch')}</option>
+                                            {branches.map((branch: Branch) => (
+                                                <option key={branch._id} value={branch._id}>{branch.name} ({branch.city})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.common.modal.status')}
+                                        </label>
+                                        <select
+                                            value={formData.status}
+                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                                            className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                            <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
+                                            <option value="LOCKED">{t('management.common.status.locked')}</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.assignBranch')}
-                                    </label>
-                                    <select
-                                        required
-                                        value={formData.branchId}
-                                        onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="">{t('management.common.modal.selectBranch')}</option>
-                                        {branches.map((branch: Branch) => (
-                                            <option key={branch._id} value={branch._id}>{branch.name} ({branch.city})</option>
-                                        ))}
-                                    </select>
+                            ) : (
+                                <div className="space-y-6 min-h-[400px]">
+                                    <PermissionSelector
+                                        userPermissions={userPermissions}
+                                        selectedPermissions={formData.permissions}
+                                        isAdmin={isAdmin}
+                                        onChange={(perms) => setFormData({ ...formData, permissions: perms })}
+                                    />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.status')}
-                                    </label>
-                                    <select
-                                        value={formData.status}
-                                        onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="ACTIVE">{t('management.common.status.active')}</option>
-                                        <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
-                                        <option value="LOCKED">{t('management.common.status.locked')}</option>
-                                    </select>
-                                </div>
-                            </div>
+                            )}
 
                             <div className="pt-4 flex items-center justify-end gap-3">
                                 <button

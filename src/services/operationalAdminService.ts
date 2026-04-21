@@ -7,6 +7,7 @@ export interface OperationalAdmin {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled: boolean;
+    permissions: string[];
     lastLoginAt?: string;
     isDeleted: boolean;
     createdBy?: string;
@@ -43,6 +44,7 @@ export interface CreateOperationalAdminPayload {
     fullName: string;
     email: string;
     password: string;
+    permissions?: string[];
 }
 
 export interface UpdateOperationalAdminPayload {
@@ -52,6 +54,7 @@ export interface UpdateOperationalAdminPayload {
     password?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 // GET all operational admins with filters, sorting, and pagination
