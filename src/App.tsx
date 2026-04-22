@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useScrollReveal } from './hooks/useScrollReveal';
+import { useAuthRefresh } from './hooks/useAuthRefresh';
 import { isTokenValid, logout, getToken } from './utils/auth';
 import './i18n';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -75,6 +76,9 @@ import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
 function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
+
+  // Background permission/profile refresh (every 2 minutes for faster updates)
+  useAuthRefresh(120000);
 
   useEffect(() => {
     // Check token validity every 30 seconds

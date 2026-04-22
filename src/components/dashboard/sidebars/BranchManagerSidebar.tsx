@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, UserCheck } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface BranchManagerSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -22,21 +23,21 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
     };
 
     const adminItems = [
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/branch-manager/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/branch-manager/manage-operation-staff' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/branch-manager/manage-workshop-managers' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers' },
-        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/branch-manager/staff-performance' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/branch-manager/manage-finance-staff', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/branch-manager/manage-operation-staff', permission: 'STAFF_VIEW' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/branch-manager/manage-workshop-managers', permission: 'STAFF_VIEW' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff', permission: 'STAFF_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [
-        { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/branch-manager/insurances' },
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-manager/purchase-orders' },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills' },
-        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles' },
-        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers' },
-        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-manager/driver-performance' },
+        { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/branch-manager/insurances', permission: 'INSURANCE_VIEW' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-manager/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles', permission: 'VEHICLE_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers', permission: 'DRIVER_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
@@ -57,13 +58,14 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 )}
                 <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     {items.map((item, i) => (
-                        <SidebarItem
-                            key={i}
-                            icon={item.icon}
-                            label={item.label}
-                            active={item.path ? isActive(item.path) : false}
-                            onClick={item.path ? () => navigate(item.path) : undefined}
-                        />
+                        <HasPermission key={i} permission={item.permission} mode="hide">
+                            <SidebarItem
+                                icon={item.icon}
+                                label={item.label}
+                                active={item.path ? isActive(item.path) : false}
+                                onClick={item.path ? () => navigate(item.path) : undefined}
+                            />
+                        </HasPermission>
                     ))}
                 </div>
             </div>

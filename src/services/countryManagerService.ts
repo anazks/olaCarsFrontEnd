@@ -86,7 +86,7 @@ export const createCountryManager = async (
 export const updateCountryManager = async (
     payload: UpdateCountryManagerPayload
 ): Promise<CountryManager> => {
-    const response = await api.put('/api/country-manager/update', payload);
+    const response = await api.put(`/api/country-manager/${payload.id}`, payload);
     return response.data;
 };
 

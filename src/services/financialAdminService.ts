@@ -83,7 +83,7 @@ export const createFinancialAdmin = async (
 export const updateFinancialAdmin = async (
     payload: UpdateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
-    const response = await api.put('/api/finance-admin/update', payload);
+    const response = await api.put(`/api/finance-admin/${payload.id}`, payload);
     return response.data;
 };
 

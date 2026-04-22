@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Wrench, UserCog } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface ExecutiveSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -22,34 +23,34 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     };
 
     const adminItems = [
-        { icon: <Shield size={20} />, label: t('sidebar.items.operationalAdmins'), path: '/admin/admin/manage-operational-admins' },
-        { icon: <DollarSign size={20} />, label: t('sidebar.items.financialAdmins'), path: '/admin/admin/manage-financial-admins' },
-        { icon: <Globe size={20} />, label: t('sidebar.items.countryManagers'), path: '/admin/admin/manage-country-managers' },
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/admin/manage-branches' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/admin/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/admin/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/admin/manage-operation-staff' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/admin/manage-workshop-managers' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers' },
-        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/admin/staff-performance' },
+        { icon: <Shield size={20} />, label: t('sidebar.items.operationalAdmins'), path: '/admin/admin/manage-operational-admins', permission: 'STAFF_VIEW' },
+        { icon: <DollarSign size={20} />, label: t('sidebar.items.financialAdmins'), path: '/admin/admin/manage-financial-admins', permission: 'STAFF_VIEW' },
+        { icon: <Globe size={20} />, label: t('sidebar.items.countryManagers'), path: '/admin/admin/manage-country-managers', permission: 'STAFF_VIEW' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/admin/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/admin/manage-branch-managers', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/admin/manage-finance-staff', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/admin/manage-operation-staff', permission: 'STAFF_VIEW' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [
-        { icon: <DollarSign size={20} />, label: t('sidebar.items.poThreshold'), path: '/admin/admin/po-threshold' },
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders' },
-        { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles' },
-        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers' },
-        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/admin/driver-performance' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/admin/agreements' },
+        { icon: <DollarSign size={20} />, label: t('sidebar.items.poThreshold'), path: '/admin/admin/po-threshold', permission: 'PURCHASE_ORDER_APPROVE' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+        { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
     ];
 
     const financeItems = [
-        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/admin/finance-dashboard' },
-        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/admin/taxes' },
-        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/admin/chart-of-accounts' },
-        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger' },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/admin/purchase-bills' },
+        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/admin/taxes', permission: 'TAX_VIEW' },
+        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/admin/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -87,13 +88,15 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 )}
                 <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     {items.map((item, i) => (
-                        <SidebarItem
-                            key={i}
-                            icon={item.icon}
-                            label={item.label}
-                            active={item.path ? isActive(item.path) : false}
-                            onClick={item.path ? () => navigate(item.path) : undefined}
-                        />
+                        <HasPermission key={i} permission={item.permission} mode="hide">
+                            <SidebarItem
+                                key={i}
+                                icon={item.icon}
+                                label={item.label}
+                                active={item.path ? isActive(item.path) : false}
+                                onClick={item.path ? () => navigate(item.path) : undefined}
+                            />
+                        </HasPermission>
                     ))}
                 </div>
             </div>

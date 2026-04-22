@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Car, Wrench, Users, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, UserCog, BarChart3 } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface OperationalAdminSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -22,22 +23,22 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     };
 
     const adminItems = [
-        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/operational-admin/manage-country-managers' },
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/operational-admin/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/operational-admin/manage-workshop-managers' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers' },
+        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/operational-admin/manage-country-managers', permission: 'STAFF_VIEW' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/operational-admin/manage-finance-staff', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff', permission: 'STAFF_VIEW' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/operational-admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles' },
-        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers' },
-        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -75,13 +76,14 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 )}
                 <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     {items.map((item, i) => (
-                        <SidebarItem
-                            key={i}
-                            icon={item.icon}
-                            label={item.label}
-                            active={item.path ? isActive(item.path) : false}
-                            onClick={item.path ? () => navigate(item.path) : undefined}
-                        />
+                        <HasPermission key={i} permission={item.permission} mode="hide">
+                            <SidebarItem
+                                icon={item.icon}
+                                label={item.label}
+                                active={item.path ? isActive(item.path) : false}
+                                onClick={item.path ? () => navigate(item.path) : undefined}
+                            />
+                        </HasPermission>
                     ))}
                 </div>
             </div>

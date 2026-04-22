@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import HasPermission from '../../../components/HasPermission';
 
 // ── Status Styles ──────────────────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ const VehicleList = () => {
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {t('common.refresh')}
                     </button>
-                    {['countrymanager', 'branchmanager'].includes(getUserRole() || '') && (
+                    <HasPermission permission="VEHICLE_CREATE">
                         <button
                             onClick={() => navigate('create')}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
@@ -166,7 +167,7 @@ const VehicleList = () => {
                         >
                             <Plus size={18} />{t('management.vehicles.onboardingBtn')}
                         </button>
-                    )}
+                    </HasPermission>
                 </div>
             </div>
 

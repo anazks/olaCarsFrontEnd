@@ -78,7 +78,7 @@ export const createOperationalAdmin = async (
 export const updateOperationalAdmin = async (
     payload: UpdateOperationalAdminPayload
 ): Promise<OperationalAdmin> => {
-    const response = await api.put('/api/operational-admin/update', payload);
+    const response = await api.put(`/api/operational-admin/${payload.id}`, payload);
     console.log(response,'2w22');
     
     return response.data;

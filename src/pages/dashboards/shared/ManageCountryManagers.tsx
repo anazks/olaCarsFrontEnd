@@ -16,6 +16,7 @@ import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import HasPermission from '../../../components/HasPermission';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -272,13 +273,15 @@ const ManageCountryManagers = () => {
                     >
                         <Filter size={16} /> {t('management.common.filters')}
                     </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
-                    >
-                        <Plus size={18} /> {t('management.countryManagers.add')}
-                    </button>
+                    <HasPermission permission="STAFF_CREATE">
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        >
+                            <Plus size={18} /> {t('management.countryManagers.add')}
+                        </button>
+                    </HasPermission>
                 </div>
             </div>
 
@@ -469,20 +472,24 @@ const ManageCountryManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => openEditModal(manager)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
-                                                        style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
-                                                    >
-                                                        <Pencil size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(manager)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
-                                                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
+                                                    <HasPermission permission="STAFF_EDIT">
+                                                        <button
+                                                            onClick={() => openEditModal(manager)}
+                                                            className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
+                                                            style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
+                                                        >
+                                                            <Pencil size={15} />
+                                                        </button>
+                                                    </HasPermission>
+                                                    <HasPermission permission="STAFF_DELETE">
+                                                        <button
+                                                            onClick={() => setDeleteTarget(manager)}
+                                                            className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
+                                                            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </HasPermission>
                                                 </div>
                                             </td>
                                         </tr>

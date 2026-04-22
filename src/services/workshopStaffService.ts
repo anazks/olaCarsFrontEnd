@@ -78,7 +78,7 @@ export const createWorkshopStaff = async (
 export const updateWorkshopStaff = async (
     payload: UpdateWorkshopStaffPayload
 ): Promise<WorkshopStaff> => {
-    const response = await api.put('/api/workshop-staff/update', payload);
+    const response = await api.put(`/api/workshop-staff/${payload.id}`, payload);
     return response.data;
 };
 

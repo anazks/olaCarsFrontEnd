@@ -7,6 +7,7 @@ import { getAllSuppliers, type Supplier } from '../../../services/supplierServic
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { useNavigate } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
+import HasPermission from '../../../components/HasPermission';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
@@ -191,7 +192,7 @@ const PurchaseOrderList = () => {
                     >
                         <Filter size={16} /> {t('management.common.filters')}
                     </button>
-                    {canCreate && (
+                    <HasPermission permission="PURCHASE_ORDER_CREATE">
                         <button
                             onClick={() => navigate('create')}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg hover:shadow-lime/20 hover:-translate-y-0.5 active:translate-y-0"
@@ -199,7 +200,7 @@ const PurchaseOrderList = () => {
                         >
                             <Plus size={18} /> {t('management.purchaseOrders.createBtn')}
                         </button>
-                    )}
+                    </HasPermission>
                 </div>
             </div>
 

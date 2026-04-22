@@ -136,3 +136,9 @@ export const changePassword = async (userId: string, data: any) => {
 export const updateUserProfile = async (data: any) => {
     return await api.put('api/user/update', data);
 };
+
+export const getProfile = async () => {
+    return await api.get('api/user/profile', {
+        headers: { 'X-Skip-Toast': 'true' } // Silent refresh should not show toasts
+    });
+};

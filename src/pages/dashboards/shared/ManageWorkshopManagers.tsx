@@ -17,6 +17,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import HasPermission from '../../../components/HasPermission';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -277,13 +278,15 @@ const ManageWorkshopManagers = () => {
                     >
                         <Filter size={18} /> {t('management.common.filters')}
                     </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
-                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                    >
-                        <Plus size={20} /> {t('management.workshopManager.add', { defaultValue: 'Add Manager' })}
-                    </button>
+                    <HasPermission permission="STAFF_CREATE">
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <Plus size={20} /> {t('management.workshopManager.add', { defaultValue: 'Add Manager' })}
+                        </button>
+                    </HasPermission>
                 </div>
             </div>
 
@@ -445,21 +448,25 @@ const ManageWorkshopManagers = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(manager)}
-                                                    className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
-                                                    style={{ color: 'var(--text-dim)' }}
-                                                    title={t('management.common.edit', { defaultValue: 'Edit' })}
-                                                >
-                                                    <Pencil size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteTarget(manager)}
-                                                    className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-400"
-                                                    title={t('management.common.delete.title', { defaultValue: 'Delete' })}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                <HasPermission permission="STAFF_EDIT">
+                                                    <button
+                                                        onClick={() => openEditModal(manager)}
+                                                        className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
+                                                        style={{ color: 'var(--text-dim)' }}
+                                                        title={t('management.common.edit', { defaultValue: 'Edit' })}
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                </HasPermission>
+                                                <HasPermission permission="STAFF_DELETE">
+                                                    <button
+                                                        onClick={() => setDeleteTarget(manager)}
+                                                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-400"
+                                                        title={t('management.common.delete.title', { defaultValue: 'Delete' })}
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </HasPermission>
                                             </div>
                                         </td>
                                     </tr>

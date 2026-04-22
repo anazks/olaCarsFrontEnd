@@ -78,7 +78,7 @@ export const createFinanceStaff = async (
 export const updateFinanceStaff = async (
     payload: UpdateFinanceStaffPayload
 ): Promise<FinanceStaff> => {
-    const response = await api.put('/api/finance-staff/update', payload);
+    const response = await api.put(`/api/finance-staff/${payload.id}`, payload);
     return response.data;
 };
 

@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
-import { getUserRole } from '../../../utils/auth';
+import { getUserRole, hasPermission as checkPermission } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
 import type { Insurance } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
 import InsuranceManagementModal from './InsuranceManagementModal';
 import VehicleGpsMap from '../../../components/maps/VehicleGpsMap';
+import HasPermission from '../../../components/HasPermission';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -96,7 +97,7 @@ const VehicleDetail = () => {
     const [notes, setNotes] = useState('');
     const [isInsuranceManagerOpen, setIsInsuranceManagerOpen] = useState(false);
     const userRole = getUserRole();
-    const canApprove = userRole === 'branchmanager' || userRole === 'countrymanager';
+    const canApprove = checkPermission('VEHICLE_APPROVE');
 
     const S3_BASE = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
     const toFullUrl = (path?: string) => {
@@ -504,13 +505,15 @@ const VehicleDetail = () => {
                             </div>
                             {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION' || (vehicle.status as string) === 'BRANCH MANAGER APPROVAL') && (
                                 <div className="mt-5">
-                                    <button
-                                        onClick={() => setIsInsuranceManagerOpen(true)}
-                                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
-                                    >
-                                        {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
-                                    </button>
+                                    <HasPermission permission="VEHICLE_EDIT">
+                                        <button
+                                            onClick={() => setIsInsuranceManagerOpen(true)}
+                                            className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                        >
+                                            {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
+                                        </button>
+                                    </HasPermission>
                                 </div>
                             )}
                         </div>
@@ -675,14 +678,16 @@ const VehicleDetail = () => {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
-                                disabled={actionLoading}
-                                className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
-                                style={{ background: '#C8E600', color: '#0A0A0A' }}
-                            >
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
-                            </button>
+                            <HasPermission permission="VEHICLE_EDIT">
+                                <button
+                                    onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
+                                    disabled={actionLoading}
+                                    className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
+                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
+                                >
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
+                                </button>
+                            </HasPermission>
                         </div>
                     ) : (
                         /* Step 2: Document Upload */
@@ -746,9 +751,11 @@ const VehicleDetail = () => {
                                 <SectionHeader icon={<Send size={16} />} title={t('management.vehicles.vehicleDetail.actions.submitForReview')} />
                                 <div className="flex flex-col gap-3 mt-3">
                                     <textarea placeholder={t('management.purchaseOrders.filters.anyUsage')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                    <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
-                                    </button>
+                                    <HasPermission permission="VEHICLE_EDIT">
+                                        <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+                                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
+                                        </button>
+                                    </HasPermission>
                                 </div>
                             </div>
                         </div>
@@ -1174,22 +1181,30 @@ const VehicleDetail = () => {
                     </div>
                     <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
-                            <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
-                        </button>
-                        <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
-                            <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
-                        </button>
-                        <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
-                            <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
-                        </button>
-                        <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
-                            <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
-                        </button>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
+                                <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
+                                <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
+                                <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
+                                <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
+                            </button>
+                        </HasPermission>
                     </div>
                 </div>
             )}

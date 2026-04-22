@@ -78,7 +78,7 @@ export const createOperationStaff = async (
 export const updateOperationStaff = async (
     payload: UpdateOperationStaffPayload
 ): Promise<OperationStaff> => {
-    const response = await api.put('/api/operation-staff/update', payload);
+    const response = await api.put(`/api/operation-staff/${payload.id}`, payload);
     return response.data;
 };
 

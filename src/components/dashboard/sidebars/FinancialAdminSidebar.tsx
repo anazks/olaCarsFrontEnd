@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Receipt, FileText, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3, Wrench, UserCog } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface FinancialAdminSidebarProps {
     isSidebarCollapsed?: boolean;
@@ -22,30 +23,30 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     };
 
     const adminItems = [
-        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/financial-admin/manage-country-managers' },
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/financial-admin/manage-branches' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/financial-admin/manage-branch-managers' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/financial-admin/manage-finance-staff' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/financial-admin/manage-operation-staff' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/financial-admin/manage-workshop-managers' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/financial-admin/manage-workshop-staff' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/financial-admin/manage-suppliers' },
+        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/financial-admin/manage-country-managers', permission: 'STAFF_VIEW' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/financial-admin/manage-branch-managers', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/financial-admin/manage-finance-staff', permission: 'STAFF_VIEW' },
+        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/financial-admin/manage-operation-staff', permission: 'STAFF_VIEW' },
+        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/financial-admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
+        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/financial-admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders' },
-        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles' },
-        { icon: <Car size={20} />, label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings' },
-        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers' },
-        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/financial-admin/driver-performance' },
+        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
+        { icon: <Car size={20} />, label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers', permission: 'DRIVER_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const financeItems = [
-        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard' },
-        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes' },
-        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts' },
-        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger' },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/financial-admin/purchase-bills' },
+        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes', permission: 'TAX_VIEW' },
+        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
+        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/financial-admin/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -83,13 +84,14 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 )}
                 <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     {items.map((item, i) => (
-                        <SidebarItem
-                            key={i}
-                            icon={item.icon}
-                            label={item.label}
-                            active={item.path ? isActive(item.path) : false}
-                            onClick={item.path ? () => navigate(item.path) : undefined}
-                        />
+                        <HasPermission key={i} permission={item.permission} mode="hide">
+                            <SidebarItem
+                                icon={item.icon}
+                                label={item.label}
+                                active={item.path ? isActive(item.path) : false}
+                                onClick={item.path ? () => navigate(item.path) : undefined}
+                            />
+                        </HasPermission>
                     ))}
                 </div>
             </div>
