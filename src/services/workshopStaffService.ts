@@ -8,6 +8,7 @@ export interface WorkshopStaff {
     branchId: any; // Can be object or string depending on population
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -43,6 +44,7 @@ export interface CreateWorkshopStaffPayload {
     phone: string;
     branchId: string;
     status?: string;
+    permissions?: string[];
 }
 
 export interface UpdateWorkshopStaffPayload {
@@ -53,6 +55,7 @@ export interface UpdateWorkshopStaffPayload {
     phone?: string;
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions?: string[];
 }
 
 // GET all workshop staff with filters
@@ -75,7 +78,7 @@ export const createWorkshopStaff = async (
 export const updateWorkshopStaff = async (
     payload: UpdateWorkshopStaffPayload
 ): Promise<WorkshopStaff> => {
-    const response = await api.put('/api/workshop-staff/update', payload);
+    const response = await api.put(`/api/workshop-staff/${payload.id}`, payload);
     return response.data;
 };
 

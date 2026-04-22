@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
-    ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
+    ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
 import { Car, Users, DollarSign, Briefcase, ShoppingCart, Activity, RefreshCw } from 'lucide-react';
@@ -423,7 +423,7 @@ const ExecutiveDashboard = () => {
                             {poData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
-                                        <Pie data={poData} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                                        <Pie data={poData} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
                                             {poData.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
                                         </Pie>
                                         <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />

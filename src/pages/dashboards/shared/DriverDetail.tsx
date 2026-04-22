@@ -7,11 +7,11 @@ import { getInvoicesByDriver, payInvoice } from '../../../services/invoiceServic
 import type { Invoice } from '../../../services/invoiceService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
-import agreementService from '../../../services/agreementService';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { generateInvoiceHTML } from '../../../utils/invoicePDFTemplate';
+import HasPermission from '../../../components/HasPermission';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -465,45 +465,51 @@ const DriverDetail = () => {
                     <div className="flex flex-wrap gap-3">
                         {/* Status-Specific Actions */}
                         {driver.status === 'DRAFT' && isStaff && (
-                            <button
-                                onClick={() => handleProgress('PENDING REVIEW', { notes: 'Automated: Draft submission' })}
-                                disabled={!canProgress()}
-                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
-                            >
-                                <PlayCircle size={20} />
-                                Submit for Review
-                            </button>
+                            <HasPermission permission="DRIVER_ONBOARD">
+                                <button
+                                    onClick={() => handleProgress('PENDING REVIEW', { notes: 'Automated: Draft submission' })}
+                                    disabled={!canProgress()}
+                                    className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                                >
+                                    <PlayCircle size={20} />
+                                    Submit for Review
+                                </button>
+                            </HasPermission>
                         )}
 
                         {driver.status === 'PENDING REVIEW' && (isFinanceStaff || userRole === 'countrymanager' || userRole === 'branchmanager') && (
-                            <button
-                                onClick={() => handleProgress('VERIFICATION', { notes: 'Finance/Manager Review Completed' })}
-                                disabled={!canProgress()}
-                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
-                            >
-                                <ShieldCheck size={20} />
-                                Complete Verification
-                            </button>
+                            <HasPermission permission="DRIVER_ONBOARD">
+                                <button
+                                    onClick={() => handleProgress('VERIFICATION', { notes: 'Finance/Manager Review Completed' })}
+                                    disabled={!canProgress()}
+                                    className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim cursor-not-allowed'}`}
+                                >
+                                    <ShieldCheck size={20} />
+                                    Complete Verification
+                                </button>
+                            </HasPermission>
                         )}
 
                         {driver.status === 'VERIFICATION' && (isFinanceStaff || userRole === 'countrymanager') && (
-                            <button
-                                onClick={() => {
-                                    const input = document.getElementById('test-score-input') as HTMLInputElement;
-                                    const val = parseInt(input?.value);
-                                    handleProgress('CREDIT CHECK', {
-                                        updateData: {
-                                            creditCheck: !isNaN(val) ? { score: val } : {}
-                                        },
-                                        notes: 'Triggering credit assessment'
-                                    });
-                                }}
-                                disabled={!canProgress()}
-                                className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
-                            >
-                                <FileCheck size={20} />
-                                Start Credit Assessment
-                            </button>
+                            <HasPermission permission="DRIVER_ONBOARD">
+                                <button
+                                    onClick={() => {
+                                        const input = document.getElementById('test-score-input') as HTMLInputElement;
+                                        const val = parseInt(input?.value);
+                                        handleProgress('CREDIT CHECK', {
+                                            updateData: {
+                                                creditCheck: !isNaN(val) ? { score: val } : {}
+                                            },
+                                            notes: 'Triggering credit assessment'
+                                        });
+                                    }}
+                                    disabled={!canProgress()}
+                                    className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center gap-3 shadow-xl active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                                >
+                                    <FileCheck size={20} />
+                                    Start Credit Assessment
+                                </button>
+                            </HasPermission>
                         )}
 
                         {driver.status === 'CREDIT CHECK' && (isFinanceStaff || userRole === 'countrymanager') && (
@@ -515,52 +521,61 @@ const DriverDetail = () => {
 
                         {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && isManager && (
                             <div className="flex gap-4">
-                                <button
-                                    onClick={() => handleProgress('APPROVED', {
-                                        updateData: {
-                                            approvedBy: { id: currentUser?._id, name: currentUser?.fullName, role: userRole },
-                                            approvedAt: new Date().toISOString()
-                                        },
-                                        notes: 'Manager Final Approval'
-                                    })}
-                                    disabled={driver.status === 'MANAGER REVIEW' && !reviewNotes}
-                                    className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-2"
-                                >
-                                    <CheckCircle2 size={20} />
-                                    Approve Application
-                                </button>
-                                <button
-                                    onClick={() => handleProgress('REJECTED', {
-                                        updateData: { rejection: { reason: rejectionReason, notes: reviewNotes } }
-                                    })}
-                                    className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-xl active:scale-95 flex items-center gap-2"
-                                >
-                                    <XCircle size={20} />
-                                    Reject
-                                </button>
+                                <HasPermission permission="DRIVER_ONBOARD">
+                                    <button
+                                        onClick={() => handleProgress('APPROVED', {
+                                            updateData: {
+                                                approvedBy: { id: currentUser?._id, name: currentUser?.fullName, role: userRole },
+                                                approvedAt: new Date().toISOString()
+                                            },
+                                            notes: 'Manager Final Approval'
+                                        })}
+                                        disabled={driver.status === 'MANAGER REVIEW' && !reviewNotes}
+                                        className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                                    >
+                                        <CheckCircle2 size={20} />
+                                        Approve Application
+                                    </button>
+                                </HasPermission>
+
+                                <HasPermission permission="DRIVER_ONBOARD">
+                                    <button
+                                        onClick={() => handleProgress('REJECTED', {
+                                            updateData: { rejection: { reason: rejectionReason, notes: reviewNotes } }
+                                        })}
+                                        className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                                    >
+                                        <XCircle size={20} />
+                                        Reject
+                                    </button>
+                                </HasPermission>
                             </div>
                         )}
 
                         {driver.status === 'APPROVED' && isStaff && (
-                            <button
-                                onClick={() => handleProgress('ACTIVE', { notes: 'Activated after Policy Approval' })}
-                                className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
-                            >
-                                <CheckCircle2 size={20} />
-                                Activate Application
-                            </button>
+                            <HasPermission permission="DRIVER_ONBOARD">
+                                <button
+                                    onClick={() => handleProgress('ACTIVE', { notes: 'Activated after Policy Approval' })}
+                                    className="px-8 py-4 bg-brand-lime text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
+                                >
+                                    <CheckCircle2 size={20} />
+                                    Activate Application
+                                </button>
+                            </HasPermission>
                         )}
 
 
 
                         {driver.status === 'ACTIVE' && isStaff && !driver.currentVehicle && (
-                            <button
-                                onClick={() => navigate('assign-vehicle')}
-                                className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
-                            >
-                                <Car size={20} />
-                                Assign Vehicle
-                            </button>
+                            <HasPermission permission="DRIVER_ASSIGN_VEHICLE">
+                                <button
+                                    onClick={() => navigate('assign-vehicle')}
+                                    className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center gap-3"
+                                >
+                                    <Car size={20} />
+                                    Assign Vehicle
+                                </button>
+                            </HasPermission>
                         )}
 
                         {/* Helpful Status Messages */}
@@ -610,14 +625,16 @@ const DriverDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => handleProgress('REJECTED', { rejection: { reason: 'OTHER', notes: 'Manually disqualified' } })}
-                        className="px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 border hover:bg-red-500/10 active:scale-95"
-                        style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.2)', color: 'var(--brand-danger, #ef4444)' }}
-                    >
-                        <Ban size={18} />
-                        Disqualify
-                    </button>
+                    <HasPermission permission="DRIVER_DELETE">
+                        <button
+                            onClick={() => handleProgress('REJECTED', { rejection: { reason: 'OTHER', notes: 'Manually disqualified' } })}
+                            className="px-6 py-2.5 font-bold rounded-xl transition-all flex items-center gap-2 border hover:bg-red-500/10 active:scale-95"
+                            style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.2)', color: 'var(--brand-danger, #ef4444)' }}
+                        >
+                            <Ban size={18} />
+                            Disqualify
+                        </button>
+                    </HasPermission>
                 </div>
             </div>
 
@@ -866,12 +883,12 @@ const DriverDetail = () => {
                                                         <div className="flex items-center justify-between">
                                                             <div>
                                                                 <p className="text-2xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
-                                                                    {next.dueDate ? new Date(next.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : `Week ${next.weekNumber}`}
+                                                                    {next.dueDate ? new Date(next.dueDate as string).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : `Week ${next.weekNumber}`}
                                                                 </p>
-                                                                <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate).getFullYear() : ''}</p>
+                                                                <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate as string).getFullYear() : ''}</p>
                                                             </div>
                                                             <div className="text-right">
-                                                                <p className="text-xl font-black text-blue-500">${(next.balance || next.totalAmountDue || next.baseAmount).toLocaleString()}</p>
+                                                                <p className="text-xl font-black text-blue-500">${(next.balance || next.totalDue || next.amount).toLocaleString()}</p>
                                                                 <p className="text-[8px] font-black uppercase text-dim">Week {next.weekNumber}</p>
                                                             </div>
                                                         </div>
@@ -904,7 +921,7 @@ const DriverDetail = () => {
                                     );
                                 }
                                 if (nextDue) {
-                                    const daysUntil = Math.ceil((new Date(nextDue.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                    const daysUntil = Math.ceil((new Date(nextDue.dueDate as string).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                                     if (daysUntil <= 3) {
                                         return (
                                             <div className="mb-6 p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center gap-4 relative z-10">
@@ -913,7 +930,7 @@ const DriverDetail = () => {
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Upcoming Payment</p>
-                                                    <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${nextDue.totalAmountDue.toLocaleString()}</p>
+                                                    <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${(nextDue.totalDue || nextDue.balance || nextDue.amount || 0).toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         );
@@ -1045,7 +1062,7 @@ const DriverDetail = () => {
                                                                 <div className="px-4 pb-4 pt-0">
                                                                     <div className="border-t pt-3 space-y-2" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                                                         <p className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1"><History size={10} /> Payment History ({rent.payments.length})</p>
-                                                                        {rent.payments.map((p, pIdx) => (
+                                                                        {rent.payments.map((p: any, pIdx: number) => (
                                                                             <div key={pIdx} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
                                                                                 <div className="flex items-center gap-2">
                                                                                     <div className="w-6 h-6 rounded-full bg-brand-lime/10 text-brand-lime flex items-center justify-center text-[9px] font-bold">{pIdx + 1}</div>
@@ -1112,7 +1129,7 @@ const DriverDetail = () => {
                                 </div>
                                 <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Emergency Contact</h2>
                             </div>
-                            {(userRole === 'financestaff' || userRole === 'branchmanager') && (
+                            <HasPermission permission="DRIVER_EDIT">
                                 <button
                                     onClick={() => {
                                         const name = prompt("Enter Emergency Contact Name", driver.personalInfo?.fullName || "");
@@ -1127,7 +1144,7 @@ const DriverDetail = () => {
                                 >
                                     Edit Contact
                                 </button>
-                            )}
+                            </HasPermission>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <InfoCard

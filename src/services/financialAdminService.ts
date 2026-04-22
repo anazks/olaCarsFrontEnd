@@ -7,6 +7,7 @@ export interface FinancialAdmin {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled: boolean;
+    permissions: string[];
     lastLoginAt?: string;
     isDeleted: boolean;
     createdBy?: string;
@@ -43,6 +44,7 @@ export interface CreateFinancialAdminPayload {
     fullName: string;
     email: string;
     password: string;
+    permissions?: string[];
 }
 
 export interface UpdateFinancialAdminPayload {
@@ -52,6 +54,7 @@ export interface UpdateFinancialAdminPayload {
     password?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 // GET all financial admins with filters, sorting, and pagination
@@ -80,7 +83,7 @@ export const createFinancialAdmin = async (
 export const updateFinancialAdmin = async (
     payload: UpdateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
-    const response = await api.put('/api/finance-admin/update', payload);
+    const response = await api.put(`/api/finance-admin/${payload.id}`, payload);
     return response.data;
 };
 

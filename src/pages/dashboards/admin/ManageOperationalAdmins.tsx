@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, AlertTriangle, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import {
     getAllOperationalAdmins,
     createOperationalAdmin,
@@ -9,9 +9,11 @@ import {
     type OperationalAdmin,
     type CreateOperationalAdminPayload,
     type UpdateOperationalAdminPayload,
-    type AdminFilters,
-    type PaginationMetadata
+    type PaginationMetadata,
+    type AdminFilters
 } from '../../../services/operationalAdminService';
+import PermissionSelector from '../../../components/common/PermissionSelector';
+import { getUser, getUserRole } from '../../../utils/auth';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -46,9 +48,15 @@ const ManageOperationalAdmins = () => {
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
     const [selectedAdmin, setSelectedAdmin] = useState<OperationalAdmin | null>(null);
-    const [formData, setFormData] = useState({ fullName: '', email: '', password: '', status: 'ACTIVE' as string });
+    const [formData, setFormData] = useState({ fullName: '', email: '', password: '', status: 'ACTIVE' as string, permissions: [] as string[] });
+    const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+
+    const currentUser = getUser();
+    const userRole = getUserRole();
+    const isAdmin = userRole === 'admin';
+    const userPermissions = currentUser?.permissions || [];
 
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<OperationalAdmin | null>(null);
@@ -90,7 +98,8 @@ const ManageOperationalAdmins = () => {
     const openCreateModal = () => {
         setModalMode('create');
         setSelectedAdmin(null);
-        setFormData({ fullName: '', email: '', password: '', status: 'ACTIVE' });
+        setFormData({ fullName: '', email: '', password: '', status: 'ACTIVE', permissions: [] });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -102,7 +111,9 @@ const ManageOperationalAdmins = () => {
             email: admin.email,
             password: '',
             status: admin.status,
+            permissions: admin.permissions || []
         });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -123,6 +134,7 @@ const ManageOperationalAdmins = () => {
                     fullName: formData.fullName,
                     email: formData.email,
                     password: formData.password,
+                    permissions: formData.permissions
                 };
                 await createOperationalAdmin(payload);
             } else if (modalMode === 'edit' && selectedAdmin) {
@@ -131,6 +143,7 @@ const ManageOperationalAdmins = () => {
                     fullName: formData.fullName,
                     email: formData.email,
                     status: formData.status as any,
+                    permissions: formData.permissions
                 };
                 if (formData.password) {
                     payload.password = formData.password;
@@ -476,65 +489,102 @@ const ManageOperationalAdmins = () => {
                             </button>
                         </div>
 
+                        {/* Tabs */}
+                        <div className="flex gap-4 border-b mb-6 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                onClick={() => setActiveTab('details')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'details' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.details', { defaultValue: 'Basic Details' })}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('permissions')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'permissions' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.permissions', { defaultValue: 'Permissions' })}
+                                {formData.permissions.length > 0 && (
+                                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-brand-lime text-black text-[10px] font-black">
+                                        {formData.permissions.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.fullName}
-                                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    placeholder="John Doe"
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                />
-                            </div>
+                            {activeTab === 'details' ? (
+                                <div className="space-y-4 min-h-[300px]">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.fullName}
+                                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                            placeholder="John Doe"
+                                            className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
 
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.email')}</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    placeholder="admin@olacars.com"
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                />
-                            </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.email')}</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="admin@olacars.com"
+                                            className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
 
-                            {modalMode === 'create' && (
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.password')}
-                                    </label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        placeholder="••••••••"
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                    {(modalMode === 'create' || modalMode === 'edit') && (
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                {modalMode === 'create' 
+                                                    ? t('management.common.modal.password') 
+                                                    : t('management.common.modal.newPasswordOptional', { defaultValue: 'New Password (Optional)' })
+                                                }
+                                            </label>
+                                            <input
+                                                type="password"
+                                                required={modalMode === 'create'}
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                placeholder="••••••••"
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {modalMode === 'edit' && (
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm cursor-pointer transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            >
+                                                <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                                <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
+                                                <option value="LOCKED">{t('management.common.status.locked')}</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4 min-h-[300px]">
+                                    <PermissionSelector
+                                        userPermissions={userPermissions}
+                                        selectedPermissions={formData.permissions}
+                                        isAdmin={isAdmin}
+                                        onChange={(perms) => setFormData({ ...formData, permissions: perms })}
                                     />
                                 </div>
-                            )}
-
-                            {modalMode === 'edit' && (
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</label>
-                                    <select
-                                        value={formData.status}
-                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm cursor-pointer transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="ACTIVE">{t('management.common.status.active')}</option>
-                                        <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
-                                        <option value="LOCKED">{t('management.common.status.locked')}</option>
-                                    </select>
-                                </div>
-                            )}
+                            ) }
 
                             {formError && (
                                 <div className="text-red-400 text-sm p-3 rounded-xl transition-colors" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>

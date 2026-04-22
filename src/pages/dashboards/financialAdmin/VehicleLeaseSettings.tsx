@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+
 import { Car, Search, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getAllVehicles, updateVehicleLeaseSettings } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
 
 const VehicleLeaseSettings = () => {
-    const { t } = useTranslation();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');

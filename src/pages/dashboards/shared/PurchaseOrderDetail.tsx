@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import ApproveRejectModal from './ApproveRejectModal';
 import PurchaseBillModal from './PurchaseBillModal';
+import HasPermission from '../../../components/HasPermission';
 
 const PurchaseOrderDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -33,7 +34,7 @@ const PurchaseOrderDetail = () => {
     const [isBillModalOpen, setIsBillModalOpen] = useState(false);
 
     const fetchPO = useCallback(async () => {
-        if (!id) return;
+        if (!id || id === 'create') return;
         setLoading(true);
         try {
             const data = await getPurchaseOrderById(id);
@@ -156,33 +157,39 @@ const PurchaseOrderDetail = () => {
 
                 {canApprove && (
                     <div className="flex gap-3 w-full md:w-auto">
-                        <button
-                            onClick={() => openModal('REJECT')}
-                            disabled={actionLoading}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
-                        >
-                            <XCircle size={18} /> Reject
-                        </button>
-                        <button
-                            onClick={() => openModal('APPROVE')}
-                            disabled={actionLoading}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                            style={{ background: '#C8E600', color: '#111' }}
-                        >
-                            <CheckCircle size={18} /> Approve Order
-                        </button>
+                        <HasPermission permission="PURCHASE_ORDER_APPROVE">
+                            <button
+                                onClick={() => openModal('REJECT')}
+                                disabled={actionLoading}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
+                            >
+                                <XCircle size={18} /> Reject
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="PURCHASE_ORDER_APPROVE">
+                            <button
+                                onClick={() => openModal('APPROVE')}
+                                disabled={actionLoading}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                style={{ background: '#C8E600', color: '#111' }}
+                            >
+                                <CheckCircle size={18} /> Approve Order
+                            </button>
+                        </HasPermission>
                     </div>
                 )}
 
                 {canPay && (
                     <div className="flex gap-3 w-full md:w-auto">
-                        <button
-                            onClick={() => setIsBillModalOpen(true)}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
-                            style={{ background: '#C8E600', color: '#111' }}
-                        >
-                            <Receipt size={18} /> Register Bill / Pay
-                        </button>
+                        <HasPermission permission="PURCHASE_ORDER_EDIT">
+                            <button
+                                onClick={() => setIsBillModalOpen(true)}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                style={{ background: '#C8E600', color: '#111' }}
+                            >
+                                <Receipt size={18} /> Register Bill / Pay
+                            </button>
+                        </HasPermission>
                     </div>
                 )}
             </div>

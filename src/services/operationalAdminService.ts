@@ -7,6 +7,7 @@ export interface OperationalAdmin {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled: boolean;
+    permissions: string[];
     lastLoginAt?: string;
     isDeleted: boolean;
     createdBy?: string;
@@ -43,6 +44,7 @@ export interface CreateOperationalAdminPayload {
     fullName: string;
     email: string;
     password: string;
+    permissions?: string[];
 }
 
 export interface UpdateOperationalAdminPayload {
@@ -52,6 +54,7 @@ export interface UpdateOperationalAdminPayload {
     password?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     twoFactorEnabled?: boolean;
+    permissions?: string[];
 }
 
 // GET all operational admins with filters, sorting, and pagination
@@ -75,7 +78,7 @@ export const createOperationalAdmin = async (
 export const updateOperationalAdmin = async (
     payload: UpdateOperationalAdminPayload
 ): Promise<OperationalAdmin> => {
-    const response = await api.put('/api/operational-admin/update', payload);
+    const response = await api.put(`/api/operational-admin/${payload.id}`, payload);
     console.log(response,'2w22');
     
     return response.data;

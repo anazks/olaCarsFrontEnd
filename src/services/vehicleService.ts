@@ -367,3 +367,12 @@ export const updateVehicleLeaseSettings = async (
     const response = await api.put(`/api/vehicle/${id}/lease-settings`, payload);
     return response.data.data;
 };
+
+// PUT update vehicle maintenance settings
+export const updateMaintenanceSettings = async (
+    id: string,
+    payload: { maintenanceThresholdKm: number }
+): Promise<Vehicle> => {
+    const response = await api.put(`/api/vehicle/${id}/maintenance-settings`, payload);
+    return response.data.data;
+};

@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronRight, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye } from 'lucide-react';
-import { getLedgerEntries } from '../../../services/ledgerService';
-import type { LedgerEntry } from '../../../services/ledgerService';
+import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -498,7 +496,7 @@ const DriverPerformanceDashboard = () => {
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <RechartsTooltip formatter={(value: number) => `$${value.toLocaleString()}`} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
+                                    <RechartsTooltip formatter={(value: any) => `$${Number(value).toLocaleString()}`} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
                                     <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -602,7 +600,7 @@ const DriverPerformanceDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginatedMetrics.map((m, idx) => (
+                                {paginatedMetrics.map((m) => (
                                     <tr
                                         key={m.driver._id}
                                         className="border-b transition-all hover:bg-white/[0.02] group cursor-pointer"

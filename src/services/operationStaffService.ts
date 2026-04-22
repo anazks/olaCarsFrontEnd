@@ -8,6 +8,7 @@ export interface OperationStaff {
     branchId: any; // Can be object or string depending on population
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -43,6 +44,7 @@ export interface CreateOperationStaffPayload {
     phone: string;
     branchId: string;
     status?: string;
+    permissions?: string[];
 }
 
 export interface UpdateOperationStaffPayload {
@@ -53,6 +55,7 @@ export interface UpdateOperationStaffPayload {
     phone?: string;
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions?: string[];
 }
 
 // GET all operation staff with filters
@@ -75,7 +78,7 @@ export const createOperationStaff = async (
 export const updateOperationStaff = async (
     payload: UpdateOperationStaffPayload
 ): Promise<OperationStaff> => {
-    const response = await api.put('/api/operation-staff/update', payload);
+    const response = await api.put(`/api/operation-staff/${payload.id}`, payload);
     return response.data;
 };
 

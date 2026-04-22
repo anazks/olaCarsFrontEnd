@@ -8,6 +8,7 @@ export interface FinanceStaff {
     branchId: any; // Can be object or string depending on population
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -43,6 +44,7 @@ export interface CreateFinanceStaffPayload {
     phone: string;
     branchId: string;
     status?: string;
+    permissions?: string[];
 }
 
 export interface UpdateFinanceStaffPayload {
@@ -53,6 +55,7 @@ export interface UpdateFinanceStaffPayload {
     phone?: string;
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions?: string[];
 }
 
 // GET all finance staff with filters
@@ -75,7 +78,7 @@ export const createFinanceStaff = async (
 export const updateFinanceStaff = async (
     payload: UpdateFinanceStaffPayload
 ): Promise<FinanceStaff> => {
-    const response = await api.put('/api/finance-staff/update', payload);
+    const response = await api.put(`/api/finance-staff/${payload.id}`, payload);
     return response.data;
 };
 

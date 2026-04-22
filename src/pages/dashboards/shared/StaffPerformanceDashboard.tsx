@@ -7,10 +7,10 @@ import {
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend 
 } from 'recharts';
-import { useTranslation } from 'react-i18next';
+
 import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData } from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getUser, getUserRole } from '../../../utils/auth';
+import { getUserRole } from '../../../utils/auth';
 
 const StaffPerformanceDashboard = () => {
     const userRole = getUserRole() || '';

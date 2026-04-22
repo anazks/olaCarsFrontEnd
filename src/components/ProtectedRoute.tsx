@@ -1,23 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { isTokenValid, getUserRole, getToken } from '../utils/auth';
+import { isTokenValid, getUserRole, hasPermission } from '../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../services/authService';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
+    requiredPermission?: string;
 }
 
-const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const token = getToken();
+const ProtectedRoute = ({ allowedRoles, requiredPermission }: ProtectedRouteProps) => {
     const isAuthenticated = isTokenValid();
     const userRole = getUserRole();
-
-    console.log('[ProtectedRoute]', {
-        hasToken: !!token,
-        isAuthenticated,
-        userRole,
-        allowedRoles,
-        match: allowedRoles ? allowedRoles.includes(userRole ?? '') : 'no role check',
-    });
 
     // 1. Not logged in → go to login
     if (!isAuthenticated) {
@@ -25,15 +17,21 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return <Navigate to="/admin/login" replace />;
     }
 
-    // 2. Logged in but wrong role → redirect to their own dashboard
+    // 2. Check Permissions (Granular)
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+        console.log(`[ProtectedRoute] ❌ Lacks required permission: ${requiredPermission}`);
+        const ownRoute = (userRole && API_ROLE_TO_ROUTE[userRole]) ?? '/admin/login';
+        return <Navigate to={ownRoute} replace />;
+    }
+
+    // 3. Check Roles (Legacy/Fallback)
     if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
         const ownRoute = API_ROLE_TO_ROUTE[userRole] ?? '/admin/login';
         console.log(`[ProtectedRoute] ❌ Wrong role (${userRole} not in [${allowedRoles}]) → ${ownRoute}`);
         return <Navigate to={ownRoute} replace />;
     }
 
-    // 3. Authorised — render the protected content
-    // console.log('[ProtectedRoute] ✅ Authorised — rendering Outlet');
+    // 4. Authorised — render the protected content
     return <Outlet />;
 };
 

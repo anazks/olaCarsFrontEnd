@@ -8,6 +8,7 @@ export interface WorkshopManager {
     branchId: any;
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -43,6 +44,7 @@ export interface CreateWorkshopManagerPayload {
     phone: string;
     branchId: string;
     status?: string;
+    permissions?: string[];
 }
 
 export interface UpdateWorkshopManagerPayload {
@@ -53,6 +55,7 @@ export interface UpdateWorkshopManagerPayload {
     phone?: string;
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
+    permissions?: string[];
 }
 
 export const getAllWorkshopManagers = async (filters: ManagerFilters = {}): Promise<PaginatedResponse<WorkshopManager>> => {

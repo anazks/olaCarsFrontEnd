@@ -5,6 +5,7 @@ import { getUser, getUserRole } from '../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../services/authService';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import AlertNotificationCenter from './AlertNotificationCenter';
 
 interface TopBarProps {
     toggleSidebar: () => void;
@@ -97,6 +98,9 @@ const TopBar = ({ }: TopBarProps) => {
             <div className="flex items-center gap-5 ml-4">
                 {/* Language Switcher */}
                 <LanguageSwitcher />
+
+                {/* Alerts Notification Center */}
+                <AlertNotificationCenter />
 
                 <button
                     onClick={toggleTheme}

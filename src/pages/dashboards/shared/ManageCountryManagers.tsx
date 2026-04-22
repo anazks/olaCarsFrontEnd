@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Globe, AlertTriangle, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Globe, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     getAllCountryManagers,
     createCountryManager,
@@ -12,8 +12,11 @@ import {
     type ManagerFilters,
     type PaginationMetadata
 } from '../../../services/countryManagerService';
+import PermissionSelector from '../../../components/common/PermissionSelector';
+import { getUser, getUserRole } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import HasPermission from '../../../components/HasPermission';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -50,10 +53,17 @@ const ManageCountryManagers = () => {
         phone: '',
         country: 'Panama',
         status: 'ACTIVE' as string,
-        twoFactorEnabled: true
+        twoFactorEnabled: true,
+        permissions: [] as string[]
     });
+    const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+
+    const currentUser = getUser();
+    const userRole = getUserRole();
+    const isAdmin = userRole === 'admin';
+    const userPermissions = currentUser?.permissions || [];
 
     // Common countries list
     const countries = [
@@ -109,8 +119,10 @@ const ManageCountryManagers = () => {
             phone: '',
             country: 'Panama',
             status: 'ACTIVE',
-            twoFactorEnabled: true
+            twoFactorEnabled: true,
+            permissions: []
         });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -124,8 +136,10 @@ const ManageCountryManagers = () => {
             phone: manager.phone || '',
             country: manager.country || 'Panama',
             status: manager.status,
-            twoFactorEnabled: manager.twoFactorEnabled
+            twoFactorEnabled: manager.twoFactorEnabled,
+            permissions: manager.permissions || []
         });
+        setActiveTab('details');
         setFormError(null);
     };
 
@@ -149,7 +163,8 @@ const ManageCountryManagers = () => {
                     phone: formData.phone,
                     country: formData.country,
                     status: formData.status as any,
-                    twoFactorEnabled: formData.twoFactorEnabled
+                    twoFactorEnabled: formData.twoFactorEnabled,
+                    permissions: formData.permissions
                 };
                 await createCountryManager(payload);
             } else if (modalMode === 'edit' && selectedManager) {
@@ -160,7 +175,8 @@ const ManageCountryManagers = () => {
                     phone: formData.phone,
                     country: formData.country,
                     status: formData.status as any,
-                    twoFactorEnabled: formData.twoFactorEnabled
+                    twoFactorEnabled: formData.twoFactorEnabled,
+                    permissions: formData.permissions
                 };
                 if (formData.password) {
                     payload.password = formData.password;
@@ -257,13 +273,15 @@ const ManageCountryManagers = () => {
                     >
                         <Filter size={16} /> {t('management.common.filters')}
                     </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
-                    >
-                        <Plus size={18} /> {t('management.countryManagers.add')}
-                    </button>
+                    <HasPermission permission="STAFF_CREATE">
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        >
+                            <Plus size={18} /> {t('management.countryManagers.add')}
+                        </button>
+                    </HasPermission>
                 </div>
             </div>
 
@@ -454,20 +472,24 @@ const ManageCountryManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => openEditModal(manager)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
-                                                        style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
-                                                    >
-                                                        <Pencil size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(manager)}
-                                                        className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
-                                                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
+                                                    <HasPermission permission="STAFF_EDIT">
+                                                        <button
+                                                            onClick={() => openEditModal(manager)}
+                                                            className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
+                                                            style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
+                                                        >
+                                                            <Pencil size={15} />
+                                                        </button>
+                                                    </HasPermission>
+                                                    <HasPermission permission="STAFF_DELETE">
+                                                        <button
+                                                            onClick={() => setDeleteTarget(manager)}
+                                                            className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-red-500/20"
+                                                            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </HasPermission>
                                                 </div>
                                             </td>
                                         </tr>
@@ -546,137 +568,174 @@ const ManageCountryManagers = () => {
                             </button>
                         </div>
 
+                        {/* Tabs */}
+                        <div className="flex gap-4 border-b mb-6 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                onClick={() => setActiveTab('details')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'details' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.details', { defaultValue: 'Basic Details' })}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('permissions')}
+                                className={`pb-3 text-sm font-bold transition-all border-b-2 ${activeTab === 'permissions' ? 'border-brand-lime text-brand-lime' : 'border-transparent text-dim'}`}
+                            >
+                                {t('management.common.tabs.permissions', { defaultValue: 'Permissions' })}
+                                {formData.permissions.length > 0 && (
+                                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-brand-lime text-black text-[10px] font-black">
+                                        {formData.permissions.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                        placeholder="John Doe"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.email')}</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="manager@olacars.com"
-                                    />
-                                </div>
-                            </div>
+                            {activeTab === 'details' ? (
+                                <div className="space-y-4 min-h-[350px] overflow-y-auto pr-1">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.fullName')}</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                value={formData.fullName}
+                                                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                                placeholder="John Doe"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.email')}</label>
+                                            <input
+                                                type="email"
+                                                required
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                placeholder="manager@olacars.com"
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.country')}</label>
-                                    <select
-                                        value={formData.country}
-                                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        {countries.map(c => (
-                                            <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.phone')}</label>
-                                    <PhoneInput
-                                        country={({
-                                            "Panama": "pa",
-                                            "United States": "us",
-                                            "United Kingdom": "gb",
-                                            "Canada": "ca",
-                                            "Australia": "au",
-                                            "Germany": "de",
-                                            "France": "fr",
-                                            "India": "in",
-                                            "Nigeria": "ng",
-                                            "South Africa": "za",
-                                            "United Arab Emirates": "ae"
-                                        } as Record<string, string>)[formData.country] || 'pa'}
-                                        value={formData.phone}
-                                        onChange={(phone) => setFormData({ ...formData, phone })}
-                                        containerStyle={{ width: '100%' }}
-                                        inputStyle={{
-                                            width: '100%',
-                                            height: '46px',
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            color: 'var(--text-main)',
-                                            borderRadius: '12px',
-                                            fontSize: '14px'
-                                        }}
-                                        buttonStyle={{
-                                            background: 'var(--bg-input)',
-                                            border: '1px solid var(--border-main)',
-                                            borderRadius: '12px 0 0 12px'
-                                        }}
-                                        dropdownStyle={{
-                                            background: 'var(--bg-card)',
-                                            color: 'var(--text-main)',
-                                            border: '1px solid var(--border-main)'
-                                        }}
-                                    />
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.country')}</label>
+                                            <select
+                                                value={formData.country}
+                                                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            >
+                                                {countries.map(c => (
+                                                    <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.phone')}</label>
+                                            <PhoneInput
+                                                country={({
+                                                    "Panama": "pa",
+                                                    "United States": "us",
+                                                    "United Kingdom": "gb",
+                                                    "Canada": "ca",
+                                                    "Australia": "au",
+                                                    "Germany": "de",
+                                                    "France": "fr",
+                                                    "India": "in",
+                                                    "Nigeria": "ng",
+                                                    "South Africa": "za",
+                                                    "United Arab Emirates": "ae"
+                                                } as Record<string, string>)[formData.country] || 'pa'}
+                                                value={formData.phone}
+                                                onChange={(phone) => setFormData({ ...formData, phone })}
+                                                containerStyle={{ width: '100%' }}
+                                                inputStyle={{
+                                                    width: '100%',
+                                                    height: '46px',
+                                                    background: 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    color: 'var(--text-main)',
+                                                    borderRadius: '12px',
+                                                    fontSize: '14px'
+                                                }}
+                                                buttonStyle={{
+                                                    background: 'var(--bg-input)',
+                                                    border: '1px solid var(--border-main)',
+                                                    borderRadius: '12px 0 0 12px'
+                                                }}
+                                                dropdownStyle={{
+                                                    background: 'var(--bg-card)',
+                                                    color: 'var(--text-main)',
+                                                    border: '1px solid var(--border-main)'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
 
-                            {modalMode === 'create' && (
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.common.modal.password')}
-                                    </label>
-                                    <input
-                                        type="password"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        placeholder="••••••••"
+                                    {(modalMode === 'create' || modalMode === 'edit') && (
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>
+                                                {modalMode === 'create' 
+                                                    ? t('management.common.modal.password') 
+                                                    : t('management.common.modal.newPasswordOptional', { defaultValue: 'New Password (Optional)' })
+                                                }
+                                            </label>
+                                            <input
+                                                type="password"
+                                                required={modalMode === 'create'}
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                placeholder="••••••••"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.status')}</label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            >
+                                                <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.active')}</option>
+                                                <option value="SUSPENDED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.suspended')}</option>
+                                                <option value="LOCKED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.locked')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex flex-col justify-end pb-1">
+                                            <label className="flex items-center gap-3 cursor-pointer group p-3 rounded-xl transition-all hover:bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                                <div className="relative">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="sr-only"
+                                                        checked={formData.twoFactorEnabled}
+                                                        onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
+                                                    />
+                                                    <div className={`w-10 h-5 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
+                                                    <div className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                                </div>
+                                                <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.common.modal.twoFactorEnabled')}</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 min-h-[350px]">
+                                    <PermissionSelector
+                                        userPermissions={userPermissions}
+                                        selectedPermissions={formData.permissions}
+                                        isAdmin={isAdmin}
+                                        onChange={(perms) => setFormData({ ...formData, permissions: perms })}
                                     />
                                 </div>
                             )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.status')}</label>
-                                    <select
-                                        value={formData.status}
-                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime appearance-none cursor-pointer"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="ACTIVE" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.active')}</option>
-                                        <option value="SUSPENDED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.suspended')}</option>
-                                        <option value="LOCKED" style={{ background: 'var(--bg-card)' }}>{t('management.common.status.locked')}</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col justify-end pb-1">
-                                    <label className="flex items-center gap-3 cursor-pointer group p-3 rounded-xl transition-all hover:bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only"
-                                                checked={formData.twoFactorEnabled}
-                                                onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
-                                            />
-                                            <div className={`w-10 h-5 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
-                                            <div className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                                        </div>
-                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.common.modal.twoFactorEnabled')}</span>
-                                    </label>
-                                </div>
-                            </div>
 
                             {formError && (
                                 <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>

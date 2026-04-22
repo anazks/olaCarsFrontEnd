@@ -8,12 +8,16 @@ import {
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
-import { getUserRole } from '../../../utils/auth';
+import { getUserRole, hasPermission as checkPermission } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
 import type { Insurance } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
 import InsuranceManagementModal from './InsuranceManagementModal';
 import VehicleGpsMap from '../../../components/maps/VehicleGpsMap';
+import HasPermission from '../../../components/HasPermission';
+import alertService from '../../../services/alertService';
+import type { Alert } from '../../../services/alertService';
+import { updateMaintenanceSettings } from '../../../services/vehicleService';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -96,7 +100,10 @@ const VehicleDetail = () => {
     const [notes, setNotes] = useState('');
     const [isInsuranceManagerOpen, setIsInsuranceManagerOpen] = useState(false);
     const userRole = getUserRole();
-    const canApprove = userRole === 'branchmanager' || userRole === 'countrymanager';
+    const canApprove = checkPermission('VEHICLE_APPROVE');
+    const [vehicleAlerts, setVehicleAlerts] = useState<Alert[]>([]);
+    const [maintThreshold, setMaintThreshold] = useState<number>(1000);
+    const [isUpdatingThreshold, setIsUpdatingThreshold] = useState(false);
 
     const S3_BASE = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
     const toFullUrl = (path?: string) => {
@@ -159,7 +166,7 @@ const VehicleDetail = () => {
     }, []);
 
     const fetchVehicle = useCallback(async () => {
-        if (!id) return;
+        if (!id || id === 'create') return;
         setLoading(true);
         try {
             const data = await getVehicleById(id);
@@ -206,10 +213,29 @@ const VehicleDetail = () => {
             if (data.inspection?.checklistItems && data.inspection.checklistItems.length > 0) {
                 setChecklist(data.inspection.checklistItems);
             }
+
+            // Sync maintenance threshold
+            if ((data as any).maintenanceDetails?.maintenanceThresholdKm) {
+                setMaintThreshold((data as any).maintenanceDetails.maintenanceThresholdKm);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load vehicle');
         } finally {
             setLoading(false);
+        }
+    }, [id]);
+
+    const fetchAlerts = useCallback(async () => {
+        if (!id) return;
+        try {
+            const data = await alertService.getActiveAlerts();
+            const filtered = data.filter((a: any) => 
+                (typeof a.vehicleId === 'object' && a.vehicleId?._id === id) || 
+                (typeof a.vehicleId === 'string' && a.vehicleId === id)
+            );
+            setVehicleAlerts(filtered);
+        } catch (error) {
+            console.error('Failed to fetch vehicle alerts:', error);
         }
     }, [id]);
 
@@ -227,7 +253,8 @@ const VehicleDetail = () => {
     useEffect(() => {
         fetchVehicle();
         fetchEligibleInsurances();
-    }, [fetchVehicle, fetchEligibleInsurances]);
+        fetchAlerts();
+    }, [fetchVehicle, fetchEligibleInsurances, fetchAlerts]);
 
     const getStatusTranslation = (status: string) => {
         return t(`management.vehicles.statusLabels.${status}`, status);
@@ -320,6 +347,23 @@ const VehicleDetail = () => {
         }
     };
 
+    const handleThresholdUpdate = async () => {
+        if (!id) return;
+        setIsUpdatingThreshold(true);
+        setActionError(null);
+        setActionSuccess(null);
+        try {
+            const updatedVehicle = await updateMaintenanceSettings(id, { maintenanceThresholdKm: maintThreshold });
+            setVehicle(updatedVehicle);
+            setActionSuccess('Maintenance threshold updated successfully');
+            setTimeout(() => setActionSuccess(null), 3000);
+        } catch (err: any) {
+            setActionError(err.response?.data?.message || 'Failed to update threshold');
+        } finally {
+            setIsUpdatingThreshold(false);
+        }
+    };
+
     // ── Loading / Error states ─────────────────────────────────────────────
     if (loading) return (
         <div className="flex items-center justify-center py-32">
@@ -354,10 +398,42 @@ const VehicleDetail = () => {
                         <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</p>
                     </div>
                 </div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border" style={{ background: s.bg, color: s.text, borderColor: s.border }}>
-                    {getStatusTranslation(vehicle.status)}
-                </div>
             </div>
+
+            {/* Alert Banner */}
+            {vehicleAlerts.length > 0 && (
+                <div 
+                    className="p-4 rounded-2xl flex items-start gap-4 border animate-in fade-in slide-in-from-top-4 duration-300"
+                    style={{ 
+                        background: 'rgba(239, 68, 68, 0.05)', 
+                        borderColor: 'rgba(239, 68, 68, 0.2)',
+                        color: 'var(--text-main)' 
+                    }}
+                >
+                    <div className="p-2 rounded-xl bg-red-500/10 text-red-500 mt-0.5">
+                        <AlertTriangle size={20} />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="font-bold text-sm text-red-500 mb-1">Active Alerts Detected</h4>
+                        <div className="space-y-2">
+                            {vehicleAlerts.map(alert => (
+                                <div key={alert._id} className="flex items-center justify-between gap-4">
+                                    <p className="text-xs opacity-90">{alert.message}</p>
+                                    <button 
+                                        onClick={async () => {
+                                            await alertService.resolveAlert(alert._id);
+                                            setVehicleAlerts(prev => prev.filter(a => a._id !== alert._id));
+                                        }}
+                                        className="text-[10px] font-bold uppercase tracking-widest text-dim hover:text-lime transition-colors whitespace-nowrap"
+                                    >
+                                        Mark Resolved
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Pipeline Progress - Only show if NOT active/rented */}
             {!(vehicle.status === 'ACTIVE — RENTED') && (
@@ -504,13 +580,15 @@ const VehicleDetail = () => {
                             </div>
                             {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION' || (vehicle.status as string) === 'BRANCH MANAGER APPROVAL') && (
                                 <div className="mt-5">
-                                    <button
-                                        onClick={() => setIsInsuranceManagerOpen(true)}
-                                        className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
-                                    >
-                                        {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
-                                    </button>
+                                    <HasPermission permission="VEHICLE_EDIT">
+                                        <button
+                                            onClick={() => setIsInsuranceManagerOpen(true)}
+                                            className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                        >
+                                            {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
+                                        </button>
+                                    </HasPermission>
                                 </div>
                             )}
                         </div>
@@ -518,7 +596,66 @@ const VehicleDetail = () => {
 
 
 
-                    {/* GPS Configuration & Live Map */}
+                    {/* Maintenance Tracking */}
+                    <div className={`${cardClass} flex flex-col`} style={cardStyle}>
+                        <SectionHeader icon={<Wrench size={16} />} title="Maintenance Tracking" />
+                        <div className="space-y-4 flex-1">
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoRow 
+                                    label="Last Service Odometer" 
+                                    value={((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0).toLocaleString() + ' KM'} 
+                                />
+                                <InfoRow 
+                                    label="Maintenance Threshold" 
+                                    value={((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000).toLocaleString() + ' KM'} 
+                                />
+                            </div>
+
+                            <div className="pt-4 border-t border-white/5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Distance Since Last Service</p>
+                                    <span className="text-[10px] font-bold text-lime">
+                                        {Math.max(0, (vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)).toLocaleString()} KM
+                                    </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-lime transition-all duration-1000"
+                                        style={{ 
+                                            width: `${Math.min(100, Math.max(0, ((vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)) / ((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000) * 100))}%`,
+                                            backgroundColor: ((vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)) >= ((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000) ? 'var(--status-failed)' : 'var(--brand-lime)'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <HasPermission permission="VEHICLE_EDIT">
+                                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                    <label className="text-[10px] uppercase font-bold tracking-wider block" style={{ color: 'var(--text-dim)' }}>
+                                        Manage Alert Threshold (KM)
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input 
+                                                type="number" 
+                                                value={maintThreshold} 
+                                                onChange={e => setMaintThreshold(parseInt(e.target.value) || 0)}
+                                                className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 outline-none text-xs focus:border-lime transition-colors"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-dim">KM</span>
+                                        </div>
+                                        <button 
+                                            onClick={handleThresholdUpdate}
+                                            disabled={isUpdatingThreshold}
+                                            className="px-4 py-2 rounded-xl bg-lime text-black font-bold text-xs disabled:opacity-50 transition-all active:scale-95"
+                                        >
+                                            {isUpdatingThreshold ? '...' : 'Update'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </HasPermission>
+                        </div>
+                    </div>
 
                     <div className={`${cardClass} lg:col-span-2 2xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
                         <div className="flex items-center justify-between mb-2">
@@ -686,14 +823,16 @@ const VehicleDetail = () => {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
-                                disabled={actionLoading}
-                                className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
-                                style={{ background: '#C8E600', color: '#0A0A0A' }}
-                            >
-                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
-                            </button>
+                            <HasPermission permission="VEHICLE_EDIT">
+                                <button
+                                    onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
+                                    disabled={actionLoading}
+                                    className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
+                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
+                                >
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
+                                </button>
+                            </HasPermission>
                         </div>
                     ) : (
                         /* Step 2: Document Upload */
@@ -757,9 +896,11 @@ const VehicleDetail = () => {
                                 <SectionHeader icon={<Send size={16} />} title={t('management.vehicles.vehicleDetail.actions.submitForReview')} />
                                 <div className="flex flex-col gap-3 mt-3">
                                     <textarea placeholder={t('management.purchaseOrders.filters.anyUsage')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                    <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
-                                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
-                                    </button>
+                                    <HasPermission permission="VEHICLE_EDIT">
+                                        <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
+                                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
+                                        </button>
+                                    </HasPermission>
                                 </div>
                             </div>
                         </div>
@@ -1185,22 +1326,30 @@ const VehicleDetail = () => {
                     </div>
                     <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
-                            <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
-                        </button>
-                        <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
-                            <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
-                        </button>
-                        <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
-                            <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
-                        </button>
-                        <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
-                            <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
-                        </button>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
+                                <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
+                                <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
+                                <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
+                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
+                                <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
+                            </button>
+                        </HasPermission>
                     </div>
                 </div>
             )}
