@@ -49,6 +49,7 @@ const agreementService = {
     const response = await api.get('/api/agreements', {
       params: filters,
     });
+    console.log(response.data.data,'893939i');
     return response.data.data;
   },
 
@@ -85,7 +86,7 @@ const agreementService = {
     return response.data.data;
   },
 
-  getRenderedAgreement: async (id: string, overrides: { driverId?: string; vehicleId?: string; durationWeeks?: string | number; weeklyRent?: string | number } = {}): Promise<{ renderedContent: string, title: string, version: number }> => {
+  getRenderedAgreement: async (id: string, overrides: { driverId?: string; vehicleId?: string; leaseDuration?: string | number; monthlyRent?: string | number } = {}): Promise<{ renderedContent: string, title: string, version: number }> => {
     const params = new URLSearchParams(overrides as any).toString();
     const response = await api.get(`/api/agreements/${id}/render${params ? `?${params}` : ''}`);
     return response.data.data;

@@ -292,34 +292,46 @@ const StaffPerformanceDashboard = () => {
                 </div>
 
                 {/* KPIs */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard 
-                        title="Total Tracked Staff" 
-                        value={totalStaff} 
-                        icon={Users} 
-                        colorClass="bg-blue-500/10 text-blue-500" 
-                    />
-                    <KPICard 
-                        title="Completed Onboardings" 
-                        value={totalOnboardings} 
-                        subtext="Active"
-                        icon={CheckCircle} 
-                        colorClass="bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]" 
-                    />
-                    <KPICard 
-                        title="Total Workflow Actions" 
-                        value={totalActions} 
-                        icon={Activity} 
-                        colorClass="bg-purple-500/10 text-purple-500" 
-                    />
-                    <KPICard 
-                        title="Avg Stage Processing" 
-                        value={`${fleetAvgTime}h`} 
-                        icon={Clock3} 
-                        colorClass="bg-amber-500/10 text-amber-500" 
-                    />
+                <div className="p-4 rounded-3xl border bg-black/5 dark:bg-white/5 shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto pb-2 custom-scrollbar">
+                        <div className="flex lg:grid lg:grid-cols-4 gap-4 min-w-max lg:min-w-full">
+                            <div className="w-[280px] lg:w-auto shrink-0">
+                                <KPICard 
+                                    title="Total Tracked Staff" 
+                                    value={totalStaff} 
+                                    icon={Users} 
+                                    colorClass="bg-blue-500/10 text-blue-500" 
+                                />
+                            </div>
+                        <div className="w-[280px] lg:w-auto shrink-0">
+                            <KPICard 
+                                title="Completed Onboardings" 
+                                value={totalOnboardings} 
+                                subtext="Active"
+                                icon={CheckCircle} 
+                                colorClass="bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]" 
+                            />
+                        </div>
+                        <div className="w-[280px] lg:w-auto shrink-0">
+                            <KPICard 
+                                title="Total Workflow Actions" 
+                                value={totalActions} 
+                                icon={Activity} 
+                                colorClass="bg-purple-500/10 text-purple-500" 
+                            />
+                        </div>
+                        <div className="w-[280px] lg:w-auto shrink-0">
+                            <KPICard 
+                                title="Avg Stage Processing" 
+                                value={`${fleetAvgTime}h`} 
+                                icon={Clock3} 
+                                colorClass="bg-amber-500/10 text-amber-500" 
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
             {/* Main Content Area */}
             <div className="flex-1 overflow-auto p-4 md:p-8">

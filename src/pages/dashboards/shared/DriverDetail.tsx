@@ -3,12 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, markRentAsPaid } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
+import { getInvoicesByDriver, payInvoice } from '../../../services/invoiceService';
+import type { Invoice } from '../../../services/invoiceService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import agreementService from '../../../services/agreementService';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
+import { generateInvoiceHTML } from '../../../utils/invoicePDFTemplate';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -22,6 +25,7 @@ const DriverDetail = () => {
     const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [rentActiveTab, setRentActiveTab] = useState<'upcoming' | 'history'>('upcoming');
     const [paymentAmounts, setPaymentAmounts] = useState<Record<number, string>>({});
     const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
@@ -55,6 +59,13 @@ const DriverDetail = () => {
                 }
             } else {
                 setAssignedVehicle(null);
+            }
+
+            try {
+                const fetchedInvoices = await getInvoicesByDriver(id!);
+                setInvoices(fetchedInvoices);
+            } catch (invError) {
+                console.error('Error fetching invoices:', invError);
             }
 
             console.log(data, "data");
@@ -142,6 +153,36 @@ const DriverDetail = () => {
             toast.success('Download complete', { id: toastId });
         } catch (error: any) {
             toast.error('Failed to download', { id: toastId });
+        }
+    };
+
+    const handleDownloadInvoice = async (invoice: Invoice) => {
+        const toastId = toast.loading('Generating Invoice PDF...');
+        try {
+            const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+            const container = document.createElement('div');
+            container.innerHTML = generateInvoiceHTML(invoice, driver, assignedVehicle);
+            
+            // Adjust styles for PDF rendering engine
+            container.style.width = '550pt';
+            container.style.background = 'white';
+            
+            document.body.appendChild(container);
+            
+            await doc.html(container, {
+                callback: function (doc) {
+                    doc.save(`Invoice_${invoice.invoiceNumber || invoice.weekNumber}.pdf`);
+                    document.body.removeChild(container);
+                    toast.success('Invoice Downloaded', { id: toastId });
+                },
+                x: 0,
+                y: 0,
+                width: 550,
+                windowWidth: 800
+            });
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
+            toast.error('Failed to generate PDF', { id: toastId });
         }
     };
 
@@ -270,7 +311,7 @@ const DriverDetail = () => {
         }
     };
 
-    const handlePartialPayment = async (weekNumber: number, payAmount: number) => {
+    const handlePartialPayment = async (invoiceId: string, weekNumber: number, payAmount: number) => {
         if (!payAmount || payAmount <= 0) {
             toast.error('Enter a valid payment amount');
             return;
@@ -278,7 +319,7 @@ const DriverDetail = () => {
         const toastId = toast.loading(`Recording $${payAmount.toLocaleString()} for Week ${weekNumber}...`);
         try {
             setLoading(true);
-            await markRentAsPaid(id!, { weekNumber, amount: payAmount, paymentMethod: 'Cash' });
+            await payInvoice(invoiceId, { amount: payAmount, paymentMethod: 'Cash' });
             toast.success(`Payment of $${payAmount.toLocaleString()} recorded for Week ${weekNumber}`, { id: toastId });
             setPaymentAmounts(prev => ({ ...prev, [weekNumber]: '' }));
             await fetchDriver();
@@ -695,11 +736,11 @@ const DriverDetail = () => {
 
             {/* Performance & Rent Tracking Section */}
             {driver.status === 'ACTIVE' && assignedVehicle && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="space-y-8">
                     {/* Performance Metrics */}
-                    <div className="xl:col-span-2 p-8 rounded-3xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="p-8 rounded-3xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-lime/5 rounded-full blur-3xl -mr-32 -mt-32" />
-                        
+
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div className="flex items-center gap-3">
                                 <div className="p-3 rounded-2xl bg-brand-lime/10 text-brand-lime">
@@ -717,31 +758,31 @@ const DriverDetail = () => {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
-                            <PerformanceCard 
-                                label="Avg Speed" 
-                                value={`${driver.performance?.avgSpeed || 0} km/h`} 
-                                icon={<Zap size={20} />} 
-                                color="text-brand-lime" 
+                            <PerformanceCard
+                                label="Avg Speed"
+                                value={`${driver.performance?.avgSpeed || 0} km/h`}
+                                icon={<Zap size={20} />}
+                                color="text-brand-lime"
                                 trend="+2.4%"
                             />
-                            <PerformanceCard 
-                                label="Total Distance" 
-                                value={`${(driver.performance?.totalDistance || 0).toLocaleString()} km`} 
-                                icon={<TrendingUp size={20} />} 
-                                color="text-blue-500" 
+                            <PerformanceCard
+                                label="Total Distance"
+                                value={`${(driver.performance?.totalDistance || 0).toLocaleString()} km`}
+                                icon={<TrendingUp size={20} />}
+                                color="text-blue-500"
                             />
-                            <PerformanceCard 
-                                label="Driving Score" 
-                                value={`${driver.performance?.drivingScore || 100}/100`} 
-                                icon={<ShieldCheck size={20} />} 
-                                color="text-green-500" 
+                            <PerformanceCard
+                                label="Driving Score"
+                                value={`${driver.performance?.drivingScore || 100}/100`}
+                                icon={<ShieldCheck size={20} />}
+                                color="text-green-500"
                                 sub="Excellent"
                             />
-                            <PerformanceCard 
-                                label="Fuel Efficiency" 
-                                value={`${driver.performance?.fuelEfficiency || 0} km/L`} 
-                                icon={<Gauge size={20} />} 
-                                color="text-yellow-500" 
+                            <PerformanceCard
+                                label="Fuel Efficiency"
+                                value={`${driver.performance?.fuelEfficiency || 0} km/L`}
+                                icon={<Gauge size={20} />}
+                                color="text-yellow-500"
                             />
                         </div>
 
@@ -755,145 +796,134 @@ const DriverDetail = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
 
-                    {/* Rent Payments */}
-                    <div className="p-8 rounded-3xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="p-3 rounded-2xl bg-brand-lime/10 text-brand-lime">
-                                <CreditCard size={24} />
+            <div className="space-y-8">
+                {/* Information Sections */}
+                <div className="space-y-8">
+                    {/* Weekly Rent Tracking & Invoices */}
+                    {driver.status === 'ACTIVE' && assignedVehicle && invoices && invoices.length > 0 && (
+                        <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -mr-8 -mt-8" style={{ backgroundColor: 'rgba(200,230,0,0.03)' }} />
+                            <div className="flex items-center justify-between gap-2 mb-6 border-b pb-4 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                                        <CreditCard size={20} />
+                                    </div>
+                                    <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Weekly Rent & Invoices</h2>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Weekly Rent</h2>
-                                <p className="text-xs font-medium opacity-60">Payment status & history</p>
-                            </div>
-                        </div>
-                        {/* Rent Analytics & Summary */}
-                        {driver.rentTracking && driver.rentTracking.length > 0 && (
-                            <>
-                                <div className="mb-8 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                                        {(() => {
-                                            const pendingRaw = [...driver.rentTracking]
-                                                .filter(r => r.status === 'PENDING' || r.status === 'PARTIAL')
-                                                .sort((a, b) => {
-                                                    if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-                                                    return a.weekNumber - b.weekNumber;
-                                                });
-                                            
-                                            // Deduplicate pending weeks
-                                            const pending = pendingRaw.reduce((acc: any[], current) => {
-                                                if (!acc.find(item => item.weekNumber === current.weekNumber)) {
-                                                    acc.push(current);
-                                                }
-                                                return acc;
-                                            }, []);
-                                            
-                                            // Deduplicate the entire tracking list for accurate summary metrics
-                                            const deduplicatedTracking = driver.rentTracking.reduce((acc: any[], current) => {
-                                                const existing = acc.find(item => item.weekNumber === current.weekNumber);
-                                                if (!existing) acc.push(current);
-                                                else if ((current.amountPaid || 0) > (existing.amountPaid || 0)) {
-                                                    const idx = acc.indexOf(existing);
-                                                    acc[idx] = current;
-                                                }
-                                                return acc;
-                                            }, []);
+                            
+                            {/* Analytics & Summary */}
+                            <div className="mb-8 space-y-6 relative z-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                                    {(() => {
+                                        const pendingRaw = [...invoices]
+                                            .filter(r => r.status === 'PENDING' || r.status === 'PARTIAL' || r.status === 'OVERDUE')
+                                            .sort((a, b) => {
+                                                if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                                                return a.weekNumber - b.weekNumber;
+                                            });
+                                        
+                                        const pending = pendingRaw;
+                                        
+                                        const deduplicatedTracking = invoices;
 
-                                            const totalBalance = deduplicatedTracking.reduce((acc, curr) => {
-                                                const baseInstallment = curr.amount || 0;
-                                                const paid = curr.amountPaid || 0;
-                                                return acc + Math.max(0, baseInstallment - paid);
+                                        const totalBalance = deduplicatedTracking.reduce((acc, curr) => {
+                                            return acc + (curr.balance || 0);
+                                        }, 0);
+
+                                        const overdueBalance = deduplicatedTracking
+                                            .filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date())
+                                            .reduce((acc, curr) => {
+                                                return acc + (curr.balance || 0);
                                             }, 0);
-
-                                            const overdueBalance = deduplicatedTracking
-                                                .filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date())
-                                                .reduce((acc, curr) => {
-                                                    const baseInstallment = curr.amount || 0;
-                                                    const paid = curr.amountPaid || 0;
-                                                    return acc + Math.max(0, baseInstallment - paid);
-                                                }, 0);
-                                            
-                                            const next = pending[0];
-                                            
-                                            return (
-                                                <>
-                                                    <div className="p-5 rounded-3xl bg-brand-lime/5 border border-brand-lime/20 shadow-sm relative overflow-hidden group">
-                                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-lime/10 rounded-full blur-2xl -mr-12 -mt-12" />
-                                                        <p className="text-[10px] font-black uppercase text-brand-lime/60 mb-2 flex items-center gap-1.5">
-                                                            <AlertCircle size={10} /> Total Outstanding
+                                        
+                                        const next = pending[0];
+                                        
+                                        return (
+                                            <>
+                                                <div className="p-5 rounded-3xl bg-brand-lime/5 border border-brand-lime/20 shadow-sm relative overflow-hidden group">
+                                                    <div className="absolute top-0 right-0 w-24 h-24 bg-brand-lime/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                                                    <p className="text-[10px] font-black uppercase text-brand-lime/60 mb-2 flex items-center gap-1.5">
+                                                        <AlertCircle size={10} /> Total Outstanding
+                                                    </p>
+                                                    <div className="flex items-end justify-between">
+                                                        <p className="text-3xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                                                            ${totalBalance.toLocaleString()}
                                                         </p>
-                                                        <div className="flex items-end justify-between">
-                                                            <p className="text-3xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
-                                                                ${totalBalance.toLocaleString()}
-                                                            </p>
-                                                            {overdueBalance > 0 && (
-                                                                <div className="px-2 py-1 rounded-lg bg-red-500/10 text-red-500 text-[9px] font-black uppercase border border-red-500/20">
-                                                                    ${overdueBalance.toLocaleString()} Overdue
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/20 shadow-sm relative overflow-hidden">
-                                                        <p className="text-[10px] font-black uppercase text-blue-500/60 mb-2">Next Payment Due</p>
-                                                        {next ? (
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <p className="text-2xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
-                                                                        {next.dueDate ? new Date(next.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : `Week ${next.weekNumber}`}
-                                                                    </p>
-                                                                    <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate).getFullYear() : ''}</p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="text-xl font-black text-blue-500">${(next.balance || next.totalDue || next.amount).toLocaleString()}</p>
-                                                                    <p className="text-[8px] font-black uppercase text-dim">Week {next.weekNumber}</p>
-                                                                </div>
+                                                        {overdueBalance > 0 && (
+                                                            <div className="px-2 py-1 rounded-lg bg-red-500/10 text-red-500 text-[9px] font-black uppercase border border-red-500/20">
+                                                                ${overdueBalance.toLocaleString()} Overdue
                                                             </div>
-                                                        ) : (
-                                                            <p className="text-sm font-bold text-dim py-2">No pending payments</p>
                                                         )}
                                                     </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
+                                                </div>
+                                                <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/20 shadow-sm relative overflow-hidden">
+                                                    <p className="text-[10px] font-black uppercase text-blue-500/60 mb-2">Next Payment Due</p>
+                                                    {next ? (
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-2xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                                                                    {next.dueDate ? new Date(next.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : `Week ${next.weekNumber}`}
+                                                                </p>
+                                                                <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate).getFullYear() : ''}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xl font-black text-blue-500">${(next.balance || next.totalAmountDue || next.baseAmount).toLocaleString()}</p>
+                                                                <p className="text-[8px] font-black uppercase text-dim">Week {next.weekNumber}</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-bold text-dim py-2">No pending payments</p>
+                                                    )}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
-                                {/* Rent Payment Reminder */}
-                                {driver.rentTracking && driver.status === 'ACTIVE' && (() => {
-                                    const overdue = driver.rentTracking.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date());
-                                    const upcoming = driver.rentTracking.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) >= new Date()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-                                    const nextDue = upcoming[0];
-                                    if (overdue.length > 0) {
+                            </div>
+
+                            {/* Rent Payment Reminder */}
+                            {invoices && invoices.length > 0 && driver.status === 'ACTIVE' && (() => {
+                                const overdue = invoices.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < new Date());
+                                const upcoming = invoices.filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) >= new Date()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+                                const nextDue = upcoming[0];
+                                if (overdue.length > 0) {
+                                    return (
+                                        <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4 relative z-10">
+                                            <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20">
+                                                <AlertCircle size={24} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Urgent Reminder</p>
+                                                <p className="text-sm font-black text-white">Payment is Overdue by {overdue.length} week(s). Total Debt: ${overdue.reduce((acc, curr) => acc + (curr.balance || 0), 0).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                if (nextDue) {
+                                    const daysUntil = Math.ceil((new Date(nextDue.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                    if (daysUntil <= 3) {
                                         return (
-                                            <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
-                                                <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20">
-                                                    <AlertCircle size={24} />
+                                            <div className="mb-6 p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center gap-4 relative z-10">
+                                                <div className="w-12 h-12 rounded-xl bg-brand-lime text-black flex items-center justify-center shrink-0 shadow-lg shadow-brand-lime/20">
+                                                    <Zap size={24} />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Urgent Reminder</p>
-                                                    <p className="text-sm font-black text-white">Payment is Overdue by {overdue.length} week(s). Total Debt: ${overdue.reduce((acc, curr) => acc + (curr.balance || curr.amount), 0).toLocaleString()}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Upcoming Payment</p>
+                                                    <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${nextDue.totalAmountDue.toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         );
                                     }
-                                    if (nextDue) {
-                                        const daysUntil = Math.ceil((new Date(nextDue.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                                        if (daysUntil <= 3) {
-                                            return (
-                                                <div className="mb-6 p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
-                                                    <div className="w-12 h-12 rounded-xl bg-brand-lime text-black flex items-center justify-center shrink-0 shadow-lg shadow-brand-lime/20">
-                                                        <Zap size={24} />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Upcoming Payment</p>
-                                                        <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${nextDue.totalDue.toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-                                    }
-                                    return null;
-                                })()}
-                                {/* Tabs */}
+                                }
+                                return null;
+                            })()}
+
+                            {/* Tabs & List */}
+                            <div className="relative z-10">
                                 <div className="flex gap-2 mb-6 p-1 rounded-2xl bg-black/20 border border-white/5 w-fit">
                                     <button 
                                         onClick={() => setRentActiveTab('upcoming')}
@@ -908,111 +938,93 @@ const DriverDetail = () => {
                                         History
                                     </button>
                                 </div>
-                                <div className="space-y-4 pr-2 custom-scrollbar max-h-[150px] overflow-y-auto">
-                                    {(() => {
-                                        const baseListRaw = driver.rentTracking?.filter(r => {
-                                            if (rentActiveTab === 'upcoming') return r.status === 'PENDING' || r.status === 'PARTIAL';
-                                            return r.status === 'PAID';
-                                        }) || [];
+                                    <div className="space-y-4 pr-2 custom-scrollbar max-h-[300px] overflow-y-auto">
+                                        {(() => {
+                                            const baseListRaw = invoices.filter(r => {
+                                                if (rentActiveTab === 'upcoming') return r.status === 'PENDING' || r.status === 'PARTIAL' || r.status === 'OVERDUE';
+                                                return r.status === 'PAID';
+                                            }) || [];
 
-                                        // Deduplicate by weekNumber (keep the one with most payment or just the first one found)
-                                        const deduplicated = baseListRaw.reduce((acc: any[], current) => {
-                                            const existing = acc.find(item => item.weekNumber === current.weekNumber);
-                                            if (!existing) {
-                                                acc.push(current);
-                                            } else if ((current.amountPaid || 0) > (existing.amountPaid || 0)) {
-                                                // If we find a duplicate with more payment, swap it
-                                                const idx = acc.indexOf(existing);
-                                                acc[idx] = current;
-                                            }
-                                            return acc;
-                                        }, []);
+                                            const deduplicated = baseListRaw;
 
-                                        const baseList = deduplicated.sort((a, b) => {
-                                            if (rentActiveTab === 'upcoming') {
-                                                if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-                                                return a.weekNumber - b.weekNumber;
-                                            } else {
-                                                if (a.dueDate && b.dueDate) return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-                                                return b.weekNumber - a.weekNumber;
-                                            }
-                                        });
+                                            const baseList = deduplicated.sort((a, b) => {
+                                                if (rentActiveTab === 'upcoming') {
+                                                    if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                                                    return a.weekNumber - b.weekNumber;
+                                                } else {
+                                                    if (a.dueDate && b.dueDate) return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+                                                    return b.weekNumber - a.weekNumber;
+                                                }
+                                            });
 
-                                        const displayList = rentActiveTab === 'upcoming' ? baseList.slice(0, 2) : baseList;
-                                        return (
-                                            <>
-                                                {displayList.map((rent, idx) => {
-                                                    const today = new Date();
-                                                    const rentDate = rent.dueDate ? new Date(rent.dueDate) : today;
-                                                    const isOverdue = rent.status !== 'PAID' && rentDate < today;
-                                                    const totalDue = rent.totalDue || rent.amount;
-                                                    const paid = rent.amountPaid || 0;
-                                                    const remaining = rent.balance ?? (totalDue - paid);
-                                                    const progressPct = totalDue > 0 ? Math.min(100, (paid / totalDue) * 100) : 0;
-                                                    const isExpanded = expandedWeek === rent.weekNumber;
-                                                    return (
-                                                        <div key={idx} className={`rounded-2xl border transition-all ${isOverdue ? 'bg-red-500/5 border-red-500/30' : rent.status === 'PAID' ? 'bg-brand-lime/5 border-brand-lime/10' : 'bg-black/10 border-white/5'}`}>
-                                                            <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedWeek(isExpanded ? null : rent.weekNumber)}>
-                                                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${rent.status === 'PAID' ? 'bg-brand-lime/20 text-brand-lime' : rent.status === 'PARTIAL' ? 'bg-yellow-500/20 text-yellow-400' : isOverdue ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-dim'}`}>
-                                                                        {rent.weekNumber}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            <p className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>{rent.weekLabel || `Week ${rent.weekNumber}`}</p>
-                                                                            {isOverdue && <span className="text-[8px] font-black text-red-500 uppercase bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 animate-pulse">OVERDUE</span>}
-                                                                            {rent.status === 'PARTIAL' && <span className="text-[8px] font-black text-yellow-400 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">PARTIAL</span>}
-                                                                            {(rent.carryOver || 0) > 0 && <span className="text-[8px] font-black text-orange-400 uppercase bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">+${rent.carryOver?.toLocaleString()} DEBT CARRYOVER</span>}
-                                                                            {rentActiveTab === 'upcoming' && idx === 0 && <span className="text-[8px] font-black text-brand-lime uppercase bg-brand-lime/10 px-1.5 py-0.5 rounded border border-brand-lime/20">CURRENT DUE</span>}
-                                                                            {rentActiveTab === 'upcoming' && idx === 1 && <span className="text-[8px] font-black text-dim uppercase bg-white/5 px-1.5 py-0.5 rounded border border-white/10">UPCOMING NEXT</span>}
+                                            const displayList = rentActiveTab === 'upcoming' ? baseList.slice(0, 5) : baseList;
+                                            return (
+                                                <>
+                                                    {displayList.map((rent, idx) => {
+                                                        const today = new Date();
+                                                        const rentDate = rent.dueDate ? new Date(rent.dueDate) : today;
+                                                        const isOverdue = rent.status !== 'PAID' && rentDate < today;
+                                                        const totalDue = rent.totalAmountDue || rent.baseAmount;
+                                                        const paid = rent.amountPaid || 0;
+                                                        const remaining = rent.balance ?? (totalDue - paid);
+                                                        const progressPct = totalDue > 0 ? Math.min(100, (paid / totalDue) * 100) : 0;
+                                                        const isExpanded = expandedWeek === rent.weekNumber;
+                                                        return (
+                                                            <div key={idx} className={`rounded-2xl border transition-all ${isOverdue ? 'bg-red-500/5 border-red-500/30' : rent.status === 'PAID' ? 'bg-brand-lime/5 border-brand-lime/10' : 'bg-black/10 border-white/5'}`}>
+                                                                <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedWeek(isExpanded ? null : rent.weekNumber)}>
+                                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${rent.status === 'PAID' ? 'bg-brand-lime/20 text-brand-lime' : rent.status === 'PARTIAL' ? 'bg-yellow-500/20 text-yellow-400' : isOverdue ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-dim'}`}>
+                                                                            {rent.weekNumber}
                                                                         </div>
-                                                                        <div className="flex items-center gap-4 mt-1">
-                                                                            <p className="text-[10px] font-bold text-dim">
-                                                                                Due: {rent.dueDate ? new Date(rent.dueDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'}
-                                                                            </p>
-                                                                            <p className="text-[10px] font-black text-brand-lime opacity-80">
-                                                                                Total Owed: ${totalDue.toLocaleString()}
-                                                                            </p>
-                                                                        </div>
-                                                                        {isExpanded && (rent.carryOver || 0) > 0 && (
-                                                                            <div className="mt-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-[10px]">
-                                                                                <div className="flex justify-between items-center opacity-70">
-                                                                                    <span>Standard Weekly Rent:</span>
-                                                                                    <span className="font-bold">${rent.amount.toLocaleString()}</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between items-center text-orange-400 mt-1">
-                                                                                    <span>Previous Unpaid Balance:</span>
-                                                                                    <span className="font-bold">+${rent.carryOver.toLocaleString()}</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between items-center border-t border-orange-500/20 mt-2 pt-2 text-white">
-                                                                                    <span className="font-black uppercase tracking-widest">Total Weekly Payment:</span>
-                                                                                    <span className="font-black text-xs">${totalDue.toLocaleString()}</span>
-                                                                                </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <p className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>{rent.weekLabel || `Week ${rent.weekNumber}`}</p>
+                                                                                {isOverdue && <span className="text-[8px] font-black text-red-500 uppercase bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">OVERDUE</span>}
+                                                                                {rent.status === 'PARTIAL' && <span className="text-[8px] font-black text-yellow-400 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">PARTIAL</span>}
+                                                                                <span className="text-[8px] font-black uppercase border px-1.5 py-0.5 rounded ml-2" style={{ borderColor: 'var(--border-main)' }}>{rent.invoiceNumber}</span>
                                                                             </div>
-                                                                        )}
-                                                                        {rent.status !== 'PAID' && (
-                                                                            <div className="mt-2 w-full">
-                                                                                <div className="flex justify-between text-[9px] font-bold mb-1">
-                                                                                    <span className="text-dim">Paid: ${paid.toLocaleString()}</span>
-                                                                                    <span className={remaining > 0 ? 'text-orange-400' : 'text-brand-lime'}>Remaining: ${remaining.toLocaleString()}</span>
-                                                                                </div>
-                                                                                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                                                                                    <div className={`h-full rounded-full transition-all duration-500 ${progressPct >= 100 ? 'bg-brand-lime' : progressPct > 0 ? 'bg-yellow-400' : 'bg-white/5'}`} style={{ width: `${progressPct}%` }} />
-                                                                                </div>
+                                                                            <div className="flex items-center gap-4 mt-1">
+                                                                                <p className="text-[10px] font-bold text-dim">Due: {rent.dueDate ? new Date(rent.dueDate).toLocaleDateString() : 'N/A'}</p>
+                                                                                <p className="text-[10px] font-black text-brand-lime">Total: ${totalDue.toLocaleString()}</p>
+                                                                                {rent.carryOverAmount > 0 && <p className="text-[10px] font-bold text-orange-400">(incl. ${rent.carryOverAmount} overdue)</p>}
+                                                                            </div>
+                                                                            {rent.status !== 'PAID' && (
+                                                                                <div className="mt-2 w-full">
+                                                                                    <div className="flex justify-between text-[9px] font-bold mb-1">
+                                                                                        <span className="text-dim">Paid: ${paid.toLocaleString()}</span>
+                                                                                        <span className={remaining > 0 ? 'text-orange-400' : 'text-brand-lime'}>Remaining: ${remaining.toLocaleString()}</span>
+                                                                                    </div>
+                                                                                    <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                                                        <div 
+                                                                                            className={`h-full rounded-full transition-all duration-500 ${progressPct >= 100 ? 'bg-brand-lime' : progressPct > 0 ? 'bg-yellow-400' : 'bg-white/5'}`} 
+                                                                                            style={{ width: `${progressPct}%` }} 
+                                                                                        />
+                                                                                    </div>
                                                                             </div>
                                                                         )}
                                                                     </div>
                                                                 </div>
                                                                 <div className="shrink-0 ml-4">
                                                                     {rent.status === 'PAID' ? (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className="text-[10px] font-black text-brand-lime uppercase flex items-center gap-1">
-                                                                                <CheckCircle2 size={12} /> PAID
-                                                                            </span>
-                                                                            {rent.paidAt && <span className="text-[9px] text-dim font-medium">{new Date(rent.paidAt).toLocaleDateString()}</span>}
+                                                                        <div className="flex items-center gap-3">
+                                                                            <button 
+                                                                                onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(rent); }}
+                                                                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-dim hover:text-white transition-all border border-white/5"
+                                                                                title="Download Invoice"
+                                                                            >
+                                                                                <Download size={14} />
+                                                                            </button>
+                                                                            <span className="text-[10px] font-black text-brand-lime uppercase flex items-center gap-1"><CheckCircle2 size={12} /> PAID</span>
                                                                         </div>
                                                                     ) : (
                                                                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                            <button 
+                                                                                onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(rent); }}
+                                                                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-dim hover:text-white transition-all border border-white/5"
+                                                                                title="Download Invoice"
+                                                                            >
+                                                                                <Download size={14} />
+                                                                            </button>
                                                                             <input 
                                                                                 type="number"
                                                                                 placeholder="Amount"
@@ -1022,11 +1034,9 @@ const DriverDetail = () => {
                                                                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                                             />
                                                                             <button 
-                                                                                onClick={() => handlePartialPayment(rent.weekNumber, Number(paymentAmounts[rent.weekNumber] || remaining))}
-                                                                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl hover:scale-105 active:scale-95 transition-all ${isOverdue ? 'bg-red-500 text-white' : 'bg-brand-lime text-black'}`}
-                                                                            >
-                                                                                Pay
-                                                                            </button>
+                                                                                onClick={() => handlePartialPayment(rent._id, rent.weekNumber, Number(paymentAmounts[rent.weekNumber] || remaining))}
+                                                                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${isOverdue ? 'bg-red-500 text-white' : 'bg-brand-lime text-black'}`}
+                                                                            >Pay Invoice</button>
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -1053,26 +1063,14 @@ const DriverDetail = () => {
                                                         </div>
                                                     );
                                                 })}
-                                                {displayList.length === 0 && (
-                                                    <div className="py-12 text-center">
-                                                        <AlertCircle size={32} className="mx-auto text-dim opacity-20 mb-4" />
-                                                        <p className="text-xs font-bold text-dim uppercase">No {rentActiveTab} payments</p>
-                                                    </div>
-                                                )}
                                             </>
                                         );
                                     })()}
                                 </div>
-                            </>
-                        )}
-
-                    </div>
-                </div>
-            )}
-
-            <div className="space-y-8">
-                {/* Information Sections */}
-                <div className="space-y-8">
+                            </div>
+                        </div>
+                    )}
+                    
                     {/* Basic Info */}
                     <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -mr-8 -mt-8" style={{ backgroundColor: 'rgba(200,230,0,0.03)' }} />

@@ -673,6 +673,17 @@ const VehicleDetail = () => {
                                     <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.colour')}</label>
                                     <input type="text" value={specData.colour} onChange={e => setSpecData(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
                                 </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineNumber')}</label>
+                                    <input type="text" placeholder="e.g. 1GZ-XXXX" value={specData.engineNumber} onChange={e => setSpecData(p => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
+                                    <div className="relative">
+                                        <input type="number" value={specData.odometer} onChange={e => setSpecData(p => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>KM</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <button

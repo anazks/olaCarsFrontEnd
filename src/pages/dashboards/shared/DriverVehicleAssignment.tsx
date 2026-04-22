@@ -64,6 +64,11 @@ const DriverVehicleAssignment = () => {
     }, [selectedVehicleId, vehicles]);
 
     const handlePreviewAgreement = async () => {
+        if (!selectedVehicleId) {
+            toast.error('Please select a vehicle first.');
+            return;
+        }
+
         const toastId = toast.loading('Fetching & Generating Preview...');
         try {
             setGeneratingPreview(true);
@@ -72,11 +77,16 @@ const DriverVehicleAssignment = () => {
                 throw new Error('No Vehicle Assignment Agreement template found in the system. Please upload a signed physical copy.');
             }
             const templateId = templates[0]._id;
+            
+            // Convert weeks to months and weekly rent to monthly rent for backend placeholders
+            const durationMonths = Math.round((leaseDuration / 52) * 12);
+            const rentMonthly = Math.round(weeklyRent * 4.33);
+
             const rendered = await agreementService.getRenderedAgreement(templateId, {
                 driverId: id,
-                vehicleId: selectedVehicleId || '',
-                durationWeeks: leaseDuration,
-                weeklyRent: weeklyRent
+                vehicleId: selectedVehicleId,
+                leaseDuration: durationMonths,
+                monthlyRent: rentMonthly
             });
 
             const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
@@ -98,17 +108,24 @@ const DriverVehicleAssignment = () => {
             container.appendChild(style);
             document.body.appendChild(container);
 
-            await doc.html(container, { x: 20, y: 20, width: 550, windowWidth: 800 });
-            const pdfBlob = doc.output('blob');
-            document.body.removeChild(container);
+            await doc.html(container, {
+                x: 20,
+                y: 20,
+                width: 550,
+                windowWidth: 800,
+                callback: function (doc) {
+                    const pdfBlob = doc.output('blob');
+                    document.body.removeChild(container);
 
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-            toast.success('Preview generated.', { id: toastId });
+                    const url = URL.createObjectURL(pdfBlob);
+                    window.open(url, '_blank');
+                    toast.success('Preview generated.', { id: toastId });
+                    setGeneratingPreview(false);
+                }
+            });
         } catch (err: any) {
             console.error("Error creating preview:", err);
             toast.error(err.response?.data?.message || err.message || 'Failed to preview agreement.', { id: toastId });
-        } finally {
             setGeneratingPreview(false);
         }
     };
@@ -177,14 +194,14 @@ const DriverVehicleAssignment = () => {
     }
 
     return (
-        <div className="p-6 container-responsive space-y-6">
-            <div className="flex items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border-main)' }}>
-                <button onClick={() => navigate('..')} className="p-2 hover:opacity-70 rounded-xl border border-transparent transition-all group">
-                    <ChevronLeft size={24} style={{ color: 'var(--text-main)' }} />
+        <div className="p-4 lg:p-6 container-responsive space-y-6">
+            <div className="flex items-center gap-4 border-b pb-5" style={{ borderColor: 'var(--border-main)' }}>
+                <button onClick={() => navigate('..')} className="p-2 hover:bg-white/5 rounded-xl border border-transparent transition-all group">
+                    <ChevronLeft size={22} style={{ color: 'var(--text-main)' }} />
                 </button>
                 <div>
-                    <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>Assign Vehicle</h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                    <h1 className="text-2xl lg:text-3xl font-bold" style={{ color: 'var(--text-main)' }}>Assign Vehicle</h1>
+                    <p className="text-xs lg:text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                         Select an available vehicle to assign to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo.fullName}</span>
                     </p>
                 </div>
@@ -206,7 +223,7 @@ const DriverVehicleAssignment = () => {
                     placeholder="Search by make, model, VIN or registration..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full border p-4 pl-12 rounded-2xl font-bold shadow-sm outline-none focus:border-brand-lime transition-all"
+                    className="w-full border p-3.5 lg:p-4 pl-12 rounded-2xl font-bold shadow-sm outline-none focus:border-brand-lime transition-all"
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 />
                 <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
@@ -268,28 +285,28 @@ const DriverVehicleAssignment = () => {
             )}
 
             {selectedVehicleId && (
-                <div className="fixed bottom-0 left-0 right-0 border-t p-6 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] z-50 animate-in slide-in-from-bottom-5" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="max-w-7xl mx-auto space-y-6">
-                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="fixed bottom-0 left-0 right-0 border-t p-4 lg:p-6 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] z-50 animate-in slide-in-from-bottom-5 backdrop-blur-xl" style={{ backgroundColor: 'rgba(28, 28, 28, 0.9)', borderColor: 'var(--border-main)' }}>
+                    <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 lg:gap-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-brand-lime/20 text-brand-lime flex items-center justify-center">
-                                    <RouteIcon size={28} />
+                                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-brand-lime/20 text-brand-lime flex items-center justify-center shrink-0">
+                                    <RouteIcon size={24} />
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim">Selected Vehicle</p>
-                                    <p className="font-black text-xl">
+                                    <p className="font-black text-lg lg:text-xl truncate">
                                         {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.make} {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.model}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Duration (Weeks)</label>
+                            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">Duration (Weeks)</label>
                                     <select
                                         value={leaseDuration}
                                         onChange={(e) => setLeaseDuration(Number(e.target.value))}
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all appearance-none"
+                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all appearance-none text-sm"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     >
                                         <option value="52">52 Weeks (1 Year)</option>
@@ -300,24 +317,24 @@ const DriverVehicleAssignment = () => {
                                         <option value="312">312 Weeks (6 Years)</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Weekly Rent (USD)</label>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">Weekly Rent (USD)</label>
                                     <input
                                         type="number"
                                         value={weeklyRent}
                                         onChange={(e) => setWeeklyRent(Number(e.target.value))}
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all"
+                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all text-sm"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Optional Notes</label>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] lg:text-[10px] font-black uppercase tracking-widest text-dim">Optional Notes</label>
                                     <input
                                         type="text"
                                         placeholder="Additional terms..."
                                         value={notes}
                                         onChange={(e) => setNotes(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all"
+                                        className="w-full px-4 py-2 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all text-sm"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
@@ -325,21 +342,21 @@ const DriverVehicleAssignment = () => {
                         </div>
 
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                            <div className="flex flex-wrap gap-2 lg:gap-3 w-full md:w-auto">
                                 <button
                                     onClick={handlePreviewAgreement}
-                                    disabled={generatingPreview || !leaseDuration || !weeklyRent}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border disabled:opacity-50 hover:opacity-80"
+                                    disabled={generatingPreview || !leaseDuration}
+                                    className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border disabled:opacity-50 hover:bg-white/5"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}
                                 >
                                     {generatingPreview ? (
-                                        <><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Generating...</>
+                                        <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Generating...</>
                                     ) : (
                                         <><FileText size={16} /> Preview Agreement</>
                                     )}
                                 </button>
 
-                                <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer hover:border-brand-lime"
+                                <label className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border cursor-pointer hover:border-brand-lime"
                                     style={{ borderColor: uploadedContract ? 'var(--brand-lime)' : 'var(--border-main)', color: uploadedContract ? 'var(--brand-lime)' : 'var(--text-main)', background: uploadedContract ? 'rgba(200,230,0,0.05)' : 'var(--bg-input)' }}
                                 >
                                     <Upload size={16} />
@@ -347,33 +364,27 @@ const DriverVehicleAssignment = () => {
                                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
                                 </label>
                                 {uploadedContract && (
-                                    <span className="text-xs font-medium flex items-center px-2 truncate max-w-[150px]" style={{ color: 'var(--text-dim)' }}>
+                                    <span className="text-[10px] lg:text-xs font-medium flex items-center px-2 truncate max-w-[120px] lg:max-w-[150px]" style={{ color: 'var(--text-dim)' }}>
                                         {uploadedContract.name}
                                     </span>
                                 )}
                             </div>
-                            <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
+                            <div className="flex gap-2 lg:gap-3 w-full md:w-auto mt-2 md:mt-0">
                                 <button
                                     onClick={() => setSelectedVehicleId(null)}
-                                    className="flex-1 lg:flex-none px-6 py-3 rounded-xl font-bold transition-all uppercase tracking-wider text-xs border"
+                                    className="flex-1 lg:flex-none px-5 lg:px-6 py-2.5 lg:py-3 rounded-xl font-bold transition-all uppercase tracking-wider text-[10px] lg:text-xs border"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleAssign}
                                     disabled={assigning || !uploadedContract || !leaseDuration || !weeklyRent}
-                                    className="flex-1 lg:flex-none px-8 py-3 rounded-xl font-black shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider text-xs"
+                                    className="flex-1 lg:flex-none px-6 lg:px-8 py-2.5 lg:py-3 rounded-xl font-black shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider text-[10px] lg:text-xs"
                                     style={{ background: 'var(--brand-lime)', color: 'var(--brand-black, #000)' }}
-                                    onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)'; }}
-                                    onMouseDown={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.transform = 'scale(0.98)'; }}
-                                    onMouseUp={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.transform = 'scale(1.02)'; }}
                                 >
                                     {assigning ? (
-                                        <><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Processing...</>
+                                        <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Processing...</>
                                     ) : (
                                         <><CheckCircle2 size={18} /> Confirm Assignment</>
                                     )}
@@ -385,7 +396,7 @@ const DriverVehicleAssignment = () => {
             )}
 
             {/* Bottom spacer so action bar doesn't overlap content */}
-            {selectedVehicleId && <div className="h-24"></div>}
+            {selectedVehicleId && <div className="h-48 lg:h-40 xl:h-32"></div>}
         </div>
     );
 };
