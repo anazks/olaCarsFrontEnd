@@ -39,7 +39,7 @@ const HasPermission: React.FC<HasPermissionProps> = ({
         e.stopPropagation();
       },
       style: { 
-        ...(children.props.style || {}), 
+        ...((children as React.ReactElement<any>).props.style || {}), 
         opacity: 0.5, 
         cursor: 'not-allowed',
         pointerEvents: 'auto' // Ensure the title/tooltip still shows

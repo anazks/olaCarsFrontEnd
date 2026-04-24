@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History } from 'lucide-react';
-import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, markRentAsPaid } from '../../../services/driverService';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History } from 'lucide-react';
+import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getInvoicesByDriver, payInvoice } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
@@ -888,7 +888,7 @@ const DriverDetail = () => {
                                                                 <p className="text-[10px] font-bold text-dim">{next.dueDate ? new Date(next.dueDate as string).getFullYear() : ''}</p>
                                                             </div>
                                                             <div className="text-right">
-                                                                <p className="text-xl font-black text-blue-500">${(next.balance || next.totalDue || next.amount).toLocaleString()}</p>
+                                                                <p className="text-xl font-black text-blue-500">${(next.balance || next.totalAmountDue).toLocaleString()}</p>
                                                                 <p className="text-[8px] font-black uppercase text-dim">Week {next.weekNumber}</p>
                                                             </div>
                                                         </div>
@@ -930,7 +930,7 @@ const DriverDetail = () => {
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Upcoming Payment</p>
-                                                    <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${(nextDue.totalDue || nextDue.balance || nextDue.amount || 0).toLocaleString()}</p>
+                                                    <p className="text-sm font-black text-white">Week {nextDue.weekNumber} is due in {daysUntil === 0 ? 'Today' : `${daysUntil} days`}. Amount: ${(nextDue.totalAmountDue || nextDue.balance || 0).toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         );

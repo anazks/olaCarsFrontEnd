@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Zap, Wrench, Ban, ArrowRightLeft, Trash2, Clock, Send
+    Zap, Wrench, Ban, ArrowRightLeft, Trash2, Clock, Send, Edit2, Save
 } from 'lucide-react';
-import { getVehicleById, progressVehicle, uploadVehicleDocuments } from '../../../services/vehicleService';
+import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
 import { getUserRole, hasPermission as checkPermission } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
@@ -99,11 +99,29 @@ const VehicleDetail = () => {
     const [actionSuccess, setActionSuccess] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
     const [isInsuranceManagerOpen, setIsInsuranceManagerOpen] = useState(false);
-    const userRole = getUserRole();
     const canApprove = checkPermission('VEHICLE_APPROVE');
     const [vehicleAlerts, setVehicleAlerts] = useState<Alert[]>([]);
     const [maintThreshold, setMaintThreshold] = useState<number>(1000);
     const [isUpdatingThreshold, setIsUpdatingThreshold] = useState(false);
+    const [isEditingOverview, setIsEditingOverview] = useState(false);
+    const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
+
+    const handleEditOverview = async () => {
+        if (!id || !vehicle) return;
+        setActionLoading(true);
+        setActionError(null);
+        try {
+            const updatedVehicle = await editVehicle(id, { basicDetails: { ...vehicle.basicDetails, ...editBasicDetails } as any });
+            setVehicle(updatedVehicle);
+            setIsEditingOverview(false);
+            setActionSuccess('Vehicle overview updated successfully');
+            setTimeout(() => setActionSuccess(null), 3000);
+        } catch (err: any) {
+            setActionError(err.response?.data?.message || 'Failed to update vehicle overview');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     const S3_BASE = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
     const toFullUrl = (path?: string) => {
@@ -380,7 +398,6 @@ const VehicleDetail = () => {
         </div>
     );
 
-    const s = STATUS_STYLES[vehicle.status] || STATUS_STYLES['PENDING ENTRY'];
     const currentIdx = PIPELINE.indexOf(vehicle.status);
 
     return (
@@ -448,8 +465,7 @@ const VehicleDetail = () => {
                             return (
                                 <div key={st} className={`flex items-center gap-1 ${i < PIPELINE.length - 1 ? 'flex-1' : ''}`}>
                                     <div
-                                        onClick={() => isCompleted && !actionLoading && handleProgress(st)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''} ${isCompleted ? 'hover:bg-[#C8E600]/20 cursor-pointer' : ''}`}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
                                         style={{
                                             background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)',
                                             color: done ? '#C8E600' : 'var(--text-dim)',
@@ -469,23 +485,117 @@ const VehicleDetail = () => {
             {/* Vehicle Details & Purchase Info */}
             <div className="grid grid-cols-1 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
                 <div className={`${cardClass} lg:col-span-2 3xl:col-span-3 4xl:col-span-4 uw:col-span-5`} style={cardStyle}>
-                    <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.vehicleOverview')} />
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vin')} value={vehicle.basicDetails?.vin || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.category')} value={vehicle.basicDetails?.category ? t(`management.vehicles.categories.${vehicle.basicDetails.category}`, vehicle.basicDetails.category) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.fuel')} value={vehicle.basicDetails?.fuelType ? t(`management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}`, vehicle.basicDetails.fuelType) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.transmission')} value={vehicle.basicDetails?.transmission ? t(`management.vehicles.transmissions.${vehicle.basicDetails.transmission}`, vehicle.basicDetails.transmission) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.colour')} value={vehicle.basicDetails?.colour || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails?.seats || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails?.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.gpsSerial')} value={vehicle.basicDetails?.gpsSerialNumber || '—'} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.weeklyRent')} value={vehicle.basicDetails?.weeklyRent ? `${t('common.currency.usd')}${vehicle.basicDetails.weeklyRent.toLocaleString()}` : '—'} />
+                    <div className="flex justify-between items-center mb-2">
+                        <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.vehicleOverview')} />
+                        <HasPermission permission="VEHICLE_EDIT">
+                            {!isEditingOverview ? (
+                                <button 
+                                    onClick={() => {
+                                        setEditBasicDetails({ ...vehicle.basicDetails });
+                                        setIsEditingOverview(true);
+                                    }}
+                                    className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={handleEditOverview}
+                                        disabled={actionLoading}
+                                        className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                        <Save size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setIsEditingOverview(false)}
+                                        className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                    >
+                                        <XCircle size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </HasPermission>
                     </div>
+
+                    {isEditingOverview ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.make')}</label>
+                                <input type="text" value={editBasicDetails.make || ''} onChange={e => setEditBasicDetails(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.model')}</label>
+                                <input type="text" value={editBasicDetails.model || ''} onChange={e => setEditBasicDetails(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.year')}</label>
+                                <input type="number" value={editBasicDetails.year || ''} onChange={e => setEditBasicDetails(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}</label>
+                                <input type="text" value={editBasicDetails.vin || ''} onChange={e => setEditBasicDetails(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.category')}</label>
+                                <select value={editBasicDetails.category} onChange={e => setEditBasicDetails(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{t(`management.vehicles.categories.${c}`, c)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.fuel')}</label>
+                                <select value={editBasicDetails.fuelType} onChange={e => setEditBasicDetails(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
+                                    {FUEL_TYPES.map(f => <option key={f} value={f}>{t(`management.vehicles.fuelTypes.${f}`, f)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.transmission')}</label>
+                                <select value={editBasicDetails.transmission} onChange={e => setEditBasicDetails(p => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
+                                    {TRANSMISSIONS.map(tOption => <option key={tOption} value={tOption}>{t(`management.vehicles.transmissions.${tOption}`, tOption)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.colour')}</label>
+                                <input type="text" value={editBasicDetails.colour || ''} onChange={e => setEditBasicDetails(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.seats')}</label>
+                                <input type="number" value={editBasicDetails.seats || ''} onChange={e => setEditBasicDetails(p => ({ ...p, seats: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.body')}</label>
+                                <select value={editBasicDetails.bodyType} onChange={e => setEditBasicDetails(p => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
+                                    <option value="">Select Body Type</option>
+                                    {BODY_TYPES.map(b => <option key={b} value={b}>{t(`management.vehicles.bodyTypes.${b}`, b)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineNumber')}</label>
+                                <input type="text" value={editBasicDetails.engineNumber || ''} onChange={e => setEditBasicDetails(p => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
+                                <input type="number" value={editBasicDetails.odometer || ''} onChange={e => setEditBasicDetails(p => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                            </div>
+
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.vin')} value={vehicle.basicDetails?.vin || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.category')} value={vehicle.basicDetails?.category ? t(`management.vehicles.categories.${vehicle.basicDetails.category}`, vehicle.basicDetails.category) : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.fuel')} value={vehicle.basicDetails?.fuelType ? t(`management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}`, vehicle.basicDetails.fuelType) : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.transmission')} value={vehicle.basicDetails?.transmission ? t(`management.vehicles.transmissions.${vehicle.basicDetails.transmission}`, vehicle.basicDetails.transmission) : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.colour')} value={vehicle.basicDetails?.colour || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails?.seats || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails?.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
+
+                        </div>
+                    )}
                 </div>
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<FileText size={16} />} title={t('management.vehicles.vehicleDetail.purchaseInformation')} />
@@ -506,7 +616,7 @@ const VehicleDetail = () => {
             {/* Comprehensive Details for Onboarded Vehicles - Show once past initial entry */}
             {(vehicle.status !== 'PENDING ENTRY' && vehicle.status !== 'DOCUMENTS REVIEW') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
-                    {/* Legal Documents */}
+
 
 
                     {/* Insurance Policy */}
@@ -685,15 +795,7 @@ const VehicleDetail = () => {
                         </div>
                     </div>
 
-                    <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.legalDocuments')} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regNumber')} value={vehicle.legalDocs?.registrationNumber} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.regExpiry')} value={vehicle.legalDocs?.registrationExpiry ? new Date(vehicle.legalDocs.registrationExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadTaxExpiry')} value={vehicle.legalDocs?.roadTaxExpiry ? new Date(vehicle.legalDocs.roadTaxExpiry).toLocaleDateString() : '—'} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.roadworthiness')} value={vehicle.legalDocs?.roadworthinessExpiry ? new Date(vehicle.legalDocs.roadworthinessExpiry).toLocaleDateString() : '—'} />
-                        </div>
-                    </div>
+
 
                     {/* Accounting Setup */}
                     <div className={cardClass} style={cardStyle}>
@@ -887,9 +989,7 @@ const VehicleDetail = () => {
                                     {t('management.vehicles.vehicleDetail.actions.fillAll')}
                                 </button>
 
-                                <button onClick={() => setVehicle(p => p ? ({ ...p, basicDetails: { ...p.basicDetails!, vin: '' } } as any) : null)} className="px-6 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer" style={{ color: 'var(--text-dim)', background: 'transparent' }}>
-                                    {t('management.vehicles.vehicleDetail.actions.backToSpecs')}
-                                </button>
+
                             </div>
 
                             <div className="border-t pt-5" style={{ borderColor: 'var(--border-main)' }}>
@@ -977,11 +1077,8 @@ const VehicleDetail = () => {
                                     <>
                                         <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                                         <div className="flex gap-3">
-                                            <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                            <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
                                                 {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
-                                            </button>
-                                            <button onClick={() => handleProgress('PENDING ENTRY')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                                {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> Reject & Request Re-upload</>}
                                             </button>
                                         </div>
                                     </>
@@ -1282,21 +1379,8 @@ const VehicleDetail = () => {
                             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
                             <textarea placeholder={t('management.vehicles.vehicleDetail.approvalNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
                             <div className="flex gap-3">
-                                <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
+                                <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
                                     {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceed')}</>}
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        if (!notes.trim()) {
-                                            setActionError('Please provide a reason for rejection in the notes.');
-                                            return;
-                                        }
-                                        handleProgress('DOCUMENTS REVIEW');
-                                    }}
-                                    disabled={actionLoading} 
-                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" 
-                                    style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                    {actionLoading ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : <><XCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.reject', 'Reject')}</>}
                                 </button>
                             </div>
                         </>

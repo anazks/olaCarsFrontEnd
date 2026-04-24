@@ -3,7 +3,6 @@ import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronR
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
-import { getUserRole } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import HasPermission from '../../../components/HasPermission';

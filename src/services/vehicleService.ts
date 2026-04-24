@@ -376,3 +376,8 @@ export const updateMaintenanceSettings = async (
     const response = await api.put(`/api/vehicle/${id}/maintenance-settings`, payload);
     return response.data.data;
 };
+// PUT update vehicle generic fields
+export const editVehicle = async (id: string, payload: Partial<Vehicle>): Promise<Vehicle> => {
+    const response = await api.put(`/api/vehicle/${id}`, payload);
+    return response.data.data;
+};

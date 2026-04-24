@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, AlertTriangle, Info, Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { Bell, AlertTriangle, Info, Calendar, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import alertService from '../../services/alertService';

@@ -81,8 +81,6 @@ const PurchaseOrderList = () => {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const navigate = useNavigate();
-    const userRole = getUserRole();
-    const canCreate = userRole === 'branchmanager' || userRole === 'countrymanager';
 
     // Fetch initial metadata (suppliers & branches)
     useEffect(() => {
