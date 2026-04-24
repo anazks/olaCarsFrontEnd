@@ -40,7 +40,7 @@ const BranchManagerDashboard = () => {
 
                 const [vehiclesRes, driversRes, alertsRes] = await Promise.allSettled([
                     getAllVehicles({ limit: 1000, branch: branchId }),
-                    getAllDrivers({ limit: 1000, branchId: branchId }),
+                    getAllDrivers({ limit: 1000, branch: branchId }),
                     getActiveAlerts() 
                 ]);
 
@@ -89,7 +89,7 @@ const BranchManagerDashboard = () => {
                 if (alertsRes.status === 'fulfilled') {
                     const alerts = alertsRes.value || [];
                     // Simple filter if API doesn't filter by branch automatically
-                    const branchAlerts = alerts.filter(a => a.vehicleId?.purchaseDetails?.branch === branchId || a.vehicleId?.purchaseDetails?.branch?._id === branchId || true); // Assuming alerts are globally visible or filtered backend-side.
+                    const branchAlerts = alerts.filter((a: any) => a.vehicleId?.purchaseDetails?.branch === branchId || (a.vehicleId?.purchaseDetails?.branch as any)?._id === branchId || true); // Assuming alerts are globally visible or filtered backend-side.
                     activeA = branchAlerts.length;
                     
                     setTasks(branchAlerts.slice(0, 5).map(a => ({

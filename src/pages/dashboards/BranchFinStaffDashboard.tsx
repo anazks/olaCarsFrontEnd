@@ -56,7 +56,7 @@ const BranchFinStaffDashboard = () => {
                     discrepancy: 0
                 });
 
-                setTransactions(ledgerData.slice(0, 10).map(tx => ({
+                setTransactions(ledgerData.slice(0, 10).map((tx: any) => ({
                     id: tx._id.slice(-6).toUpperCase(),
                     type: tx.description || 'Entry',
                     amount: `₹${(tx.amount || 0).toLocaleString()}`,

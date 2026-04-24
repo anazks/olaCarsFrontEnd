@@ -62,7 +62,7 @@ const CountryManagerDashboard = () => {
                 let branchRevenue: Record<string, number> = {};
                 if (ledgerRes.status === 'fulfilled') {
                     const entries = ledgerRes.value || []; 
-                    const data = Array.isArray(entries) ? entries : entries.data || [];
+                    const data = Array.isArray(entries) ? entries : (entries as any).data || [];
                     data.forEach((entry: any) => {
                         const bId = entry.branchId?._id || entry.branchId;
                         if (bId && entry.accountingCode?.category?.toUpperCase() === 'INCOME') {
@@ -180,9 +180,9 @@ const CountryManagerDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} />
                                     <XAxis type="number" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                                     <YAxis dataKey="name" type="category" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} width={80} />
-                                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} formatter={(v: any) => `$${(v || 0).toLocaleString()}`} />
                                     <Bar dataKey="revenue" name="Revenue" radius={[0, 4, 4, 0]} maxBarSize={30}>
-                                        {branchData.map((e, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                        {branchData.map((_: any, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
