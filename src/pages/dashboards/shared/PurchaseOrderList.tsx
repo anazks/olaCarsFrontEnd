@@ -6,7 +6,6 @@ import type { PurchaseOrder, POStatus, PaginationMetadata, PurchaseOrderFilters 
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { useNavigate } from 'react-router-dom';
-import { getUserRole } from '../../../utils/auth';
 import HasPermission from '../../../components/HasPermission';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {

@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
-import { getUserRole, hasPermission as checkPermission } from '../../../utils/auth';
-import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType } from '../../../services/vehicleService';
+import { hasPermission as checkPermission } from '../../../utils/auth';
+import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType, BasicDetails } from '../../../services/vehicleService';
 import type { Insurance } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
 import InsuranceManagementModal from './InsuranceManagementModal';
@@ -20,24 +20,6 @@ import type { Alert } from '../../../services/alertService';
 import { updateMaintenanceSettings } from '../../../services/vehicleService';
 
 // ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-    'PENDING ENTRY': { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
-    'DOCUMENTS REVIEW': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' },
-    'INSPECTION REQUIRED': { bg: 'rgba(236,72,153,0.1)', text: '#ec4899', border: 'rgba(236,72,153,0.3)' },
-    'INSPECTION FAILED': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' },
-    'REPAIR IN PROGRESS': { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: 'rgba(249,115,22,0.3)' },
-    'ACCOUNTING SETUP': { bg: 'rgba(20,184,166,0.1)', text: '#14b8a6', border: 'rgba(20,184,166,0.3)' },
-    'GPS ACTIVATION': { bg: 'rgba(6,182,212,0.1)', text: '#06b6d4', border: 'rgba(6,182,212,0.3)' },
-    'BRANCH MANAGER APPROVAL': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' },
-    'ACTIVE — AVAILABLE': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' },
-    'ACTIVE — RENTED': { bg: 'rgba(34,197,94,0.1)', text: '#16a34a', border: 'rgba(34,197,94,0.3)' },
-    'ACTIVE — MAINTENANCE': { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: 'rgba(249,115,22,0.3)' },
-    'SUSPENDED': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' },
-    'TRANSFER PENDING': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' },
-    'TRANSFER COMPLETE': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' },
-    'RETIRED': { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' },
-};
-
 const PIPELINE: VehicleStatus[] = [
     'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSPECTION REQUIRED',
     'ACCOUNTING SETUP', 'GPS ACTIVATION', 'BRANCH MANAGER APPROVAL', 'ACTIVE — AVAILABLE',
@@ -458,7 +440,6 @@ const VehicleDetail = () => {
                     <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.onboardingPipeline')} />
                     <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">
                         {PIPELINE.map((st, i) => {
-                            const isCompleted = currentIdx >= 0 && i < currentIdx;
                             const active = vehicle.status === st;
                             const done = i <= currentIdx;
 
@@ -522,60 +503,60 @@ const VehicleDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.make')}</label>
-                                <input type="text" value={editBasicDetails.make || ''} onChange={e => setEditBasicDetails(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
+                                <input type="text" value={editBasicDetails.make || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.model')}</label>
-                                <input type="text" value={editBasicDetails.model || ''} onChange={e => setEditBasicDetails(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
+                                <input type="text" value={editBasicDetails.model || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.year')}</label>
-                                <input type="number" value={editBasicDetails.year || ''} onChange={e => setEditBasicDetails(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                                <input type="number" value={editBasicDetails.year || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}</label>
-                                <input type="text" value={editBasicDetails.vin || ''} onChange={e => setEditBasicDetails(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
+                                <input type="text" value={editBasicDetails.vin || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.category')}</label>
-                                <select value={editBasicDetails.category} onChange={e => setEditBasicDetails(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
+                                <select value={editBasicDetails.category} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
                                     {CATEGORIES.map(c => <option key={c} value={c}>{t(`management.vehicles.categories.${c}`, c)}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.fuel')}</label>
-                                <select value={editBasicDetails.fuelType} onChange={e => setEditBasicDetails(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
+                                <select value={editBasicDetails.fuelType} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
                                     {FUEL_TYPES.map(f => <option key={f} value={f}>{t(`management.vehicles.fuelTypes.${f}`, f)}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.transmission')}</label>
-                                <select value={editBasicDetails.transmission} onChange={e => setEditBasicDetails(p => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
+                                <select value={editBasicDetails.transmission} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
                                     {TRANSMISSIONS.map(tOption => <option key={tOption} value={tOption}>{t(`management.vehicles.transmissions.${tOption}`, tOption)}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.colour')}</label>
-                                <input type="text" value={editBasicDetails.colour || ''} onChange={e => setEditBasicDetails(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
+                                <input type="text" value={editBasicDetails.colour || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.seats')}</label>
-                                <input type="number" value={editBasicDetails.seats || ''} onChange={e => setEditBasicDetails(p => ({ ...p, seats: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                                <input type="number" value={editBasicDetails.seats || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, seats: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.body')}</label>
-                                <select value={editBasicDetails.bodyType} onChange={e => setEditBasicDetails(p => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
+                                <select value={editBasicDetails.bodyType} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
                                     <option value="">Select Body Type</option>
                                     {BODY_TYPES.map(b => <option key={b} value={b}>{t(`management.vehicles.bodyTypes.${b}`, b)}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineNumber')}</label>
-                                <input type="text" value={editBasicDetails.engineNumber || ''} onChange={e => setEditBasicDetails(p => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
+                                <input type="text" value={editBasicDetails.engineNumber || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
-                                <input type="number" value={editBasicDetails.odometer || ''} onChange={e => setEditBasicDetails(p => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                                <input type="number" value={editBasicDetails.odometer || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                             </div>
 
                         </div>
