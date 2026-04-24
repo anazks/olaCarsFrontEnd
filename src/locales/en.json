@@ -1,5 +1,6 @@
 {
   "common": {
+    "notifications": "Notifications",
     "units": {
       "km": "km",
       "kmh": "km/h",

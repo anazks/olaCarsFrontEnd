@@ -42,8 +42,17 @@ export const resolveAlert = async (id: string): Promise<Alert> => {
     return response.data.data;
 };
 
+/**
+ * Fetches all alerts (active, resolved, dismissed).
+ */
+export const getAllAlerts = async (params?: { type?: string; vehicleId?: string; status?: string }): Promise<Alert[]> => {
+    const response = await api.get('/api/alerts/all', { params });
+    return response.data.data;
+};
+
 const alertService = {
     getActiveAlerts,
+    getAllAlerts,
     resolveAlert
 };
 

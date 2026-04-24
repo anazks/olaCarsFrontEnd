@@ -114,7 +114,7 @@ const AlertNotificationCenter: React.FC = () => {
                                 <p className="text-xs text-dim">Loading alerts...</p>
                             </div>
                         ) : alerts.length > 0 ? (
-                            alerts.map((alert) => (
+                            alerts.slice(0, 5).map((alert) => (
                                 <div
                                     key={alert._id}
                                     onClick={() => handleAlertClick(alert)}
@@ -161,9 +161,14 @@ const AlertNotificationCenter: React.FC = () => {
                     <div className="px-5 py-3 bg-white/[0.02] border-t border-white/5 flex justify-center">
                         <button 
                             className="text-[11px] font-bold uppercase tracking-widest text-dim hover:text-lime transition-colors"
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                if (role) {
+                                    navigate(`${API_ROLE_TO_ROUTE[role]}/notifications`);
+                                }
+                            }}
                         >
-                            Close Panel
+                            View All Notifications
                         </button>
                     </div>
                 </div>

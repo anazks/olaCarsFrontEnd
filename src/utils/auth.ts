@@ -100,7 +100,13 @@ export const isTokenValid = (): boolean => {
     if (decoded.exp) {
         const currentTime = Date.now() / 1000; // exp is in seconds
         if (decoded.exp < currentTime) {
-            console.warn('[auth] Token has expired');
+            // Check if we have a refresh token
+            const refreshToken = getRefreshToken();
+            if (refreshToken) {
+                console.warn('[auth] Access token expired, but refresh token exists. Deferring to interceptor.');
+                return true;
+            }
+            console.warn('[auth] Token has expired and no refresh token available');
             return false;
         }
     }
