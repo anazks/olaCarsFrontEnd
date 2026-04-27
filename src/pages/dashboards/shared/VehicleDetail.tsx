@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Clock
+    Zap, Wrench, Clock, Send, Edit2, Save
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
