@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Zap, Wrench, Ban, ArrowRightLeft, Trash2, Clock, Send, Edit2, Save
+    Clock
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances } from '../../../services/insuranceService';
@@ -141,10 +141,6 @@ const VehicleDetail = () => {
     );
     const [accounting, setAccounting] = useState({ depreciationMethod: 'Straight-Line', usefulLifeYears: 5, residualValue: 0, isSetupComplete: true });
     const [gps, setGps] = useState({ isActivated: true, geofenceZone: '', speedLimitThreshold: 120, idleTimeAlertMins: 30, mileageSyncFrequencyHrs: 1 });
-    const [maintenance, _setMaintenance] = useState({ type: 'Scheduled', estimatedCompletionDate: '' });
-    const [suspension, _setSuspension] = useState({ reason: 'Accident', suspendedUntil: '' });
-    const [transfer, _setTransfer] = useState({ toBranch: '', reason: '', estimatedArrival: '', transportMethod: 'Driven' });
-    const [retirement, _setRetirement] = useState({ reason: 'Sold', disposalDate: '', disposalValue: 0 });
 
     // Upload state
     const [uploadFiles, setUploadFiles] = useState<Record<string, File | File[]>>({});
