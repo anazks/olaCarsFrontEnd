@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Sun, Moon } from 'lucide-react';
+import { Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getUser, getUserRole } from '../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../services/authService';
@@ -74,24 +74,6 @@ const TopBar = ({ }: TopBarProps) => {
             }}
         >
             <div className="flex items-center gap-4 flex-1">
-                {/* Search Bar */}
-                <div className="flex-1 max-w-lg">
-                    <div
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-300"
-                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
-                    >
-                        <Search size={18} className="text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder={t('common.search')}
-                            className="bg-transparent border-none outline-none text-sm w-full text-main placeholder-gray-500"
-                            style={{ color: 'var(--text-main)' }}
-                        />
-                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded textxs font-medium" style={{ background: 'var(--bg-card)', color: 'var(--text-dim)', border: '1px solid var(--border-main)' }}>
-                            ⌘K
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Right Tools */}

@@ -1380,80 +1380,6 @@ const VehicleDetail = () => {
                 </div>
             )}
 
-            {/* ACTIVE — AVAILABLE: Fleet Actions */}
-            {vehicle.status === 'ACTIVE — AVAILABLE' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.fleetActions')} />
-                    <div className="flex items-center gap-2 mb-2">
-                        <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} className="px-4 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                            ✓ {t('management.vehicles.statusLabels.ACTIVE')}
-                        </button>
-                    </div>
-                    <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <HasPermission permission="VEHICLE_EDIT">
-                            <button onClick={() => handleProgress('ACTIVE — MAINTENANCE', { maintenanceDetails: maintenance })} disabled={actionLoading}
-                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.05)' }}>
-                                <Wrench size={14} /> {t('management.vehicles.vehicleDetail.actions.pullMaintenance')}
-                            </button>
-                        </HasPermission>
-                        <HasPermission permission="VEHICLE_EDIT">
-                            <button onClick={() => handleProgress('SUSPENDED', { suspensionDetails: suspension })} disabled={actionLoading}
-                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>
-                                <Ban size={14} /> {t('management.vehicles.vehicleDetail.actions.suspendVehicle')}
-                            </button>
-                        </HasPermission>
-                        <HasPermission permission="VEHICLE_EDIT">
-                            <button onClick={() => { if (transfer.toBranch) handleProgress('TRANSFER PENDING', { transferDetails: transfer }); else setActionError('Select a destination branch'); }} disabled={actionLoading}
-                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6', background: 'rgba(59,130,246,0.05)' }}>
-                                <ArrowRightLeft size={14} /> {t('management.vehicles.vehicleDetail.actions.transfer')}
-                            </button>
-                        </HasPermission>
-                        <HasPermission permission="VEHICLE_EDIT">
-                            <button onClick={() => handleProgress('RETIRED', { retirementDetails: retirement })} disabled={actionLoading}
-                                className="flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold cursor-pointer border transition-all hover:scale-105" style={{ borderColor: 'rgba(107,114,128,0.3)', color: '#6b7280', background: 'rgba(107,114,128,0.05)' }}>
-                                <Trash2 size={14} /> {t('management.vehicles.vehicleDetail.actions.retire')}
-                            </button>
-                        </HasPermission>
-                    </div>
-                </div>
-            )}
-
-            {/* Fleet Actions (For Active/Rented/Other) */}
-            {(vehicle.status.startsWith('ACTIVE') || vehicle.status === 'SUSPENDED' || vehicle.status === 'ACTIVE — MAINTENANCE' || vehicle.status === 'TRANSFER PENDING' || vehicle.status === 'TRANSFER COMPLETE' || vehicle.status === 'RETIRED') && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.fleetActions')} />
-                    <div className="flex flex-wrap gap-3 mt-4">
-                        {vehicle.status === 'SUSPENDED' && (
-                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                {t('management.vehicles.vehicleDetail.vehicleSuspended')}
-                            </button>
-                        )}
-                        {vehicle.status === 'ACTIVE — MAINTENANCE' && (
-                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                                {t('management.vehicles.vehicleDetail.actions.returnToAvailable')}
-                            </button>
-                        )}
-                        {vehicle.status === 'TRANSFER PENDING' && (
-                            <button onClick={() => handleProgress('TRANSFER COMPLETE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
-                                {t('management.vehicles.vehicleDetail.transferPending')}
-                            </button>
-                        )}
-                        {vehicle.status === 'TRANSFER COMPLETE' && (
-                            <button onClick={() => handleProgress('ACTIVE — AVAILABLE')} disabled={actionLoading} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                                {t('management.vehicles.vehicleDetail.transferComplete')}
-                            </button>
-                        )}
-
-                        {/* If inspection passed but accounting/gps missing */}
-                        {vehicle.status === 'ACTIVE — AVAILABLE' && !vehicle.accountingSetup?.isSetupComplete && (
-                            <button onClick={() => handleProgress('ACCOUNTING SETUP')} className="px-6 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                {t('management.vehicles.vehicleDetail.actions.proceedAccounting')}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Action feedback */}
             {actionError && (
@@ -1518,7 +1444,13 @@ const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
                             </p>
                             <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{new Date(h.changedAt || h.timestamp).toLocaleString()}</span>
                         </div>
-                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.history.updatedBy')}: {h.updatedByRole || h.changedBy}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                            {t('management.vehicles.vehicleDetail.history.updatedBy')}: {
+                                (h.changedBy && typeof h.changedBy === 'object')
+                                ? `${h.changedBy.fullName || h.changedBy.name || h.changedBy.email || 'User'} (${h.changedByRole || h.changedBy.role || 'N/A'})`
+                                : `${h.changedByRole || 'No Role'} (${h.changedBy || 'No ID'})`
+                            }
+                        </p>
                         {h.notes && <p className="text-[10px] mt-2 p-2 rounded bg-opacity-30 italic" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-dim)' }}>"{h.notes}"</p>}
                     </div>
                 </div>

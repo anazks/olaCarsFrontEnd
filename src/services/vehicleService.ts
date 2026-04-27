@@ -190,7 +190,8 @@ export interface RetirementDetails {
 export interface StatusHistoryEntry {
     status: VehicleStatus;
     changedAt: string;
-    changedBy?: string;
+    changedBy?: string | { _id: string; fullName: string; role: string; [key: string]: any };
+    changedByRole?: string;
     notes?: string;
 }
 
