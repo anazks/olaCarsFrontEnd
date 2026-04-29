@@ -47,7 +47,9 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
 
     const financeItems = [
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+        { icon: <Calculator size={20} />, label: 'Staff Payrolls', path: '/admin/admin/staff-salaries', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/admin/taxes', permission: 'TAX_VIEW' },
+        { icon: <Building2 size={20} />, label: t('sidebar.items.bankAccounts'), path: '/admin/admin/bank-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
         { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/admin/purchase-bills', permission: 'SERVICE_BILL_VIEW' },

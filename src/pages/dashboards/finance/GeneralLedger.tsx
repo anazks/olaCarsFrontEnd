@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, Download } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, Download, PlusCircle, User } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
+import CreateJournalEntry from './CreateJournalEntry';
+import { getUserRole } from '../../../utils/auth';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -18,6 +21,12 @@ const GeneralLedger = () => {
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const userRole = getUserRole() || '';
+    const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
 
     // Filters
     const [startDate, setStartDate] = useState('');
@@ -52,6 +61,15 @@ const GeneralLedger = () => {
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('action') === 'create' && canCreateEntry) {
+            setShowCreateModal(true);
+            // Clear the param so it doesn't reopen on refresh if not intended
+            navigate(location.pathname, { replace: true });
+        }
+    }, [location.search, canCreateEntry, navigate, location.pathname]);
+
     // Derived statistics
     const totalDebit = entries.reduce((sum, entry) => {
         if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
@@ -82,14 +100,15 @@ const GeneralLedger = () => {
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
-                    {/* Placeholder for export functionality */}
-                    <button
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-50"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                        disabled={entries.length === 0}
-                    >
-                        <Download size={16} /> Export CSV
-                    </button>
+                    {canCreateEntry && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        >
+                            <PlusCircle size={18} /> Add Manual Entry
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -195,6 +214,7 @@ const GeneralLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Description</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Account</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Audit Trace</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
                                 </tr>
@@ -240,6 +260,12 @@ const GeneralLedger = () => {
                                                     </span>
                                                 </div>
                                             </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-xs opacity-70" style={{ color: 'var(--text-dim)' }}>
+                                                    <User size={12} />
+                                                    {entry.creatorRole || 'SYSTEM'}
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 {debitVal > 0 ? (
                                                     <span className="font-mono text-sm font-bold text-red-400">
@@ -262,6 +288,18 @@ const GeneralLedger = () => {
                     )}
                 </div>
             </div>
+
+            {/* Create Journal Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                    <CreateJournalEntry 
+                        onClose={() => setShowCreateModal(false)} 
+                        onSuccess={() => {
+                            fetchData();
+                        }} 
+                    />
+                </div>
+            )}
         </div>
     );
 };

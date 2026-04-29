@@ -138,7 +138,8 @@
       "billingInvoices": "Billing & Invoices",
       "taxCompliance": "Tax Compliance",
       "payoutRegistry": "Payout Registry",
-      "riskAudit": "Risk Audit"
+      "riskAudit": "Risk Audit",
+      "bankAccounts": "Bank Accounts"
     }
   },
   "dashboards": {

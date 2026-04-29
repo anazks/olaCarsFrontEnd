@@ -44,6 +44,7 @@ import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
+import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -73,6 +74,8 @@ import TaxManagement from './pages/dashboards/finance/TaxManagement';
 import ChartOfAccounts from './pages/dashboards/finance/ChartOfAccounts';
 import GeneralLedger from './pages/dashboards/finance/GeneralLedger';
 import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
+import FinancialStatements from './pages/dashboards/finance/FinancialStatements';
+import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -174,7 +177,10 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
-              <Route path="agreements" element={<ManageAgreements />} />
+               <Route path="financial-statements" element={<FinancialStatements />} />
+               <Route path="staff-salaries" element={<StaffSalaries />} />
+               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
@@ -276,6 +282,9 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
+              <Route path="financial-statements" element={<FinancialStatements />} />
+              <Route path="staff-salaries" element={<StaffSalaries />} />
+              <Route path="bank-accounts" element={<ManageBankAccounts />} />
             </Route>
           </Route>
 
@@ -320,6 +329,11 @@ function App() {
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+              <Route path="taxes" element={<TaxManagement />} />
+              <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
+              <Route path="financial-statements" element={<FinancialStatements />} />
             </Route>
           </Route>
 
@@ -420,6 +434,7 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
+              <Route path="financial-statements" element={<FinancialStatements />} />
             </Route>
           </Route>
 

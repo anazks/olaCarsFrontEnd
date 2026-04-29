@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, Calculator, BookMarked, FileText } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -41,6 +41,13 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
+    ];
+    
+    const financeItems = [
+        { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
+        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
+        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
@@ -127,6 +134,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
                 <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
                 <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
+                <SidebarSection title={t('sidebar.sections.finance', 'Finance')} items={financeItems} />
             </div>
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
