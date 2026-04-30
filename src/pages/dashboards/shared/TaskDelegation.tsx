@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Plus, User, Clock, CheckCircle, Search, Filter, AlertCircle, Calendar, X, Info } from 'lucide-react';
+import { ClipboardList, Plus, User, CheckCircle, Search, Filter, AlertCircle, Calendar, X, Info } from 'lucide-react';
 import { delegateTask, getTasks, updateTaskStatus } from '../../../services/taskService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getAllBranches } from '../../../services/branchService';
@@ -48,7 +48,7 @@ const TaskDelegation = () => {
 
             // Filter staff for Branch Manager and Country Manager
             if (userRole === 'branchmanager' && user?.branchId) {
-                allStaff = allStaff.filter(s => s.branchId === user.branchId);
+                allStaff = allStaff.filter(s => ('branchId' in s) && s.branchId === user.branchId);
             } else if (userRole === 'countrymanager') {
                 const managedBranchIds = bData.data
                     .filter((b: any) => {
@@ -56,7 +56,7 @@ const TaskDelegation = () => {
                         return managerId === userId;
                     })
                     .map((b: any) => b._id);
-                allStaff = allStaff.filter(s => managedBranchIds.includes(s.branchId));
+                allStaff = allStaff.filter(s => ('branchId' in s) && managedBranchIds.includes(s.branchId));
             }
 
             setStaff(allStaff);
@@ -188,9 +188,9 @@ const TaskDelegation = () => {
                                             style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         >
                                             <option value="">All Branches</option>
-                                            {Array.from(new Set(staff.map(s => s.branchId))).filter(Boolean).map(bId => {
-                                                const s = staff.find(st => st.branchId === bId);
-                                                return <option key={bId} value={bId}>{s.branchName || bId}</option>;
+                                            {Array.from(new Set(staff.map(s => ('branchId' in s) ? s.branchId : null))).filter(Boolean).map(bId => {
+                                                const s = staff.find(st => ('branchId' in st) && st.branchId === bId);
+                                                return <option key={bId} value={bId}>{s?.branchName || bId}</option>;
                                             })}
                                         </select>
                                     </div>
@@ -349,8 +349,9 @@ const TaskDelegation = () => {
                                         <option value="">Select Staff</option>
                                         {staff
                                             .filter(s => {
-                                                if (user?.branchId) return s.branchId === user.branchId;
-                                                if (branchFilter) return s.branchId === branchFilter;
+                                                const sBranchId = ('branchId' in s) ? s.branchId : null;
+                                                if (user?.branchId) return sBranchId === user.branchId;
+                                                if (branchFilter) return sBranchId === branchFilter;
                                                 return true;
                                             })
                                             .map(s => (

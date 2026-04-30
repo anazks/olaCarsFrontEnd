@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Target as TargetIcon, MapPin, Users, Briefcase, Calendar, CheckCircle, Plus, Info, User } from 'lucide-react';
+import { Target as TargetIcon, MapPin, Users, Briefcase, Calendar, CheckCircle, Plus, Info, User } from 'lucide-react';
 import { assignTarget, getTargets } from '../../../services/targetService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
@@ -65,7 +65,7 @@ const TargetManagement = () => {
             
             // Filter staff for Branch Manager and Country Manager
             if (userRole === 'branchmanager' && user?.branchId) {
-                allStaff = allStaff.filter(s => s.branchId === user.branchId);
+                allStaff = allStaff.filter(s => ('branchId' in s) && s.branchId === user.branchId);
             } else if (userRole === 'countrymanager') {
                 const managedBranchIds = bData.data
                     .filter((b: any) => {
@@ -73,7 +73,7 @@ const TargetManagement = () => {
                         return managerId === userId;
                     })
                     .map((b: any) => b._id);
-                allStaff = allStaff.filter(s => managedBranchIds.includes(s.branchId));
+                allStaff = allStaff.filter(s => ('branchId' in s) && managedBranchIds.includes(s.branchId));
             }
             
             setStaff(allStaff);
@@ -216,8 +216,9 @@ const TargetManagement = () => {
                                             }
                                             {formData.targetType === 'STAFF' && staff
                                                 .filter(s => {
-                                                    if (user?.branchId) return s.branchId === user.branchId;
-                                                    if (branchFilter) return s.branchId === branchFilter;
+                                                    const sBranchId = ('branchId' in s) ? s.branchId : null;
+                                                    if (user?.branchId) return sBranchId === user.branchId;
+                                                    if (branchFilter) return sBranchId === branchFilter;
                                                     return true;
                                                 })
                                                 .map(s => (

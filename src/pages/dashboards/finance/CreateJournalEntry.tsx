@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, X, AlertCircle, CheckCircle2, Calculator } from 'lucide-react';
+import { Plus, Trash2, Save, X, AlertCircle, Calculator } from 'lucide-react';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import { createManualJournal } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllTaxes } from '../../../services/taxService';
 import { Search, ChevronDown, Building2 } from 'lucide-react';
 import { getAllBankAccounts } from '../../../services/bankAccountService';
-import type { BankAccount } from '../../../services/bankAccountService';
+
 import type { AccountingCode } from '../../../services/accountingService';
 import type { JournalLine } from '../../../services/ledgerService';
 
@@ -156,7 +156,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         return acc;
     }, { debit: 0, credit: 0 });
 
-    const isBalanced = Math.abs(totals.debit - totals.credit) < 0.01;
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -170,8 +170,6 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         try {
             await createManualJournal({
                 ...header,
-                paymentMethod,
-                bankAccount: paymentMethod === 'BANK' ? selectedBankId : undefined,
                 lines
             });
             onSuccess();

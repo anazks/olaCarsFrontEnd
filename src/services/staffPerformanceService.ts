@@ -135,6 +135,8 @@ export interface PerformanceFilters {
     branch?: string;
     country?: string;
     type?: 'all' | 'finance' | 'operation' | 'branch-manager' | 'country-manager' | 'finance-admin' | 'operation-admin';
+    startDate?: string;
+    endDate?: string;
 }
 
 export const getStaffPerformance = async (filters: PerformanceFilters = {}): Promise<StaffPerformanceResponse> => {

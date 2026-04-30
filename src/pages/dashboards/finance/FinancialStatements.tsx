@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, TrendingUp, Landmark, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
+import { TrendingUp, Landmark, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 

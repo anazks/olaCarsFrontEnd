@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     Users, 
     DollarSign, 
@@ -7,10 +7,8 @@ import {
     Search, 
     Plus, 
     Edit2, 
-    ChevronRight, 
     Wallet, 
     CheckCircle2, 
-    AlertCircle, 
     ArrowUpRight,
     Calculator,
     Save,
@@ -32,10 +30,10 @@ import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
 import { getAllFinancialAdmins } from '../../../services/financialAdminService';
 import { getAllOperationalAdmins } from '../../../services/operationalAdminService';
-import { getUser, getUserRole } from '../../../utils/auth';
+import { getUserRole } from '../../../utils/auth';
 
 const StaffSalaries = () => {
-    const user = getUser();
+
     const role = getUserRole();
     const [loading, setLoading] = useState(true);
     const [staffList, setStaffList] = useState<any[]>([]);
