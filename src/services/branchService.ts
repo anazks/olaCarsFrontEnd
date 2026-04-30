@@ -10,6 +10,11 @@ export interface Branch {
     phone: string;
     email: string;
     country: string;
+    countryManager?: {
+        _id: string;
+        fullName: string;
+        country: string;
+    };
     managerId?: string;
     status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
     createdAt?: string;
@@ -25,6 +30,7 @@ export interface CreateBranchPayload {
     phone: string;
     email: string;
     country: string;
+    countryManager?: string;
     managerId?: string;
     status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 }

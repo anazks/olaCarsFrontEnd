@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Car, Wrench, Users, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, UserCog, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Car, Wrench, Users, Settings, Menu, Globe, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, UserCog, BarChart3, Target, ClipboardList } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -31,6 +31,9 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/operational-admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <Target size={20} />, label: 'Target Management', path: '/admin/operational-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [

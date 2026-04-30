@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, User } from 'lucide-react';
 import {
     getAllBranches,
     createBranch,
@@ -13,6 +13,7 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
+import { getAllCountryManagers, type CountryManager } from '../../../services/countryManagerService';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -51,10 +52,12 @@ const ManageBranches = () => {
         state: '',
         phone: '',
         email: '',
-        country: 'Panama',
+        country: '',
+        countryManager: '',
         managerId: '',
         status: 'ACTIVE' as string
     });
+    const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
@@ -88,6 +91,18 @@ const ManageBranches = () => {
         fetchBranches();
     }, [fetchBranches]);
 
+    useEffect(() => {
+        const fetchManagers = async () => {
+            try {
+                const response = await getAllCountryManagers({ limit: 100 });
+                setCountryManagers(response.data);
+            } catch (err) {
+                console.error("Failed to fetch country managers", err);
+            }
+        };
+        fetchManagers();
+    }, []);
+
     const handleFilterChange = (key: string, value: any) => {
         setFilters(prev => ({
             ...prev,
@@ -107,7 +122,8 @@ const ManageBranches = () => {
             state: '',
             phone: '',
             email: '',
-            country: 'Panama',
+            country: '',
+            countryManager: '',
             managerId: '',
             status: 'ACTIVE'
         });
@@ -125,7 +141,8 @@ const ManageBranches = () => {
             state: branch.state,
             phone: branch.phone || '',
             email: branch.email,
-            country: branch.country || 'Panama',
+            country: branch.country || '',
+            countryManager: branch.countryManager?._id || '',
             managerId: branch.managerId || '',
             status: branch.status
         });
@@ -338,6 +355,7 @@ const ManageBranches = () => {
                                     <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.branchInfo')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.location')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.countryManager')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.contact')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
@@ -366,6 +384,18 @@ const ManageBranches = () => {
                                                             <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{branch.city}, {branch.state}, {branch.country}</span>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {branch.countryManager ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <User size={14} style={{ color: '#C8E600' }} />
+                                                            <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                                                                {branch.countryManager.fullName}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs italic" style={{ color: 'var(--text-dim)' }}>Unassigned</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="text-sm" style={{ color: 'var(--text-main)' }}>{branch.email}</div>
@@ -588,18 +618,25 @@ const ManageBranches = () => {
                                     />
                                 </div>
 
-                                {/* Country */}
+                                {/* Country Manager */}
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium"
                                         style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.country')}
+                                        {t('management.common.modal.countryManager')}
                                     </label>
 
                                     <select
-                                        value={formData.country}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, country: e.target.value })
-                                        }
+                                        required
+                                        value={formData.countryManager}
+                                        onChange={(e) => {
+                                            const managerId = e.target.value;
+                                            const manager = countryManagers.find(m => m._id === managerId);
+                                            setFormData({ 
+                                                ...formData, 
+                                                countryManager: managerId,
+                                                country: manager ? manager.country : ''
+                                            });
+                                        }}
                                         className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                         style={{
                                             background: "var(--bg-input)",
@@ -607,8 +644,11 @@ const ManageBranches = () => {
                                             color: "var(--text-main)"
                                         }}
                                     >
-                                        {countries.map(c => (
-                                            <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>
+                                        <option value="">{t('management.common.modal.selectCountryManager')}</option>
+                                        {countryManagers.map(m => (
+                                            <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
+                                                {m.fullName} ({m.country})
+                                            </option>
                                         ))}
                                     </select>
                                 </div>

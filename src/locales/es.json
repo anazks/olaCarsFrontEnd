@@ -385,7 +385,8 @@
         "country": "País",
         "branchInfo": "Información de Sucursal",
         "location": "Ubicación",
-        "contact": "Contacto"
+        "contact": "Contacto",
+        "countryManager": "Gerente de País"
       },
       "status": {
         "active": "Activo",
@@ -425,7 +426,9 @@
         "assignBranch": "Asignar Sucursal",
         "selectBranch": "Seleccionar una sucursal",
         "twoFactorAuth": "Autenticación de Dos Factores",
-        "create": "Crear"
+        "create": "Crear",
+        "countryManager": "Gerente de País",
+        "selectCountryManager": "Seleccionar un Gerente de País"
       }
     },
     "branches": {

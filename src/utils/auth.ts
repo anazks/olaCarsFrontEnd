@@ -124,6 +124,11 @@ export const getUserRole = (): string | null => {
     return normalized;
 };
 
+export const getUserId = (): string | null => {
+    const decoded = getDecodedToken();
+    return decoded?.id || decoded?._id || null;
+};
+
 /**
  * Checks if the current user has a specific granular permission.
  * Admins are granted all permissions by default.

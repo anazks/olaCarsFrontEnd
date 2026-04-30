@@ -110,6 +110,7 @@
       "taxManagement": "Tax Management",
       "chartOfAccounts": "Chart of Accounts",
       "generalLedger": "General Ledger",
+      "balanceSheet": "Balance Sheet",
       "liveGpsTracking": "Live GPS Tracking",
       "fleetInventory": "Fleet Inventory",
       "maintenanceHub": "Maintenance Hub",
@@ -386,7 +387,8 @@
         "country": "Country",
         "branchInfo": "Branch Info",
         "location": "Location",
-        "contact": "Contact"
+        "contact": "Contact",
+        "countryManager": "Country Manager"
       },
       "status": {
         "active": "Active",
@@ -426,7 +428,9 @@
         "assignBranch": "Assign Branch",
         "selectBranch": "Select a branch",
         "twoFactorAuth": "Two-Factor Authentication",
-        "create": "Create"
+        "create": "Create",
+        "countryManager": "Country Manager",
+        "selectCountryManager": "Select a Country Manager"
       }
     },
     "branches": {

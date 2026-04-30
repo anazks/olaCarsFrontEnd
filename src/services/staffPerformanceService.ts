@@ -34,6 +34,7 @@ export interface StaffPerformanceData {
     createdAt: string;
     metrics: Metrics;
     recentActivity: RecentActivity[];
+    targetStats?: TargetStats;
 }
 
 export interface BranchManagerMetrics {
@@ -41,6 +42,14 @@ export interface BranchManagerMetrics {
     activeBranchDrivers: number;
     totalBranchVehicles: number;
     activeBranchVehicles: number;
+}
+
+export interface TargetStats {
+    [category: string]: {
+        target: number;
+        actual: number;
+        percent: number;
+    };
 }
 
 export interface BranchManagerPerformanceData {
@@ -55,6 +64,7 @@ export interface BranchManagerPerformanceData {
     createdAt: string;
     metrics: BranchManagerMetrics;
     recentActivity: RecentActivity[];
+    targetStats?: TargetStats;
 }
 
 export interface CountryManagerMetrics {
@@ -76,6 +86,7 @@ export interface CountryManagerPerformanceData {
     createdAt: string;
     metrics: CountryManagerMetrics;
     recentActivity: RecentActivity[];
+    targetStats?: TargetStats;
 }
 
 export interface GlobalAdminMetrics {
@@ -99,6 +110,15 @@ export interface GlobalAdminPerformanceData {
     recentActivity: RecentActivity[];
 }
 
+export interface TargetComparison {
+    category: 'DRIVER_ACQUISITION' | 'RENTAL' | 'VEHICLE_ACQUISITION';
+    targetValue: number;
+    actualValue: number;
+    period: string;
+    startDate: string;
+    endDate: string;
+}
+
 export interface StaffPerformanceResponse {
     success: boolean;
     data: {
@@ -107,6 +127,7 @@ export interface StaffPerformanceResponse {
         branchManagers?: BranchManagerPerformanceData[];
         countryManagers?: CountryManagerPerformanceData[];
         globalAdmins?: GlobalAdminPerformanceData[];
+        targetComparison?: TargetComparison[];
     };
 }
 

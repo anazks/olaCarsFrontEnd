@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Menu, ShieldCheck, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, UserCheck, Target, ClipboardList } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -29,6 +29,8 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff', permission: 'STAFF_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <Target size={20} />, label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [

@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
     Users, Briefcase, Activity, Clock, Search, ChevronDown, CheckCircle, 
-    Clock3, MapPin, AlignLeft, TrendingUp, UserCheck
+    Clock3, MapPin, AlignLeft, TrendingUp, UserCheck, Calendar, BarChart3,
+    Target as TargetIcon
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend 
 } from 'recharts';
 
-import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData } from '../../../services/staffPerformanceService';
+import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData, type TargetComparison } from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
 
@@ -24,6 +25,11 @@ const StaffPerformanceDashboard = () => {
     const [branchManagers, setBranchManagers] = useState<BranchManagerPerformanceData[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManagerPerformanceData[]>([]);
     const [globalAdmins, setGlobalAdmins] = useState<GlobalAdminPerformanceData[]>([]);
+    const [targetComparison, setTargetComparison] = useState<TargetComparison[]>([]);
+    const [dateRange, setDateRange] = useState({
+        startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0], // 1st of current month
+        endDate: new Date().toISOString().split('T')[0]
+    });
     
     // Filters
     const [staffType, setStaffType] = useState<'all' | 'finance' | 'operation' | 'branch-manager' | 'country-manager' | 'finance-admin' | 'operation-admin'>('all');
@@ -38,7 +44,7 @@ const StaffPerformanceDashboard = () => {
         if (!isBranchScoped) {
             fetchBranches();
         }
-    }, [selectedBranch, staffType]);
+    }, [selectedBranch, staffType, dateRange]);
 
     const fetchBranches = async () => {
         try {
@@ -55,13 +61,16 @@ const StaffPerformanceDashboard = () => {
             // Note: BranchManager naturally gets scoped by the backend using req.user.branchId
             const data = await getStaffPerformance({
                 branch: isBranchScoped ? undefined : selectedBranch || undefined,
-                type: staffType
+                type: staffType,
+                startDate: dateRange.startDate,
+                endDate: dateRange.endDate
             });
             setFinStaff(data.data.financeStaff || []);
             setOpStaff(data.data.operationStaff || []);
             setBranchManagers(data.data.branchManagers || []);
             setCountryManagers(data.data.countryManagers || []);
             setGlobalAdmins(data.data.globalAdmins || []);
+            setTargetComparison(data.data.targetComparison || []);
         } catch (error) {
             console.error('Error fetching staff performance:', error);
         } finally {
@@ -222,9 +231,9 @@ const StaffPerformanceDashboard = () => {
     );
 
     return (
-        <div className="flex-1 w-full flex flex-col h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-lighter)' }}>
+        <div className="flex-1 w-full overflow-y-auto h-screen" style={{ backgroundColor: 'var(--bg-lighter)' }}>
             {/* Header */}
-            <div className="flex-none p-4 md:p-8 border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
+            <div className="p-4 md:p-8 border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold font-plus-jakarta tracking-tight mb-2 flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
@@ -288,53 +297,62 @@ const StaffPerformanceDashboard = () => {
                                 <ChevronDown size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" style={{ color: 'var(--text-main)' }} />
                             </div>
                         )}
+
+                        <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-white/5">
+                            <Calendar size={16} className="ml-2 opacity-50" />
+                            <input 
+                                type="date" 
+                                value={dateRange.startDate}
+                                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                                className="bg-transparent text-xs font-bold focus:outline-none p-1.5"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                            <span className="opacity-30">-</span>
+                            <input 
+                                type="date" 
+                                value={dateRange.endDate}
+                                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                                className="bg-transparent text-xs font-bold focus:outline-none p-1.5"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* KPIs */}
-                <div className="p-4 rounded-3xl border bg-black/5 dark:bg-white/5 shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
-                    <div className="overflow-x-auto pb-2 custom-scrollbar">
-                        <div className="flex lg:grid lg:grid-cols-4 gap-4 min-w-max lg:min-w-full">
-                            <div className="w-[280px] lg:w-auto shrink-0">
-                                <KPICard 
-                                    title="Total Tracked Staff" 
-                                    value={totalStaff} 
-                                    icon={Users} 
-                                    colorClass="bg-blue-500/10 text-blue-500" 
-                                />
-                            </div>
-                        <div className="w-[280px] lg:w-auto shrink-0">
-                            <KPICard 
-                                title="Completed Onboardings" 
-                                value={totalOnboardings} 
-                                subtext="Active"
-                                icon={CheckCircle} 
-                                colorClass="bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]" 
-                            />
-                        </div>
-                        <div className="w-[280px] lg:w-auto shrink-0">
-                            <KPICard 
-                                title="Total Workflow Actions" 
-                                value={totalActions} 
-                                icon={Activity} 
-                                colorClass="bg-purple-500/10 text-purple-500" 
-                            />
-                        </div>
-                        <div className="w-[280px] lg:w-auto shrink-0">
-                            <KPICard 
-                                title="Avg Stage Processing" 
-                                value={`${fleetAvgTime}h`} 
-                                icon={Clock3} 
-                                colorClass="bg-amber-500/10 text-amber-500" 
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-auto p-4 md:p-8">
+            <div className="p-4 md:p-8">
+                {/* KPIs */}
+                <div className="mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <KPICard 
+                            title="Total Tracked Staff" 
+                            value={totalStaff} 
+                            icon={Users} 
+                            colorClass="bg-blue-500/10 text-blue-500" 
+                        />
+                        <KPICard 
+                            title="Completed Onboardings" 
+                            value={totalOnboardings} 
+                            subtext="Active"
+                            icon={CheckCircle} 
+                            colorClass="bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]" 
+                        />
+                        <KPICard 
+                            title="Total Workflow Actions" 
+                            value={totalActions} 
+                            icon={Activity} 
+                            colorClass="bg-purple-500/10 text-purple-500" 
+                        />
+                        <KPICard 
+                            title="Avg Stage Processing" 
+                            value={`${fleetAvgTime}h`} 
+                            icon={Clock3} 
+                            colorClass="bg-amber-500/10 text-amber-500" 
+                        />
+                    </div>
+                </div>
 
                 {/* Analytical Grapsh */}
                 {!loading && combinedList.length > 0 && (
@@ -439,6 +457,169 @@ const StaffPerformanceDashboard = () => {
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Tasks Logged</div>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Hierarchical Comparison Chart */}
+                {!loading && (
+                    <div className="mb-8">
+                        <div className="rounded-3xl border p-8 shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
+                                        <BarChart3 size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold font-plus-jakarta">
+                                            {(() => {
+                                                const role = userRole.toLowerCase().replace(' ', '');
+                                                if (role === 'admin') return 'National Country Performance';
+                                                if (role === 'countrymanager') return selectedBranch ? 'Branch Staff Performance' : 'Regional Branch Performance';
+                                                return 'Branch Staff Performance';
+                                            })()}
+                                        </h2>
+                                        <p className="text-xs text-dim font-medium uppercase tracking-wider mt-1">
+                                            Target vs Actual Comparison
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="h-[350px] w-full">
+                                {(() => {
+                                    let data: any[] = [];
+                                    const role = userRole.toLowerCase().replace(' ', '');
+                                    
+                                    if (role === 'admin') {
+                                        data = countryManagers.map(cm => ({
+                                            name: cm.country,
+                                            Target: cm.targetStats?.DRIVER_ACQUISITION?.target || 0,
+                                            Actual: cm.targetStats?.DRIVER_ACQUISITION?.actual || 0,
+                                        }));
+                                    } else if (role === 'countrymanager') {
+                                        // If a branch is selected, show staff comparison. Otherwise show branch comparison.
+                                        if (selectedBranch) {
+                                            data = [...finStaff, ...opStaff].map(s => ({
+                                                name: s.fullName.split(' ')[0],
+                                                Target: s.targetStats?.DRIVER_ACQUISITION?.target || s.targetStats?.VEHICLE_ACQUISITION?.target || 0,
+                                                Actual: s.targetStats?.DRIVER_ACQUISITION?.actual || s.targetStats?.VEHICLE_ACQUISITION?.actual || 0,
+                                            }));
+                                        } else {
+                                            data = branchManagers.map(bm => ({
+                                                name: bm.branchName,
+                                                Target: bm.targetStats?.DRIVER_ACQUISITION?.target || 0,
+                                                Actual: bm.targetStats?.DRIVER_ACQUISITION?.actual || 0,
+                                            }));
+                                        }
+                                    } else if (role === 'branchmanager' || isBranchScoped) {
+                                        data = [...finStaff, ...opStaff].map(s => ({
+                                            name: s.fullName.split(' ')[0],
+                                            Target: s.targetStats?.DRIVER_ACQUISITION?.target || s.targetStats?.VEHICLE_ACQUISITION?.target || 0,
+                                            Actual: s.targetStats?.DRIVER_ACQUISITION?.actual || s.targetStats?.VEHICLE_ACQUISITION?.actual || 0,
+                                        }));
+                                    }
+
+                                    if (data.length === 0) return (
+                                        <div className="h-full flex flex-col items-center justify-center opacity-30">
+                                            <BarChart3 size={48} className="mb-4" />
+                                            <p className="text-sm font-bold uppercase">No hierarchical data available</p>
+                                        </div>
+                                    );
+
+                                    return (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                                <XAxis 
+                                                    dataKey="name" 
+                                                    stroke="var(--text-dim)" 
+                                                    fontSize={12} 
+                                                    tickLine={false} 
+                                                    axisLine={false}
+                                                    dy={10}
+                                                />
+                                                <YAxis 
+                                                    stroke="var(--text-dim)" 
+                                                    fontSize={12} 
+                                                    tickLine={false} 
+                                                    axisLine={false}
+                                                />
+                                                <RechartsTooltip 
+                                                    cursor={{fill: 'rgba(255,255,255,0.05)'}} 
+                                                    contentStyle={{ 
+                                                        background: 'var(--bg-popover)', 
+                                                        border: '1px solid var(--border-main)', 
+                                                        borderRadius: '12px', 
+                                                        color: 'var(--text-main)', 
+                                                        fontSize: '14px',
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                                                    }} 
+                                                />
+                                                <Legend iconType="circle" />
+                                                <Bar dataKey="Target" fill="var(--border-main)" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                                                <Bar dataKey="Actual" fill="var(--brand-lime)" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Target vs Actual Comparison */}
+                {!loading && targetComparison.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2.5 rounded-xl bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]">
+                                <TargetIcon size={20} />
+                            </div>
+                            <h2 className="text-xl font-bold font-plus-jakarta">Target vs Actual Performance</h2>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {targetComparison.map((t, idx) => {
+                                const percent = Math.min(100, Math.round((t.actualValue / t.targetValue) * 100));
+                                return (
+                                    <div key={idx} className="p-6 rounded-3xl border shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">{t.category.replace('_', ' ')}</p>
+                                                <h3 className="font-bold text-lg">{t.period} PROGRESS</h3>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-2xl font-black text-[var(--brand-lime)]">{percent}%</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-end gap-2 mb-4">
+                                            <div className="flex-1">
+                                                <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full rounded-full transition-all duration-1000" 
+                                                        style={{ 
+                                                            width: `${percent}%`, 
+                                                            backgroundColor: percent >= 100 ? 'var(--brand-lime)' : percent > 50 ? '#3b82f6' : '#f59e0b' 
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-sm font-bold">
+                                            <div className="flex flex-col">
+                                                <span className="opacity-40 text-[10px] uppercase">Actual</span>
+                                                <span className="text-lg">{t.actualValue}</span>
+                                            </div>
+                                            <div className="flex flex-col text-right">
+                                                <span className="opacity-40 text-[10px] uppercase">Target</span>
+                                                <span className="text-lg">{t.targetValue}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

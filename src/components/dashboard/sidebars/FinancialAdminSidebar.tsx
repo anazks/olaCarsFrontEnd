@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Receipt, FileText, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3, Wrench, UserCog, Plus } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, ShieldCheck, Settings, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3, Wrench, UserCog, Plus, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -31,6 +31,9 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/financial-admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/financial-admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+        { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <Target size={20} />, label: 'Target Management', path: '/admin/financial-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [
@@ -42,13 +45,14 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     ];
 
     const financeItems = [
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
+        { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/financial-admin/balance-sheet', permission: 'REPORTS_VIEW' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
         { icon: <FileText size={20} />, label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes', permission: 'TAX_VIEW' },
         { icon: <Building2 size={20} />, label: t('sidebar.items.bankAccounts'), path: '/admin/financial-admin/bank-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
         { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
-        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Plus size={20} />, label: 'Add Journal Entry', path: '/admin/financial-admin/ledger?action=create', permission: 'JOURNAL_CREATE' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/financial-admin/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
     ];

@@ -45,6 +45,8 @@ import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
+import TargetManagement from './pages/dashboards/shared/TargetManagement';
+import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -75,7 +77,9 @@ import ChartOfAccounts from './pages/dashboards/finance/ChartOfAccounts';
 import GeneralLedger from './pages/dashboards/finance/GeneralLedger';
 import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
 import FinancialStatements from './pages/dashboards/finance/FinancialStatements';
+import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
+
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -178,9 +182,12 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
                <Route path="financial-statements" element={<FinancialStatements />} />
+               <Route path="balance-sheet" element={<BalanceSheet />} />
                <Route path="staff-salaries" element={<StaffSalaries />} />
-               <Route path="bank-accounts" element={<ManageBankAccounts />} />
-               <Route path="agreements" element={<ManageAgreements />} />
+                <Route path="bank-accounts" element={<ManageBankAccounts />} />
+                <Route path="target-management" element={<TargetManagement />} />
+                <Route path="task-delegation" element={<TaskDelegation />} />
+                <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
@@ -283,9 +290,12 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
-              <Route path="bank-accounts" element={<ManageBankAccounts />} />
-            </Route>
+               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+               <Route path="target-management" element={<TargetManagement />} />
+               <Route path="task-delegation" element={<TaskDelegation />} />
+             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
@@ -334,6 +344,9 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="task-delegation" element={<TaskDelegation />} />
             </Route>
           </Route>
 
@@ -377,6 +390,8 @@ function App() {
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="task-delegation" element={<TaskDelegation />} />
             </Route>
           </Route>
 
@@ -435,6 +450,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
             </Route>
           </Route>
 

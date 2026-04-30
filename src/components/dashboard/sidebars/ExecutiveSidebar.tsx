@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Wrench, UserCog } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Wrench, UserCog, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -34,6 +34,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <Target size={20} />, label: 'Target Management', path: '/admin/admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [
@@ -46,14 +48,16 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     ];
 
     const financeItems = [
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
+        { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/admin/balance-sheet', permission: 'REPORTS_VIEW' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: 'Staff Payrolls', path: '/admin/admin/staff-salaries', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/admin/taxes', permission: 'TAX_VIEW' },
         { icon: <Building2 size={20} />, label: t('sidebar.items.bankAccounts'), path: '/admin/admin/bank-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
         { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
-        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/admin/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
     ];
+
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
         <div

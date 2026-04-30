@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, Calculator, BookMarked, FileText } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, Calculator, BookMarked, FileText, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -31,6 +31,8 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff', permission: 'STAFF_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <Target size={20} />, label: 'Target Management', path: '/admin/country-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+        { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
     ];
 
     const operationsItems = [
@@ -44,10 +46,11 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
     ];
     
     const financeItems = [
+        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
+        { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/country-manager/balance-sheet', permission: 'REPORTS_VIEW' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
         { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
-        { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
