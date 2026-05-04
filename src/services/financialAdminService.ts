@@ -89,5 +89,5 @@ export const updateFinancialAdmin = async (
 
 // DELETE a financial admin by ID
 export const deleteFinancialAdmin = async (id: string): Promise<void> => {
-    await api.delete(`/api/finance-staff/${id}`);
+    await api.delete(`/api/finance-admin/${id}`);
 };
