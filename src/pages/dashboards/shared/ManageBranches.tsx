@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, User } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, User, UserCircle, Loader2 } from 'lucide-react';
 import {
     getAllBranches,
     createBranch,
@@ -13,7 +13,7 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
-import { getAllCountryManagers, type CountryManager } from '../../../services/countryManagerService';
+import { getAllBranchManagers, type BranchManager } from '../../../services/branchManagerService';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -22,7 +22,7 @@ const ManageBranches = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Server-side filtering & pagination state
     const [filters, setFilters] = useState({
         page: 1,
@@ -53,11 +53,10 @@ const ManageBranches = () => {
         phone: '',
         email: '',
         country: '',
-        countryManager: '',
-        managerId: '',
+        branchManager: '',
         status: 'ACTIVE' as string
     });
-    const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
+    const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
@@ -70,6 +69,14 @@ const ManageBranches = () => {
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Inline CM creation state
+    const [showAddCM, setShowAddCM] = useState(false);
+    const [addingCM, setAddingCM] = useState(false);
+    const [cmFormError, setCmFormError] = useState<string | null>(null);
+    const [cmForm, setCmForm] = useState({
+        fullName: '', email: '', password: '', phone: '', country: ''
+    });
 
     const fetchBranches = useCallback(async () => {
         setLoading(true);
@@ -94,14 +101,43 @@ const ManageBranches = () => {
     useEffect(() => {
         const fetchManagers = async () => {
             try {
-                const response = await getAllCountryManagers({ limit: 100 });
-                setCountryManagers(response.data);
+                const response = await getAllBranchManagers({ limit: 100 });
+                setBranchManagers(response.data);
             } catch (err) {
-                console.error("Failed to fetch country managers", err);
+                console.error("Failed to fetch branch managers", err);
             }
         };
         fetchManagers();
     }, []);
+
+    const handleCreateCM = async () => {
+        if (!cmForm.fullName.trim() || !cmForm.email.trim() || !cmForm.password.trim() || !cmForm.phone.trim() || !cmForm.country.trim()) {
+            setCmFormError('All fields are required.');
+            return;
+        }
+        setAddingCM(true);
+        setCmFormError(null);
+        try {
+            const payload: CreateCountryManagerPayload = {
+                fullName: cmForm.fullName.trim(),
+                email: cmForm.email.trim(),
+                password: cmForm.password,
+                phone: cmForm.phone.trim(),
+                country: cmForm.country.trim(),
+                status: 'ACTIVE'
+            };
+            await createCountryManager(payload);
+            // Refresh country managers list
+            const response = await getAllCountryManagers({ limit: 100 });
+            setCountryManagers(response.data);
+            setShowAddCM(false);
+            setCmForm({ fullName: '', email: '', password: '', phone: '', country: '' });
+        } catch (err: any) {
+            setCmFormError(err?.response?.data?.message || 'Failed to create Country Manager.');
+        } finally {
+            setAddingCM(false);
+        }
+    };
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters(prev => ({
@@ -215,6 +251,7 @@ const ManageBranches = () => {
         }
     };
 
+
     return (
         <div className="container-responsive space-y-6">
             {/* Header */}
@@ -262,11 +299,10 @@ const ManageBranches = () => {
                     </div>
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-300 border ${
-                            showAdvancedFilters 
-                            ? 'border-lime text-lime bg-lime/10' 
-                            : 'border-transparent text-gray-400 bg-white/5 hover:bg-white/10'
-                        }`}
+                        className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-300 border ${showAdvancedFilters
+                                ? 'border-lime text-lime bg-lime/10'
+                                : 'border-transparent text-gray-400 bg-white/5 hover:bg-white/10'
+                            }`}
                         style={{ borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)' }}
                     >
                         <Plus size={18} className={`transition-transform duration-300 ${showAdvancedFilters ? 'rotate-45' : ''}`} />
@@ -275,7 +311,7 @@ const ManageBranches = () => {
                 </div>
 
                 {showAdvancedFilters && (
-                    <div 
+                    <div
                         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 rounded-2xl border animate-in slide-in-from-top-4 duration-300"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
@@ -355,7 +391,8 @@ const ManageBranches = () => {
                                     <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.branchInfo')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.location')}</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.countryManager')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.country')}</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.branchManager')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.contact')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
@@ -363,6 +400,7 @@ const ManageBranches = () => {
                                 </thead>
                                 <tbody>
                                     {branches.map((branch) => {
+                                        console.log('Branch Data:', branch);
                                         const sc = statusColor(branch.status);
                                         return (
                                             <tr
@@ -386,14 +424,29 @@ const ManageBranches = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {branch.countryManager ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <User size={14} style={{ color: '#C8E600' }} />
-                                                            <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                                                                {branch.countryManager.fullName}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin size={14} style={{ color: 'var(--text-dim)' }} />
+                                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                                                            {branch.country}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {branch.branchManager ? (() => {
+                                                        const managerObj = typeof branch.branchManager === 'object' 
+                                                            ? branch.branchManager 
+                                                            : branchManagers.find(m => m._id === branch.branchManager);
+                                                        
+                                                        return (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                                                                        {managerObj?.fullName || (typeof branch.branchManager === 'string' ? 'Loading...' : 'Unknown')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })() : (
                                                         <span className="text-xs italic" style={{ color: 'var(--text-dim)' }}>Unassigned</span>
                                                     )}
                                                 </td>
@@ -517,16 +570,345 @@ const ManageBranches = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Empty state: no Country Managers when creating */}
+                        {modalMode === 'create' && countryManagers.length === 0 ? (
+                            <div className="flex flex-col items-center gap-4 py-8">
+                                {!showAddCM ? (
+                                    /* Prompt state */
+                                    <>
+                                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(234,179,8,0.1)' }}>
+                                            <UserCircle size={40} style={{ color: '#eab308' }} />
+                                        </div>
+                                        <h3 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                                            No Country Managers Available
+                                        </h3>
+                                        <p className="text-sm text-center max-w-md" style={{ color: 'var(--text-dim)' }}>
+                                            A Country Manager is required to create a branch. Create one below to continue.
+                                        </p>
+                                        <div className="flex gap-3 mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={closeModal}
+                                                className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all border"
+                                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAddCM(true)}
+                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 hover:shadow-lg border-none"
+                                                style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
+                                            >
+                                                <Plus size={16} /> Create Country Manager
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    /* Inline CM creation form */
+                                    <div className="w-full max-w-lg space-y-4">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(234,179,8,0.1)' }}>
+                                                <UserCircle size={20} style={{ color: '#eab308' }} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>Create Country Manager</h3>
+                                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Fill in the details below to add a new Country Manager</p>
+                                            </div>
+                                        </div>
 
-                            {/* GRID SECTION */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Full Name *</label>
+                                                <input
+                                                    type="text" placeholder="John Doe"
+                                                    value={cmForm.fullName}
+                                                    onChange={e => setCmForm({ ...cmForm, fullName: e.target.value })}
+                                                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Email *</label>
+                                                <input
+                                                    type="email" placeholder="manager@olacars.com"
+                                                    value={cmForm.email}
+                                                    onChange={e => setCmForm({ ...cmForm, email: e.target.value })}
+                                                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Password *</label>
+                                                <input
+                                                    type="password" placeholder="Minimum 8 characters"
+                                                    value={cmForm.password}
+                                                    onChange={e => setCmForm({ ...cmForm, password: e.target.value })}
+                                                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Phone *</label>
+                                                <PhoneInput
+                                                    country={"in"}
+                                                    value={cmForm.phone}
+                                                    onChange={(phone) => setCmForm({ ...cmForm, phone })}
+                                                    containerStyle={{ width: '100%' }}
+                                                    inputStyle={{
+                                                        width: '100%', height: '40px',
+                                                        background: 'var(--bg-input)', border: '1px solid var(--border-main)',
+                                                        color: 'var(--text-main)', borderRadius: '8px', fontSize: '14px'
+                                                    }}
+                                                    buttonStyle={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
+                                                />
+                                            </div>
+                                        </div>
 
-                                {/* Branch Name */}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Country *</label>
+                                            <select
+                                                value={cmForm.country}
+                                                onChange={e => setCmForm({ ...cmForm, country: e.target.value })}
+                                                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            >
+                                                <option value="">Select Country</option>
+                                                {countries.map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {cmFormError && (
+                                            <div className="p-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                                                {cmFormError}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end gap-3 pt-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setShowAddCM(false); setCmFormError(null); }}
+                                                className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all border"
+                                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                            >
+                                                Back
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleCreateCM}
+                                                disabled={addingCM}
+                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-50 border-none"
+                                                style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
+                                            >
+                                                {addingCM ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                                {addingCM ? 'Creating...' : 'Create & Continue'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+
+                                {/* GRID SECTION */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                    {/* Branch Name */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.branchName')}
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                            value={formData.name}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, name: e.target.value })
+                                            }
+                                            placeholder="Kochi Main"
+                                        />
+                                    </div>
+
+                                    {/* Code */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.branchCode')}
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                            value={formData.code}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, code: e.target.value })
+                                            }
+                                            placeholder="KOCHI01"
+                                        />
+                                    </div>
+
+                                    {/* City */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.city')}
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                            value={formData.city}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, city: e.target.value })
+                                            }
+                                            placeholder="Kochi"
+                                        />
+                                    </div>
+
+                                    {/* State */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.state')}
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                            value={formData.state}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, state: e.target.value })
+                                            }
+                                            placeholder="Kerala"
+                                        />
+                                    </div>
+
+                                    {/* Country Manager */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.countryManager')}
+                                        </label>
+
+                                        <select
+                                            required
+                                            value={formData.countryManager}
+                                            onChange={(e) => {
+                                                const managerId = e.target.value;
+                                                const manager = countryManagers.find(m => m._id === managerId);
+                                                setFormData({
+                                                    ...formData,
+                                                    countryManager: managerId,
+                                                    country: manager ? manager.country : ''
+                                                });
+                                            }}
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                        >
+                                            <option value="">{t('management.common.modal.selectCountryManager')}</option>
+                                            {countryManagers.map(m => (
+                                                <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
+                                                    {m.fullName} ({m.country})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.officialEmail')}
+                                        </label>
+
+                                        <input
+                                            type="email"
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                            style={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)"
+                                            }}
+                                            value={formData.email}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, email: e.target.value })
+                                            }
+                                            placeholder="branch@olacars.com"
+                                        />
+                                    </div>
+
+                                    {/* Phone */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium"
+                                            style={{ color: "var(--text-dim)" }}>
+                                            {t('management.common.modal.phone')}
+                                        </label>
+
+                                        <PhoneInput
+                                            country={"in"}
+                                            value={formData.phone}
+                                            onChange={(phone) =>
+                                                setFormData({ ...formData, phone })
+                                            }
+                                            containerStyle={{ width: "100%" }}
+                                            inputStyle={{
+                                                width: "100%",
+                                                height: "36px",
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)",
+                                                borderRadius: "8px",
+                                                fontSize: "14px"
+                                            }}
+                                            buttonStyle={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)"
+                                            }}
+                                        />
+                                    </div>
+
+                                </div>
+
+                                {/* ADDRESS FULL WIDTH */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium"
+                                    <label
+                                        className="text-xs font-medium"
                                         style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.branchName')}
+                                        {t('management.common.modal.address')}
                                     </label>
 
                                     <input
@@ -538,105 +920,27 @@ const ManageBranches = () => {
                                             border: "1px solid var(--border-main)",
                                             color: "var(--text-main)"
                                         }}
-                                        value={formData.name}
+                                        value={formData.address}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, name: e.target.value })
+                                            setFormData({ ...formData, address: e.target.value })
                                         }
-                                        placeholder="Kochi Main"
+                                        placeholder="MG Road"
                                     />
                                 </div>
 
-                                {/* Code */}
+                                {/* STATUS */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium"
+                                    <label
+                                        className="text-xs font-medium"
                                         style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.branchCode')}
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                        style={{
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)"
-                                        }}
-                                        value={formData.code}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, code: e.target.value })
-                                        }
-                                        placeholder="KOCHI01"
-                                    />
-                                </div>
-
-                                {/* City */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium"
-                                        style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.city')}
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                        style={{
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)"
-                                        }}
-                                        value={formData.city}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, city: e.target.value })
-                                        }
-                                        placeholder="Kochi"
-                                    />
-                                </div>
-
-                                {/* State */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium"
-                                        style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.state')}
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                        style={{
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)"
-                                        }}
-                                        value={formData.state}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, state: e.target.value })
-                                        }
-                                        placeholder="Kerala"
-                                    />
-                                </div>
-
-                                {/* Country Manager */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium"
-                                        style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.countryManager')}
+                                        {t('management.common.modal.status')}
                                     </label>
 
                                     <select
-                                        required
-                                        value={formData.countryManager}
-                                        onChange={(e) => {
-                                            const managerId = e.target.value;
-                                            const manager = countryManagers.find(m => m._id === managerId);
-                                            setFormData({ 
-                                                ...formData, 
-                                                countryManager: managerId,
-                                                country: manager ? manager.country : ''
-                                            });
-                                        }}
+                                        value={formData.status}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, status: e.target.value })
+                                        }
                                         className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                         style={{
                                             background: "var(--bg-input)",
@@ -644,172 +948,64 @@ const ManageBranches = () => {
                                             color: "var(--text-main)"
                                         }}
                                     >
-                                        <option value="">{t('management.common.modal.selectCountryManager')}</option>
-                                        {countryManagers.map(m => (
-                                            <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
-                                                {m.fullName} ({m.country})
-                                            </option>
-                                        ))}
+                                        <option value="ACTIVE">{t('management.common.status.active')}</option>
+                                        <option value="INACTIVE">{t('management.common.status.inactive')}</option>
+                                        <option value="MAINTENANCE">{t('management.common.status.maintenance')}</option>
                                     </select>
                                 </div>
 
-                                {/* Email */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium"
-                                        style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.officialEmail')}
-                                    </label>
-
-                                    <input
-                                        type="email"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                {/* ERROR */}
+                                {formError && (
+                                    <div
+                                        className="p-3 rounded-lg text-sm"
                                         style={{
-                                            background: "var(--bg-input)",
+                                            background: "rgba(239,68,68,0.1)",
+                                            border: "1px solid rgba(239,68,68,0.3)",
+                                            color: "#ef4444"
+                                        }}
+                                    >
+                                        {formError}
+                                    </div>
+                                )}
+
+                                {/* ACTIONS */}
+                                <div className="flex gap-3 pt-2">
+
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
+                                        className="flex-1 py-2.5 rounded-lg text-sm"
+                                        style={{
                                             border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)"
+                                            color: "var(--text-dim)"
                                         }}
-                                        value={formData.email}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, email: e.target.value })
-                                        }
-                                        placeholder="branch@olacars.com"
-                                    />
+                                    >
+                                        {t('management.common.modal.cancel')}
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        disabled={formLoading}
+                                        className="flex-1 py-2.5 rounded-lg font-semibold flex justify-center items-center"
+                                        style={{
+                                            background: "#C8E600",
+                                            color: "#0A0A0A"
+                                        }}
+                                    >
+                                        {formLoading ? (
+                                            <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            modalMode === "create"
+                                                ? t('management.branches.createButton')
+                                                : t('management.branches.updateButton')
+                                        )}
+                                    </button>
+
                                 </div>
 
-                                {/* Phone */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium"
-                                        style={{ color: "var(--text-dim)" }}>
-                                        {t('management.common.modal.phone')}
-                                    </label>
+                            </form>
 
-                                    <PhoneInput
-                                        country={"in"}
-                                        value={formData.phone}
-                                        onChange={(phone) =>
-                                            setFormData({ ...formData, phone })
-                                        }
-                                        containerStyle={{ width: "100%" }}
-                                        inputStyle={{
-                                            width: "100%",
-                                            height: "36px",
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)",
-                                            borderRadius: "8px",
-                                            fontSize: "14px"
-                                        }}
-                                        buttonStyle={{
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)"
-                                        }}
-                                    />
-                                </div>
-
-                            </div>
-
-                            {/* ADDRESS FULL WIDTH */}
-                            <div className="space-y-1">
-                                <label
-                                    className="text-xs font-medium"
-                                    style={{ color: "var(--text-dim)" }}>
-                                    {t('management.common.modal.address')}
-                                </label>
-
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                    style={{
-                                        background: "var(--bg-input)",
-                                        border: "1px solid var(--border-main)",
-                                        color: "var(--text-main)"
-                                    }}
-                                    value={formData.address}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, address: e.target.value })
-                                    }
-                                    placeholder="MG Road"
-                                />
-                            </div>
-
-                            {/* STATUS */}
-                            <div className="space-y-1">
-                                <label
-                                    className="text-xs font-medium"
-                                    style={{ color: "var(--text-dim)" }}>
-                                    {t('management.common.modal.status')}
-                                </label>
-
-                                <select
-                                    value={formData.status}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, status: e.target.value })
-                                    }
-                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                    style={{
-                                        background: "var(--bg-input)",
-                                        border: "1px solid var(--border-main)",
-                                        color: "var(--text-main)"
-                                    }}
-                                >
-                                    <option value="ACTIVE">{t('management.common.status.active')}</option>
-                                    <option value="INACTIVE">{t('management.common.status.inactive')}</option>
-                                    <option value="MAINTENANCE">{t('management.common.status.maintenance')}</option>
-                                </select>
-                            </div>
-
-                            {/* ERROR */}
-                            {formError && (
-                                <div
-                                    className="p-3 rounded-lg text-sm"
-                                    style={{
-                                        background: "rgba(239,68,68,0.1)",
-                                        border: "1px solid rgba(239,68,68,0.3)",
-                                        color: "#ef4444"
-                                    }}
-                                >
-                                    {formError}
-                                </div>
-                            )}
-
-                            {/* ACTIONS */}
-                            <div className="flex gap-3 pt-2">
-
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="flex-1 py-2.5 rounded-lg text-sm"
-                                    style={{
-                                        border: "1px solid var(--border-main)",
-                                        color: "var(--text-dim)"
-                                    }}
-                                >
-                                    {t('management.common.modal.cancel')}
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    disabled={formLoading}
-                                    className="flex-1 py-2.5 rounded-lg font-semibold flex justify-center items-center"
-                                    style={{
-                                        background: "#C8E600",
-                                        color: "#0A0A0A"
-                                    }}
-                                >
-                                    {formLoading ? (
-                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        modalMode === "create"
-                                            ? t('management.branches.createButton')
-                                            : t('management.branches.updateButton')
-                                    )}
-                                </button>
-
-                            </div>
-
-                        </form>
+                        )}
                     </div>
                 </div>
             )}
@@ -842,10 +1038,10 @@ const ManageBranches = () => {
                                 className="flex-1 py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center"
                                 style={{ background: '#ef4444', color: 'white' }}
                             >
-                                 {deleteLoading
-                                     ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                     : t('management.common.delete.confirmSubmit')
-                                 }
+                                {deleteLoading
+                                    ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    : t('management.common.delete.confirmSubmit')
+                                }
                             </button>
                         </div>
                     </div>

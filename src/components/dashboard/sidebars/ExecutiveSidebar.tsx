@@ -45,6 +45,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
     ];
 
     const financeItems = [

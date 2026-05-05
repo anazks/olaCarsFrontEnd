@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft } from 'lucide-react';
+import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import BulkDriverUpload from './BulkDriverUpload';
 
 const DriverList = () => {
     const { t } = useTranslation();
@@ -12,6 +13,7 @@ const DriverList = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
 
     // Filter State
     const [searchTerm, setSearchTerm] = useState('');
@@ -144,6 +146,17 @@ const DriverList = () => {
                         }}
                     >
                         <Filter size={18} /> {t('management.common.filters')}
+                    </button>
+                    <button
+                        onClick={() => setShowBulkUpload(true)}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 border"
+                        style={{ 
+                            borderColor: 'var(--brand-lime)', 
+                            color: 'var(--brand-lime)',
+                            background: 'rgba(200,230,0,0.06)'
+                        }}
+                    >
+                        <Upload size={18} /> {t('management.drivers.bulkUploadBtn', 'Bulk Upload')}
                     </button>
                     <button
                         onClick={() => navigate('new')}
@@ -370,6 +383,15 @@ const DriverList = () => {
                     </div>
                 )}
             </div>
+            {/* Bulk Upload Modal */}
+            <BulkDriverUpload
+                isOpen={showBulkUpload}
+                onClose={() => setShowBulkUpload(false)}
+                onSuccess={() => {
+                    fetchDrivers();
+                    setShowBulkUpload(false);
+                }}
+            />
         </div>
     );
 };

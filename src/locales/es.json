@@ -386,7 +386,7 @@
         "branchInfo": "Información de Sucursal",
         "location": "Ubicación",
         "contact": "Contacto",
-        "countryManager": "Gerente de País"
+        "branchManager": "Gerente de Sucursal"
       },
       "status": {
         "active": "Activo",
@@ -427,8 +427,8 @@
         "selectBranch": "Seleccionar una sucursal",
         "twoFactorAuth": "Autenticación de Dos Factores",
         "create": "Crear",
-        "countryManager": "Gerente de País",
-        "selectCountryManager": "Seleccionar un Gerente de País"
+        "branchManager": "Gerente de Sucursal",
+        "selectBranchManager": "Seleccionar un gerente de sucursal"
       }
     },
     "branches": {
@@ -1024,7 +1024,6 @@
         "Suspension": "Suspensión"
       }
     },
-
     "drivers": {
       "title": "Gestión de Conductores",
       "subtitle": "Monitorear y gestionar las solicitudes de incorporación de conductores",

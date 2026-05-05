@@ -147,6 +147,11 @@ export interface DriverFilters {
     endDate?: string;
 }
 
+export interface BulkUploadResult {
+    created: Array<{ row: number; id: string; name: string }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
 // GET all drivers with filters
 export const getAllDrivers = async (filters: DriverFilters = {}): Promise<PaginatedResponse<Driver>> => {
     const response = await api.get('/api/driver', { params: filters });
@@ -190,6 +195,13 @@ export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
 
+export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promise<{ message: string; data: BulkUploadResult }> => {
+    const payload: any = { drivers };
+    if (branch) payload.branch = branch;
+    const response = await api.post('/api/driver/bulk', payload);
+    return response.data;
+};
+
 // Also export as a default object for backward compatibility if needed, 
 // though individual exports are preferred now.
 export const driverService = {
@@ -200,7 +212,8 @@ export const driverService = {
     progressDriver,
     uploadDocument: uploadDriverDocument,
     markRentAsPaid,
-    deleteDriver
+    deleteDriver,
+    bulkCreateDrivers
 };
 
 export default driverService;

@@ -10,12 +10,11 @@ export interface Branch {
     phone: string;
     email: string;
     country: string;
-    countryManager?: {
+    branchManager?: {
         _id: string;
         fullName: string;
-        country: string;
-    };
-    managerId?: string;
+        email: string;
+    } | string;
     status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
     createdAt?: string;
     updatedAt?: string;

@@ -42,6 +42,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Intelligence Reports', path: '/admin/operational-admin/reports', permission: 'REPORTS_VIEW' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

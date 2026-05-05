@@ -388,7 +388,7 @@
         "branchInfo": "Branch Info",
         "location": "Location",
         "contact": "Contact",
-        "countryManager": "Country Manager"
+        "branchManager": "Branch Manager"
       },
       "status": {
         "active": "Active",
@@ -429,8 +429,8 @@
         "selectBranch": "Select a branch",
         "twoFactorAuth": "Two-Factor Authentication",
         "create": "Create",
-        "countryManager": "Country Manager",
-        "selectCountryManager": "Select a Country Manager"
+        "branchManager": "Branch Manager",
+        "selectBranchManager": "Select a Branch Manager"
       }
     },
     "branches": {
@@ -1018,7 +1018,6 @@
         "Suspension": "Suspension"
       }
     },
-
     "drivers": {
       "title": "Driver Management",
       "subtitle": "Monitor and manage driver onboarding applications",

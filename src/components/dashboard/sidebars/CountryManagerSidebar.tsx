@@ -43,6 +43,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
     ];
     
     const financeItems = [

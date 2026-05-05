@@ -505,8 +505,9 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                 </div>
 
                 {/* Lines Table */}
-                <div className="rounded-xl border border-white/10">
-                    <table className="w-full text-left border-collapse">
+                <div className="rounded-xl border border-white/10 overflow-hidden">
+                    <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse">
                         <thead className="bg-white/5">
                             <tr>
                                 <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Account</th>
@@ -610,6 +611,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <Plus size={14} /> Add Line
                     </button>
                 </div>
+            </div>
 
                 {/* Footer / Totals */}
                 <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pt-4 border-t border-white/5">

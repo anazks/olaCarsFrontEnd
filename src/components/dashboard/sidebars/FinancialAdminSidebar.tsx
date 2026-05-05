@@ -48,6 +48,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/financial-admin/balance-sheet', permission: 'REPORTS_VIEW' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+        { icon: <BarChart3 size={20} />, label: 'Intelligence Reports', path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
         { icon: <FileText size={20} />, label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
         { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes', permission: 'TAX_VIEW' },

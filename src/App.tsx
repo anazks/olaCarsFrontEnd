@@ -39,6 +39,7 @@ import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff
 import ManageWorkshopManagers from './pages/dashboards/shared/ManageWorkshopManagers';
 import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
+import Reports from './pages/dashboards/shared/Reports';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
@@ -177,6 +178,7 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
@@ -234,6 +236,7 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
@@ -285,6 +288,7 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
@@ -336,6 +340,7 @@ function App() {
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
@@ -388,8 +393,9 @@ function App() {
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="insurances" element={<ManageInsurances />} />
-              <Route path="profile" element={<Profile />} />
+               <Route path="profile" element={<Profile />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
             </Route>
