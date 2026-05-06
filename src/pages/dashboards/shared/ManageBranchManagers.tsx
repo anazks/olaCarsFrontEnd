@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck, ShieldCheck } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck } from 'lucide-react';
 import {
     getAllBranchManagers,
     createBranchManager,

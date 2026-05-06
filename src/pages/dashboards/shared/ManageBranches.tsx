@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, User, UserCircle, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, UserCircle, Loader2 } from 'lucide-react';
 import {
     getAllBranches,
     createBranch,
@@ -55,6 +55,7 @@ const ManageBranches = () => {
         email: '',
         country: '',
         branchManager: '',
+        countryManager: '',
         status: 'ACTIVE' as string
     });
     const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
@@ -165,8 +166,8 @@ const ManageBranches = () => {
             phone: '',
             email: '',
             country: '',
+            branchManager: '',
             countryManager: '',
-            managerId: '',
             status: 'ACTIVE'
         });
         setFormError(null);
@@ -175,6 +176,9 @@ const ManageBranches = () => {
     const openEditModal = (branch: Branch) => {
         setModalMode('edit');
         setSelectedBranch(branch);
+        const cManagerId = typeof branch.countryManager === 'object' ? branch.countryManager?._id : branch.countryManager;
+        const bManagerId = typeof branch.branchManager === 'object' ? branch.branchManager?._id : branch.branchManager;
+
         setFormData({
             name: branch.name,
             code: branch.code,
@@ -184,8 +188,8 @@ const ManageBranches = () => {
             phone: branch.phone || '',
             email: branch.email,
             country: branch.country || '',
-            countryManager: branch.countryManager?._id || '',
-            managerId: branch.managerId || '',
+            branchManager: bManagerId || '',
+            countryManager: cManagerId || '',
             status: branch.status
         });
         setFormError(null);
