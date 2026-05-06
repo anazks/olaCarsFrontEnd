@@ -417,7 +417,6 @@ const ManageBranchManagers = () => {
                                         </button>
                                     </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.twoFactor')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                 </tr>
                             </thead>
@@ -458,14 +457,6 @@ const ManageBranchManagers = () => {
                                                 <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
                                                     {t(`management.common.status.${manager.status.toLowerCase()}`, { defaultValue: manager.status })}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <ShieldCheck size={16} style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }} />
-                                                    <span className="text-sm" style={{ color: manager.twoFactorEnabled ? '#22c55e' : 'var(--text-dim)' }}>
-                                                        {manager.twoFactorEnabled ? t('management.common.status.enabled') : t('management.common.status.disabled')}
-                                                    </span>
-                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">

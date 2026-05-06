@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
-    BarChart3, TrendingUp, TrendingDown, Users, Download, 
-    Calendar, Filter, FileText, ChevronDown, Loader2, 
+    TrendingUp, TrendingDown, Download, 
+    Calendar, Filter, FileText, Loader2, 
     ArrowUpRight, ArrowDownRight, Activity, MapPin, Building2
 } from 'lucide-react';
 import { 
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-    ResponsiveContainer, AreaChart, Area, Legend, Cell
+    XAxis, YAxis, CartesianGrid, Tooltip, 
+    ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import { getDecodedToken } from '../../../utils/auth';
 import { getAllBranches, type Branch } from '../../../services/branchService';

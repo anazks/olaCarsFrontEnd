@@ -68,8 +68,8 @@ const TargetManagement = () => {
                 allStaff = allStaff.filter(s => ('branchId' in s) && s.branchId === user.branchId);
             } else if (userRole === 'countrymanager') {
                 const managedBranchIds = bData.data
-                    .filter((b: any) => {
-                        const managerId = typeof b.countryManager === 'object' ? b.countryManager?._id : b.countryManager;
+                    .filter((b: Branch) => {
+                        const managerId = typeof b.countryManager === 'object' ? (b.countryManager as any)?._id : b.countryManager;
                         return managerId === userId;
                     })
                     .map((b: any) => b._id);
@@ -205,7 +205,7 @@ const TargetManagement = () => {
                                                 .filter(b => {
                                                     if (userRole === 'countrymanager') {
                                                         // Handle both populated and unpopulated countryManager
-                                                        const managerId = typeof b.countryManager === 'object' ? b.countryManager?._id : b.countryManager;
+                                                        const managerId = typeof b.countryManager === 'object' ? (b.countryManager as any)?._id : b.countryManager;
                                                         return managerId === userId;
                                                     }
                                                     return true;

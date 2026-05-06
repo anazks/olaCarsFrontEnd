@@ -47,18 +47,18 @@ const CSV_COLUMNS = [
 
 const SAMPLE_DATA = [
     {
-        fullName: 'John Smith', email: 'john.smith@example.com', phone: '+1234567890',
-        whatsappNumber: '+1234567890', dateOfBirth: '1990-05-15', nationality: 'South African',
-        idType: 'National ID', idNumber: 'SA900515123', licenseNumber: 'DL-123456',
-        licenseCountry: 'South Africa', licenseExpiry: '2028-12-31',
-        emergencyName: 'Jane Smith', emergencyRelationship: 'Spouse', emergencyPhone: '+0987654321'
+        fullName: 'John Smith', email: 'john.smith@example.com', phone: '+254700000001',
+        whatsappNumber: '+254700000001', dateOfBirth: '1995-05-15', nationality: 'Kenyan',
+        idType: 'National ID', idNumber: 'ID-12345678', licenseNumber: 'DL-123456',
+        licenseCountry: 'Kenya', licenseExpiry: '2028-12-31',
+        emergencyName: 'Jane Smith', emergencyRelationship: 'Spouse', emergencyPhone: '+254700000002'
     },
     {
-        fullName: 'Maria Garcia', email: 'maria.garcia@example.com', phone: '+1122334455',
-        whatsappNumber: '+1122334455', dateOfBirth: '1985-08-22', nationality: 'South African',
-        idType: 'Passport', idNumber: 'PP-SA885522', licenseNumber: 'DL-789012',
-        licenseCountry: 'South Africa', licenseExpiry: '2027-06-30',
-        emergencyName: 'Carlos Garcia', emergencyRelationship: 'Brother', emergencyPhone: '+5566778899'
+        fullName: 'Maria Garcia', email: 'maria.garcia@example.com', phone: '+254711223344',
+        whatsappNumber: '+254711223344', dateOfBirth: '1990-08-22', nationality: 'Kenyan',
+        idType: 'Passport', idNumber: 'PP-88552211', licenseNumber: 'DL-789012',
+        licenseCountry: 'Kenya', licenseExpiry: '2029-06-30',
+        emergencyName: 'Carlos Garcia', emergencyRelationship: 'Brother', emergencyPhone: '+254722334455'
     }
 ];
 
@@ -191,12 +191,63 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         }
     };
 
-    // Validate a single parsed row
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
+        
+        // Basic presence
         if (!row.fullName?.trim()) errors.push('Missing fullName');
         if (!row.email?.trim()) errors.push('Missing email');
         if (!row.phone?.trim()) errors.push('Missing phone');
+
+        // Email format
+        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+            errors.push('Invalid email format');
+        }
+
+        // Phone: 6-15 digits (allowing + at start)
+        const phoneDigits = (row.phone || '').replace(/[^\d]/g, '');
+        if (row.phone && (phoneDigits.length < 6 || phoneDigits.length > 15)) {
+            errors.push('Phone must be 6-15 digits');
+        }
+
+        // WhatsApp: if provided, 6-15 digits
+        if (row.whatsappNumber) {
+            const waDigits = row.whatsappNumber.replace(/[^\d]/g, '');
+            if (waDigits.length < 6 || waDigits.length > 15) {
+                errors.push('WhatsApp must be 6-15 digits');
+            }
+        }
+
+        // Emergency Phone: 6-15 digits
+        if (row.emergencyPhone) {
+            const epDigits = row.emergencyPhone.replace(/[^\d]/g, '');
+            if (epDigits.length < 6 || epDigits.length > 15) {
+                errors.push('Emergency phone must be 6-15 digits');
+            }
+        }
+
+        // DOB: 14+ years ago
+        if (row.dateOfBirth) {
+            const dob = new Date(row.dateOfBirth);
+            if (isNaN(dob.getTime())) {
+                errors.push('Invalid dateOfBirth format (YYYY-MM-DD)');
+            } else {
+                const minAge = new Date();
+                minAge.setFullYear(minAge.getFullYear() - 14);
+                if (dob > minAge) errors.push('Driver must be at least 14 years old');
+            }
+        }
+
+        // License Expiry: Future
+        if (row.licenseExpiry) {
+            const expiry = new Date(row.licenseExpiry);
+            if (isNaN(expiry.getTime())) {
+                errors.push('Invalid licenseExpiry format (YYYY-MM-DD)');
+            } else if (expiry <= new Date()) {
+                errors.push('License expiry must be in the future');
+            }
+        }
+
         return errors;
     }, []);
 

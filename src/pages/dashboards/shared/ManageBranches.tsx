@@ -14,6 +14,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
 import { getAllBranchManagers, type BranchManager } from '../../../services/branchManagerService';
+import { getAllCountryManagers, createCountryManager, type CountryManager, type CreateCountryManagerPayload } from '../../../services/countryManagerService';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -57,6 +58,7 @@ const ManageBranches = () => {
         status: 'ACTIVE' as string
     });
     const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
+    const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
@@ -101,10 +103,14 @@ const ManageBranches = () => {
     useEffect(() => {
         const fetchManagers = async () => {
             try {
-                const response = await getAllBranchManagers({ limit: 100 });
-                setBranchManagers(response.data);
+                const [bmRes, cmRes] = await Promise.all([
+                    getAllBranchManagers({ limit: 100 }),
+                    getAllCountryManagers({ limit: 100 })
+                ]);
+                setBranchManagers(bmRes.data);
+                setCountryManagers(cmRes.data);
             } catch (err) {
-                console.error("Failed to fetch branch managers", err);
+                console.error("Failed to fetch managers", err);
             }
         };
         fetchManagers();
@@ -839,7 +845,7 @@ const ManageBranches = () => {
                                             }}
                                         >
                                             <option value="">{t('management.common.modal.selectCountryManager')}</option>
-                                            {countryManagers.map(m => (
+                                            {countryManagers.map((m: CountryManager) => (
                                                 <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
                                                     {m.fullName} ({m.country})
                                                 </option>

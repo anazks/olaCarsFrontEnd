@@ -357,7 +357,6 @@ const ManageOperationalAdmins = () => {
                                     </button>
                                 </th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.twoFactor')}</th>
                                 <th className="px-6 py-4">
                                     <button onClick={() => handleSort('createdAt')} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
                                         {t('management.common.table.created')} <SortIcon field="createdAt" />
@@ -384,13 +383,6 @@ const ManageOperationalAdmins = () => {
                                             <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-colors" style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                                                 {t(`management.common.status.${admin.status.toLowerCase()}`, { defaultValue: admin.status })}
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-left transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            {admin.twoFactorEnabled ? (
-                                                <span className="text-green-400 text-[10px] font-black tracking-wider px-2 py-0.5 rounded bg-green-400/10">{t('management.common.status.enabled')}</span>
-                                            ) : (
-                                                <span className="text-[10px] font-bold opacity-30">{t('management.common.status.disabled')}</span>
-                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-left text-[11px] transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

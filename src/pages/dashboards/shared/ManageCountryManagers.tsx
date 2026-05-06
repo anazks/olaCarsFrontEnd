@@ -417,7 +417,6 @@ const ManageCountryManagers = () => {
                                     </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.country')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.twoFactor')}</th>
                                     <th className="px-6 py-4">
                                         <button onClick={() => handleSort('createdAt')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.common.table.created')} <SortIcon field="createdAt" />
@@ -459,13 +458,6 @@ const ManageCountryManagers = () => {
                                                 <span className="px-3 py-1 rounded-full text-xs font-bold border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
                                                     {t(`management.common.status.${manager.status.toLowerCase()}`, { defaultValue: manager.status })}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {manager.twoFactorEnabled ? (
-                                                    <span className="text-xs font-bold" style={{ color: '#22c55e' }}>{t('management.common.status.enabled')}</span>
-                                                ) : (
-                                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.common.status.disabled')}</span>
-                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
                                                 {manager.createdAt ? new Date(manager.createdAt).toLocaleDateString() : '—'}

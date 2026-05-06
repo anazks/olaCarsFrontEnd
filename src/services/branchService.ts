@@ -15,6 +15,11 @@ export interface Branch {
         fullName: string;
         email: string;
     } | string;
+    countryManager?: {
+        _id: string;
+        fullName: string;
+        email: string;
+    } | string;
     status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
     createdAt?: string;
     updatedAt?: string;

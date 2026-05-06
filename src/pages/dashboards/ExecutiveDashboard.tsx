@@ -38,6 +38,8 @@ const ExecutiveDashboard = () => {
     const [globalStartDate, setGlobalStartDate] = useState<string>('');
     const [globalEndDate, setGlobalEndDate] = useState<string>('');
 
+    const today = new Date().toISOString().split('T')[0];
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -244,7 +246,15 @@ const ExecutiveDashboard = () => {
                         <input
                             type="date"
                             value={globalStartDate}
-                            onChange={(e) => setGlobalStartDate(e.target.value)}
+                            max={globalEndDate || today}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val && val <= today && (!globalEndDate || val <= globalEndDate)) {
+                                    setGlobalStartDate(val);
+                                } else if (!val) {
+                                    setGlobalStartDate('');
+                                }
+                            }}
                             className="px-4 py-2 border rounded-xl text-sm outline-none transition-all font-bold"
                             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         />
@@ -252,7 +262,16 @@ const ExecutiveDashboard = () => {
                         <input
                             type="date"
                             value={globalEndDate}
-                            onChange={(e) => setGlobalEndDate(e.target.value)}
+                            min={globalStartDate}
+                            max={today}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val && val <= today && (!globalStartDate || val >= globalStartDate)) {
+                                    setGlobalEndDate(val);
+                                } else if (!val) {
+                                    setGlobalEndDate('');
+                                }
+                            }}
                             className="px-4 py-2 border rounded-xl text-sm outline-none transition-all font-bold"
                             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         />

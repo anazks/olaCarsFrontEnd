@@ -625,6 +625,7 @@ const DriverDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {!(driver.status === 'ACTIVE' && driver.currentVehicle) && (
                     <HasPermission permission="DRIVER_DELETE">
                         <button
                             onClick={() => handleProgress('REJECTED', { rejection: { reason: 'OTHER', notes: 'Manually disqualified' } })}
@@ -635,6 +636,7 @@ const DriverDetail = () => {
                             Disqualify
                         </button>
                     </HasPermission>
+                    )}
                 </div>
             </div>
 
