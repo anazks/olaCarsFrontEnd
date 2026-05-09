@@ -152,6 +152,11 @@ export interface BulkUploadResult {
     errors: Array<{ row: number; message: string }>;
 }
 
+export interface DataMigrationResult {
+    created: Array<{ row: number; driverId: string; driverDbId: string; vehicleId: string; name: string; vehicleNumber: string }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
 // GET all drivers with filters
 export const getAllDrivers = async (filters: DriverFilters = {}): Promise<PaginatedResponse<Driver>> => {
     const response = await api.get('/api/driver', { params: filters });
@@ -202,6 +207,16 @@ export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promis
     return response.data;
 };
 
+export const dataMigrateDrivers = async (
+    drivers: any[], branch?: string, handlingStaff?: string
+): Promise<{ message: string; data: DataMigrationResult }> => {
+    const payload: any = { drivers };
+    if (branch) payload.branch = branch;
+    if (handlingStaff) payload.handlingStaff = handlingStaff;
+    const response = await api.post('/api/driver/data-migration', payload);
+    return response.data;
+};
+
 // Also export as a default object for backward compatibility if needed, 
 // though individual exports are preferred now.
 export const driverService = {
@@ -213,7 +228,8 @@ export const driverService = {
     uploadDocument: uploadDriverDocument,
     markRentAsPaid,
     deleteDriver,
-    bulkCreateDrivers
+    bulkCreateDrivers,
+    dataMigrateDrivers
 };
 
 export default driverService;

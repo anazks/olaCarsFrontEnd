@@ -9,6 +9,7 @@ export interface FinanceStaff {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions: string[];
+    fleetNumbers: string[];
     createdAt?: string;
     updatedAt?: string;
 }
@@ -45,6 +46,7 @@ export interface CreateFinanceStaffPayload {
     branchId: string;
     status?: string;
     permissions?: string[];
+    fleetNumbers?: string[];
 }
 
 export interface UpdateFinanceStaffPayload {
@@ -56,6 +58,7 @@ export interface UpdateFinanceStaffPayload {
     branchId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions?: string[];
+    fleetNumbers?: string[];
 }
 
 // GET all finance staff with filters
@@ -85,4 +88,10 @@ export const updateFinanceStaff = async (
 // DELETE a finance staff by ID
 export const deleteFinanceStaff = async (id: string): Promise<void> => {
     await api.delete(`/api/finance-staff/${id}`);
+};
+
+// GET the next consecutive fleet number
+export const getNextFleetNumber = async (): Promise<string> => {
+    const response = await api.get('/api/finance-staff/next-fleet-number');
+    return response.data.data;
 };

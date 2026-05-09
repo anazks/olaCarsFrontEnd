@@ -309,6 +309,7 @@ const VehicleList = () => {
                                 <thead>
                                     <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet #</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.year')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</th>
@@ -340,6 +341,16 @@ const VehicleList = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
+                                                <div className="text-sm font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
+                                                    {v.basicDetails?.fleetNumber || '—'}
+                                                </div>
+                                                {v.handlingStaff && (
+                                                    <div className="text-[10px] mt-0.5 opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                        {typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
                                                 <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails?.vin || '—'}</div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -355,7 +366,7 @@ const VehicleList = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {v.purchaseDetails.currency} {v.purchaseDetails.purchasePrice.toLocaleString()}
+                                                    {v.purchaseDetails?.currency || ""} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">

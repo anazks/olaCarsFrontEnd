@@ -70,6 +70,7 @@ export interface BasicDetails {
     odometer?: number;
     gpsSerialNumber?: string;
     leaseDurationWeeks?: number;
+    fleetNumber?: string;
 }
 
 export interface LegalDocs {
@@ -213,6 +214,13 @@ export interface Vehicle {
     transferDetails?: TransferDetails;
     retirementDetails?: RetirementDetails;
     status: VehicleStatus;
+    handlingStaff?: {
+        _id: string;
+        fullName: string;
+        email: string;
+        phone?: string;
+        fleetNumbers?: string[];
+    };
     statusHistory?: StatusHistoryEntry[];
     createdBy?: string;
     creatorRole?: string;
@@ -248,8 +256,10 @@ export interface CreateVehiclePayload {
         bodyType?: BodyType;
         odometer?: number;
         gpsSerialNumber?: string;
+        fleetNumber?: string;
     };
     insuranceId?: string;
+    handlingStaff?: string;
 }
 
 export interface ProgressVehiclePayload {

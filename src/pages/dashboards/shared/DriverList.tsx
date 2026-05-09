@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft, Upload } from 'lucide-react';
+import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft, Upload, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import BulkDriverUpload from './BulkDriverUpload';
+import DataMigrationUpload from './DataMigrationUpload';
 
 const DriverList = () => {
     const { t } = useTranslation();
@@ -14,6 +15,7 @@ const DriverList = () => {
     const [loading, setLoading] = useState(true);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [showBulkUpload, setShowBulkUpload] = useState(false);
+    const [showDataMigration, setShowDataMigration] = useState(false);
 
     // Filter State
     const [searchTerm, setSearchTerm] = useState('');
@@ -148,6 +150,17 @@ const DriverList = () => {
                         <Filter size={18} /> {t('management.common.filters')}
                     </button>
                     <button
+                        onClick={() => setShowDataMigration(true)}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 border"
+                        style={{ 
+                            borderColor: '#f59e0b', 
+                            color: '#f59e0b',
+                            background: 'rgba(245,158,11,0.06)'
+                        }}
+                    >
+                        <Database size={18} /> Data Migration
+                    </button>
+                    <button
                         onClick={() => setShowBulkUpload(true)}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 border"
                         style={{ 
@@ -255,6 +268,11 @@ const DriverList = () => {
                                         {t('management.drivers.table.driver')} <SortIcon field="personalInfo.fullName" />
                                     </div>
                                 </th>
+                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('driverId')}>
+                                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        ID <SortIcon field="driverId" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                         {t('common.status')} <SortIcon field="status" />
@@ -275,12 +293,12 @@ const DriverList = () => {
                             {loading ? (
                                 Array(5).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={5} className="px-6 py-4 h-16" style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}></td>
+                                        <td colSpan={6} className="px-6 py-4 h-16" style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}></td>
                                     </tr>
                                 ))
                             ) : drivers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center" style={{ color: 'var(--text-dim)' }}>
+                                    <td colSpan={6} className="px-6 py-12 text-center" style={{ color: 'var(--text-dim)' }}>
                                         <div className="flex flex-col items-center gap-2">
                                             <Users size={40} style={{ opacity: 0.2 }} />
                                             <p>{t('management.drivers.empty.noDrivers')}</p>
@@ -308,6 +326,11 @@ const DriverList = () => {
                                                     </div>
                                                     <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{driver.personalInfo?.email}</div>
                                                 </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="font-mono text-xs font-bold" style={{ color: 'var(--brand-lime)' }}>
+                                                {driver.driverId || '—'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -390,6 +413,15 @@ const DriverList = () => {
                 onSuccess={() => {
                     fetchDrivers();
                     setShowBulkUpload(false);
+                }}
+            />
+            {/* Data Migration Modal */}
+            <DataMigrationUpload
+                isOpen={showDataMigration}
+                onClose={() => setShowDataMigration(false)}
+                onSuccess={() => {
+                    fetchDrivers();
+                    setShowDataMigration(false);
                 }}
             />
         </div>

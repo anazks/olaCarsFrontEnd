@@ -86,6 +86,7 @@ const VehicleDetail = () => {
     const [maintThreshold, setMaintThreshold] = useState<number>(1000);
     const [isUpdatingThreshold, setIsUpdatingThreshold] = useState(false);
     const [isEditingOverview, setIsEditingOverview] = useState(false);
+    const [isEditingDocs, setIsEditingDocs] = useState(false);
     const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
 
     const handleEditOverview = async () => {
@@ -333,6 +334,7 @@ const VehicleDetail = () => {
             console.log('--- API CALL SUCCESS: uploadVehicleDocuments ---', uploadedDocs);
             setActionSuccess('Documents uploaded successfully!');
             setUploadFiles({});
+            setIsEditingDocs(false);
             await fetchVehicle();
             return uploadedDocs;
         } catch (err: any) {
@@ -577,15 +579,21 @@ const VehicleDetail = () => {
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<FileText size={16} />} title={t('management.vehicles.vehicleDetail.purchaseInformation')} />
                     <div className="space-y-4">
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vendor')} value={vehicle.purchaseDetails.vendorName} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.purchaseDate')} value={vehicle.purchaseDetails.purchaseDate ? new Date(vehicle.purchaseDetails.purchaseDate).toLocaleDateString() : undefined} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.vendor')} value={vehicle.purchaseDetails?.vendorName} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.purchaseDate')} value={vehicle.purchaseDetails?.purchaseDate ? new Date(vehicle.purchaseDetails?.purchaseDate).toLocaleDateString() : undefined} />
                         <div className="grid grid-cols-2 gap-4">
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.price')} value={`${vehicle.purchaseDetails.currency} ${vehicle.purchaseDetails.purchasePrice.toLocaleString()}`} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.method')} value={vehicle.purchaseDetails.paymentMethod} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.price')} value={`${vehicle.purchaseDetails?.currency || ""} ${(vehicle.purchaseDetails?.purchasePrice || 0).toLocaleString()}`} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.method')} value={vehicle.purchaseDetails?.paymentMethod} />
                         </div>
-                        {vehicle.purchaseDetails.branch && typeof vehicle.purchaseDetails.branch !== 'string' && (
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.assignedBranch')} value={vehicle.purchaseDetails.branch.name} />
+                        {vehicle.purchaseDetails?.branch && typeof vehicle.purchaseDetails?.branch !== 'string' && (
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.assignedBranch')} value={vehicle.purchaseDetails?.branch?.name} />
                         )}
+                        <div className="pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoRow label="Handling Staff" value={vehicle.handlingStaff?.fullName} />
+                                <InfoRow label="Fleet Number" value={vehicle.basicDetails?.fleetNumber} />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -986,12 +994,43 @@ const VehicleDetail = () => {
             )}
 
             {/* DOCUMENTS REVIEW / VERIFICATION */}
-            {(vehicle.status === 'DOCUMENTS REVIEW' || currentIdx > PIPELINE.indexOf('DOCUMENTS REVIEW')) && (() => {
+            {vehicle.status !== 'PENDING ENTRY' && (() => {
                 const isReadOnly = vehicle.status !== 'DOCUMENTS REVIEW';
                 return (
                     <div className={cardClass} style={cardStyle}>
-                        <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
-                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review the uploaded documents for accuracy and completeness.</p>
+                        <div className="flex justify-between items-center mb-2">
+                            <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
+                            <HasPermission permission="VEHICLE_EDIT">
+                                {!isEditingDocs ? (
+                                    <button 
+                                        onClick={() => setIsEditingDocs(true)}
+                                        className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer"
+                                        title="Manage Documents"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleUpload}
+                                            disabled={uploadLoading}
+                                            className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
+                                            title="Save Documents"
+                                        >
+                                            <Save size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => { setIsEditingDocs(false); setUploadFiles({}); }}
+                                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                            title="Cancel"
+                                        >
+                                            <XCircle size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                            </HasPermission>
+                        </div>
+                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review and manage the vehicle's legal and procurement documents.</p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-4 mt-4">
                             {DOC_FIELDS.map(df => {
@@ -1005,20 +1044,48 @@ const VehicleDetail = () => {
                                 const docUrl = toFullUrl(rawUrl);
 
                                 return (
-                                    <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
-                                            {docUrl ? (
-                                                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
-                                                    <FileText size={10} /> View Document
-                                                </a>
-                                            ) : (
-                                                <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                                                    <XCircle size={10} /> Not Uploaded
-                                                </span>
-                                            )}
+                                    <div key={df.key} className="p-3 rounded-xl border flex flex-col gap-2" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
+                                                {docUrl ? (
+                                                    <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
+                                                        <FileText size={10} /> View Document
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                        <XCircle size={10} /> Not Uploaded
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
                                         </div>
-                                        {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
+
+                                        {isEditingDocs && (
+                                            <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                                                <input 
+                                                    type="file" 
+                                                    ref={el => { fileInputRefs.current[df.key] = el; }} 
+                                                    className="hidden"
+                                                    onChange={e => {
+                                                        if (e.target.files?.[0]) {
+                                                            setUploadFiles(prev => ({ ...prev, [df.key]: e.target.files![0] }));
+                                                        }
+                                                    }}
+                                                />
+                                                <span className="text-[9px] text-dim truncate max-w-[80px]">
+                                                    {(uploadFiles[df.key] as File)?.name || 'No file chosen'}
+                                                </span>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => fileInputRefs.current[df.key]?.click()} 
+                                                    className="px-2 py-1 rounded-lg text-[9px] font-bold cursor-pointer" 
+                                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                                >
+                                                    {t('common.search').split('...')[0]}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

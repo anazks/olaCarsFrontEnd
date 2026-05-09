@@ -55,7 +55,8 @@ const ManageFinanceStaff = () => {
         phone: '',
         branchId: '',
         status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'LOCKED',
-        permissions: [] as string[]
+        permissions: [] as string[],
+        fleetNumbers: ''
     });
     const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
     const [formError, setFormError] = useState<string | null>(null);
@@ -118,7 +119,8 @@ const ManageFinanceStaff = () => {
             phone: '',
             branchId: '',
             status: 'ACTIVE',
-            permissions: []
+            permissions: [],
+            fleetNumbers: ''
         });
         setActiveTab('details');
         setFormError(null);
@@ -134,7 +136,8 @@ const ManageFinanceStaff = () => {
             phone: staff.phone || '',
             branchId: typeof staff.branchId === 'object' ? staff.branchId?._id || '' : staff.branchId,
             status: staff.status,
-            permissions: staff.permissions || []
+            permissions: staff.permissions || [],
+            fleetNumbers: (staff.fleetNumbers || []).join(', ')
         });
         setActiveTab('details');
         setFormError(null);
@@ -160,7 +163,8 @@ const ManageFinanceStaff = () => {
                     phone: formData.phone,
                     branchId: formData.branchId,
                     status: formData.status,
-                    permissions: formData.permissions
+                    permissions: formData.permissions,
+                    fleetNumbers: formData.fleetNumbers.split(',').map(s => s.trim()).filter(s => s)
                 };
                 await createFinanceStaff(payload);
             } else if (modalMode === 'edit' && selectedStaff) {
@@ -171,7 +175,8 @@ const ManageFinanceStaff = () => {
                     phone: formData.phone,
                     branchId: formData.branchId,
                     status: formData.status,
-                    permissions: formData.permissions
+                    permissions: formData.permissions,
+                    fleetNumbers: formData.fleetNumbers.split(',').map(s => s.trim()).filter(s => s)
                 };
                 if (formData.password) {
                     payload.password = formData.password;
@@ -378,6 +383,7 @@ const ManageFinanceStaff = () => {
                                 <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
                                     <div className="flex items-center gap-2">{t('management.common.table.status')} <SortIcon field="status" /></div>
                                 </th>
+                                <th className="px-6 py-4">{t('Fleet #')}</th>
                                 <th className="px-6 py-4 text-right">{t('management.common.table.actions')}</th>
                             </tr>
                         </thead>
@@ -428,6 +434,17 @@ const ManageFinanceStaff = () => {
                                                 }`}>
                                                 {t(`management.common.status.${staff.status.toLowerCase()}`)}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                                {(staff.fleetNumbers || []).length > 0 ? (
+                                                    staff.fleetNumbers.map((fn, idx) => (
+                                                        <span key={idx} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold" style={{ color: 'var(--text-main)' }}>
+                                                            {fn}
+                                                        </span>
+                                                    ))
+                                                ) : '—'}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
@@ -680,6 +697,19 @@ const ManageFinanceStaff = () => {
                                             <option value="SUSPENDED">{t('management.common.status.suspended')}</option>
                                             <option value="LOCKED">{t('management.common.status.locked')}</option>
                                         </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                            Fleet Numbers (Comma separated)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.fleetNumbers}
+                                            onChange={(e) => setFormData({ ...formData, fleetNumbers: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            placeholder="e.g. 101, 102, 103"
+                                        />
                                     </div>
                                 </div>
                             ) : (

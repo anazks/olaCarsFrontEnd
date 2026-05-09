@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Car, X, Check, AlertCircle, DollarSign } from 'lucide-react';
+import { Car, X, Check, AlertCircle, DollarSign, Plus } from 'lucide-react';
 import { createVehicle } from '../../../services/vehicleService';
 import type { CreateVehiclePayload, PaymentMethod } from '../../../services/vehicleService';
 import { getVehiclePurchaseOrders } from '../../../services/purchaseOrderService';
 import type { PurchaseOrder } from '../../../services/purchaseOrderService';
 import { useNavigate } from 'react-router-dom';
+import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber } from '../../../services/financeStaffService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 
 // ── Shared UI Constants ──────────────────────────────────────────────────────
 
@@ -33,7 +35,19 @@ const CreateVehicle = () => {
 
     // Data handling
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [financeStaff, setFinanceStaff] = useState<FinanceStaff[]>([]);
+    
+    // Loading states
+    const [branchesLoading, setBranchesLoading] = useState(false);
+    const [posLoading, setPosLoading] = useState(false);
+    const [staffLoading, setStaffLoading] = useState(false);
+    const [nextFleetLoading, setNextFleetLoading] = useState(false);
+
+    // Selection states
     const [branchName, setBranchName] = useState<string>('');
+    const [selectedStaffObj, setSelectedStaffObj] = useState<FinanceStaff | null>(null);
+    const [isAddingNewFleet, setIsAddingNewFleet] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState<Partial<CreateVehiclePayload>>({
@@ -45,24 +59,76 @@ const CreateVehicle = () => {
             paymentMethod: 'Cash',
             branch: '',
             purchaseOrder: '',
-        }
+        },
+        handlingStaff: '',
+        basicDetails: {
+            fleetNumber: ''
+        } as any
     });
 
-    const fetchData = useCallback(async () => {
+    const fetchInitialData = useCallback(async () => {
+        setBranchesLoading(true);
         try {
-            const posResponse = await getVehiclePurchaseOrders(1, 100);
-            const posData = (posResponse as any).data || posResponse;
-            setPurchaseOrders(Array.isArray(posData) ? posData.filter((po: any) => po.status === 'APPROVED') : []);
+            const res = await getAllBranches({ status: 'ACTIVE', limit: 500 });
+            setBranches(res.data || []);
         } catch (err) {
-            console.error('Failed to fetch purchase orders:', err);
+            console.error('Failed to fetch branches:', err);
+        } finally {
+            setBranchesLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchInitialData();
+    }, [fetchInitialData]);
 
     // ── Handlers ────────────────────────────────────────────────────────────
+
+    const handleBranchChange = async (branchId: string) => {
+        // Reset dependent fields
+        setFormData(prev => ({
+            ...prev,
+            purchaseDetails: {
+                ...prev.purchaseDetails!,
+                branch: branchId,
+                purchaseOrder: '',
+                vendorName: '',
+                purchasePrice: 0,
+                purchaseDate: '',
+            },
+            handlingStaff: '',
+            basicDetails: { ...prev.basicDetails, fleetNumber: '' } as any
+        }));
+        setBranchName('');
+        setSelectedStaffObj(null);
+        setPurchaseOrders([]);
+        setFinanceStaff([]);
+
+        if (!branchId) return;
+
+        // Fetch POs for this branch
+        setPosLoading(true);
+        try {
+            const posResponse = await getVehiclePurchaseOrders(1, 100, branchId);
+            const posData = (posResponse as any).data || posResponse;
+            setPurchaseOrders(Array.isArray(posData) ? posData.filter((po: any) => po.status === 'APPROVED') : []);
+        } catch (err) {
+            console.error('Failed to fetch POs:', err);
+        } finally {
+            setPosLoading(false);
+        }
+
+        // Fetch Staff for this branch
+        setStaffLoading(true);
+        try {
+            const staffRes = await getAllFinanceStaff({ branchId: branchId, limit: 200 });
+            setFinanceStaff(staffRes.data || []);
+        } catch (err) {
+            console.error('Failed to fetch staff:', err);
+        } finally {
+            setStaffLoading(false);
+        }
+    };
 
     const handlePOChange = (poId: string) => {
         const selectedPO = purchaseOrders.find(p => p._id === poId);
@@ -92,7 +158,7 @@ const CreateVehicle = () => {
                     ...prev.purchaseDetails!,
                     purchaseOrder: poId,
                     vendorName: '',
-                    branch: '',
+                    branch: formData.purchaseDetails?.branch || '',
                     purchasePrice: 0,
                     purchaseDate: '',
                 }
@@ -110,8 +176,9 @@ const CreateVehicle = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const p = formData.purchaseDetails;
+        if (!p?.branch) { setError('Branch is required'); return; }
         if (!p?.purchaseOrder) { setError('Purchase Order is required'); return; }
-        if (!p?.branch) { setError('Branch is required (from PO)'); return; }
+        if (!formData.handlingStaff) { setError('Handling Staff is required'); return; }
 
         setLoading(true);
         setError(null);
@@ -170,6 +237,22 @@ const CreateVehicle = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField label="Branch" required>
+                            <select
+                                required
+                                value={formData.purchaseDetails?.branch || ''}
+                                onChange={(e) => handleBranchChange(e.target.value)}
+                                className={inputClass}
+                                style={inputStyle}
+                                disabled={branchesLoading}
+                            >
+                                <option value="">{branchesLoading ? 'Loading branches...' : 'Select a branch'}</option>
+                                {branches.map(b => (
+                                    <option key={b._id} value={b._id}>{b.name} — {b.city}</option>
+                                ))}
+                            </select>
+                        </FormField>
+
                         <FormField label="Purchase Order" required>
                             <select
                                 required
@@ -177,19 +260,179 @@ const CreateVehicle = () => {
                                 onChange={(e) => handlePOChange(e.target.value)}
                                 className={inputClass}
                                 style={inputStyle}
+                                disabled={posLoading || !formData.purchaseDetails?.branch}
                             >
-                                <option value="">Select an approved PO</option>
+                                <option value="">
+                                    {!formData.purchaseDetails?.branch 
+                                        ? 'Select a branch first' 
+                                        : posLoading 
+                                            ? 'Loading POs...' 
+                                            : purchaseOrders.length === 0 
+                                                ? 'No approved POs found' 
+                                                : 'Select an approved PO'}
+                                </option>
                                 {purchaseOrders.map(po => (
                                     <option key={po._id} value={po._id}>{po.purchaseOrderNumber}</option>
                                 ))}
                             </select>
                         </FormField>
 
+                        <FormField label="Handling Staff (Finance)" required>
+                            <select
+                                required
+                                value={formData.handlingStaff || ''}
+                                onChange={async (e) => {
+                                    const sId = e.target.value;
+                                    const s = financeStaff.find(st => st._id === sId) || null;
+                                    setSelectedStaffObj(s);
+                                    
+                                    let fleetToAssign = '';
+                                    
+                                    if (sId) {
+                                        if (s?.fleetNumbers && s.fleetNumbers.length > 0) {
+                                            fleetToAssign = s.fleetNumbers[0];
+                                            setIsAddingNewFleet(false);
+                                        } else {
+                                            setIsAddingNewFleet(true);
+                                            setNextFleetLoading(true);
+                                            try {
+                                                const suggested = await getNextFleetNumber();
+                                                fleetToAssign = suggested;
+                                            } catch (err) {
+                                                console.error('Failed to fetch next fleet number:', err);
+                                            } finally {
+                                                setNextFleetLoading(false);
+                                            }
+                                        }
+                                    }
+
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        handlingStaff: sId,
+                                        basicDetails: {
+                                            ...prev.basicDetails,
+                                            fleetNumber: fleetToAssign
+                                        } as any
+                                    }));
+                                }}
+                                className={inputClass}
+                                style={inputStyle}
+                                disabled={staffLoading || !formData.purchaseDetails?.branch}
+                            >
+                                <option value="">
+                                    {!formData.purchaseDetails?.branch 
+                                        ? 'Select a branch first' 
+                                        : staffLoading 
+                                            ? 'Loading Staff...' 
+                                            : financeStaff.length === 0 
+                                                ? 'No finance staff found' 
+                                                : 'Select Handling Staff'}
+                                </option>
+                                {financeStaff.map(s => (
+                                    <option key={s._id} value={s._id}>
+                                        {s.fullName} {(s.fleetNumbers && s.fleetNumbers.length > 0) ? `(Fleets: ${s.fleetNumbers.join(', ')})` : '(No Fleet Assigned)'}
+                                    </option>
+                                ))}
+                            </select>
+                        </FormField>
+
+                        <FormField label="Assign Fleet Number" required={!!formData.handlingStaff}>
+                            {(!isAddingNewFleet && selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0) ? (
+                                <div className="space-y-2">
+                                    <select
+                                        value={formData.basicDetails?.fleetNumber || ''}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            basicDetails: { ...prev.basicDetails, fleetNumber: e.target.value } as any
+                                        }))}
+                                        className={inputClass}
+                                        style={inputStyle}
+                                        required={!!formData.handlingStaff}
+                                    >
+                                        <option value="">Select an existing fleet number</option>
+                                        {selectedStaffObj.fleetNumbers.map((fn, idx) => (
+                                            <option key={idx} value={fn}>{fn}</option>
+                                        ))}
+                                    </select>
+                                    <button 
+                                        type="button"
+                                        onClick={async () => {
+                                            setIsAddingNewFleet(true);
+                                            setNextFleetLoading(true);
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                basicDetails: { ...prev.basicDetails, fleetNumber: '' } as any
+                                            }));
+                                            try {
+                                                const suggested = await getNextFleetNumber();
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    basicDetails: { ...prev.basicDetails, fleetNumber: suggested } as any
+                                                }));
+                                            } catch (err) {
+                                                console.error('Failed to fetch next fleet number:', err);
+                                            } finally {
+                                                setNextFleetLoading(false);
+                                            }
+                                        }}
+                                        className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 hover:opacity-70 transition-opacity"
+                                        style={{ color: 'var(--brand-lime)' }}
+                                    >
+                                        <Plus size={10} /> Add New Fleet Number
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder={nextFleetLoading ? "Fetching next number..." : "Enter new fleet number"}
+                                            required={!!formData.handlingStaff}
+                                            readOnly={nextFleetLoading}
+                                            value={formData.basicDetails?.fleetNumber || ''}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                basicDetails: { ...prev.basicDetails, fleetNumber: e.target.value } as any
+                                            }))}
+                                            className={inputClass}
+                                            style={nextFleetLoading ? readOnlyStyle : inputStyle}
+                                        />
+                                        {nextFleetLoading && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                <div className="w-3 h-3 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0 && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setIsAddingNewFleet(false);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    basicDetails: { ...prev.basicDetails, fleetNumber: selectedStaffObj.fleetNumbers![0] } as any
+                                                }));
+                                            }}
+                                            className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 hover:opacity-70 transition-opacity"
+                                            style={{ color: 'var(--text-dim)' }}
+                                        >
+                                            Select from existing fleets
+                                        </button>
+                                    )}
+                                    {isAddingNewFleet && (
+                                        <div className="text-[9px] uppercase tracking-widest opacity-50 px-1" style={{ color: 'var(--text-main)' }}>
+                                            Manual Type Field (Adding new fleet to staff)
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </FormField>
+
                         <FormField label="Vendor Name (from PO)">
                             <input
                                 type="text"
                                 readOnly
-                                placeholder="Auto-filled"
+                                placeholder="Auto-filled from PO"
                                 value={formData.purchaseDetails?.vendorName || ''}
                                 className={inputClass}
                                 style={readOnlyStyle}
@@ -202,17 +445,6 @@ const CreateVehicle = () => {
                                 readOnly
                                 required
                                 value={formData.purchaseDetails?.purchaseDate || ''}
-                                className={inputClass}
-                                style={readOnlyStyle}
-                            />
-                        </FormField>
-
-                        <FormField label="Branch (from PO)" required>
-                            <input
-                                type="text"
-                                readOnly
-                                placeholder="Auto-filled"
-                                value={branchName}
                                 className={inputClass}
                                 style={readOnlyStyle}
                             />

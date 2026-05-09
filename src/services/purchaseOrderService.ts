@@ -98,9 +98,11 @@ export const getAllPurchaseOrders = async (filters: PurchaseOrderFilters = {}): 
 };
 
 // GET purchase orders filtered by purpose=Vehicle (for vehicle onboarding)
-export const getVehiclePurchaseOrders = async (page = 1, limit = 10): Promise<PaginatedResponse<PurchaseOrder>> => {
+export const getVehiclePurchaseOrders = async (page = 1, limit = 10, branchId?: string): Promise<PaginatedResponse<PurchaseOrder>> => {
+    const params: any = { purpose: 'Vehicle', isUsed: false, page, limit };
+    if (branchId) params.branch = branchId;
     const response = await api.get('/api/purchase-order', {
-        params: { purpose: 'Vehicle', isUsed: false, page, limit }
+        params
     });
     return response.data;
 };
