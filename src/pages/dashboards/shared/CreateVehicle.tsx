@@ -98,7 +98,6 @@ const CreateVehicle = () => {
             handlingStaff: '',
             basicDetails: { ...prev.basicDetails, fleetNumber: '' } as any
         }));
-        setBranchName('');
         setSelectedStaffObj(null);
         setPurchaseOrders([]);
         setFinanceStaff([]);
@@ -134,10 +133,8 @@ const CreateVehicle = () => {
         if (selectedPO) {
             const vendorName = typeof selectedPO.supplier === 'object' ? selectedPO.supplier.name : 'Unknown Supplier';
             const branchId = typeof selectedPO.branch === 'object' ? selectedPO.branch._id : selectedPO.branch;
-            const bName = typeof selectedPO.branch === 'object' ? `${selectedPO.branch.name} — ${selectedPO.branch.city}` : 'Specified in PO';
             const poDate = selectedPO.purchaseOrderDate ? new Date(selectedPO.purchaseOrderDate).toISOString().split('T')[0] : '';
 
-            setBranchName(bName);
             setFormData(prev => ({
                 ...prev,
                 purchaseDetails: {
@@ -150,7 +147,6 @@ const CreateVehicle = () => {
                 }
             }));
         } else {
-            setBranchName('');
             setFormData(prev => ({
                 ...prev,
                 purchaseDetails: {
