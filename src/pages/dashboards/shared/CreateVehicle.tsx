@@ -45,7 +45,6 @@ const CreateVehicle = () => {
     const [nextFleetLoading, setNextFleetLoading] = useState(false);
 
     // Selection states
-    const [branchName, setBranchName] = useState<string>('');
     const [selectedStaffObj, setSelectedStaffObj] = useState<FinanceStaff | null>(null);
     const [isAddingNewFleet, setIsAddingNewFleet] = useState(false);
 

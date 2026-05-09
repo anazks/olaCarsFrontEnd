@@ -4,6 +4,7 @@ import type { Branch } from './branchService';
 export interface Driver {
     _id: string;
     id?: string;
+    driverId?: string;
     personalInfo: {
         fullName: string;
         email: string;

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -48,7 +47,6 @@ const SAMPLE_DATA = [{
 }];
 
 const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
-    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
