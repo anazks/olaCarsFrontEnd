@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Car, X, Check, AlertCircle, DollarSign, Plus } from 'lucide-react';
 import { createVehicle } from '../../../services/vehicleService';
 import type { CreateVehiclePayload, PaymentMethod } from '../../../services/vehicleService';
 import { getVehiclePurchaseOrders } from '../../../services/purchaseOrderService';
 import type { PurchaseOrder } from '../../../services/purchaseOrderService';
 import { useNavigate } from 'react-router-dom';
-import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber } from '../../../services/financeStaffService';
+import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import toast from 'react-hot-toast';
 
 // ── Shared UI Constants ──────────────────────────────────────────────────────
 
@@ -47,6 +48,9 @@ const CreateVehicle = () => {
     // Selection states
     const [selectedStaffObj, setSelectedStaffObj] = useState<FinanceStaff | null>(null);
     const [isAddingNewFleet, setIsAddingNewFleet] = useState(false);
+    const [fleetError, setFleetError] = useState<string | null>(null);
+    const [isCheckingFleet, setIsCheckingFleet] = useState(false);
+    const fleetInputRef = useRef<HTMLInputElement>(null);
 
     // Form state
     const [formData, setFormData] = useState<Partial<CreateVehiclePayload>>({
@@ -76,6 +80,33 @@ const CreateVehicle = () => {
             setBranchesLoading(false);
         }
     }, []);
+
+    // Fleet number uniqueness check
+    useEffect(() => {
+        const fleetNum = formData.basicDetails?.fleetNumber;
+        if (!fleetNum || !isAddingNewFleet) {
+            setFleetError(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsCheckingFleet(true);
+            try {
+                const res = await checkFleetAvailability(fleetNum);
+                if (!res.available && res.staffId !== formData.handlingStaff) {
+                    setFleetError(`Fleet ${fleetNum} is already assigned to ${res.assignedTo}`);
+                } else {
+                    setFleetError(null);
+                }
+            } catch (err) {
+                console.error('Fleet check failed:', err);
+            } finally {
+                setIsCheckingFleet(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.basicDetails?.fleetNumber, isAddingNewFleet, formData.handlingStaff]);
 
     useEffect(() => {
         fetchInitialData();
@@ -182,7 +213,19 @@ const CreateVehicle = () => {
             setSuccess(true);
             setTimeout(() => navigate('/admin/country-manager'), 1500);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to create vehicle');
+            const serverMsg = err.response?.data?.message;
+            const errType = err.response?.data?.errorType;
+            
+            if (errType === 'DUPLICATE_FLEET') {
+                toast.error(serverMsg || 'Fleet number already in use');
+                setFleetError(serverMsg);
+                setIsAddingNewFleet(true);
+                setTimeout(() => {
+                    fleetInputRef.current?.focus();
+                }, 100);
+            } else {
+                setError(serverMsg || err.message || 'Failed to create vehicle');
+            }
         } finally {
             setLoading(false);
         }
@@ -389,15 +432,21 @@ const CreateVehicle = () => {
                                                 ...prev,
                                                 basicDetails: { ...prev.basicDetails, fleetNumber: e.target.value } as any
                                             }))}
+                                            ref={fleetInputRef}
                                             className={inputClass}
                                             style={nextFleetLoading ? readOnlyStyle : inputStyle}
                                         />
-                                        {nextFleetLoading && (
+                                        {(nextFleetLoading || isCheckingFleet) && (
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                                 <div className="w-3 h-3 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>
+                                    {fleetError && (
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 animate-pulse uppercase tracking-wider px-1">
+                                            <AlertCircle size={10} /> {fleetError}
+                                        </div>
+                                    )}
                                     {selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0 && (
                                         <button 
                                             type="button"
@@ -481,7 +530,7 @@ const CreateVehicle = () => {
                 <div className="flex justify-end pt-4">
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !!fleetError}
                         className="flex items-center gap-2 px-10 py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                         style={{ background: '#C8E600', color: '#0A0A0A' }}
                     >

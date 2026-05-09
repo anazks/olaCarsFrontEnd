@@ -209,11 +209,12 @@ export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promis
 };
 
 export const dataMigrateDrivers = async (
-    drivers: any[], branch?: string, handlingStaff?: string
+    drivers: any[], branch?: string, handlingStaff?: string, fleetNumber?: string
 ): Promise<{ message: string; data: DataMigrationResult }> => {
     const payload: any = { drivers };
     if (branch) payload.branch = branch;
     if (handlingStaff) payload.handlingStaff = handlingStaff;
+    if (fleetNumber) payload.fleetNumber = fleetNumber;
     const response = await api.post('/api/driver/data-migration', payload);
     return response.data;
 };

@@ -5,7 +5,8 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { dataMigrateDrivers, type DataMigrationResult } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getAllFinanceStaff, type FinanceStaff } from '../../../services/financeStaffService';
+import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
+import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 
 interface ParsedRow {
@@ -14,7 +15,7 @@ interface ParsedRow {
     idType?: string; idNumber?: string;
     licenseNumber?: string; licenseCountry?: string; licenseExpiry?: string;
     emergencyName?: string; emergencyRelationship?: string; emergencyPhone?: string;
-    vehicleNumber: string; fleetNumber?: string;
+    vehicleNumber: string;
     vehicleMake?: string; vehicleModel?: string; vehicleYear?: string;
     vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string;
     activationDate?: string; deactivationDate?: string; remarks?: string;
@@ -29,7 +30,7 @@ const MIGRATION_COLUMNS = [
     'fullName','email','phone','whatsappNumber','dateOfBirth','nationality',
     'idType','idNumber','licenseNumber','licenseCountry','licenseExpiry',
     'emergencyName','emergencyRelationship','emergencyPhone',
-    'vehicleNumber','fleetNumber','vehicleMake','vehicleModel','vehicleYear',
+    'vehicleNumber','vehicleMake','vehicleModel','vehicleYear',
     'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin',
     'activationDate','deactivationDate','remarks'
 ];
@@ -40,7 +41,7 @@ const SAMPLE_DATA = [{
     idType:'National ID', idNumber:'ID-12345', licenseNumber:'DL-123',
     licenseCountry:'Kenya', licenseExpiry:'2028-12-31',
     emergencyName:'Jane Smith', emergencyRelationship:'Spouse', emergencyPhone:'+254700000002',
-    vehicleNumber:'KAA 123A', fleetNumber:'101',
+    vehicleNumber:'KAA 123A',
     vehicleMake:'Toyota', vehicleModel:'Corolla', vehicleYear:'2022',
     vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'',
     activationDate:'2024-01-15', deactivationDate:'', remarks:'Migrated from old system'
@@ -48,6 +49,7 @@ const SAMPLE_DATA = [{
 
 const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const fleetInputRef = useRef<HTMLInputElement>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
     const isAutoAssign = AUTO_ASSIGN_ROLES.includes(userRole);
@@ -64,6 +66,12 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [financeStaff, setFinanceStaff] = useState<FinanceStaff[]>([]);
     const [staffLoading, setStaffLoading] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState('');
+    const [selectedStaffObj, setSelectedStaffObj] = useState<FinanceStaff | null>(null);
+    const [selectedFleet, setSelectedFleet] = useState('');
+    const [isAddingNewFleet, setIsAddingNewFleet] = useState(false);
+    const [nextFleetLoading, setNextFleetLoading] = useState(false);
+    const [fleetError, setFleetError] = useState<string | null>(null);
+    const [isCheckingFleet, setIsCheckingFleet] = useState(false);
 
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
@@ -84,6 +92,32 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
             .catch(() => setFinanceStaff([]))
             .finally(() => setStaffLoading(false));
     }, [selectedBranch, isOpen]);
+
+    // Fleet number uniqueness check
+    useEffect(() => {
+        if (!selectedFleet || !isAddingNewFleet) {
+            setFleetError(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsCheckingFleet(true);
+            try {
+                const res = await checkFleetAvailability(selectedFleet);
+                if (!res.available && res.staffId !== selectedStaff) {
+                    setFleetError(`Fleet ${selectedFleet} is already assigned to ${res.assignedTo}`);
+                } else {
+                    setFleetError(null);
+                }
+            } catch (err) {
+                console.error('Fleet check failed:', err);
+            } finally {
+                setIsCheckingFleet(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [selectedFleet, isAddingNewFleet, selectedStaff]);
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
@@ -149,17 +183,38 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
         try {
             const payload = valid.map(({ _rowErrors, ...rest }) => rest);
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined);
+            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) onSuccess();
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Data migration failed.');
+            const serverMsg = err?.response?.data?.message;
+            const errType = err?.response?.data?.errorType;
+            
+            if (errType === 'DUPLICATE_FLEET') {
+                toast.error(serverMsg || 'Fleet number already in use');
+                setFleetError(serverMsg);
+                setIsAddingNewFleet(true);
+                setTimeout(() => {
+                    fleetInputRef.current?.focus();
+                }, 100);
+            } else {
+                const rowErrors = err?.response?.data?.data?.errors;
+                if (rowErrors && rowErrors.length > 0) {
+                    toast.error(`Row ${rowErrors[0].row}: ${rowErrors[0].message}`);
+                } else {
+                    toast.error(serverMsg || 'Data migration failed.');
+                }
+                
+                if (err?.response?.data?.data) {
+                    setResult(err.response.data.data);
+                }
+            }
         } finally { setUploading(false); }
     };
 
-    const handleReset = () => { setParsedRows([]); setFileName(''); setResult(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
-    const handleClose = () => { handleReset(); setSelectedBranch(''); setSelectedStaff(''); onClose(); };
+    const handleReset = () => { setParsedRows([]); setFileName(''); setResult(null); setSelectedFleet(''); setIsAddingNewFleet(false); if (fileInputRef.current) fileInputRef.current.value = ''; };
+    const handleClose = () => { handleReset(); setSelectedBranch(''); setSelectedStaff(''); setSelectedStaffObj(null); onClose(); };
 
     const validCount = parsedRows.filter(d => d._rowErrors.length === 0).length;
     const errorCount = parsedRows.filter(d => d._rowErrors.length > 0).length;
@@ -214,23 +269,138 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     )}
 
                     {/* Handling Staff Selector */}
-                    <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                        <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
-                        {staffLoading ? (
-                            <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
-                        ) : financeStaff.length === 0 ? (
-                            <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
-                        ) : (
-                            <div className="relative">
-                                <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}
-                                    className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold appearance-none"
-                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}>
-                                    <option value="">— Optional: Select handling staff —</option>
-                                    {financeStaff.map(s => <option key={s._id} value={s._id}>{s.fullName} ({s.email})</option>)}
-                                </select>
-                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                            </div>
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
+                            {staffLoading ? (
+                                <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
+                            ) : financeStaff.length === 0 ? (
+                                <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
+                            ) : (
+                                <div className="relative">
+                                    <select 
+                                        value={selectedStaff} 
+                                        onChange={(e) => {
+                                            const sId = e.target.value;
+                                            setSelectedStaff(sId);
+                                            const staffObj = financeStaff.find(s => s._id === sId) || null;
+                                            setSelectedStaffObj(staffObj);
+                                            setIsAddingNewFleet(false);
+                                            
+                                            // Set first fleet if exists
+                                            if (staffObj && staffObj.fleetNumbers && staffObj.fleetNumbers.length > 0) {
+                                                setSelectedFleet(staffObj.fleetNumbers[0]);
+                                            } else {
+                                                setSelectedFleet('');
+                                            }
+                                        }}
+                                        className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold appearance-none transition-all focus:ring-2 focus:ring-amber-500/20"
+                                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}>
+                                        <option value="">— Optional: Select handling staff —</option>
+                                        {financeStaff.map(s => (
+                                            <option key={s._id} value={s._id}>
+                                                {s.fullName} {(s.fleetNumbers && s.fleetNumbers.length > 0) ? `(Fleets: ${s.fleetNumbers.join(', ')})` : '(No Fleet Assigned)'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Fleet Number Selector */}
+                        <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Assign Fleet Number</label>
+                            {!selectedStaff ? (
+                                <div className="h-[48px] flex items-center px-4 rounded-xl border border-dashed text-xs italic" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                    Select handling staff first
+                                </div>
+                            ) : (
+                                <>
+                                    {(!isAddingNewFleet && selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0) ? (
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedFleet}
+                                                    onChange={(e) => setSelectedFleet(e.target.value)}
+                                                    className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold appearance-none transition-all focus:ring-2 focus:ring-amber-500/20"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                >
+                                                    <option value="">Select an existing fleet</option>
+                                                    {selectedStaffObj.fleetNumbers.map((fn, idx) => (
+                                                        <option key={idx} value={fn}>{fn}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                            </div>
+                                            <button 
+                                                type="button"
+                                                onClick={async () => {
+                                                    setIsAddingNewFleet(true);
+                                                    setNextFleetLoading(true);
+                                                    setSelectedFleet('');
+                                                    try {
+                                                        const suggested = await getNextFleetNumber();
+                                                        setSelectedFleet(suggested);
+                                                    } catch (err) {
+                                                        console.error('Failed to fetch next fleet number:', err);
+                                                    } finally {
+                                                        setNextFleetLoading(false);
+                                                    }
+                                                }}
+                                                className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity"
+                                                style={{ color: '#f59e0b' }}
+                                            >
+                                                <Plus size={10} /> Add New Fleet Number
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder={nextFleetLoading ? "Fetching next number..." : "Enter new fleet number"}
+                                                    readOnly={nextFleetLoading}
+                                                    value={selectedFleet}
+                                                    onChange={(e) => setSelectedFleet(e.target.value)}
+                                                    ref={fleetInputRef}
+                                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-amber-500/20"
+                                                    style={{ 
+                                                        background: 'var(--bg-card)', 
+                                                        border: '1px solid var(--border-main)', 
+                                                        color: 'var(--text-main)',
+                                                        opacity: nextFleetLoading ? 0.6 : 1
+                                                    }}
+                                                />
+                                                {(nextFleetLoading || isCheckingFleet) && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                        <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {fleetError && (
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 animate-pulse uppercase tracking-wider px-1">
+                                                    <AlertTriangle size={10} /> {fleetError}
+                                                </div>
+                                            )}
+                                            {selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0 && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsAddingNewFleet(false);
+                                                        setSelectedFleet(selectedStaffObj.fleetNumbers![0]);
+                                                    }}
+                                                    className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity"
+                                                    style={{ color: 'var(--text-dim)' }}
+                                                >
+                                                    Select from existing fleets
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* Template Downloads */}
@@ -297,7 +467,6 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Email</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Phone</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Vehicle #</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Fleet #</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Status</th>
                                             </tr>
                                         </thead>
@@ -309,7 +478,6 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                     <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.email || '—'}</td>
                                                     <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.phone || '—'}</td>
                                                     <td className="px-3 py-2 font-bold" style={{ color: '#f59e0b' }}>{row.vehicleNumber || '—'}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.fleetNumber || '—'}</td>
                                                     <td className="px-3 py-2">
                                                         {row._rowErrors.length === 0
                                                             ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
@@ -363,7 +531,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                         {result ? 'Close' : 'Cancel'}
                     </button>
                     {!result && parsedRows.length > 0 && (
-                        <button onClick={handleSubmit} disabled={uploading || validCount === 0}
+                        <button onClick={handleSubmit} disabled={uploading || validCount === 0 || !!fleetError}
                             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-50 shadow-lg border-none"
                             style={{ backgroundColor: '#f59e0b', color: '#0A0A0A' }}>
                             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}

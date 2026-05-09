@@ -95,3 +95,9 @@ export const getNextFleetNumber = async (): Promise<string> => {
     const response = await api.get('/api/finance-staff/next-fleet-number');
     return response.data.data;
 };
+
+// Check if a fleet number is already assigned
+export const checkFleetAvailability = async (fleetNumber: string): Promise<{ available: boolean; assignedTo: string | null; staffId: string | null }> => {
+    const response = await api.get(`/api/finance-staff/check-fleet/${fleetNumber}`);
+    return response.data.data;
+};
