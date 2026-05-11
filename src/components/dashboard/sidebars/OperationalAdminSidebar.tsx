@@ -22,18 +22,16 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
         navigate('/admin/login');
     };
 
-    const adminItems = [
-        { icon: <Globe size={20} />, label: t('sidebar.items.manageCountryManagers'), path: '/admin/operational-admin/manage-country-managers', permission: 'STAFF_VIEW' },
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches', permission: 'BRANCH_VIEW' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/operational-admin/manage-branch-managers', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/operational-admin/manage-finance-staff', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/operational-admin/manage-operation-staff', permission: 'STAFF_VIEW' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/operational-admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/operational-admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+    const staffItems = [
+        { icon: <Users size={20} />, label: t('sidebar.items.staffManagement', 'Staff Management'), path: '/admin/operational-admin/staff-management', permission: 'STAFF_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <Target size={20} />, label: 'Target Management', path: '/admin/operational-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+    ];
+
+    const adminItems = [
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
@@ -127,7 +125,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.staff', 'Staff')} items={staffItems} />
+                <SidebarSection title={t('sidebar.sections.administration', 'Administration')} items={adminItems} />
                 <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 

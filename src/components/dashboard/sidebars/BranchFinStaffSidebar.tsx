@@ -29,6 +29,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     ];
 
     const financeItems = [
+        { icon: <Receipt size={20} />, label: 'Voucher Management', path: '/admin/branch-fin-staff/vouchers' },
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/branch-fin-staff/ledger' },
         { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/branch-fin-staff/balance-sheet' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/branch-fin-staff/finance-dashboard' },

@@ -48,6 +48,7 @@ import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLease
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
 import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
+import StaffManagement from './pages/dashboards/shared/StaffManagement';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -80,6 +81,7 @@ import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
 import FinancialStatements from './pages/dashboards/finance/FinancialStatements';
 import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
+import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 
 
 function App() {
@@ -136,6 +138,7 @@ function App() {
               
               {/* Staff Management */}
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
+                <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-operational-admins" element={<ManageOperationalAdmins />} />
                 <Route path="manage-financial-admins" element={<ManageFinancialAdmins />} />
                 <Route path="manage-country-managers" element={<ManageCountryManagers />} />
@@ -182,6 +185,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
                <Route path="financial-statements" element={<FinancialStatements />} />
                <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -200,6 +204,7 @@ function App() {
               <Route index element={<OperationalAdminDashboard />} />
               
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
+                <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-country-managers" element={<ManageCountryManagers />} />
                 <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
                 <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
@@ -248,6 +253,7 @@ function App() {
               <Route index element={<FinancialAdminDashboard />} />
               
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
+                <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-country-managers" element={<ManageCountryManagers />} />
                 <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
                 <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
@@ -292,6 +298,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -309,6 +316,7 @@ function App() {
                 <Route path="manage-branches" element={<ManageBranches />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
+                <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-branch-managers" element={<ManageBranchManagers />} />
                 <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
@@ -347,6 +355,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -360,6 +369,7 @@ function App() {
               <Route index element={<BranchManagerDashboard />} />
               
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
+                <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
                 <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
@@ -454,6 +464,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />

@@ -58,6 +58,8 @@
   },
   "sidebar": {
     "sections": {
+      "staff": "Staff",
+      "administration": "Administration",
       "staffManagement": "Staff Management",
       "finance": "Finance",
       "financeOperations": "Finance Operations",

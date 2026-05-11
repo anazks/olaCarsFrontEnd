@@ -22,20 +22,16 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
         navigate('/admin/login');
     };
 
-    const adminItems = [
-        { icon: <Shield size={20} />, label: t('sidebar.items.operationalAdmins'), path: '/admin/admin/manage-operational-admins', permission: 'STAFF_VIEW' },
-        { icon: <DollarSign size={20} />, label: t('sidebar.items.financialAdmins'), path: '/admin/admin/manage-financial-admins', permission: 'STAFF_VIEW' },
-        { icon: <Globe size={20} />, label: t('sidebar.items.countryManagers'), path: '/admin/admin/manage-country-managers', permission: 'STAFF_VIEW' },
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/admin/manage-branches', permission: 'BRANCH_VIEW' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/admin/manage-branch-managers', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/admin/manage-finance-staff', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/admin/manage-operation-staff', permission: 'STAFF_VIEW' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/admin/manage-workshop-managers', permission: 'STAFF_VIEW' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/admin/manage-workshop-staff', permission: 'STAFF_VIEW' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+    const staffItems = [
+        { icon: <Users size={20} />, label: t('sidebar.items.staffManagement', 'Staff Management'), path: '/admin/admin/staff-management', permission: 'STAFF_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <Target size={20} />, label: 'Target Management', path: '/admin/admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+    ];
+
+    const adminItems = [
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/admin/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
@@ -49,6 +45,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     ];
 
     const financeItems = [
+        { icon: <Receipt size={20} />, label: 'Voucher Management', path: '/admin/admin/vouchers', permission: 'LEDGER_VIEW' },
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/admin/balance-sheet', permission: 'REPORTS_VIEW' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
@@ -145,7 +142,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.staff', 'Staff')} items={staffItems} />
+                <SidebarSection title={t('sidebar.sections.administration', 'Administration')} items={adminItems} />
                 <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
                 <SidebarSection title={t('sidebar.sections.finance')} items={financeItems} />
             </div>

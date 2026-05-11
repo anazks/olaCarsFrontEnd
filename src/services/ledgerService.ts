@@ -77,3 +77,61 @@ export const getManualJournals = async (filters: Record<string, any> = {}): Prom
     const response = await api.get(url);
     return response.data.data;
 };
+
+// --- Voucher System ---
+
+export type VoucherType = 'SALES' | 'PURCHASE' | 'RECEIPT' | 'PAYMENT' | 'JOURNAL' | 'CONTRA';
+export type VoucherStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+
+export interface Voucher {
+    _id: string;
+    voucherNumber: string;
+    date: string;
+    type: VoucherType;
+    branch: any;
+    narration: string;
+    referenceInfo?: {
+        referenceNumber?: string;
+        partyName?: string;
+        partyId?: string;
+        partyType?: 'CUSTOMER' | 'SUPPLIER' | 'DRIVER' | 'OTHER';
+    };
+    lines: JournalLine[];
+    totalAmount: number;
+    status: VoucherStatus;
+    createdBy: any;
+    creatorRole: string;
+    postedAt?: string;
+    createdAt: string;
+}
+
+export interface CreateVoucherPayload {
+    type: VoucherType;
+    date: string;
+    branch: string;
+    narration: string;
+    referenceInfo?: {
+        referenceNumber?: string;
+        partyName?: string;
+        partyId?: string;
+        partyType?: 'CUSTOMER' | 'SUPPLIER' | 'DRIVER' | 'OTHER';
+    };
+    lines: JournalLine[];
+}
+
+export const createVoucher = async (payload: CreateVoucherPayload): Promise<any> => {
+    const response = await api.post('/api/vouchers', payload);
+    return response.data.data;
+};
+
+export const getVouchers = async (filters: Record<string, any> = {}): Promise<{ vouchers: Voucher[], pagination: any }> => {
+    const params = new URLSearchParams(filters).toString();
+    const url = `/api/vouchers${params ? `?${params}` : ''}`;
+    const response = await api.get(url);
+    return response.data.data;
+};
+
+export const getVoucherById = async (id: string): Promise<Voucher> => {
+    const response = await api.get(`/api/vouchers/${id}`);
+    return response.data.data;
+};

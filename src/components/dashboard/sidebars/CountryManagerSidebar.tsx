@@ -22,17 +22,16 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         navigate('/admin/login');
     };
 
-    const adminItems = [
-        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/country-manager/manage-branches', permission: 'BRANCH_VIEW' },
-        { icon: <UserCheck size={20} />, label: t('sidebar.items.branchManagers'), path: '/admin/country-manager/manage-branch-managers', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/country-manager/manage-finance-staff', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/country-manager/manage-operation-staff', permission: 'STAFF_VIEW' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/country-manager/manage-workshop-managers', permission: 'STAFF_VIEW' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/country-manager/manage-workshop-staff', permission: 'STAFF_VIEW' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+    const staffItems = [
+        { icon: <Users size={20} />, label: t('sidebar.items.staffManagement', 'Staff Management'), path: '/admin/country-manager/staff-management', permission: 'STAFF_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <Target size={20} />, label: 'Target Management', path: '/admin/country-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+    ];
+
+    const adminItems = [
+        { icon: <Building2 size={20} />, label: t('sidebar.items.manageBranches'), path: '/admin/country-manager/manage-branches', permission: 'BRANCH_VIEW' },
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/country-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
@@ -136,7 +135,8 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.staff', 'Staff')} items={staffItems} />
+                <SidebarSection title={t('sidebar.sections.administration', 'Administration')} items={adminItems} />
                 <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
                 <SidebarSection title={t('sidebar.sections.finance', 'Finance')} items={financeItems} />
             </div>

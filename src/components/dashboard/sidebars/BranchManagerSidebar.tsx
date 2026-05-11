@@ -22,15 +22,15 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
         navigate('/admin/login');
     };
 
-    const adminItems = [
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.financeStaff'), path: '/admin/branch-manager/manage-finance-staff', permission: 'STAFF_VIEW' },
-        { icon: <ShieldCheck size={20} />, label: t('sidebar.items.groundOpsStaff'), path: '/admin/branch-manager/manage-operation-staff', permission: 'STAFF_VIEW' },
-        { icon: <UserCog size={20} />, label: t('sidebar.items.workshopManagers', 'Workshop Managers'), path: '/admin/branch-manager/manage-workshop-managers', permission: 'STAFF_VIEW' },
-        { icon: <Wrench size={20} />, label: t('sidebar.items.workshopStaff'), path: '/admin/branch-manager/manage-workshop-staff', permission: 'STAFF_VIEW' },
-        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+    const staffItems = [
+        { icon: <Users size={20} />, label: t('sidebar.items.staffManagement', 'Staff Management'), path: '/admin/branch-manager/staff-management', permission: 'STAFF_VIEW' },
         { icon: <UserCheck size={20} />, label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <Target size={20} />, label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
         { icon: <ClipboardList size={20} />, label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+    ];
+
+    const adminItems = [
+        { icon: <Users size={20} />, label: t('sidebar.items.suppliers'), path: '/admin/branch-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
     ];
 
     const operationsItems = [
@@ -124,7 +124,8 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
                 <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
 
-                <SidebarSection title={t('sidebar.sections.staffManagement')} items={adminItems} />
+                <SidebarSection title={t('sidebar.sections.staff', 'Staff')} items={staffItems} />
+                <SidebarSection title={t('sidebar.sections.administration', 'Administration')} items={adminItems} />
                 <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
             </div>
 

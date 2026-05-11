@@ -4,8 +4,7 @@ import { getAllAccountingCodes, createAccountingCode } from '../../../services/a
 import { createManualJournal } from '../../../services/ledgerService';
 import { getAllBranches, createBranch } from '../../../services/branchService';
 import { getAllTaxes, createTax } from '../../../services/taxService';
-import { Search, ChevronDown, Building2, UserPlus } from 'lucide-react';
-import { getAllBankAccounts, createBankAccount } from '../../../services/bankAccountService';
+import { Search, ChevronDown } from 'lucide-react';
 import { getAllCountryManagers, createCountryManager } from '../../../services/countryManagerService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -14,9 +13,9 @@ import type { AccountingCode } from '../../../services/accountingService';
 import type { JournalLine } from '../../../services/ledgerService';
 import type { CountryManager } from '../../../services/countryManagerService';
 
-const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAddNew }: { 
-    codes: AccountingCode[], 
-    selectedId: string, 
+const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAddNew }: {
+    codes: AccountingCode[],
+    selectedId: string,
     onSelect: (id: string) => void,
     isOpen: boolean,
     setIsOpen: (open: boolean) => void,
@@ -25,15 +24,15 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
     const [search, setSearch] = useState('');
     const selectedCode = codes.find(c => c._id === selectedId);
 
-    const filteredCodes = codes.filter(c => 
-        c.name.toLowerCase().includes(search.toLowerCase()) || 
+    const filteredCodes = codes.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.code.toLowerCase().includes(search.toLowerCase()) ||
         c.category.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
         <div className="relative">
-            <div 
+            <div
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsOpen(!isOpen);
@@ -50,9 +49,9 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                 <div className="absolute top-full left-0 w-[300px] mt-2 bg-[#1A1A1A] border border-white/10 rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-3 border-b border-white/5 bg-white/5 flex items-center gap-2">
                         <Search size={14} className="text-white/40" />
-                        <input 
+                        <input
                             autoFocus
-                            type="text" 
+                            type="text"
                             placeholder="Search code or name..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -63,7 +62,7 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
                         {filteredCodes.length > 0 ? (
                             filteredCodes.map(code => (
-                                <div 
+                                <div
                                     key={code._id}
                                     onClick={() => {
                                         onSelect(code._id);
@@ -85,12 +84,12 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                             <div className="p-4 text-center text-xs flex flex-col items-center">
                                 <span className="text-white/40 italic block mb-2">No accounts found</span>
                                 {onAddNew && (
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => {
                                             setIsOpen(false);
                                             onAddNew();
-                                        }} 
+                                        }}
                                         className="text-[#C8E600] font-bold hover:underline flex items-center gap-1"
                                     >
                                         <Plus size={12} /> Add New Code
@@ -108,19 +107,15 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
 const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
+    const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
     const [taxes, setTaxes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-    const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
-    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK'>('CASH');
-    const [selectedBankId, setSelectedBankId] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
 
     // Quick create states
     const [showBranchModal, setShowBranchModal] = useState(false);
-    const [showBankModal, setShowBankModal] = useState(false);
     const [showCountryManagerModal, setShowCountryManagerModal] = useState(false);
     const [showAccountingCodeModal, setShowAccountingCodeModal] = useState(false);
     const [showTaxModal, setShowTaxModal] = useState(false);
@@ -146,11 +141,10 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         "South Africa": "za",
         "United Arab Emirates": "ae"
     };
-    
+
     const [newBranch, setNewBranch] = useState({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' });
-    const [newBank, setNewBank] = useState({ bankName: '', accountNumber: '', accountHolderName: '', swiftCode: '', ifscCode: '', branchName: '', currency: 'USD', initialBalance: 0 });
     const [newCountryManager, setNewCountryManager] = useState({ fullName: '', email: '', password: '', phone: '', country: '' });
-    const [newAccountingCode, setNewAccountingCode] = useState<{code: string, name: string, category: any}>({ code: '', name: '', category: 'EXPENSE' });
+    const [newAccountingCode, setNewAccountingCode] = useState<{ code: string, name: string, category: any }>({ code: '', name: '', category: 'EXPENSE' });
     const [newTax, setNewTax] = useState({ name: '', rate: 0 });
 
     const [header, setHeader] = useState({
@@ -166,19 +160,44 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [codesData, branchesData, taxesData, banksData, managersData] = await Promise.all([
+                // Fetch each resource individually to identify failures
+                const [codesRes, branchesRes, taxesRes, managersRes] = await Promise.allSettled([
                     getAllAccountingCodes(),
                     getAllBranches(),
                     getAllTaxes(),
-                    getAllBankAccounts(),
                     getAllCountryManagers()
                 ]);
-                setAccountingCodes(codesData);
-                setBranches(branchesData.data || []);
-                setTaxes(taxesData);
-                setBankAccounts(banksData.data || []);
-                setCountryManagers(managersData.data || []);
+
+                if (codesRes.status === 'fulfilled') {
+                    setAccountingCodes(codesRes.value);
+                } else {
+                    console.error("Failed to load accounting codes:", codesRes.reason);
+                }
+
+                if (branchesRes.status === 'fulfilled') {
+                    setBranches(branchesRes.value.data || []);
+                } else {
+                    console.error("Failed to load branches:", branchesRes.reason);
+                }
+
+                if (taxesRes.status === 'fulfilled') {
+                    setTaxes(taxesRes.value);
+                } else {
+                    console.error("Failed to load taxes:", taxesRes.reason);
+                }
+
+                if (managersRes.status === 'fulfilled') {
+                    setCountryManagers(managersRes.value.data || []);
+                } else {
+                    console.error("Failed to load country managers:", managersRes.reason);
+                }
+
+                // Only show error if critical data (codes or branches) failed
+                if (codesRes.status === 'rejected' || branchesRes.status === 'rejected') {
+                    setError('Failed to load critical initial data. Please check your connection.');
+                }
             } catch (err: any) {
+                console.error("Unexpected error loading initial data:", err);
                 setError('Failed to load initial data');
             } finally {
                 setLoading(false);
@@ -189,7 +208,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
 
     const handleCreateBranch = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!newBranch.phone || newBranch.phone.length < 5) {
             setQuickCreateError("Please enter a valid phone number");
             return;
@@ -213,32 +232,6 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         }
     };
 
-    const handleCreateBank = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!newBank.bankName || !newBank.accountNumber || !newBank.accountHolderName) {
-            setQuickCreateError("Please fill in all required fields");
-            return;
-        }
-
-        setQuickCreateLoading(true);
-        setQuickCreateError(null);
-        try {
-            const res = await createBankAccount({ ...newBank, status: 'ACTIVE' });
-            // Refresh banks
-            const banksData = await getAllBankAccounts();
-            setBankAccounts(banksData.data || []);
-            // Auto select
-            setSelectedBankId(res._id);
-            setPaymentMethod('BANK');
-            setShowBankModal(false);
-            setNewBank({ bankName: '', accountNumber: '', accountHolderName: '', swiftCode: '', ifscCode: '', branchName: '', currency: 'USD', initialBalance: 0 });
-        } catch (err: any) {
-            setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create bank account');
-        } finally {
-            setQuickCreateLoading(false);
-        }
-    };
 
     const handleCreateCountryManager = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -270,7 +263,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             // Refresh codes
             const codesData = await getAllAccountingCodes();
             setAccountingCodes(codesData);
-            
+
             if (targetLineIndex !== null) {
                 updateLine(targetLineIndex, 'accountingCode', res._id);
             }
@@ -293,7 +286,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             // Refresh taxes
             const taxData = await getAllTaxes();
             setTaxes(taxData);
-            
+
             if (targetLineIndex !== null) {
                 updateLine(targetLineIndex, 'taxInfo', { taxApplied: res._id });
             }
@@ -341,7 +334,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             setError('Please select a branch');
             return;
         }
-        
+
         setSubmitting(true);
         setError(null);
         try {
@@ -371,7 +364,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                 <div>
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Calculator size={24} className="text-[#C8E600]" />
-                        Create Manual Journal Entry
+                        Create Manual Journal Entry Adjustments
                     </h2>
                     <p className="text-xs text-white/40 mt-1">Record manual adjustments, payroll, or tax provisions</p>
                 </div>
@@ -435,183 +428,115 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-white/60 uppercase">Payment Method</label>
-                        <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod('CASH')}
-                                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                                    paymentMethod === 'CASH' 
-                                    ? 'bg-[#C8E600] text-black shadow-lg shadow-[#C8E600]/20' 
-                                    : 'text-white/40 hover:text-white'
-                                }`}
-                            >
-                                Cash
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod('BANK')}
-                                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                                    paymentMethod === 'BANK' 
-                                    ? 'bg-[#C8E600] text-black shadow-lg shadow-[#C8E600]/20' 
-                                    : 'text-white/40 hover:text-white'
-                                }`}
-                            >
-                                Bank
-                            </button>
-                        </div>
-                    </div>
-                    {paymentMethod === 'BANK' && (
-                        <div className="space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
-                            <div className="flex justify-between items-center">
-                                <label className="text-xs font-semibold text-white/60 uppercase">Bank Account</label>
-                                {bankAccounts.length === 0 && (
-                                    <button type="button" onClick={() => setShowBankModal(true)} className="text-[10px] text-[#C8E600] font-bold hover:underline flex items-center gap-1">
-                                        <Plus size={10} /> Add Bank
-                                    </button>
-                                )}
-                            </div>
-                            <div className="flex gap-2 relative">
-                                <div className="relative flex-1">
-                                    <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C8E600]" />
-                                    <select
-                                        required
-                                        disabled={bankAccounts.length === 0}
-                                        value={selectedBankId}
-                                        onChange={e => setSelectedBankId(e.target.value)}
-                                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <option value="" className="bg-[#1A1A1A]">{bankAccounts.length === 0 ? 'No Bank Accounts' : 'Select Bank Account'}</option>
-                                        {bankAccounts.map(acc => (
-                                            <option key={acc._id} value={acc._id} className="bg-[#1A1A1A]">
-                                                {acc.bankName} - {acc.accountNumber} ({acc.currency})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
-                                        <ChevronDown size={16} />
-                                    </div>
-                                </div>
-                                {bankAccounts.length > 0 && (
-                                    <button type="button" onClick={() => setShowBankModal(true)} className="px-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 text-white/60 transition-all flex items-center justify-center" title="Quick Add Bank">
-                                        <Plus size={16} />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
 
                 {/* Lines Table */}
                 <div className="rounded-xl border border-white/10 overflow-hidden">
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
-                        <thead className="bg-white/5">
-                            <tr>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Account</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Description</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Type</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Amount</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Tax Option</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {lines.map((line, index) => (
-                                <tr key={index} className="hover:bg-white/[0.02]" style={{ position: 'relative', zIndex: openDropdownIndex === index ? 1000 : 1 }}>
-                                    <td className="p-2 w-1/4 relative">
-                                        <AccountSelector 
-                                            codes={accountingCodes} 
-                                            selectedId={line.accountingCode} 
-                                            onSelect={(id) => updateLine(index, 'accountingCode', id)} 
-                                            isOpen={openDropdownIndex === index}
-                                            setIsOpen={(open) => setOpenDropdownIndex(open ? index : null)}
-                                            onAddNew={() => {
-                                                setTargetLineIndex(index);
-                                                setShowAccountingCodeModal(true);
-                                            }}
-                                        />
-                                    </td>
-                                    <td className="p-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Line memo"
-                                            value={line.description}
-                                            onChange={e => updateLine(index, 'description', e.target.value)}
-                                            className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
-                                        />
-                                    </td>
-                                    <td className="p-2 w-32">
-                                        <select
-                                            value={line.type}
-                                            onChange={e => updateLine(index, 'type', e.target.value)}
-                                            className="w-full bg-transparent border-none text-xs font-bold text-white focus:ring-0 outline-none"
-                                        >
-                                            <option value="DEBIT" className="bg-[#1A1A1A] text-emerald-500">DEBIT</option>
-                                            <option value="CREDIT" className="bg-[#1A1A1A] text-rose-500">CREDIT</option>
-                                        </select>
-                                    </td>
-                                    <td className="p-2 w-32">
-                                        <input
-                                            required
-                                            type="number"
-                                            step="0.01"
-                                            value={line.amount}
-                                            onChange={e => updateLine(index, 'amount', Number(e.target.value))}
-                                            className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none font-mono"
-                                        />
-                                    </td>
-                                    <td className="p-2 w-40 relative group">
-                                        <div className="flex items-center gap-1">
-                                            <select
-                                                disabled={taxes.length === 0}
-                                                value={line.taxInfo?.taxApplied || ''}
-                                                onChange={e => updateLine(index, 'taxInfo', { taxApplied: e.target.value })}
-                                                className="w-full bg-transparent border-none text-[10px] text-white/60 focus:ring-0 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <option value="" className="bg-[#1A1A1A]">{taxes.length === 0 ? 'No Tax Options' : 'No Tax'}</option>
-                                                {taxes.map(t => (
-                                                    <option key={t._id} value={t._id} className="bg-[#1A1A1A]">{t.name} ({t.rate || (t as any).percentage}%)</option>
-                                                ))}
-                                            </select>
-                                            <button 
-                                                type="button" 
-                                                onClick={() => {
-                                                    setTargetLineIndex(index);
-                                                    setShowTaxModal(true);
-                                                }} 
-                                                className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 transition-all ${taxes.length === 0 ? 'opacity-100 text-[#C8E600]' : 'opacity-0 group-hover:opacity-100'}`}
-                                                title="Quick Add Tax"
-                                            >
-                                                <Plus size={12} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td className="p-2 text-right">
-                                        <button 
-                                            type="button"
-                                            onClick={() => handleRemoveLine(index)}
-                                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500/40 hover:text-rose-500 transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
+                            <thead className="bg-white/5">
+                                <tr>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Account</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Description</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Type</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Amount</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Tax Option</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right"></th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    
-                    <button 
-                        type="button"
-                        onClick={handleAddLine}
-                        className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
-                    >
-                        <Plus size={14} /> Add Line
-                    </button>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {lines.map((line, index) => (
+                                    <tr key={index} className="hover:bg-white/[0.02]" style={{ position: 'relative', zIndex: openDropdownIndex === index ? 1000 : 1 }}>
+                                        <td className="p-2 w-1/4 relative">
+                                            <AccountSelector
+                                                codes={accountingCodes}
+                                                selectedId={line.accountingCode}
+                                                onSelect={(id) => updateLine(index, 'accountingCode', id)}
+                                                isOpen={openDropdownIndex === index}
+                                                setIsOpen={(open) => setOpenDropdownIndex(open ? index : null)}
+                                                onAddNew={() => {
+                                                    setTargetLineIndex(index);
+                                                    setShowAccountingCodeModal(true);
+                                                }}
+                                            />
+                                        </td>
+                                        <td className="p-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Line memo"
+                                                value={line.description}
+                                                onChange={e => updateLine(index, 'description', e.target.value)}
+                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                                            />
+                                        </td>
+                                        <td className="p-2 w-32">
+                                            <select
+                                                value={line.type}
+                                                onChange={e => updateLine(index, 'type', e.target.value)}
+                                                className="w-full bg-transparent border-none text-xs font-bold text-white focus:ring-0 outline-none"
+                                            >
+                                                <option value="DEBIT" className="bg-[#1A1A1A] text-emerald-500">DEBIT</option>
+                                                <option value="CREDIT" className="bg-[#1A1A1A] text-rose-500">CREDIT</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-2 w-32">
+                                            <input
+                                                required
+                                                type="number"
+                                                step="0.01"
+                                                value={line.amount}
+                                                onChange={e => updateLine(index, 'amount', Number(e.target.value))}
+                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none font-mono"
+                                            />
+                                        </td>
+                                        <td className="p-2 w-40 relative group">
+                                            <div className="flex items-center gap-1">
+                                                <select
+                                                    disabled={taxes.length === 0}
+                                                    value={line.taxInfo?.taxApplied || ''}
+                                                    onChange={e => updateLine(index, 'taxInfo', { taxApplied: e.target.value })}
+                                                    className="w-full bg-transparent border-none text-[10px] text-white/60 focus:ring-0 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="" className="bg-[#1A1A1A]">{taxes.length === 0 ? 'No Tax Options' : 'No Tax'}</option>
+                                                    {taxes.map(t => (
+                                                        <option key={t._id} value={t._id} className="bg-[#1A1A1A]">{t.name} ({t.rate || (t as any).percentage}%)</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTargetLineIndex(index);
+                                                        setShowTaxModal(true);
+                                                    }}
+                                                    className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 transition-all ${taxes.length === 0 ? 'opacity-100 text-[#C8E600]' : 'opacity-0 group-hover:opacity-100'}`}
+                                                    title="Quick Add Tax"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="p-2 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveLine(index)}
+                                                className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500/40 hover:text-rose-500 transition-colors"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <button
+                            type="button"
+                            onClick={handleAddLine}
+                            className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
+                        >
+                            <Plus size={14} /> Add Line
+                        </button>
+                    </div>
                 </div>
-            </div>
 
                 {/* Footer / Totals */}
                 <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pt-4 border-t border-white/5">
@@ -661,11 +586,11 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Branch Name</label>
-                                    <input required type="text" value={newBranch.name} onChange={e => setNewBranch({...newBranch, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Main Branch" />
+                                    <input required type="text" value={newBranch.name} onChange={e => setNewBranch({ ...newBranch, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Main Branch" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Branch Code</label>
-                                    <input required type="text" value={newBranch.code} onChange={e => setNewBranch({...newBranch, code: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="BR01" />
+                                    <input required type="text" value={newBranch.code} onChange={e => setNewBranch({ ...newBranch, code: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="BR01" />
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex justify-between items-center">
@@ -684,8 +609,8 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                             onChange={(e) => {
                                                 const managerId = e.target.value;
                                                 const manager = countryManagers.find(m => m._id === managerId);
-                                                setNewBranch({ 
-                                                    ...newBranch, 
+                                                setNewBranch({
+                                                    ...newBranch,
                                                     countryManager: managerId,
                                                     country: manager ? manager.country : ''
                                                 });
@@ -708,22 +633,22 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Email</label>
-                                    <input required type="email" value={newBranch.email} onChange={e => setNewBranch({...newBranch, email: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="branch@example.com" />
+                                    <input required type="email" value={newBranch.email} onChange={e => setNewBranch({ ...newBranch, email: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="branch@example.com" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">City</label>
-                                    <input required type="text" value={newBranch.city} onChange={e => setNewBranch({...newBranch, city: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="New York" />
+                                    <input required type="text" value={newBranch.city} onChange={e => setNewBranch({ ...newBranch, city: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="New York" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">State</label>
-                                    <input required type="text" value={newBranch.state} onChange={e => setNewBranch({...newBranch, state: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="NY" />
+                                    <input required type="text" value={newBranch.state} onChange={e => setNewBranch({ ...newBranch, state: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="NY" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Phone</label>
                                     <PhoneInput
                                         country={countryToIso2[newBranch.country] || "in"}
                                         value={newBranch.phone}
-                                        onChange={(phone) => setNewBranch({...newBranch, phone})}
+                                        onChange={(phone) => setNewBranch({ ...newBranch, phone })}
                                         containerStyle={{ width: "100%" }}
                                         inputStyle={{
                                             width: "100%",
@@ -742,10 +667,10 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Status</label>
-                                    <select 
-                                        required 
-                                        value={newBranch.status} 
-                                        onChange={e => setNewBranch({...newBranch, status: e.target.value})} 
+                                    <select
+                                        required
+                                        value={newBranch.status}
+                                        onChange={e => setNewBranch({ ...newBranch, status: e.target.value })}
                                         className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
                                     >
                                         <option value="ACTIVE" className="bg-[#1A1A1A]">Active</option>
@@ -755,64 +680,12 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                                 <div className="space-y-1 col-span-2">
                                     <label className="text-xs text-white/60">Address</label>
-                                    <input required type="text" value={newBranch.address} onChange={e => setNewBranch({...newBranch, address: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="123 Street" />
+                                    <input required type="text" value={newBranch.address} onChange={e => setNewBranch({ ...newBranch, address: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="123 Street" />
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4 border-t border-white/5">
                                 <button type="button" onClick={() => setShowBranchModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
                                 <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Branch'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {showBankModal && (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-                    <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-xl border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Building2 size={20} className="text-[#C8E600]" /> Quick Add Bank Account</h3>
-                            <button onClick={() => setShowBankModal(false)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"><X size={18} /></button>
-                        </div>
-                        {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
-                        <form onSubmit={handleCreateBank} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-xs text-white/60">Bank Name</label>
-                                    <input required type="text" value={newBank.bankName} onChange={e => setNewBank({...newBank, bankName: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Chase Bank" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Account Number</label>
-                                    <input required type="text" value={newBank.accountNumber} onChange={e => setNewBank({...newBank, accountNumber: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="123456789" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Account Holder Name</label>
-                                    <input required type="text" value={newBank.accountHolderName} onChange={e => setNewBank({...newBank, accountHolderName: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="John Doe" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Branch Name</label>
-                                    <input type="text" value={newBank.branchName} onChange={e => setNewBank({...newBank, branchName: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Main Branch" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">SWIFT / BIC Code</label>
-                                    <input type="text" value={newBank.swiftCode} onChange={e => setNewBank({...newBank, swiftCode: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="SWIFT Code" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">IFSC Code (Optional)</label>
-                                    <input type="text" value={newBank.ifscCode} onChange={e => setNewBank({...newBank, ifscCode: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="IFSC Code" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Currency</label>
-                                    <input required type="text" value={newBank.currency} onChange={e => setNewBank({...newBank, currency: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="USD" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Initial Balance</label>
-                                    <input required type="number" step="0.01" value={newBank.initialBalance} onChange={e => setNewBank({...newBank, initialBalance: parseFloat(e.target.value) || 0})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="0.00" />
-                                </div>
-                            </div>
-                            <div className="flex gap-3 pt-4 border-t border-white/5">
-                                <button type="button" onClick={() => setShowBankModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
-                                <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Bank Account'}</button>
                             </div>
                         </form>
                     </div>
@@ -831,14 +704,14 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Full Name</label>
-                                    <input required type="text" value={newCountryManager.fullName} onChange={e => setNewCountryManager({...newCountryManager, fullName: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="John Doe" />
+                                    <input required type="text" value={newCountryManager.fullName} onChange={e => setNewCountryManager({ ...newCountryManager, fullName: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="John Doe" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Country</label>
-                                    <select 
-                                        required 
-                                        value={newCountryManager.country} 
-                                        onChange={e => setNewCountryManager({...newCountryManager, country: e.target.value})} 
+                                    <select
+                                        required
+                                        value={newCountryManager.country}
+                                        onChange={e => setNewCountryManager({ ...newCountryManager, country: e.target.value })}
                                         className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
                                     >
                                         <option value="" className="bg-[#1A1A1A]">Select Country</option>
@@ -849,14 +722,14 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Email</label>
-                                    <input required type="email" value={newCountryManager.email} onChange={e => setNewCountryManager({...newCountryManager, email: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="john@example.com" />
+                                    <input required type="email" value={newCountryManager.email} onChange={e => setNewCountryManager({ ...newCountryManager, email: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="john@example.com" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-white/60">Phone</label>
                                     <PhoneInput
                                         country={countryToIso2[newCountryManager.country] || "in"}
                                         value={newCountryManager.phone}
-                                        onChange={(phone) => setNewCountryManager({...newCountryManager, phone})}
+                                        onChange={(phone) => setNewCountryManager({ ...newCountryManager, phone })}
                                         containerStyle={{ width: "100%" }}
                                         inputStyle={{
                                             width: "100%",
@@ -875,7 +748,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                                 <div className="space-y-1 col-span-2">
                                     <label className="text-xs text-white/60">Temporary Password</label>
-                                    <input required type="password" value={newCountryManager.password} onChange={e => setNewCountryManager({...newCountryManager, password: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="••••••••" />
+                                    <input required type="password" value={newCountryManager.password} onChange={e => setNewCountryManager({ ...newCountryManager, password: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="••••••••" />
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4 border-t border-white/5">
@@ -897,18 +770,18 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <form onSubmit={handleCreateAccountingCode} className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-xs text-white/60">Code Number</label>
-                                <input required type="text" value={newAccountingCode.code} onChange={e => setNewAccountingCode({...newAccountingCode, code: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="4000" />
+                                <input required type="text" value={newAccountingCode.code} onChange={e => setNewAccountingCode({ ...newAccountingCode, code: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="4000" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-white/60">Account Name</label>
-                                <input required type="text" value={newAccountingCode.name} onChange={e => setNewAccountingCode({...newAccountingCode, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Sales Revenue" />
+                                <input required type="text" value={newAccountingCode.name} onChange={e => setNewAccountingCode({ ...newAccountingCode, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Sales Revenue" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-white/60">Category</label>
-                                <select 
-                                    required 
-                                    value={newAccountingCode.category} 
-                                    onChange={e => setNewAccountingCode({...newAccountingCode, category: e.target.value as any})} 
+                                <select
+                                    required
+                                    value={newAccountingCode.category}
+                                    onChange={e => setNewAccountingCode({ ...newAccountingCode, category: e.target.value as any })}
                                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
                                 >
                                     <option value="INCOME" className="bg-[#1A1A1A]">Income</option>
@@ -926,7 +799,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                     </div>
                 </div>
             )}
-            
+
             {showTaxModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
                     <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-sm border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -938,11 +811,11 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <form onSubmit={handleCreateTax} className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-xs text-white/60">Tax Name</label>
-                                <input required type="text" value={newTax.name} onChange={e => setNewTax({...newTax, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="e.g. VAT" />
+                                <input required type="text" value={newTax.name} onChange={e => setNewTax({ ...newTax, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="e.g. VAT" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-white/60">Tax Rate (%)</label>
-                                <input required type="number" step="0.01" min="0" max="100" value={newTax.rate} onChange={e => setNewTax({...newTax, rate: Number(e.target.value)})} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="10" />
+                                <input required type="number" step="0.01" min="0" max="100" value={newTax.rate} onChange={e => setNewTax({ ...newTax, rate: Number(e.target.value) })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="10" />
                             </div>
                             <div className="flex gap-3 pt-4 border-t border-white/5">
                                 <button type="button" onClick={() => setShowTaxModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>

@@ -106,7 +106,7 @@ const GeneralLedger = () => {
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
                             style={{ background: '#C8E600', color: '#0A0A0A' }}
                         >
-                            <PlusCircle size={18} /> Add Manual Entry
+                            <PlusCircle size={18} /> Add Manual Entry Adjustments
                         </button>
                     )}
                 </div>
