@@ -28,15 +28,10 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     ];
 
     const financeItems = [
-        { icon: <Receipt size={20} />, label: 'Voucher Management', path: '/admin/branch-fin-staff/vouchers' },
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/branch-fin-staff/ledger' },
-        { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/branch-fin-staff/balance-sheet' },
         { icon: <BarChart3 size={20} />, label: t('sidebar.items.financeDashboard'), path: '/admin/branch-fin-staff/finance-dashboard' },
         { icon: <FileText size={20} />, label: 'Financial Statements', path: '/admin/branch-fin-staff/financial-statements' },
-        { icon: <Calculator size={20} />, label: t('sidebar.items.taxManagement'), path: '/admin/branch-fin-staff/taxes' },
-        { icon: <BookMarked size={20} />, label: t('sidebar.items.chartOfAccounts'), path: '/admin/branch-fin-staff/chart-of-accounts' },
         { icon: <Plus size={20} />, label: 'Add Journal Entry', path: '/admin/branch-fin-staff/ledger?action=create' },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-fin-staff/purchase-bills' },
     ];
 
     const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (

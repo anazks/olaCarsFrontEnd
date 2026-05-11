@@ -36,7 +36,6 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
     const operationsItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
-        { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/country-manager/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },

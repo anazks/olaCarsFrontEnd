@@ -13,13 +13,15 @@ import {
     EyeOff,
     RefreshCw,
     AlertTriangle,
-    Settings
+    Settings,
+    Building2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { changePassword } from '../../../services/authService';
 import systemSettingsService from '../../../services/systemSettingsService';
+import ManageBankAccounts from '../finance/ManageBankAccounts';
 
 const DashboardSettings = () => {
     const { t, i18n } = useTranslation();
@@ -28,7 +30,7 @@ const DashboardSettings = () => {
     const role = getUserRole();
     
     // State for Tabs
-    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'banking'>('profile');
 
     // Profile State
     const [passwords, setPasswords] = useState({
@@ -176,6 +178,18 @@ const DashboardSettings = () => {
                             <DollarSign size={18} /> Operations Settings
                         </button>
                     )}
+
+                    <button 
+                        onClick={() => setActiveTab('banking')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'banking' ? 'bg-lime/10 shadow-sm' : 'hover:bg-black/5'}`}
+                        style={{ 
+                            color: activeTab === 'banking' ? 'var(--brand-lime)' : 'var(--text-dim)',
+                            background: activeTab === 'banking' ? 'rgba(200,230,0,0.1)' : 'transparent'
+                        }}
+                    >
+                        <Building2 size={18} />
+                        {t('sidebar.items.bankAccounts', 'Bank Accounts')}
+                    </button>
                 </div>
 
                 {/* Main Content Area */}
@@ -434,6 +448,12 @@ const DashboardSettings = () => {
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'banking' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <ManageBankAccounts />
                         </div>
                     )}
                 </div>

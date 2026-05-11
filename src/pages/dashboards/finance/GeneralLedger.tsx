@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Landmark, Calculator, BookMarked } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
@@ -171,6 +171,69 @@ const GeneralLedger = () => {
                         Reset Filters
                     </button>
                 )}
+            </div>
+            
+            {/* Navigation Shortcuts */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div 
+                    onClick={() => navigate('../vouchers')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <Receipt size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Voucher Management</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage payments & receipts</p>
+                </div>
+
+                <div 
+                    onClick={() => navigate('../balance-sheet')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <Landmark size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Balance Sheet</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>View assets & liabilities</p>
+                </div>
+
+                <div 
+                    onClick={() => navigate('../taxes')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <Calculator size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Tax Management</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Configure tax settings</p>
+                </div>
+
+                <div 
+                    onClick={() => navigate('../chart-of-accounts')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <BookMarked size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Chart of Accounts</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage accounting codes</p>
+                </div>
+
+                <div 
+                    onClick={() => navigate('../purchase-bills')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <Receipt size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Purchase Bills</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Track vendor bills</p>
+                </div>
             </div>
 
             {/* Quick Stats Summary */}
