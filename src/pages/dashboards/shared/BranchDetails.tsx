@@ -9,7 +9,6 @@ import {
     Phone,
     Mail,
     ArrowLeft,
-    Briefcase,
     CheckCircle2,
     Clock,
     Search,
@@ -32,7 +31,7 @@ import { getBranchExtendedDetails } from '../../../services/branchService';
 const BranchDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    useTranslation();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

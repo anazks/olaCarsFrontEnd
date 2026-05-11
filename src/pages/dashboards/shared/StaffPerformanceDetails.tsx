@@ -7,15 +7,13 @@ import {
     Calendar, 
     Clock, 
     CheckCircle2, 
-    AlertCircle, 
     TrendingUp, 
     DollarSign, 
     Building2, 
     ArrowLeft,
     LogIn,
     LogOut,
-    Shield,
-    Briefcase
+    Shield
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
@@ -195,7 +193,7 @@ const StaffPerformanceDetails = () => {
                                             <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
                                             <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
                                             <Bar dataKey="count" radius={[8, 8, 0, 0]} maxBarSize={60}>
-                                                {[0, 1, 2].map((entry, index) => (
+                                                {[0, 1, 2].map((_, index) => (
                                                     <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : '#C8E600'} />
                                                 ))}
                                             </Bar>
