@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, UserCog, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, UserCog, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import {
     getAllWorkshopManagers,
     createWorkshopManager,
@@ -36,6 +37,7 @@ const phoneInputStyles = `
 
 const ManageWorkshopManagers = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [workshopManagers, setWorkshopManagers] = useState<WorkshopManager[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -448,6 +450,17 @@ const ManageWorkshopManagers = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const currentPath = window.location.pathname;
+                                                        const basePath = currentPath.split('/manage-workshop-managers')[0];
+                                                        navigate(`${basePath}/staff-performance/${manager._id}`);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                    title="View Performance Profile"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
                                                 <HasPermission permission="STAFF_EDIT">
                                                     <button
                                                         onClick={() => openEditModal(manager)}

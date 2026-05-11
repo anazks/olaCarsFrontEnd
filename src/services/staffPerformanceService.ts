@@ -143,3 +143,10 @@ export const getStaffPerformance = async (filters: PerformanceFilters = {}): Pro
     const response = await api.get('/api/staff-performance', { params: filters });
     return response.data;
 };
+
+export const getIndividualStaffPerformance = async (id: string, startDate?: string, endDate?: string) => {
+    const response = await api.get(`/api/staff-performance/${id}/details`, {
+        params: { startDate, endDate }
+    });
+    return response.data;
+};

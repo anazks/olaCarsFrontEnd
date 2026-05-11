@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck, Eye } from 'lucide-react';
 import {
     getAllBranchManagers,
     createBranchManager,
@@ -23,6 +24,7 @@ type ModalMode = 'create' | 'edit' | null;
 
 const ManageBranchManagers = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -460,6 +462,17 @@ const ManageBranchManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            const currentPath = window.location.pathname;
+                                                            const basePath = currentPath.split('/manage-branch-managers')[0];
+                                                            navigate(`${basePath}/staff-performance/${manager._id}`);
+                                                        }}
+                                                        className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                        title="View Performance Profile"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
                                                     <HasPermission permission="STAFF_EDIT">
                                                         <button
                                                             onClick={() => openEditModal(manager)}

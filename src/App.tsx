@@ -33,6 +33,7 @@ import ManageOperationalAdmins from './pages/dashboards/admin/ManageOperationalA
 import ManageFinancialAdmins from './pages/dashboards/admin/ManageFinancialAdmins';
 import ManageCountryManagers from './pages/dashboards/shared/ManageCountryManagers';
 import ManageBranches from './pages/dashboards/shared/ManageBranches';
+import BranchDetails from './pages/dashboards/shared/BranchDetails';
 import ManageBranchManagers from './pages/dashboards/shared/ManageBranchManagers';
 import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
@@ -69,6 +70,7 @@ import DriverDetail from './pages/dashboards/shared/DriverDetail';
 import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
 import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerformanceDashboard';
 import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
+import StaffPerformanceDetails from './pages/dashboards/shared/StaffPerformanceDetails';
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
@@ -152,6 +154,7 @@ function App() {
               {/* Branch / Supplier Management */}
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
                 <Route path="manage-branches" element={<ManageBranches />} />
+                <Route path="manage-branches/:id" element={<BranchDetails />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
@@ -179,6 +182,7 @@ function App() {
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
+              <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
@@ -216,6 +220,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
                 <Route path="manage-branches" element={<ManageBranches />} />
+                <Route path="manage-branches/:id" element={<BranchDetails />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
@@ -240,6 +245,7 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
+              <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
@@ -266,6 +272,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
                 <Route path="manage-branches" element={<ManageBranches />} />
+                <Route path="manage-branches/:id" element={<BranchDetails />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
@@ -294,6 +301,7 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
+              <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
@@ -317,6 +325,7 @@ function App() {
               <Route index element={<CountryManagerDashboard />} />
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
                 <Route path="manage-branches" element={<ManageBranches />} />
+                <Route path="manage-branches/:id" element={<BranchDetails />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />
@@ -348,6 +357,7 @@ function App() {
               </Route>
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
+              <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
@@ -406,6 +416,7 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
+              <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />

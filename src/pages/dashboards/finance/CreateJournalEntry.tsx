@@ -335,6 +335,11 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             return;
         }
 
+        if (lines.some(line => !line.accountingCode)) {
+            setError('Please select an accounting code for all transaction lines');
+            return;
+        }
+
         setSubmitting(true);
         setError(null);
         try {
@@ -435,7 +440,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-white/5">
                                 <tr>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Account</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Accounting Code</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Description</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Type</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Amount</th>
@@ -483,8 +488,8 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                 required
                                                 type="number"
                                                 step="0.01"
-                                                value={line.amount}
-                                                onChange={e => updateLine(index, 'amount', Number(e.target.value))}
+                                                value={line.amount || ''}
+                                                onChange={e => updateLine(index, 'amount', e.target.value === '' ? 0 : Number(e.target.value))}
                                                 className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none font-mono"
                                             />
                                         </td>

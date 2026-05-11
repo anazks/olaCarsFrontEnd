@@ -393,8 +393,8 @@ const ManageBankAccounts = () => {
                                             type="number" 
                                             step="0.01"
                                             placeholder="0.00"
-                                            value={formData.initialBalance}
-                                            onChange={e => setFormData({ ...formData, initialBalance: Number(e.target.value) })}
+                                            value={formData.initialBalance || ''}
+                                            onChange={e => setFormData({ ...formData, initialBalance: e.target.value === '' ? 0 : Number(e.target.value) })}
                                             className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-8 py-3 text-white focus:border-[#C8E600] outline-none transition-all font-mono"
                                         />
                                     </div>

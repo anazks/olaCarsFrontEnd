@@ -26,10 +26,10 @@ export const REFRESH_ENDPOINTS: Record<string, string> = {
     'financialadmin': 'api/finance-admin/refresh',
     'countrymanager': 'api/country-manager/refresh',
     'branchmanager': 'api/branch-manager/refresh',
-    'branchopstaff': 'api/operation-staff/refresh-token',
+    'branchopstaff': 'api/operation-staff/refresh',
     'branchfinstaff': 'api/finance-staff/refresh',
-    'workshopmanager': 'api/workshop-manager/refresh-token',
-    'workshopstaff': 'api/workshop-staff/refresh-token',
+    'workshopmanager': 'api/workshop-manager/refresh',
+    'workshopstaff': 'api/workshop-staff/refresh',
 };
 
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, UserCircle, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Building2, AlertTriangle, MapPin, UserCircle, Loader2, Eye } from 'lucide-react';
 import {
     getAllBranches,
     createBranch,
@@ -20,6 +21,8 @@ type ModalMode = 'create' | 'edit' | null;
 
 const ManageBranches = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -471,6 +474,16 @@ const ManageBranches = () => {
                                                 </td>
                                                 <td className="px-6 py-4 uppercase">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const base = location.pathname.endsWith('/') ? location.pathname.slice(0, -1) : location.pathname;
+                                                                navigate(`${base}/${branch._id}`);
+                                                            }}
+                                                            className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95"
+                                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
+                                                        >
+                                                            <Eye size={15} />
+                                                        </button>
                                                         <HasPermission permission="BRANCH_EDIT">
                                                             <button
                                                                 onClick={() => openEditModal(branch)}

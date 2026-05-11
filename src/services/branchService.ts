@@ -96,3 +96,11 @@ export const updateBranch = async (payload: UpdateBranchPayload): Promise<Branch
 export const deleteBranch = async (id: string): Promise<void> => {
     await api.delete(`/api/branch/${id}`);
 };
+
+// GET extended branch details with analytics
+export const getBranchExtendedDetails = async (id: string, startDate?: string, endDate?: string): Promise<any> => {
+    const response = await api.get(`/api/branch/${id}/details`, {
+        params: { startDate, endDate }
+    });
+    return response.data.data;
+};

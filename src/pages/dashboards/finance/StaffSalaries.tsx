@@ -515,8 +515,8 @@ const StaffSalaries = () => {
                                         <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                                         <input 
                                             type="number" 
-                                            value={formData.baseSalary}
-                                            onChange={(e) => setFormData({...formData, baseSalary: parseFloat(e.target.value) || 0})}
+                                            value={formData.baseSalary || ''}
+                                            onChange={(e) => setFormData({...formData, baseSalary: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-white focus:outline-none focus:border-[#C8E600]/50 transition-all"
                                         />
                                     </div>
@@ -551,10 +551,10 @@ const StaffSalaries = () => {
                                         <input 
                                             type="number"
                                             placeholder="Amount"
-                                            value={allowance.amount}
+                                            value={allowance.amount || ''}
                                             onChange={(e) => {
                                                 const newAllowances = [...(formData.allowances || [])];
-                                                newAllowances[idx].amount = parseFloat(e.target.value) || 0;
+                                                newAllowances[idx].amount = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                                 setFormData({...formData, allowances: newAllowances});
                                             }}
                                             className="w-32 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white font-mono"
@@ -627,9 +627,9 @@ const StaffSalaries = () => {
                                     <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Days in Month</label>
                                     <input 
                                         type="number" 
-                                        value={payrollData.totalDays}
+                                        value={payrollData.totalDays || ''}
                                         onChange={(e) => {
-                                            const total = parseInt(e.target.value) || 30;
+                                            const total = e.target.value === '' ? 0 : parseInt(e.target.value);
                                             const structure = getStructureForStaff(selectedStaff._id);
                                             const base = structure?.baseSalary || 0;
                                             const deduction = (base / total) * payrollData.leaveDays;
@@ -642,9 +642,9 @@ const StaffSalaries = () => {
                                     <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Leave Days</label>
                                     <input 
                                         type="number" 
-                                        value={payrollData.leaveDays}
+                                        value={payrollData.leaveDays || ''}
                                         onChange={(e) => {
-                                            const leaves = parseInt(e.target.value) || 0;
+                                            const leaves = e.target.value === '' ? 0 : parseInt(e.target.value);
                                             const structure = getStructureForStaff(selectedStaff._id);
                                             const base = structure?.baseSalary || 0;
                                             const deduction = (base / payrollData.totalDays) * leaves;
@@ -686,8 +686,8 @@ const StaffSalaries = () => {
                                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                                     <input 
                                         type="number" 
-                                        value={payrollData.leaveDeduction}
-                                        onChange={(e) => setPayrollData({...payrollData, leaveDeduction: parseFloat(e.target.value) || 0})}
+                                        value={payrollData.leaveDeduction || ''}
+                                        onChange={(e) => setPayrollData({...payrollData, leaveDeduction: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
                                         className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-[#C8E600] focus:outline-none focus:border-[#C8E600]/50 transition-all"
                                         placeholder="0.00"
                                     />

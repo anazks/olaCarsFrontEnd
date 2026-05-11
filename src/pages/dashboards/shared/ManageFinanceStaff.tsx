@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, ShieldCheck, Eye } from 'lucide-react';
 import {
     getAllFinanceStaff,
     createFinanceStaff,
@@ -23,6 +24,7 @@ type ModalMode = 'create' | 'edit' | null;
 
 const ManageFinanceStaff = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [financeStaff, setFinanceStaff] = useState<FinanceStaff[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -448,6 +450,17 @@ const ManageFinanceStaff = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const currentPath = window.location.pathname;
+                                                        const basePath = currentPath.split('/manage-finance-staff')[0];
+                                                        navigate(`${basePath}/staff-performance/${staff._id}`);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                    title="View Performance Profile"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
                                                 <HasPermission permission="STAFF_EDIT">
                                                     <button
                                                         onClick={() => openEditModal(staff)}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, DollarSign, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, DollarSign, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle, Eye } from 'lucide-react';
 import {
     getAllFinancialAdmins,
     createFinancialAdmin,
@@ -25,6 +26,7 @@ const FilterLabel = ({ label }: { label: string }) => (
 
 const ManageFinancialAdmins = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [admins, setAdmins] = useState<FinancialAdmin[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -389,6 +391,17 @@ const ManageFinancialAdmins = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const currentPath = window.location.pathname;
+                                                        const basePath = currentPath.split('/manage-financial-admins')[0];
+                                                        navigate(`${basePath}/staff-performance/${admin._id}`);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                    title="View Performance Profile"
+                                                >
+                                                    <Eye size={15} />
+                                                </button>
                                                 <button
                                                     onClick={() => openEditModal(admin)}
                                                     className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"

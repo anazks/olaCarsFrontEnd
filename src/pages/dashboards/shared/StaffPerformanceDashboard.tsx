@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Users, Briefcase, Activity, Clock, Search, ChevronDown, CheckCircle, 
     Clock3, MapPin, AlignLeft, TrendingUp, UserCheck, Calendar, BarChart3,
-    Target as TargetIcon
+    Target as TargetIcon, Eye
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
@@ -15,6 +16,7 @@ import { getUserRole } from '../../../utils/auth';
 
 const StaffPerformanceDashboard = () => {
     const userRole = getUserRole() || '';
+    const navigate = useNavigate();
     
     
     const [loading, setLoading] = useState(true);
@@ -769,8 +771,23 @@ const StaffPerformanceDashboard = () => {
                                         <p className="font-medium">{formatDateStr(staff.lastLoginAt)}</p>
                                     </div>
 
-                                    <div className="p-2 ml-auto opacity-50">
-                                        <ChevronDown size={20} className={`transform transition-transform ${expandedStaffId === staff.staffId ? 'rotate-180' : ''}`} />
+                                    <div className="flex items-center gap-3 ml-auto">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const currentPath = window.location.pathname;
+                                                const basePath = currentPath.split('/staff-performance')[0];
+                                                navigate(`${basePath}/staff-performance/${staff.staffId}`);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#C8E600]/10 hover:bg-[#C8E600] text-[#C8E600] hover:text-black transition-all border border-[#C8E600]/20 font-black text-[10px] uppercase tracking-wider shadow-lg shadow-[#C8E600]/5"
+                                            title="View Full Profile"
+                                        >
+                                            <Eye size={14} />
+                                            View
+                                        </button>
+                                        <div className="p-2 opacity-50">
+                                            <ChevronDown size={20} className={`transform transition-transform ${expandedStaffId === staff.staffId ? 'rotate-180' : ''}`} />
+                                        </div>
                                     </div>
                                 </div>
 

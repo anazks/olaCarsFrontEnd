@@ -117,8 +117,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     });
 
     const [lines, setLines] = useState<JournalLine[]>([
-        { accountingCode: '', type: 'DEBIT', amount: 0, description: '' },
-        { accountingCode: '', type: 'CREDIT', amount: 0, description: '' }
+        { accountingCode: '', type: 'DEBIT', amount: 0, description: '' }
     ]);
 
     useEffect(() => {
@@ -143,22 +142,10 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     useEffect(() => {
         if (type === 'PAYMENT') {
             setHeader(h => ({ ...h, narration: 'Payment for ' }));
-            setLines([
-                { accountingCode: '', type: 'DEBIT', amount: 0, description: 'Expense/Supplier amount' },
-                { accountingCode: '', type: 'CREDIT', amount: 0, description: 'Bank/Cash payment' }
-            ]);
         } else if (type === 'RECEIPT') {
             setHeader(h => ({ ...h, narration: 'Receipt from ' }));
-            setLines([
-                { accountingCode: '', type: 'DEBIT', amount: 0, description: 'Bank/Cash receipt' },
-                { accountingCode: '', type: 'CREDIT', amount: 0, description: 'Income/Customer amount' }
-            ]);
         } else if (type === 'CONTRA') {
             setHeader(h => ({ ...h, narration: 'Cash/Bank transfer' }));
-            setLines([
-                { accountingCode: '', type: 'DEBIT', amount: 0, description: 'Transfer To' },
-                { accountingCode: '', type: 'CREDIT', amount: 0, description: 'Transfer From' }
-            ]);
         }
     }, [type]);
 
@@ -167,7 +154,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     };
 
     const handleRemoveLine = (index: number) => {
-        if (lines.length <= 2) return;
+        if (lines.length <= 1) return;
         setLines(lines.filter((_, i) => i !== index));
     };
 
@@ -194,6 +181,10 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         
         if (['JOURNAL', 'CONTRA'].includes(type) && Math.abs(totals.debit - totals.credit) > 0.01) {
             return setError('Debits and Credits must balance');
+        }
+
+        if (lines.some(line => !line.accountingCode)) {
+            return setError('Please select an accounting code for all transaction lines');
         }
 
         setSubmitting(true);
@@ -361,75 +352,76 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                     </div>
                 </div>
 
-                {/* Lines Table */}
                 <div className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.02]">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-white/5 border-b border-white/5">
-                            <tr>
-                                <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Account</th>
-                                <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Description</th>
-                                <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">DR/CR</th>
-                                <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Amount</th>
-                                <th className="px-5 py-4 text-right"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {lines.map((line, index) => (
-                                <tr key={index} className="hover:bg-white/[0.01]">
-                                    <td className="p-3 w-1/3">
-                                        <AccountSelector
-                                            codes={accountingCodes}
-                                            selectedId={line.accountingCode}
-                                            onSelect={(id) => updateLine(index, 'accountingCode', id)}
-                                            isOpen={openDropdownIndex === index}
-                                            setIsOpen={(open) => setOpenDropdownIndex(open ? index : null)}
-                                        />
-                                    </td>
-                                    <td className="p-3">
-                                        <input
-                                            type="text"
-                                            placeholder="Line memo"
-                                            value={line.description}
-                                            onChange={e => updateLine(index, 'description', e.target.value)}
-                                            className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
-                                        />
-                                    </td>
-                                    <td className="p-3 w-32">
-                                        <select
-                                            value={line.type}
-                                            onChange={e => updateLine(index, 'type', e.target.value)}
-                                            className={`w-full bg-transparent border-none text-xs font-bold focus:ring-0 outline-none ${line.type === 'DEBIT' ? 'text-emerald-500' : 'text-rose-500'}`}
-                                        >
-                                            <option value="DEBIT" className="bg-[#1A1A1A]">DEBIT</option>
-                                            <option value="CREDIT" className="bg-[#1A1A1A]">CREDIT</option>
-                                        </select>
-                                    </td>
-                                    <td className="p-3 w-40">
-                                        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/5 focus-within:border-[#C8E600]/50 transition-all">
-                                            <span className="text-white/20 text-xs">$</span>
-                                            <input
-                                                required
-                                                type="number"
-                                                step="0.01"
-                                                value={line.amount || ''}
-                                                onChange={e => updateLine(index, 'amount', Number(e.target.value))}
-                                                className="w-full bg-transparent border-none p-0 text-sm text-white focus:ring-0 outline-none font-mono"
-                                            />
-                                        </div>
-                                    </td>
-                                    <td className="p-3 text-right">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveLine(index)}
-                                            className="p-2 rounded-xl hover:bg-rose-500/10 text-rose-500/40 hover:text-rose-500 transition-all"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
+                    <div className={`${lines.length > 3 ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-white/5 border-b border-white/5 sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Account</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Description</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">DR/CR</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Amount</th>
+                                    <th className="px-5 py-4 text-right"></th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {lines.map((line, index) => (
+                                    <tr key={index} className="hover:bg-white/[0.01]">
+                                        <td className="p-3 w-1/3">
+                                            <AccountSelector
+                                                codes={accountingCodes}
+                                                selectedId={line.accountingCode}
+                                                onSelect={(id) => updateLine(index, 'accountingCode', id)}
+                                                isOpen={openDropdownIndex === index}
+                                                setIsOpen={(open) => setOpenDropdownIndex(open ? index : null)}
+                                            />
+                                        </td>
+                                        <td className="p-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Line memo"
+                                                value={line.description}
+                                                onChange={e => updateLine(index, 'description', e.target.value)}
+                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                                            />
+                                        </td>
+                                        <td className="p-3 w-32">
+                                            <select
+                                                value={line.type}
+                                                onChange={e => updateLine(index, 'type', e.target.value)}
+                                                className={`w-full bg-transparent border-none text-xs font-bold focus:ring-0 outline-none ${line.type === 'DEBIT' ? 'text-emerald-500' : 'text-rose-500'}`}
+                                            >
+                                                <option value="DEBIT" className="bg-[#1A1A1A]">DEBIT</option>
+                                                <option value="CREDIT" className="bg-[#1A1A1A]">CREDIT</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-3 w-40">
+                                            <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/5 focus-within:border-[#C8E600]/50 transition-all">
+                                                <span className="text-white/20 text-xs">$</span>
+                                                <input
+                                                    required
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={line.amount || ''}
+                                                    onChange={e => updateLine(index, 'amount', e.target.value === '' ? 0 : Number(e.target.value))}
+                                                    className="w-full bg-transparent border-none p-0 text-sm text-white focus:ring-0 outline-none font-mono"
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveLine(index)}
+                                                className="p-2 rounded-xl hover:bg-rose-500/10 text-rose-500/40 hover:text-rose-500 transition-all"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                     <button
                         type="button"
                         onClick={handleAddLine}
