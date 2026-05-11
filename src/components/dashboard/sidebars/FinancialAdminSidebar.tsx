@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Receipt, FileText, Settings, Menu, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Package, Car, Calculator, BookMarked, BarChart3, Plus, Target, ClipboardList, Landmark } from 'lucide-react';
+import { LayoutDashboard, Receipt, FileText, Settings, Menu, Building2, UserCheck, Users, ChevronDown, ChevronRight, LogOut, Car, Calculator, BookMarked, BarChart3, Plus, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -35,7 +35,6 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     ];
 
     const operationsItems = [
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Car size={20} />, label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/financial-admin/drivers', permission: 'DRIVER_VIEW' },

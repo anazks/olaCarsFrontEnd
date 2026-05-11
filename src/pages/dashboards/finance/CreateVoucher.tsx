@@ -125,10 +125,9 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [codes, branchesData, taxesData] = await Promise.all([
+                const [codes, branchesData] = await Promise.all([
                     getAllAccountingCodes(),
-                    getAllBranches(),
-                    getAllTaxes()
+                    getAllBranches()
                 ]);
                 setAccountingCodes(codes);
                 setBranches(branchesData.data || []);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, BarChart3, Calculator, BookMarked, FileText, Target, ClipboardList, Landmark } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Car, Shield, Receipt, BarChart3, Calculator, BookMarked, FileText, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -36,7 +36,6 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
     const operationsItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/country-manager/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/country-manager/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },

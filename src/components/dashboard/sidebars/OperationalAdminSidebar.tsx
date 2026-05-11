@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Car, Users, Settings, Menu, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, BarChart3, Target, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Car, Users, Settings, Menu, Building2, UserCheck, ShieldCheck, ChevronDown, ChevronRight, LogOut, BarChart3, Target, ClipboardList } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -35,7 +35,6 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     ];
 
     const operationsItems = [
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/operational-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },

@@ -13,9 +13,7 @@ import {
     EyeOff,
     RefreshCw,
     AlertTriangle,
-    ChevronRight,
-    Settings,
-    Bell
+    Settings
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';

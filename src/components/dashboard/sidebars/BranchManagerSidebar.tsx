@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, ChevronRight, Package, Car, Shield, Receipt, BarChart3, UserCheck, Target, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Menu, LogOut, ChevronDown, ChevronRight, Car, Shield, Receipt, BarChart3, UserCheck, Target, ClipboardList } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -35,7 +35,6 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
     const operationsItems = [
         { icon: <Shield size={20} />, label: t('sidebar.items.insuranceManagement'), path: '/admin/branch-manager/insurances', permission: 'INSURANCE_VIEW' },
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/branch-manager/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <Receipt size={20} />, label: t('sidebar.items.purchaseBills'), path: '/admin/branch-manager/purchase-bills', permission: 'SERVICE_BILL_VIEW' },
         { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-manager/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-manager/drivers', permission: 'DRIVER_VIEW' },

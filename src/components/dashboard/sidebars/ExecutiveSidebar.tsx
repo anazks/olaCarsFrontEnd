@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, DollarSign, LogOut, Menu, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Target, ClipboardList, Landmark } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, LogOut, Menu, Building2, UserCheck, Users, ChevronDown, ChevronRight, Calculator, BookMarked, BarChart3, Receipt, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -35,7 +35,6 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     ];
 
     const operationsItems = [
-        { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
