@@ -60,7 +60,7 @@ const TopBar = ({ }: TopBarProps) => {
         if (role) {
             const basePath = API_ROLE_TO_ROUTE[role];
             if (basePath) {
-                navigate(`${basePath}/profile`);
+                navigate(`${basePath}/dashboard-settings`);
             }
         }
     };

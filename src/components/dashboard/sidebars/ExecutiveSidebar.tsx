@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, Shield, DollarSign, LogOut, Menu, Globe, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Wrench, UserCog, Target, ClipboardList, Landmark } from 'lucide-react';
+import { LayoutDashboard, CarFront, FileText, ShieldCheck, Settings, DollarSign, LogOut, Menu, Building2, UserCheck, Users, ChevronDown, ChevronRight, Package, Calculator, BookMarked, BarChart3, Receipt, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -35,7 +35,6 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     ];
 
     const operationsItems = [
-        { icon: <DollarSign size={20} />, label: t('sidebar.items.poThreshold'), path: '/admin/admin/po-threshold', permission: 'PURCHASE_ORDER_APPROVE' },
         { icon: <Package size={20} />, label: t('sidebar.items.purchaseOrders'), path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
         { icon: <CarFront size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
         { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
@@ -151,7 +150,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             {/* Footer */}
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
                 <div
-                    onClick={() => navigate('profile')}
+                    onClick={() => navigate('/admin/admin/dashboard-settings')}
                     className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}

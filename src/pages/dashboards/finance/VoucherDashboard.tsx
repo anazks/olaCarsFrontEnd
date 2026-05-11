@@ -8,7 +8,6 @@ import {
     ArrowDownLeft, 
     ArrowLeftRight, 
     FileText,
-    ChevronRight,
     Calendar,
     Building2,
     MoreVertical,
@@ -24,11 +23,9 @@ import CreateVoucher from './CreateVoucher';
 const VoucherDashboard = () => {
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<VoucherType | 'ALL'>('ALL');
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
 
     const fetchVouchers = async () => {
         setLoading(true);
@@ -38,7 +35,7 @@ const VoucherDashboard = () => {
             const data = await getVouchers(filters);
             setVouchers(data.vouchers);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch vouchers');
+            console.error(err.message || 'Failed to fetch vouchers');
         } finally {
             setLoading(false);
         }

@@ -5,7 +5,6 @@ import {
     Save, 
     X, 
     AlertCircle, 
-    Calculator, 
     ChevronDown, 
     Search, 
     Receipt, 
@@ -14,7 +13,6 @@ import {
     ArrowLeftRight, 
     FileText,
     Building2,
-    UserCircle,
     Hash,
     Tag,
     Calendar
@@ -102,7 +100,6 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     const [type, setType] = useState<VoucherType>('PAYMENT');
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
-    const [taxes, setTaxes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -135,7 +132,6 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                 ]);
                 setAccountingCodes(codes);
                 setBranches(branchesData.data || []);
-                setTaxes(taxesData);
             } catch (err) {
                 setError('Failed to load form data');
             } finally {

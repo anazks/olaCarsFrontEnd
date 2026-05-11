@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye } from 'lucide-react';
+import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -405,6 +405,49 @@ const DriverPerformanceDashboard = () => {
                         />
                     </div>
                 </div>
+            </div>
+
+            {/* ── Navigation Shortcuts ────────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button 
+                    onClick={() => navigate('../drivers')}
+                    className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-lime/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-lime/10 transition-colors" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="p-4 rounded-2xl bg-brand-lime/10 text-brand-lime group-hover:scale-110 transition-transform">
+                            <Users size={24} />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Driver Management</h3>
+                            <p className="text-[10px] font-medium text-dim">View all drivers, edit profiles, and track compliance.</p>
+                        </div>
+                    </div>
+                    <div className="p-2 rounded-full bg-white/5 text-dim group-hover:text-brand-lime group-hover:bg-brand-lime/10 transition-all relative z-10">
+                        <ArrowUpRight size={20} />
+                    </div>
+                </button>
+
+                <button 
+                    onClick={() => navigate('../vehicles')}
+                    className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-lime/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-lime/10 transition-colors" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="p-4 rounded-2xl bg-brand-lime/10 text-brand-lime group-hover:scale-110 transition-transform">
+                            <Car size={24} />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Vehicle Fleet</h3>
+                            <p className="text-[10px] font-medium text-dim">Manage inventory, maintenance, and vehicle assignments.</p>
+                        </div>
+                    </div>
+                    <div className="p-2 rounded-full bg-white/5 text-dim group-hover:text-brand-lime group-hover:bg-brand-lime/10 transition-all relative z-10">
+                        <ArrowUpRight size={20} />
+                    </div>
+                </button>
             </div>
 
             {/* ── KPI Cards ───────────────────────────────────────────── */}

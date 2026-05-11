@@ -49,6 +49,7 @@ import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
 import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
+import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -70,7 +71,6 @@ import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerforma
 import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
-import Profile from './pages/dashboards/shared/Profile';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
 
 // Finance Pages
@@ -106,9 +106,9 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Toaster 
-        position="top-right" 
-        reverseOrder={false} 
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
         toastOptions={{
           style: {
             fontSize: '13px',
@@ -135,7 +135,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
               <Route index element={<ExecutiveDashboard />} />
-              
+
               {/* Staff Management */}
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />
@@ -153,13 +153,13 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
                 <Route path="manage-branches" element={<ManageBranches />} />
               </Route>
-              
+
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
               </Route>
 
               <Route path="po-threshold" element={<POThresholdPage />} />
-              
+
               {/* Purchase Orders */}
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
@@ -179,7 +179,8 @@ function App() {
               <Route path="drivers/:id" element={<DriverDetail />} />
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
@@ -187,13 +188,13 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
-               <Route path="financial-statements" element={<FinancialStatements />} />
-               <Route path="balance-sheet" element={<BalanceSheet />} />
-               <Route path="staff-salaries" element={<StaffSalaries />} />
-                <Route path="bank-accounts" element={<ManageBankAccounts />} />
-                <Route path="target-management" element={<TargetManagement />} />
-                <Route path="task-delegation" element={<TaskDelegation />} />
-                <Route path="agreements" element={<ManageAgreements />} />
+              <Route path="financial-statements" element={<FinancialStatements />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="staff-salaries" element={<StaffSalaries />} />
+              <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
             </Route>
@@ -202,7 +203,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['operationadmin']} />}>
             <Route path="/admin/operational-admin/*" element={<DashboardLayout SidebarComponent={OperationalAdminSidebar} />}>
               <Route index element={<OperationalAdminDashboard />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-country-managers" element={<ManageCountryManagers />} />
@@ -239,7 +240,8 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="agreements" element={<ManageAgreements />} />
@@ -251,7 +253,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-country-managers" element={<ManageCountryManagers />} />
@@ -283,7 +285,7 @@ function App() {
               </Route>
 
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
@@ -292,7 +294,8 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
@@ -303,10 +306,10 @@ function App() {
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
-               <Route path="bank-accounts" element={<ManageBankAccounts />} />
-               <Route path="target-management" element={<TargetManagement />} />
-               <Route path="task-delegation" element={<TaskDelegation />} />
-             </Route>
+              <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="task-delegation" element={<TaskDelegation />} />
+            </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['countrymanager']} />}>
@@ -346,7 +349,8 @@ function App() {
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="insurances" element={<ManageInsurances />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="agreements" element={<ManageAgreements />} />
@@ -367,7 +371,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['branchmanager']} />}>
             <Route path="/admin/branch-manager/*" element={<DashboardLayout SidebarComponent={BranchManagerSidebar} />}>
               <Route index element={<BranchManagerDashboard />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />
                 <Route path="manage-finance-staff" element={<ManageFinanceStaff />} />
@@ -403,7 +407,8 @@ function App() {
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="insurances" element={<ManageInsurances />} />
-               <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="target-management" element={<TargetManagement />} />
@@ -414,7 +419,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['operationstaff']} />}>
             <Route path="/admin/branch-op-staff/*" element={<DashboardLayout SidebarComponent={BranchOpStaffSidebar} />}>
               <Route index element={<BranchOpStaffDashboard />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
@@ -431,7 +436,8 @@ function App() {
               </Route>
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
@@ -439,7 +445,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['financestaff']} />}>
             <Route path="/admin/branch-fin-staff/*" element={<DashboardLayout SidebarComponent={BranchFinStaffSidebar} />}>
               <Route index element={<BranchFinStaffDashboard />} />
-              
+
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
@@ -459,7 +465,8 @@ function App() {
               </Route>
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
@@ -483,7 +490,8 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['driver']} />}>
             <Route path="/admin/driver/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
               <Route index element={<DriverDashboard />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
             </Route>
           </Route>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, X, AlertCircle, Calculator } from 'lucide-react';
+import { Plus, Trash2, Save, X, AlertCircle, Calculator, Building2, UserPlus } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode } from '../../../services/accountingService';
 import { createManualJournal } from '../../../services/ledgerService';
 import { getAllBranches, createBranch } from '../../../services/branchService';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, Wrench, UserCog, BarChart3, Calculator, BookMarked, FileText, Target, ClipboardList, Landmark } from 'lucide-react';
+import { LayoutDashboard, Building2, Settings, Menu, UserCheck, Users, ShieldCheck, ChevronDown, ChevronRight, LogOut, Package, Car, Shield, Receipt, BarChart3, Calculator, BookMarked, FileText, Target, ClipboardList, Landmark } from 'lucide-react';
 import { removeToken } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
 import HasPermission from '../../../components/HasPermission';
@@ -44,7 +44,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
         { icon: <ShieldCheck size={20} />, label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
         { icon: <BarChart3 size={20} />, label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
     ];
-    
+
     const financeItems = [
         { icon: <FileText size={20} />, label: t('sidebar.items.generalLedger'), path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
         { icon: <Landmark size={20} />, label: t('sidebar.items.balanceSheet'), path: '/admin/country-manager/balance-sheet', permission: 'REPORTS_VIEW' },
@@ -143,7 +143,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
 
             <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
                 <div
-                    onClick={() => navigate('profile')}
+                    onClick={() => navigate('/admin/country-manager/dashboard-settings')}
                     className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     style={{ color: 'var(--sidebar-text)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
