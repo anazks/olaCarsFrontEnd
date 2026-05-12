@@ -3,14 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutGrid,
     Car,
-    Users,
     Settings,
     ChevronDown,
     ChevronUp,
     User,
     X,
-    FileText,
-    BarChart3,
     Calculator
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
