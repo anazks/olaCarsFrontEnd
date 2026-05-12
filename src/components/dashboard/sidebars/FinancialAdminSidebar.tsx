@@ -99,6 +99,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: t('sidebar.items.manageVehicles', 'Manage Vehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
+                { label: 'Fleet Performance', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
