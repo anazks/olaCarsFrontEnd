@@ -9,13 +9,7 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X,
-    Shield,
-    BarChart3,
-    Target,
-    ClipboardList,
-    Bell,
-    UserCheck
+    X
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

@@ -11,11 +11,11 @@ import {
     X,
     FileText,
     BarChart3,
-    Plus,
     Calculator
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface BranchFinStaffSidebarProps {
     isSidebarCollapsed?: boolean;
