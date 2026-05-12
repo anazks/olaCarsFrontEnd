@@ -127,7 +127,6 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'General Ledger', path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
-                { label: 'Balance Sheet', path: '/admin/country-manager/balance-sheet', permission: 'REPORTS_VIEW' },
                 { label: 'Finance Dashboard', path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: 'Tax Management', path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
                 { label: 'Chart of Accounts', path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
