@@ -8,11 +8,11 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X,
-    BarChart3
+    X
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface BranchOpStaffSidebarProps {
     isSidebarCollapsed?: boolean;
