@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
     Target as TargetIcon, MapPin, Users, Briefcase, Calendar, CheckCircle, 
     Plus, Info, User, ArrowRight, TrendingUp, Shield, Activity, Search, Filter, Building2, 
-    ChevronDown, MoreVertical, Trash2, Edit3, X, AlertCircle, Smartphone
+    ChevronDown, MoreVertical, Trash2, Edit3, X, AlertCircle
 } from 'lucide-react';
 import { assignTarget, getTargets } from '../../../services/targetService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
@@ -31,7 +31,7 @@ const TargetManagement = () => {
         notes: ''
     });
 
-    const [branchFilter, setBranchFilter] = useState('');
+    const [branchFilter] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {

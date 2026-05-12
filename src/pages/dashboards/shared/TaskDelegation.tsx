@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-    ClipboardList, Plus, User, CheckCircle, Search, Filter, AlertCircle, 
-    Calendar, X, Info, ArrowUpRight, Shield, Activity, MoreVertical, 
-    CheckCircle2, Clock, Trash2, Smartphone, MapPin, Tag
+    ClipboardList, Plus, User, CheckCircle, Search, 
+    X, CheckCircle2, Shield, Activity, 
+    Trash2, Tag, Clock
 } from 'lucide-react';
 import { delegateTask, getTasks, updateTaskStatus } from '../../../services/taskService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
@@ -17,7 +17,6 @@ const TaskDelegation = () => {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [staff, setStaff] = useState<any[]>([]);
-    const [branches, setBranches] = useState<Branch[]>([]);
     const [tasks, setTasks] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -33,7 +32,7 @@ const TaskDelegation = () => {
         notes: ''
     });
 
-    const [branchFilter, setBranchFilter] = useState('');
+    const [branchFilter] = useState('');
 
     useEffect(() => {
         fetchInitialData();
@@ -43,7 +42,6 @@ const TaskDelegation = () => {
         setFetching(true);
         try {
             const bData = await getAllBranches({ limit: 100 });
-            setBranches(bData.data || []);
             
             const sData = await getStaffPerformance({ type: 'all' });
             let allStaff = [
