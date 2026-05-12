@@ -51,6 +51,7 @@ import TargetManagement from './pages/dashboards/shared/TargetManagement';
 import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
+import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -198,6 +199,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
@@ -253,6 +255,7 @@ function App() {
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+              <Route path="alerts" element={<AlertsManagement />} />
             </Route>
           </Route>
 
@@ -317,6 +320,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="alerts" element={<AlertsManagement />} />
             </Route>
           </Route>
 
@@ -366,6 +370,7 @@ function App() {
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+              <Route path="alerts" element={<AlertsManagement />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
@@ -423,6 +428,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="target-management" element={<TargetManagement />} />
+              <Route path="alerts" element={<AlertsManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
             </Route>
           </Route>

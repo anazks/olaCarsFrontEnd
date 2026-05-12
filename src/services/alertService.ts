@@ -18,6 +18,12 @@ export interface Alert {
         };
         status: string;
     };
+    branchId?: {
+        _id: string;
+        name: string;
+        country: string;
+    };
+    country?: string;
     status: 'ACTIVE' | 'RESOLVED' | 'DISMISSED';
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
     message: string;

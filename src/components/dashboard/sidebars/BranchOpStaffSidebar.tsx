@@ -1,137 +1,258 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Settings, Menu, ChevronDown, ChevronRight, LogOut, Car, Users, BarChart3 } from 'lucide-react';
-import { removeToken } from '../../../utils/auth';
+import {
+    LayoutGrid,
+    Car,
+    Settings,
+    ChevronDown,
+    ChevronUp,
+    User,
+    X
+} from 'lucide-react';
+import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
+import HasPermission from '../../../components/HasPermission';
 
 interface BranchOpStaffSidebarProps {
     isSidebarCollapsed?: boolean;
     toggleSidebar?: () => void;
 }
 
+interface SubItem {
+    label: string;
+    path: string;
+    permission?: string;
+}
+
+interface MenuItem {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    path?: string;
+    permission?: string;
+    subItems?: SubItem[];
+}
+
 const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: BranchOpStaffSidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useTranslation();
+    const [openSection, setOpenSection] = useState<string | null>(null);
 
-    const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+    const currentUser = getUser();
+    const userName = currentUser?.name || 'Staff';
+    const userRole = 'Operations Staff';
+
+    useEffect(() => {
+        const currentPath = location.pathname;
+        const activeItem = menuItems.find(item =>
+            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+        );
+        if (activeItem) {
+            setOpenSection(activeItem.id);
+        }
+    }, [location.pathname]);
+
+    const isActive = (path: string) => {
+        if (!path) return false;
+        if (path === '/admin/branch-op-staff') {
+            return location.pathname === '/admin/branch-op-staff';
+        }
+        return location.pathname.startsWith(path);
+    };
+
+    const toggleSection = (id: string) => {
+        setOpenSection(prev => prev === id ? null : id);
+    };
+
+    const handleNavigation = (path: string) => {
+        navigate(path);
+        if (window.innerWidth < 1024 && toggleSidebar) {
+            toggleSidebar();
+        }
+    };
 
     const handleLogout = () => {
         removeToken();
         navigate('/admin/login');
     };
 
-    const operationsItems = [
-        { icon: <Car size={20} />, label: t('sidebar.items.manageVehicles'), path: '/admin/branch-op-staff/vehicles' },
-        { icon: <Users size={20} />, label: t('sidebar.items.drivers'), path: '/admin/branch-op-staff/drivers' },
-        { icon: <BarChart3 size={20} />, label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
+    const menuItems: MenuItem[] = [
+        {
+            id: 'dashboard',
+            label: t('sidebar.items.opsOverview', 'Operations Overview'),
+            icon: <LayoutGrid size={22} />,
+            path: '/admin/branch-op-staff'
+        },
+        {
+            id: 'operations',
+            label: 'Operations',
+            icon: <Car size={22} />,
+            subItems: [
+                { label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
+                { label: 'Manage Drivers', path: '/admin/branch-op-staff/drivers' },
+                { label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
+            ]
+        },
+        {
+            id: 'settings',
+            label: 'Settings',
+            icon: <Settings size={22} />,
+            subItems: [
+                { label: 'System Preferences', path: '/admin/branch-op-staff/dashboard-settings' },
+            ]
+        },
     ];
 
-    const SidebarItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
-        <div
-            onClick={onClick}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all mb-1 ${isSidebarCollapsed ? 'justify-center' : ''}`}
-            style={{
-                background: active ? 'rgba(200,230,0,0.1)' : 'transparent',
-                color: active ? 'var(--brand-lime)' : 'var(--sidebar-text)',
-            }}
-            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; }}
-            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-            title={isSidebarCollapsed ? label : ''}
-        >
-            <span style={{ color: active ? 'var(--brand-lime)' : 'inherit' }}>{icon}</span>
-            {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span>}
-        </div>
-    );
-
-    const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
-        const [isOpen, setIsOpen] = useState(true);
-
-        return (
-            <div className="mb-4">
-                {!isSidebarCollapsed && (
-                    <div
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="px-4 py-2 mb-1 flex items-center justify-between cursor-pointer group hover:bg-black/5 rounded-lg transition-all"
-                    >
-                        <h4 className="text-[11px] font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{title}</h4>
-                        <span style={{ color: 'var(--text-dim)' }} className="transition-transform duration-200">
-                            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </span>
-                    </div>
-                )}
-                <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isOpen || isSidebarCollapsed ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                    {items.map((item, i) => (
-                        <SidebarItem
-                            key={i}
-                            icon={item.icon}
-                            label={item.label}
-                            active={item.path ? isActive(item.path) : false}
-                            onClick={item.path ? () => navigate(item.path) : undefined}
-                        />
-                    ))}
-                </div>
-            </div>
-        );
-    };
     return (
         <aside
-            className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out"
-            style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-main)' }}
+            className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out relative"
+            style={{ background: '#0F0F0F', borderRight: '1px solid rgba(255,255,255,0.05)' }}
         >
-            <div className={`h-20 flex items-center justify-between border-b ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-6'}`} style={{ borderColor: 'var(--border-main)' }}>
-                {!isSidebarCollapsed && (
-                    <span className="text-xl font-bold tracking-wide transition-colors" style={{ color: 'var(--brand-lime)' }}>
-                        OLA <span style={{ color: 'var(--text-main)' }}>CARS</span>
-                    </span>
-                )}
-
-                <button
-                    onClick={toggleSidebar}
-                    className={`p-2 rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? 'ml-4' : 'ml-2'}`}
-                    style={{ color: 'var(--sidebar-text)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                >
-                    <Menu size={24} />
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-3 mt-4 custom-scrollbar overflow-x-hidden">
-                <SidebarItem
-                    icon={<LayoutDashboard size={20} />}
-                    label={t('sidebar.items.opsOverview')}
-                    active={true}
-                    onClick={() => { }}
-                />
-
-                <div className="my-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }} />
-
-                <SidebarSection title={t('sidebar.sections.operations', 'Operations')} items={operationsItems} />
-            </div>
-
-            <div className="p-4 border-t space-y-1" style={{ borderColor: 'var(--border-main)' }}>
-                <div
-                    onClick={() => navigate('/admin/branch-op-staff/dashboard-settings')}
-                    className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                    style={{ color: 'var(--sidebar-text)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? t('common.settings') : ""}
-                >
-                    <Settings size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.settings')}</span>}
+            {/* Logo Header */}
+            <div className={`h-20 flex items-center border-b border-gray-800/50 px-6 justify-between`}>
+                <div className={`flex items-center gap-2`}>
+                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
+                       <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
+                           <div className="bg-[#D4F12E] w-2.5 h-2.5 rounded-full"></div>
+                       </div>
+                    </div>
+                    {!isSidebarCollapsed && (
+                        <div className="flex items-center border-l border-gray-700 h-7 pl-3 ml-1">
+                            <span className="text-white font-bold tracking-widest text-[16px] uppercase whitespace-nowrap">Ola Cars</span>
+                        </div>
+                    )}
                 </div>
-                <div
-                    onClick={handleLogout}
-                    className={`flex items-center gap-3 cursor-pointer transition-all p-2 rounded-lg ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                    style={{ color: 'var(--sidebar-text)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.color = '#ef4444'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
-                    title={isSidebarCollapsed ? t('common.logout') : ""}
-                >
-                    <LogOut size={20} />
-                    {!isSidebarCollapsed && <span className="text-sm font-medium">{t('common.logout')}</span>}
+                
+                {toggleSidebar && (
+                    <button 
+                        onClick={toggleSidebar}
+                        className="lg:hidden text-gray-400 hover:text-white p-1.5 hover:bg-white/5 rounded-md transition-colors cursor-pointer"
+                        title="Close Sidebar"
+                    >
+                        <X size={22} />
+                    </button>
+                )}
+            </div>
+
+            {/* Menu Items */}
+            <div className="flex-1 overflow-y-auto pt-6 custom-scrollbar overflow-x-hidden">
+                <div className="space-y-1">
+                    {menuItems.map((item) => {
+                        const hasSub = item.subItems && item.subItems.length > 0;
+                        const isOpen = openSection === item.id;
+                        const isCurrentlyActive = item.path ? isActive(item.path) : false;
+
+                        const renderMainItem = () => (
+                            <div
+                                onClick={() => {
+                                    if (isSidebarCollapsed && toggleSidebar) {
+                                        toggleSidebar();
+                                        if (hasSub) {
+                                            setOpenSection(item.id);
+                                        } else if (item.path) {
+                                            handleNavigation(item.path);
+                                        }
+                                    } else {
+                                        if (hasSub) {
+                                            toggleSection(item.id);
+                                        } else if (item.path) {
+                                            handleNavigation(item.path);
+                                        }
+                                    }
+                                }}
+                                className={`group relative flex items-center gap-4 px-6 py-3.5 cursor-pointer transition-all duration-200
+                                    ${(isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? 'bg-[#1C1C0E]' : 'hover:bg-white/5'}
+                                    ${isSidebarCollapsed ? 'justify-center px-0' : ''}
+                                `}
+                                style={{
+                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
+                                }}
+                            >
+                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-gray-400 group-hover:text-gray-200'} transition-colors`}>
+                                    {item.icon}
+                                </div>
+                                {!isSidebarCollapsed && (
+                                    <div className="flex items-center justify-between w-full">
+                                        <span className={`text-[15px] font-medium transition-colors ${isCurrentlyActive ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                            {item.label}
+                                        </span>
+                                        {hasSub && (
+                                            <span className="text-gray-500 group-hover:text-gray-300">
+                                                {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+
+                        return (
+                            <div key={item.id}>
+                                {item.permission ? (
+                                    <HasPermission permission={item.permission} mode="hide">
+                                        {renderMainItem()}
+                                    </HasPermission>
+                                ) : (
+                                    renderMainItem()
+                                )}
+
+                                {!isSidebarCollapsed && hasSub && (
+                                    <div 
+                                        className={`ml-12 pl-4 relative border-l border-gray-700 flex flex-col gap-0.5 transition-all duration-300 ease-in-out overflow-hidden
+                                            ${isOpen ? 'max-h-[500px] opacity-100 mt-1 mb-2 py-1' : 'max-h-0 opacity-0 mt-0 mb-0 py-0'}
+                                        `}
+                                    >
+                                        {item.subItems!.map((sub, idx) => {
+                                            const isItActive = isActive(sub.path);
+                                            const renderSub = (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => handleNavigation(sub.path)}
+                                                    className={`cursor-pointer py-2 text-sm transition-colors
+                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-gray-400 hover:text-white'}
+                                                    `}
+                                                >
+                                                    {sub.label}
+                                                </div>
+                                            );
+
+                                            return sub.permission ? (
+                                                <HasPermission key={idx} permission={sub.permission} mode="hide">
+                                                    {renderSub}
+                                                </HasPermission>
+                                            ) : renderSub;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* User Profile Section */}
+            <div className="mt-auto border-t border-gray-800 px-6 py-4">
+                <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}>
+                    <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden border-2 border-[#D4F12E] flex-shrink-0 flex items-center justify-center">
+                        {currentUser?.avatarUrl ? (
+                            <img src={currentUser.avatarUrl} alt="profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <User size={20} className="text-white" />
+                        )}
+                    </div>
+                    {!isSidebarCollapsed && (
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-white text-sm font-semibold truncate">{userName}</span>
+                            <span className="text-gray-400 text-xs truncate">{currentUser?.role || userRole}</span>
+                            <button
+                                onClick={handleLogout}
+                                className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </aside>
