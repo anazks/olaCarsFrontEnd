@@ -4,7 +4,7 @@ import {
     Plus, User, ArrowRight, TrendingUp, Shield, Activity, Search, Building2
 } from 'lucide-react';
 import { assignTarget, getTargets } from '../../../services/targetService';
-import { getAllBranches } from '../../../services/branchService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser } from '../../../utils/auth';
 

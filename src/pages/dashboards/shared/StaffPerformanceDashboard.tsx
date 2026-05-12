@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Users, Briefcase, Activity, Clock, Search, ChevronDown, CheckCircle, 
     Clock3, MapPin, AlignLeft, TrendingUp, UserCheck, Calendar, BarChart3,
-    Target as TargetIcon, Eye, Zap, Shield, Award, Filter, Mail, ArrowUpRight
+    ArrowUpRight
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
@@ -27,7 +26,6 @@ const StaffPerformanceDashboard = () => {
     const [branchManagers, setBranchManagers] = useState<BranchManagerPerformanceData[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManagerPerformanceData[]>([]);
     const [globalAdmins, setGlobalAdmins] = useState<GlobalAdminPerformanceData[]>([]);
-    const [targetComparison, setTargetComparison] = useState<TargetComparison[]>([]);
     const [dateRange, setDateRange] = useState({
         startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
@@ -69,7 +67,6 @@ const StaffPerformanceDashboard = () => {
             setBranchManagers(data.data.branchManagers || []);
             setCountryManagers(data.data.countryManagers || []);
             setGlobalAdmins(data.data.globalAdmins || []);
-            setTargetComparison(data.data.targetComparison || []);
         } catch (error) {
             console.error('Error fetching staff performance:', error);
         } finally {
@@ -196,13 +193,6 @@ const StaffPerformanceDashboard = () => {
             ].filter(x => x.value > 0)
         };
     }, [combinedList]);
-
-    const formatDateStr = (dateStr: string) => {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleString(undefined, {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-    };
 
     const getStatusColor = (status: string) => {
         return status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :

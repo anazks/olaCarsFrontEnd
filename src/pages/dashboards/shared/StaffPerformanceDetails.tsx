@@ -14,11 +14,8 @@ import {
     LogIn,
     LogOut,
     Shield,
-    Award,
     Activity,
     Briefcase,
-    ChevronRight,
-    MapPin,
     Smartphone,
     Zap
 } from 'lucide-react';
