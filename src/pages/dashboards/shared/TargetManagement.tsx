@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-    Target as TargetIcon, MapPin, Users, Briefcase, Calendar, CheckCircle, 
-    Plus, Info, User, ArrowRight, TrendingUp, Shield, Activity, Search, Filter, Building2, 
-    ChevronDown, MoreVertical, Trash2, Edit3, X, AlertCircle
+    Target as TargetIcon, MapPin, Users,
+    Plus, User, ArrowRight, TrendingUp, Shield, Activity, Search, Building2
 } from 'lucide-react';
 import { assignTarget, getTargets } from '../../../services/targetService';
-import { getAllBranches, type Branch } from '../../../services/branchService';
+import { getAllBranches } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser } from '../../../utils/auth';
 

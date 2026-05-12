@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { delegateTask, getTasks, updateTaskStatus } from '../../../services/taskService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
-import { getAllBranches, type Branch } from '../../../services/branchService';
+import { getAllBranches } from '../../../services/branchService';
 import { getUserRole, getUserId, getUser } from '../../../utils/auth';
 
 const TaskDelegation = () => {
