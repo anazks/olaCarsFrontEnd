@@ -5,7 +5,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
 import { 
-    Car, Users, DollarSign, AlertCircle, ShieldAlert, ArrowUpRight, Calendar, 
+    Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
     MapPin, Building, ChevronRight, Briefcase, CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,18 +14,9 @@ import { format } from 'date-fns';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
 
-const THEME_COLORS = {
-    primary: '#148F85',
-    danger: '#EF4444',
-    warning: '#F97316',
-    info: '#3B82F6',
-    accent: '#22C55E',
-    textSecondary: '#64748b',
-    grid: 'rgba(0, 0, 0, 0.05)'
-};
+
 
 const FinancialAdminDashboard = () => {
-    const { t } = useTranslation();
     
     // State
     const [loading, setLoading] = useState(true);

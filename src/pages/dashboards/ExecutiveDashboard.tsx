@@ -67,7 +67,7 @@ const ExecutiveDashboard = () => {
 
     // Global Filters
     const [globalBranch, setGlobalBranch] = useState<string>('all');
-    const [globalSort, setGlobalSort] = useState<string>('desc');
+    const [globalSort] = useState<string>('desc');
     const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 

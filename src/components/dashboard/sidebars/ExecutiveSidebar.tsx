@@ -6,15 +6,12 @@ import {
     Users,
     Library,
     Calculator,
-    Crosshair,
     Bell,
     Settings,
     ChevronDown,
     ChevronUp,
     User,
-    X,
-    ShieldCheck,
-    BarChart3
+    X
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

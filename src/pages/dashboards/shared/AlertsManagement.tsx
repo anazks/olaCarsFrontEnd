@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
     AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle, 
     Car, Calendar, MapPin, Building2, RefreshCw, ArrowLeft, Eye
@@ -14,7 +13,6 @@ type SeverityTab = 'ALL' | 'CRITICAL' | 'MAJOR' | 'MINOR';
 
 const AlertsManagement = () => {
     const navigate = useNavigate();
-
     const [loading, setLoading] = useState(true);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
