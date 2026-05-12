@@ -12,11 +12,7 @@ import {
     X,
     ShieldCheck,
     BarChart3,
-    Bell,
-    Target,
-    ClipboardList,
-    Building2,
-    UserCheck
+    Bell
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

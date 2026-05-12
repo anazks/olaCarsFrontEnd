@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 type SeverityTab = 'ALL' | 'CRITICAL' | 'MAJOR' | 'MINOR';
 
 const AlertsManagement = () => {
-    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
@@ -100,7 +99,7 @@ const AlertsManagement = () => {
 
         // Country filter - use alert's own country or populated branchId.country
         if (filterCountry !== 'all') {
-            const alertCountry = alert.country || (alert as any).branchId?.country;
+            const alertCountry = alert.country || alert.branchId?.country;
             if (alertCountry !== filterCountry) return false;
         }
 
@@ -456,19 +455,19 @@ const AlertsManagement = () => {
                                                             {vehicle.basicDetails?.vin}
                                                         </span>
                                                     </div>
-                                                    {((alert as any).branchId?.name || vehicle.purchaseDetails?.branch?.name) && (
+                                                    {(alert.branchId?.name || vehicle.purchaseDetails?.branch?.name) && (
                                                         <div className="flex items-center gap-1.5">
                                                             <Building2 size={12} style={{ color: 'var(--text-dim)' }} />
                                                             <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
-                                                                {(alert as any).branchId?.name || vehicle.purchaseDetails?.branch?.name}
+                                                                {alert.branchId?.name || vehicle.purchaseDetails?.branch?.name}
                                                             </span>
                                                         </div>
                                                     )}
-                                                    {(alert.country || (alert as any).branchId?.country) && (
+                                                    {(alert.country || alert.branchId?.country) && (
                                                         <div className="flex items-center gap-1.5">
                                                             <MapPin size={12} style={{ color: 'var(--text-dim)' }} />
                                                             <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
-                                                                {alert.country || (alert as any).branchId?.country}
+                                                                {alert.country || alert.branchId?.country}
                                                             </span>
                                                         </div>
                                                     )}
