@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Clock3, MapPin, AlignLeft, TrendingUp, UserCheck, Calendar, BarChart3,
-    ArrowUpRight
+    Clock3, MapPin, TrendingUp, Calendar, BarChart3,
+    ArrowUpRight, Activity, Shield, ChevronDown, Users, CheckCircle, Award, Search
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend 
 } from 'recharts';
 
-import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData, type TargetComparison } from '../../../services/staffPerformanceService';
+import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData } from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
 import { StatCard } from '../../../components/dashboard/widgets/StatusCards';

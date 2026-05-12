@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 const COLORS = ['#C8E600', '#4F46E5', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 const BranchManagerDashboard = () => {
-    const { t } = useTranslation();
+    const { } = useTranslation();
     const navigate = useNavigate();
     const user = getUser();
 
@@ -47,7 +47,7 @@ const BranchManagerDashboard = () => {
                 const [vehiclesRes, driversRes, alertsRes] = await Promise.allSettled([
                     getAllVehicles({ limit: 1000, branch: branchId }),
                     getAllDrivers({ limit: 1000, branch: branchId }),
-                    getActiveAlerts() 
+                    getActiveAlerts()
                 ]);
 
                 let totalV = 0;
@@ -60,7 +60,7 @@ const BranchManagerDashboard = () => {
                 if (vehiclesRes.status === 'fulfilled') {
                     const vehicles = vehiclesRes.value.data || [];
                     totalV = vehicles.length;
-                    
+
                     vehicles.forEach((v: any) => {
                         const status = v.status;
                         if (status === 'ACTIVE — AVAILABLE') {
@@ -96,14 +96,14 @@ const BranchManagerDashboard = () => {
                     const alerts = alertsRes.value || [];
                     const branchAlerts = alerts.filter((a: any) => a.vehicleId?.purchaseDetails?.branch === branchId || (a.vehicleId?.purchaseDetails?.branch as any)?._id === branchId || true);
                     activeA = branchAlerts.length;
-                    
+
                     // Enhanced sorting: Priority (High > Medium > Low) then Date (Newest first)
                     const priorityWeight = { 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
-                    
+
                     const sortedAlerts = [...branchAlerts].sort((a: any, b: any) => {
                         const pA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0;
                         const pB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0;
-                        
+
                         if (pA !== pB) return pB - pA;
                         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                     });
@@ -209,7 +209,7 @@ const BranchManagerDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
+
                 {/* Fleet Status Chart */}
                 <div
                     className="rounded-3xl border shadow-xl overflow-hidden transition-all hover:shadow-lime/5 group"
@@ -226,34 +226,34 @@ const BranchManagerDashboard = () => {
                         {vehicleStatusData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie 
-                                        data={vehicleStatusData} 
-                                        innerRadius={70} 
-                                        outerRadius={95} 
-                                        paddingAngle={5} 
-                                        dataKey="value" 
+                                    <Pie
+                                        data={vehicleStatusData}
+                                        innerRadius={70}
+                                        outerRadius={95}
+                                        paddingAngle={5}
+                                        dataKey="value"
                                         stroke="none"
                                         animationBegin={0}
                                         animationDuration={1500}
                                     >
                                         {vehicleStatusData.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
                                     </Pie>
-                                    <RechartsTooltip 
-                                        contentStyle={{ 
-                                            background: 'rgba(28, 28, 28, 0.9)', 
+                                    <RechartsTooltip
+                                        contentStyle={{
+                                            background: 'rgba(28, 28, 28, 0.9)',
                                             backdropFilter: 'blur(10px)',
-                                            border: '1px solid var(--border-main)', 
-                                            borderRadius: '12px', 
-                                            color: 'var(--text-main)', 
-                                            fontSize: '12px', 
+                                            border: '1px solid var(--border-main)',
+                                            borderRadius: '12px',
+                                            color: 'var(--text-main)',
+                                            fontSize: '12px',
                                             fontWeight: 600,
                                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                                        }} 
+                                        }}
                                     />
-                                    <Legend 
-                                        verticalAlign="bottom" 
-                                        height={36} 
-                                        wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '20px' }} 
+                                    <Legend
+                                        verticalAlign="bottom"
+                                        height={36}
+                                        wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '20px' }}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -277,8 +277,8 @@ const BranchManagerDashboard = () => {
                     </div>
                     <div className="p-2 overflow-y-auto max-h-[300px] custom-scrollbar">
                         {handovers.length > 0 ? handovers.map((h, i) => (
-                            <div 
-                                key={i} 
+                            <div
+                                key={i}
                                 className="flex items-center justify-between p-4 hover:bg-white/5 transition-all group rounded-2xl mx-2 my-1 border border-transparent hover:border-white/10"
                             >
                                 <div className="flex gap-4 items-center">
@@ -318,8 +318,8 @@ const BranchManagerDashboard = () => {
                             Live Notifications
                         </h4>
                         <div className="flex items-center gap-1">
-                             <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                             <span className="text-[10px] font-bold text-dim uppercase tracking-widest">Live</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-dim uppercase tracking-widest">Live</span>
                         </div>
                     </div>
                     <div className="p-3 space-y-2 overflow-y-auto max-h-[300px] custom-scrollbar">
@@ -333,15 +333,15 @@ const BranchManagerDashboard = () => {
                                 }}
                             >
                                 {/* Left Priority Indicator Line */}
-                                <div 
+                                <div
                                     className="absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2"
                                     style={{ background: task.priority === 'HIGH' ? '#EF4444' : task.priority === 'MEDIUM' ? '#F59E0B' : 'var(--brand-lime)' }}
                                 />
 
                                 <div className="flex gap-4">
-                                    <div 
+                                    <div
                                         className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
-                                        style={{ 
+                                        style={{
                                             background: task.priority === 'HIGH' ? 'rgba(239, 68, 68, 0.1)' : task.priority === 'MEDIUM' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(200, 230, 0, 0.1)',
                                             color: task.priority === 'HIGH' ? '#EF4444' : task.priority === 'MEDIUM' ? '#F59E0B' : 'var(--brand-lime)'
                                         }}
@@ -359,9 +359,9 @@ const BranchManagerDashboard = () => {
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <span 
+                                                <span
                                                     className="text-[8px] px-1.5 py-0.5 rounded-sm font-black uppercase tracking-widest border"
-                                                    style={{ 
+                                                    style={{
                                                         borderColor: task.priority === 'HIGH' ? '#EF444440' : task.priority === 'MEDIUM' ? '#F59E0B40' : 'var(--brand-lime)40',
                                                         color: task.priority === 'HIGH' ? '#EF4444' : task.priority === 'MEDIUM' ? '#F59E0B' : 'var(--brand-lime)'
                                                     }}
@@ -390,9 +390,9 @@ const BranchManagerDashboard = () => {
                     </div>
                     {tasks.length > 0 && (
                         <div className="p-3 border-t text-center" style={{ borderColor: 'var(--border-main)' }}>
-                             <button className="text-[10px] font-black uppercase tracking-widest text-dim hover:text-lime transition-colors cursor-pointer">
+                            <button className="text-[10px] font-black uppercase tracking-widest text-dim hover:text-lime transition-colors cursor-pointer">
                                 Mark all as viewed
-                             </button>
+                            </button>
                         </div>
                     )}
                 </div>
