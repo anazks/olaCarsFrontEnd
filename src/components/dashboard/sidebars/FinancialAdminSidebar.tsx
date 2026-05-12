@@ -150,7 +150,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             id: 'alerts',
             label: 'Alerts',
             icon: <Bell size={22} />,
-            subItems: []
+            path: '/admin/financial-admin/alerts'
         },
         {
             id: 'settings',
@@ -179,7 +179,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="flex items-center border-l border-gray-700 h-7 pl-3 ml-1">
-                            <span className="text-white font-bold tracking-widest text-[16px] uppercase">Fleet</span>
+                            <span className="text-white font-bold tracking-widest text-[16px] uppercase whitespace-nowrap">Ola Cars</span>
                         </div>
                     )}
                 </div>
@@ -308,7 +308,8 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="flex flex-col min-w-0">
-                            <span className="text-white text-sm font-semibold truncate">{userName}, {userRole}</span>
+                            <span className="text-white text-sm font-semibold truncate">{userName}</span>
+                            <span className="text-gray-400 text-xs truncate">{currentUser?.role || userRole}</span>
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
