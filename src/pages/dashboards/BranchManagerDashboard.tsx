@@ -208,7 +208,7 @@ const BranchManagerDashboard = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                 {/* Fleet Status Chart */}
                 <div
@@ -309,7 +309,7 @@ const BranchManagerDashboard = () => {
 
                 {/* Staff Tasks / Alerts */}
                 <div
-                    className="rounded-3xl border shadow-xl flex flex-col overflow-hidden transition-all hover:shadow-red-500/5 lg:col-span-1"
+                    className="rounded-3xl border shadow-xl flex flex-col overflow-hidden transition-all hover:shadow-red-500/5 lg:col-span-2"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <div className="p-6 border-b flex justify-between items-center" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
