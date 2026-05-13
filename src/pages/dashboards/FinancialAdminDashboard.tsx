@@ -7,7 +7,7 @@ import {
 import { 
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
     MapPin, Building, ChevronRight, Briefcase, FilterX,
-    TrendingUp, Wallet
+    TrendingUp, Wallet, CheckCircle
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
