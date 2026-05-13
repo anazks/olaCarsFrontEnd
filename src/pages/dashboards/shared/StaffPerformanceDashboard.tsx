@@ -204,7 +204,7 @@ const StaffPerformanceDashboard = () => {
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             
             {/* Command Header */}
-            <div className="p-8 border-b border-white/5 relative overflow-hidden">
+            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48" />
                 
                 <div className="max-w-[1600px] mx-auto relative z-10">
@@ -214,7 +214,7 @@ const StaffPerformanceDashboard = () => {
                                 <Activity size={32} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black tracking-tighter text-white">Resource Intelligence</h1>
+                                <h1 className="text-4xl font-black tracking-tighter text-[var(--text-main)]">Resource Intelligence</h1>
                                 <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
                                     <Shield size={14} className="text-lime" /> Platform Telemetry & Staff Performance
                                 </p>
@@ -222,7 +222,7 @@ const StaffPerformanceDashboard = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-1.5 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar max-w-[90vw]">
+                            <div className="flex items-center gap-1.5 p-1.5 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)] overflow-x-auto no-scrollbar max-w-[90vw]">
                                 {(
                                     isBranchScoped 
                                         ? ['all', 'finance', 'operation'] 
@@ -236,7 +236,7 @@ const StaffPerformanceDashboard = () => {
                                         className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                                             staffType === type 
                                                 ? 'bg-lime text-black shadow-lg shadow-lime/20 scale-[1.02]' 
-                                                : 'hover:bg-white/5 text-dim hover:text-white'
+                                                : 'hover:bg-[var(--bg-card)] text-dim hover:text-[var(--text-main)]'
                                         }`}
                                     >
                                         {type === 'country-manager' ? 'Region' : 
@@ -271,20 +271,20 @@ const StaffPerformanceDashboard = () => {
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                            <div className="flex items-center gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-main)]">
                                 <Calendar size={14} className="ml-3 text-lime opacity-60" />
                                 <input 
                                     type="date" 
                                     value={dateRange.startDate}
                                     onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-white uppercase"
+                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-[var(--text-main)] uppercase"
                                 />
-                                <div className="w-px h-4 bg-white/10" />
+                                <div className="w-px h-4 bg-[var(--border-main)]" />
                                 <input 
                                     type="date" 
                                     value={dateRange.endDate}
                                     onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-white uppercase"
+                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-[var(--text-main)] uppercase"
                                 />
                             </div>
                         </div>
@@ -330,7 +330,7 @@ const StaffPerformanceDashboard = () => {
                 {!loading && combinedList.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* 1. Distribution Matrix */}
-                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
@@ -338,7 +338,7 @@ const StaffPerformanceDashboard = () => {
                                     </div>
                                     <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Distribution Matrix</h2>
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-white px-3 py-1 rounded-lg bg-white/5 border border-white/5">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-[var(--text-main)] px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-main)]">
                                     FINANCE vs OPERATION
                                 </div>
                             </div>
@@ -348,15 +348,15 @@ const StaffPerformanceDashboard = () => {
                                         <Pie data={chartData.distribution} innerRadius={65} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
                                             {chartData.distribution.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
                                         </Pie>
-                                        <RechartsTooltip contentStyle={{ background: '#111', border: 'none', borderRadius: '16px' }} />
-                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
+                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
                         {/* 2. Task Momentum */}
-                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
                                     <TrendingUp size={20} />
@@ -369,15 +369,15 @@ const StaffPerformanceDashboard = () => {
                                         <Pie data={chartData.frequency} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
                                             {chartData.frequency.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
                                         </Pie>
-                                        <RechartsTooltip contentStyle={{ background: '#111', border: 'none', borderRadius: '16px' }} />
-                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
+                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
                         {/* 3. Asset Deployment */}
-                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="p-3 rounded-2xl bg-lime/10 text-lime">
                                     <BarChart3 size={20} />
@@ -387,10 +387,10 @@ const StaffPerformanceDashboard = () => {
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData.output} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                                        <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ background: '#111', border: 'none', borderRadius: '12px' }} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                        <RechartsTooltip cursor={{fill: 'var(--bg-input)'}} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }} itemStyle={{ color: 'var(--text-main)' }} />
                                         <Bar dataKey="value" name="Total" radius={[10, 10, 2, 2]} maxBarSize={40}>
                                             {chartData.output.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
                                         </Bar>
@@ -400,7 +400,7 @@ const StaffPerformanceDashboard = () => {
                         </div>
 
                         {/* 4. Process Bottlenecks */}
-                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
                                     <Clock3 size={20} />
@@ -410,10 +410,10 @@ const StaffPerformanceDashboard = () => {
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData.velocity} layout="vertical" margin={{ top: 0, right: 0, left: 20, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} />
-                                        <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={9} tickLine={false} axisLine={false} />
-                                        <YAxis dataKey="name" type="category" stroke="white" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} width={60} />
-                                        <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ background: '#111', border: 'none', borderRadius: '12px' }} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} opacity={0.2} />
+                                        <XAxis type="number" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
+                                        <YAxis dataKey="name" type="category" stroke="var(--text-main)" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} width={60} />
+                                        <RechartsTooltip cursor={{fill: 'var(--bg-input)'}} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }} itemStyle={{ color: 'var(--text-main)' }} />
                                         <Bar dataKey="hours" name="Avg Hours" radius={[0, 8, 8, 0]} maxBarSize={15} fill="#f97316" />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -423,10 +423,10 @@ const StaffPerformanceDashboard = () => {
                 )}
 
                 {/* Staff Roster Table */}
-                <div className="rounded-[2.5rem] border border-white/5 bg-white/5 overflow-hidden">
-                    <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/[0.02]">
+                <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                    <div className="p-8 border-b border-[var(--border-main)] flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--bg-card)]">
                         <div>
-                            <h2 className="text-2xl font-black text-white">Staff Telemetry Ledger</h2>
+                            <h2 className="text-2xl font-black text-[var(--text-main)]">Staff Telemetry Ledger</h2>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-dim mt-1">Real-time performance audit of network resources</p>
                         </div>
 
@@ -437,7 +437,7 @@ const StaffPerformanceDashboard = () => {
                                 placeholder="Search resources..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-12 pr-6 py-3.5 rounded-2xl border w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all font-bold text-[10px] uppercase tracking-widest bg-black/40 border-white/10 text-white"
+                                className="pl-12 pr-6 py-3.5 rounded-2xl border w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all font-bold text-[10px] uppercase tracking-widest bg-[var(--bg-input)] border-[var(--border-main)] text-[var(--text-main)]"
                             />
                         </div>
                     </div>
@@ -445,20 +445,20 @@ const StaffPerformanceDashboard = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-black/20">
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 pl-8">Resource</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Designation</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Hub Node</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Output</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Velocity</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-right pr-8">Actions</th>
+                                <tr className="bg-[var(--bg-input)] opacity-50">
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Resource</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Designation</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Hub Node</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Output</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Velocity</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right pr-8">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y divide-[var(--border-main)]">
                                 {loading ? (
                                     [1, 2, 3, 4, 5].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={6} className="p-6"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
+                                            <td colSpan={6} className="p-6"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                         </tr>
                                     ))
                                 ) : combinedList.length === 0 ? (
@@ -467,14 +467,14 @@ const StaffPerformanceDashboard = () => {
                                     </tr>
                                 ) : (
                                     combinedList.map(staff => (
-                                        <tr key={staff.staffId} className="hover:bg-white/[0.02] transition-colors group">
+                                        <tr key={staff.staffId} className="hover:bg-[var(--bg-input)] transition-colors group">
                                             <td className="p-5 pl-8">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black text-sm border border-lime/10">
                                                         {staff.fullName.split(' ')[0].charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-white group-hover:text-lime transition-colors">{staff.fullName}</p>
+                                                        <p className="text-sm font-black text-[var(--text-main)] group-hover:text-lime transition-colors">{staff.fullName}</p>
                                                         <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mt-1 inline-block ${getStatusColor(staff.status)}`}>
                                                             {staff.status}
                                                         </span>
@@ -482,13 +482,13 @@ const StaffPerformanceDashboard = () => {
                                                 </div>
                                             </td>
                                             <td className="p-5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">
                                                     {staff._listType.replace('-', ' ')}
                                                 </p>
                                                 <p className="text-[9px] font-bold text-dim mt-0.5">{staff.email}</p>
                                             </td>
                                             <td className="p-5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">
                                                     {staff._listType === 'country-manager' ? (staff as any).country : 
                                                      (staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? 'Global HQ' : 
                                                      staff.branchName}
@@ -498,7 +498,7 @@ const StaffPerformanceDashboard = () => {
                                                 </p>
                                             </td>
                                             <td className="p-5 text-center">
-                                                <p className="text-lg font-black text-white leading-none">
+                                                <p className="text-lg font-black text-[var(--text-main)] leading-none">
                                                     {staff.metrics.totalDriversOnboarded ?? staff.metrics.totalVehiclesOnboarded ?? 0}
                                                 </p>
                                                 <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Onboarded</p>
@@ -516,7 +516,7 @@ const StaffPerformanceDashboard = () => {
                                                         const basePath = currentPath.split('/staff-performance')[0];
                                                         navigate(`${basePath}/staff-performance/${staff.staffId}`);
                                                     }}
-                                                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 hover:bg-lime text-dim hover:text-black transition-all border border-white/5 hover:border-lime font-black text-[10px] uppercase tracking-widest"
+                                                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[var(--bg-input)] hover:bg-lime text-dim hover:text-black transition-all border border-[var(--border-main)] hover:border-lime font-black text-[10px] uppercase tracking-widest"
                                                 >
                                                     Profile <ArrowUpRight size={14} />
                                                 </button>

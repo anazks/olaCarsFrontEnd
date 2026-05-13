@@ -132,7 +132,7 @@ const TargetManagement = () => {
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             
             {/* Command Header */}
-            <div className="p-8 border-b border-white/5 relative overflow-hidden bg-black/40 backdrop-blur-md">
+            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden bg-[var(--bg-card)] backdrop-blur-md">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48" />
                 
                 <div className="max-w-[1600px] mx-auto relative z-10">
@@ -142,7 +142,7 @@ const TargetManagement = () => {
                                 <TargetIcon size={32} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black tracking-tighter text-white">Target Management</h1>
+                                <h1 className="text-4xl font-black tracking-tighter text-[var(--text-main)]">Target Management</h1>
                                 <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
                                     <Shield size={14} className="text-lime" /> Strategic Benchmarking & Control
                                 </p>
@@ -150,15 +150,15 @@ const TargetManagement = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 border border-white/10">
+                            <div className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)]">
                                 <div className="text-right">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim">Active</p>
-                                    <p className="text-xl font-black text-white leading-none">{existingTargets.length}</p>
+                                    <p className="text-xl font-black text-[var(--text-main)] leading-none">{existingTargets.length}</p>
                                 </div>
-                                <div className="w-px h-8 bg-white/10 mx-2" />
+                                <div className="w-px h-8 bg-[var(--border-main)] mx-2" />
                                 <div className="text-right">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim">Volume</p>
-                                    <p className="text-xl font-black text-white leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
+                                    <p className="text-xl font-black text-[var(--text-main)] leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
                                 </div>
                             </div>
                         </div>
@@ -171,10 +171,10 @@ const TargetManagement = () => {
                     
                     {/* Left Column: Form (Sticky) */}
                     <div className="xl:col-span-4">
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/5 p-8 sticky top-8 overflow-hidden group">
+                        <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 sticky top-8 overflow-hidden group">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-lime/30 to-transparent" />
                             
-                            <h2 className="text-xl font-black text-white mb-8 flex items-center gap-3">
+                            <h2 className="text-xl font-black text-[var(--text-main)] mb-8 flex items-center gap-3">
                                 <Plus size={20} className="text-lime" />
                                 Deploy Objective
                             </h2>
@@ -192,7 +192,7 @@ const TargetManagement = () => {
                                             }
                                             setFormData({ ...formData, targetType: newType, targetId: newId });
                                         }}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-white"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                     >
                                         {canAssignCountry && <option value="COUNTRY">National Country</option>}
                                         {canAssignBranch && <option value="BRANCH">Regional Branch</option>}
@@ -205,7 +205,7 @@ const TargetManagement = () => {
                                     <select
                                         value={formData.targetId}
                                         onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-white"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                         required
                                     >
                                         <option value="">Select Option</option>
@@ -246,7 +246,7 @@ const TargetManagement = () => {
                                     <select
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-white"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                     >
                                         <option value="DRIVER_ACQUISITION">Driver Acquisition</option>
                                         <option value="RENTAL">Rental (New Leases)</option>
@@ -260,7 +260,7 @@ const TargetManagement = () => {
                                         type="number"
                                         value={formData.targetValue}
                                         onChange={(e) => setFormData({ ...formData, targetValue: parseInt(e.target.value) })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xl font-black focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-lime"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-xl font-black focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-lime"
                                         min="0"
                                         required
                                     />
@@ -273,7 +273,7 @@ const TargetManagement = () => {
                                             type="date"
                                             value={formData.startDate}
                                             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-[10px] font-bold text-white uppercase"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-[10px] font-bold text-[var(--text-main)] uppercase"
                                             required
                                         />
                                     </div>
@@ -283,7 +283,7 @@ const TargetManagement = () => {
                                             type="date"
                                             value={formData.endDate}
                                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-[10px] font-bold text-white uppercase"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-[10px] font-bold text-[var(--text-main)] uppercase"
                                             required
                                         />
                                     </div>
@@ -303,7 +303,7 @@ const TargetManagement = () => {
                     {/* Right Column: Tables */}
                     <div className="xl:col-span-8 space-y-10">
                         
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-4 rounded-[2rem] bg-white/5 border border-white/10 mb-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-4 rounded-[2rem] bg-[var(--bg-input)] border border-[var(--border-main)] mb-8">
                             <div className="relative flex-1 group">
                                 <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-lime opacity-40 group-focus-within:opacity-100 transition-opacity" />
                                 <input 
@@ -311,20 +311,20 @@ const TargetManagement = () => {
                                     placeholder="Search directives..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-6 py-3.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-white"
+                                    className="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl pl-12 pr-6 py-3.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                 />
                             </div>
                         </div>
 
                         {/* 1. Higher Authority Table */}
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/5 overflow-hidden">
-                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                            <div className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/10">
                                         <Shield size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-black text-white">Authority Directives</h2>
+                                        <h2 className="text-xl font-black text-[var(--text-main)]">Authority Directives</h2>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-dim mt-1">Operational Mandates from Management</p>
                                     </div>
                                 </div>
@@ -333,19 +333,19 @@ const TargetManagement = () => {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="bg-black/20">
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 pl-8">Target Node</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Category</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Cycle Range</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-right">Value</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center pr-8">Status</th>
+                                        <tr className="bg-[var(--bg-input)]">
+                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Target Node</th>
+                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Category</th>
+                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Cycle Range</th>
+                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right">Value</th>
+                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center pr-8">Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-[var(--border-main)]">
                                         {fetching ? (
                                             [1, 2, 3].map(i => (
                                                 <tr key={i} className="animate-pulse">
-                                                    <td colSpan={5} className="p-8"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
+                                                    <td colSpan={5} className="p-8"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                                 </tr>
                                             ))
                                         ) : targetsFromAuthority.length === 0 ? (
@@ -354,14 +354,14 @@ const TargetManagement = () => {
                                             </tr>
                                         ) : (
                                             targetsFromAuthority.map((t) => (
-                                                <tr key={t._id} className="hover:bg-white/[0.02] transition-colors group/row">
+                                                <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
                                                     <td className="p-5 pl-8">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50 group-hover/row:text-blue-400 transition-colors">
+                                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-blue-400 transition-colors">
                                                                 {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                             </div>
                                                             <div>
-                                                                <p className="text-sm font-black text-white">{getTargetName(t)}</p>
+                                                                <p className="text-sm font-black text-[var(--text-main)]">{getTargetName(t)}</p>
                                                                 <p className="text-[9px] font-bold text-dim flex items-center gap-1 mt-0.5">
                                                                     <User size={10} /> {t.assignedBy?.fullName || 'System'}
                                                                 </p>
@@ -369,13 +369,13 @@ const TargetManagement = () => {
                                                         </div>
                                                     </td>
                                                     <td className="p-5">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-dim">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-[var(--bg-input)] border border-[var(--border-main)] text-dim">
                                                             {t.category.replace('_', ' ')}
                                                         </span>
                                                     </td>
                                                     <td className="p-5">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[11px] font-bold text-white">{new Date(t.startDate).toLocaleDateString()}</span>
+                                                            <span className="text-[11px] font-bold text-[var(--text-main)]">{new Date(t.startDate).toLocaleDateString()}</span>
                                                             <span className="text-[9px] font-black uppercase text-dim tracking-widest">Until {new Date(t.endDate).toLocaleDateString()}</span>
                                                         </div>
                                                     </td>
@@ -399,14 +399,14 @@ const TargetManagement = () => {
 
                         {/* 2. My Assigned Targets Table */}
                         {userRole !== 'admin' && (
-                            <div className="rounded-[2.5rem] border border-white/5 bg-white/5 overflow-hidden">
-                                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                            <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                                <div className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center text-lime border border-lime/10">
                                             <TrendingUp size={24} />
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-black text-white">My Delegated Objectives</h2>
+                                            <h2 className="text-xl font-black text-[var(--text-main)]">My Delegated Objectives</h2>
                                             <p className="text-[10px] font-black uppercase tracking-widest text-dim mt-1">Benchmarks you assigned to nodes</p>
                                         </div>
                                     </div>
@@ -415,19 +415,19 @@ const TargetManagement = () => {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
-                                            <tr className="bg-black/20">
-                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 pl-8">Recipient</th>
-                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Category</th>
-                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Cycle Range</th>
-                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-right">Value</th>
-                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center pr-8">Status</th>
+                                            <tr className="bg-[var(--bg-input)]">
+                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Recipient</th>
+                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Category</th>
+                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Cycle Range</th>
+                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right">Value</th>
+                                                <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center pr-8">Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-white/5">
+                                        <tbody className="divide-y divide-[var(--border-main)]">
                                             {fetching ? (
                                                 [1, 2].map(i => (
                                                     <tr key={i} className="animate-pulse">
-                                                        <td colSpan={5} className="p-8"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
+                                                        <td colSpan={5} className="p-8"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                                     </tr>
                                                 ))
                                             ) : myAssignedTargets.length === 0 ? (
@@ -436,14 +436,14 @@ const TargetManagement = () => {
                                                 </tr>
                                             ) : (
                                                 myAssignedTargets.map((t) => (
-                                                    <tr key={t._id} className="hover:bg-white/[0.02] transition-colors group/row">
+                                                    <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
                                                         <td className="p-5 pl-8">
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50 group-hover/row:text-lime transition-colors">
+                                                                <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-lime transition-colors">
                                                                     {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-black text-white">{getTargetName(t)}</p>
+                                                                    <p className="text-sm font-black text-[var(--text-main)]">{getTargetName(t)}</p>
                                                                     <p className="text-[9px] font-black text-dim uppercase tracking-widest mt-0.5">{t.targetType}</p>
                                                                 </div>
                                                             </div>
@@ -455,7 +455,7 @@ const TargetManagement = () => {
                                                         </td>
                                                         <td className="p-5">
                                                             <div className="flex flex-col">
-                                                                <span className="text-[11px] font-bold text-white">{new Date(t.startDate).toLocaleDateString()}</span>
+                                                                <span className="text-[11px] font-bold text-[var(--text-main)]">{new Date(t.startDate).toLocaleDateString()}</span>
                                                                 <span className="text-[9px] font-black uppercase text-dim tracking-widest">To {new Date(t.endDate).toLocaleDateString()}</span>
                                                             </div>
                                                         </td>

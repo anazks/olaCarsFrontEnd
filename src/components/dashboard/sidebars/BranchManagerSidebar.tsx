@@ -130,11 +130,10 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
     return (
         <aside
-            className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out relative"
-            style={{ background: '#0F0F0F', borderRight: '1px solid rgba(255,255,255,0.05)' }}
+            className="w-full h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out relative bg-[var(--bg-sidebar)] border-r border-[var(--border-main)]"
         >
             {/* Logo Header */}
-            <div className={`h-20 flex items-center border-b border-gray-800/50 px-6 justify-between`}>
+            <div className={`h-20 flex items-center border-b border-[var(--border-main)] px-6 justify-between`}>
                 <div className={`flex items-center gap-2`}>
                     <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
                        <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
@@ -142,8 +141,8 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                        </div>
                     </div>
                     {!isSidebarCollapsed && (
-                        <div className="flex items-center border-l border-gray-700 h-7 pl-3 ml-1">
-                            <span className="text-white font-bold tracking-widest text-[16px] uppercase whitespace-nowrap">Ola Cars</span>
+                        <div className="flex items-center border-l border-[var(--border-main)] h-7 pl-3 ml-1">
+                            <span className="text-[var(--text-main)] font-bold tracking-widest text-[16px] uppercase whitespace-nowrap">Ola Cars</span>
                         </div>
                     )}
                 </div>
@@ -151,7 +150,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 {toggleSidebar && (
                     <button 
                         onClick={toggleSidebar}
-                        className="lg:hidden text-gray-400 hover:text-white p-1.5 hover:bg-white/5 rounded-md transition-colors cursor-pointer"
+                        className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
                         title="Close Sidebar"
                     >
                         <X size={22} />
@@ -186,23 +185,23 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                                     }
                                 }}
                                 className={`group relative flex items-center gap-4 px-6 py-3.5 cursor-pointer transition-all duration-200
-                                    ${(isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? 'bg-[#1C1C0E]' : 'hover:bg-white/5'}
+                                    ${(isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? 'bg-[var(--sidebar-hover)]/80' : 'hover:bg-[var(--sidebar-hover)]'}
                                     ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                                 `}
                                 style={{
                                     borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
                                 }}
                             >
-                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-gray-400 group-hover:text-gray-200'} transition-colors`}>
+                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
                                     {item.icon}
                                 </div>
                                 {!isSidebarCollapsed && (
                                     <div className="flex items-center justify-between w-full">
-                                        <span className={`text-[15px] font-medium transition-colors ${isCurrentlyActive ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                        <span className={`text-[15px] font-medium transition-colors ${isCurrentlyActive ? 'text-[var(--text-main)]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'}`}>
                                             {item.label}
                                         </span>
                                         {hasSub && (
-                                            <span className="text-gray-500 group-hover:text-gray-300">
+                                            <span className="text-[var(--sidebar-text)]/50 group-hover:text-[var(--sidebar-text)]">
                                                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                             </span>
                                         )}
@@ -223,7 +222,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
 
                                 {!isSidebarCollapsed && hasSub && (
                                     <div 
-                                        className={`ml-12 pl-4 relative border-l border-gray-700 flex flex-col gap-0.5 transition-all duration-300 ease-in-out overflow-hidden
+                                        className={`ml-12 pl-4 relative border-l border-[var(--border-main)] flex flex-col gap-0.5 transition-all duration-300 ease-in-out overflow-hidden
                                             ${isOpen ? 'max-h-[500px] opacity-100 mt-1 mb-2 py-1' : 'max-h-0 opacity-0 mt-0 mb-0 py-0'}
                                         `}
                                     >
@@ -234,7 +233,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
                                                     className={`cursor-pointer py-2 text-sm transition-colors
-                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-gray-400 hover:text-white'}
+                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
                                                     {sub.label}
@@ -256,19 +255,19 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             </div>
 
             {/* User Profile Section */}
-            <div className="mt-auto border-t border-gray-800 px-6 py-4">
+            <div className="mt-auto border-t border-[var(--border-main)] px-6 py-4">
                 <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}>
-                    <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden border-2 border-[#D4F12E] flex-shrink-0 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-[var(--bg-input)] overflow-hidden border-2 border-[#D4F12E] flex-shrink-0 flex items-center justify-center">
                         {currentUser?.avatarUrl ? (
                             <img src={currentUser.avatarUrl} alt="profile" className="w-full h-full object-cover" />
                         ) : (
-                            <User size={20} className="text-white" />
+                            <User size={20} className="text-[var(--sidebar-text)]" />
                         )}
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="flex flex-col min-w-0">
-                            <span className="text-white text-sm font-semibold truncate">{userName}</span>
-                            <span className="text-gray-400 text-xs truncate">{currentUser?.role || userRole}</span>
+                            <span className="text-[var(--text-main)] text-sm font-semibold truncate">{userName}</span>
+                            <span className="text-[var(--sidebar-text)] text-xs truncate">{currentUser?.role || userRole}</span>
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"

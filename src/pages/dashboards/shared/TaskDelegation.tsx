@@ -133,7 +133,7 @@ const TaskDelegation = () => {
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             
             {/* Command Header */}
-            <div className="p-8 border-b border-white/5 relative overflow-hidden bg-black/40 backdrop-blur-md sticky top-0 z-20">
+            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden bg-[var(--bg-card)] backdrop-blur-md sticky top-0 z-20">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 blur-[100px] rounded-full -mr-48 -mt-48" />
                 
                 <div className="max-w-[1600px] mx-auto relative z-10">
@@ -143,7 +143,7 @@ const TaskDelegation = () => {
                                 <ClipboardList size={32} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black tracking-tighter text-white">Delegation Center</h1>
+                                <h1 className="text-4xl font-black tracking-tighter text-[var(--text-main)]">Delegation Center</h1>
                                 <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
                                     <Shield size={14} className="text-indigo-400" /> Operational Task Orchestration & Oversight
                                 </p>
@@ -151,12 +151,12 @@ const TaskDelegation = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="hidden sm:flex items-center gap-6 px-8 py-3 rounded-2xl bg-white/5 border border-white/10">
+                            <div className="hidden sm:flex items-center gap-6 px-8 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)]">
                                 <div className="text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Queue</p>
-                                    <p className="text-xl font-black text-white leading-none">{tasks.filter(t => t.status !== 'COMPLETED').length}</p>
+                                    <p className="text-xl font-black text-[var(--text-main)] leading-none">{tasks.filter(t => t.status !== 'COMPLETED').length}</p>
                                 </div>
-                                <div className="w-px h-8 bg-white/10" />
+                                <div className="w-px h-8 bg-[var(--border-main)]" />
                                 <div className="text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Resolved</p>
                                     <p className="text-xl font-black text-emerald-400 leading-none">{tasks.filter(t => t.status === 'COMPLETED').length}</p>
@@ -178,7 +178,7 @@ const TaskDelegation = () => {
             <div className="p-8 max-w-[1600px] mx-auto space-y-10 pb-24">
                 
                 {/* Search & Intelligence Bar */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-4 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-4 rounded-[2rem] bg-[var(--bg-card)] border border-[var(--border-main)] backdrop-blur-sm">
                     <div className="relative flex-1 group">
                         <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-400 opacity-40 group-focus-within:opacity-100 transition-opacity" />
                         <input 
@@ -186,7 +186,7 @@ const TaskDelegation = () => {
                             placeholder="Filter by task title, description, or resource name..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-14 pr-6 py-4 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-14 pr-6 py-4 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
                         />
                     </div>
                     
@@ -198,7 +198,7 @@ const TaskDelegation = () => {
                                 className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                                     filterStatus === status 
                                         ? 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20' 
-                                        : 'bg-white/5 border-white/5 text-dim hover:text-white hover:bg-white/10'
+                                        : 'bg-[var(--bg-input)] border-[var(--border-main)] text-dim hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
                                 }`}
                             >
                                 {status === 'all' ? 'Unified Ledger' : status.replace('_', ' ')}
@@ -208,14 +208,14 @@ const TaskDelegation = () => {
                 </div>
 
                 {/* Tabular Task Ledger */}
-                <div className="rounded-[2.5rem] border border-white/5 bg-white/5 overflow-hidden shadow-2xl">
-                    <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden shadow-2xl">
+                    <div className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/10">
                                 <Activity size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-white">Delegation Ledger</h2>
+                                <h2 className="text-xl font-black text-[var(--text-main)]">Delegation Ledger</h2>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-dim mt-1">Real-time tracking of operational resource directives</p>
                             </div>
                         </div>
@@ -224,25 +224,25 @@ const TaskDelegation = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-black/40">
-                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 pl-10">Directive Details</th>
-                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Resource</th>
-                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Timeline</th>
-                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Status</th>
-                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-right pr-10">Management</th>
+                                <tr className="bg-[var(--bg-input)]">
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-10">Directive Details</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Resource</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Timeline</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Status</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right pr-10">Management</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y divide-[var(--border-main)]">
                                 {fetching ? (
                                     [1, 2, 3, 4].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="p-10"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
+                                            <td colSpan={5} className="p-10"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                         </tr>
                                     ))
                                 ) : filteredTasks.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="p-32 text-center">
-                                            <div className="mx-auto w-24 h-24 rounded-[2rem] bg-white/5 flex items-center justify-center text-dim mb-6">
+                                            <div className="mx-auto w-24 h-24 rounded-[2rem] bg-[var(--bg-input)] flex items-center justify-center text-dim mb-6">
                                                 <ClipboardList size={48} className="opacity-20" />
                                             </div>
                                             <p className="text-sm font-black text-dim uppercase tracking-[0.2em]">No Directives Found in Ledger</p>
@@ -250,10 +250,10 @@ const TaskDelegation = () => {
                                     </tr>
                                 ) : (
                                     filteredTasks.map((task) => (
-                                        <tr key={task._id} className="hover:bg-white/[0.03] transition-colors group/row">
+                                        <tr key={task._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
                                             <td className="p-6 pl-10 max-w-md">
                                                 <div className="space-y-1">
-                                                    <h3 className="text-base font-black text-white group-hover/row:text-indigo-400 transition-colors flex items-center gap-2">
+                                                    <h3 className="text-base font-black text-[var(--text-main)] group-hover/row:text-indigo-400 transition-colors flex items-center gap-2">
                                                         {task.title}
                                                         {task.assignedBy === userId && <Tag size={12} className="text-indigo-500" />}
                                                     </h3>
@@ -268,13 +268,13 @@ const TaskDelegation = () => {
                                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-black text-xs border border-indigo-500/10 mb-1">
                                                         {task.assignedTo?.fullName?.charAt(0) || 'R'}
                                                     </div>
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-tighter">{task.assignedToRole}</span>
+                                                    <span className="text-[10px] font-black text-[var(--text-main)] uppercase tracking-tighter">{task.assignedToRole}</span>
                                                     <span className="text-[8px] font-bold text-dim">{task.assignedTo?.fullName || 'Unspecified'}</span>
                                                 </div>
                                             </td>
                                             <td className="p-6 text-center">
                                                 <div className="inline-flex flex-col gap-1">
-                                                    <div className="flex items-center justify-center gap-2 text-white">
+                                                    <div className="flex items-center justify-center gap-2 text-[var(--text-main)]">
                                                         <Clock size={12} className="text-indigo-400" />
                                                         <span className="text-[12px] font-black">{new Date(task.dueDate).toLocaleDateString()}</span>
                                                     </div>
@@ -334,18 +334,18 @@ const TaskDelegation = () => {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative w-full max-w-xl rounded-[3rem] bg-[#0c0c0c] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                    <div className="relative w-full max-w-xl rounded-[3rem] bg-[var(--bg-card)] border border-[var(--border-main)] shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-10 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                                     <Plus size={28} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-black text-white">Deploy Directive</h2>
+                                    <h2 className="text-2xl font-black text-[var(--text-main)]">Deploy Directive</h2>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-dim">Establish operational focus for resources</p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-dim hover:text-white transition-all">
+                            <button onClick={() => setIsModalOpen(false)} className="p-3 rounded-2xl bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-dim hover:text-[var(--text-main)] transition-all">
                                 <X size={24} />
                             </button>
                         </div>
@@ -357,7 +357,7 @@ const TaskDelegation = () => {
                                     type="text"
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full bg-black border border-white/10 rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white"
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
                                     placeholder="Operational objective title..."
                                     required
                                 />
@@ -368,7 +368,7 @@ const TaskDelegation = () => {
                                 <textarea
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full bg-black border border-white/10 rounded-2xl p-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white min-h-[120px]"
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)] min-h-[120px]"
                                     placeholder="Comprehensive directive description..."
                                     required
                                 />
@@ -380,7 +380,7 @@ const TaskDelegation = () => {
                                     <select
                                         value={formData.assignedTo}
                                         onChange={(e) => handleStaffChange(e.target.value)}
-                                        className="w-full bg-black border border-white/10 rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
                                         required
                                     >
                                         <option value="">Select Target</option>
@@ -403,7 +403,7 @@ const TaskDelegation = () => {
                                         type="date"
                                         value={formData.dueDate}
                                         onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                        className="w-full bg-black border border-white/10 rounded-2xl p-5 text-[11px] font-bold text-white uppercase"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-[11px] font-bold text-[var(--text-main)] uppercase"
                                         required
                                     />
                                 </div>

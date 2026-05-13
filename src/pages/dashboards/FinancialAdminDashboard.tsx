@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
@@ -16,6 +17,7 @@ import { getAllBranches } from '../../services/branchService';
 
 
 const FinancialAdminDashboard = () => {
+    const navigate = useNavigate();
     
     // State
     const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ const FinancialAdminDashboard = () => {
 
     if (loading && !dashboardData) {
         return (
-            <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#0f172a]">
+            <div className="h-screen w-full flex items-center justify-center bg-[var(--bg-main)]">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#148F85]"></div>
             </div>
         );
@@ -76,26 +78,26 @@ const FinancialAdminDashboard = () => {
     const totalVehicles = dashboardData?.totalVehicles || 0;
 
     return (
-        <div className="p-6 md:p-8 bg-gray-50 dark:bg-[#0f172a] min-h-screen transition-colors duration-300">
+        <div className="p-6 md:p-8 bg-[var(--bg-main)] min-h-screen transition-colors duration-300">
             
             {/* Top Control Header */}
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-main)] flex items-center gap-2">
                         <Briefcase className="text-[#148F85]" /> Executive Dashboard
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Live orchestration across operating ecosystems</p>
+                    <p className="text-dim font-medium">Live orchestration across operating ecosystems</p>
                 </div>
 
                 {/* Floating Filter Bar */}
-                <div className="bg-white dark:bg-[#1e293b] shadow-sm dark:shadow-none dark:border dark:border-slate-700 p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <div className="bg-[var(--bg-card)] border border-[var(--border-main)] shadow-sm p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     
                     {/* Country Select */}
                     <div className="relative">
                         <select 
                             value={filters.country} 
                             onChange={(e) => handleFilterChange('country', e.target.value)}
-                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-slate-700 dark:text-slate-200 appearance-none cursor-pointer"
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-[var(--text-main)] appearance-none cursor-pointer"
                         >
                             <option value="">All Countries</option>
                             <option value="India">India</option>
@@ -105,14 +107,14 @@ const FinancialAdminDashboard = () => {
                         <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
 
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                    <div className="h-6 w-px bg-[var(--border-main)] hidden sm:block" />
 
                     {/* Branch Select */}
                     <div className="relative">
                         <select 
                             value={filters.branch} 
                             onChange={(e) => handleFilterChange('branch', e.target.value)}
-                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-slate-700 dark:text-slate-200 appearance-none cursor-pointer max-w-[150px]"
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-[var(--text-main)] appearance-none cursor-pointer max-w-[150px]"
                         >
                             <option value="">All Branches</option>
                             {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
@@ -120,23 +122,23 @@ const FinancialAdminDashboard = () => {
                         <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
 
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                    <div className="h-6 w-px bg-[var(--border-main)] hidden sm:block" />
 
                     {/* Date */}
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-1.5">
+                    <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-xl px-3 py-1.5">
                         <Calendar size={15} className="text-slate-500" />
                         <input 
                             type="date"
                             value={filters.startDate}
                             onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                            className="bg-transparent text-xs font-bold border-none outline-none text-slate-700 dark:text-slate-200"
+                            className="bg-transparent text-xs font-bold border-none outline-none text-[var(--text-main)]"
                         />
                         <span className="text-slate-400 text-xs">-</span>
                         <input 
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                            className="bg-transparent text-xs font-bold border-none outline-none text-slate-700 dark:text-slate-200"
+                            className="bg-transparent text-xs font-bold border-none outline-none text-[var(--text-main)]"
                         />
                     </div>
                 </div>
@@ -182,10 +184,16 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* 2. Alerts Side Panel */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm flex flex-col border border-transparent dark:border-slate-700/50">
+                <div className="lg:col-span-4 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm flex flex-col">
                     <div className="flex justify-between items-center mb-5">
-                        <h3 className="text-lg font-bold dark:text-white">Priority Alerts</h3>
-                        <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><span className="block h-1.5 w-1.5 rounded-full bg-slate-400 mb-0.5"></span><span className="block h-1.5 w-1.5 rounded-full bg-slate-400 mb-0.5"></span><span className="block h-1.5 w-1.5 rounded-full bg-slate-400"></span></button>
+                        <h3 className="text-lg font-bold text-[var(--text-main)]">Priority Alerts</h3>
+                        <button 
+                            onClick={() => navigate('/admin/financial-admin/alerts')}
+                            className="p-2 hover:bg-[var(--bg-input)] rounded-full text-[var(--text-main)] transition-colors"
+                            title="View All Alerts"
+                        >
+                            <ArrowUpRight size={20} />
+                        </button>
                     </div>
 
                     <div className="flex flex-col gap-3">
@@ -222,8 +230,8 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* 4. Operations Snapshot */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-5 shadow-sm border border-transparent dark:border-slate-700/50">
-                    <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Operations Overview</h3>
+                <div className="lg:col-span-4 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-5 shadow-sm">
+                    <h3 className="text-sm font-bold text-[var(--text-main)] mb-3">Operations Overview</h3>
                     <div className="flex gap-2">
                         <OpBadge count={18} label="Overdue Tasks" color="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" />
                         <OpBadge count={11} label="Upcoming Tasks" color="bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300" />
@@ -234,19 +242,19 @@ const FinancialAdminDashboard = () => {
                 {/* ── MIDDLE SECTION: CHARTS ── */}
                 
                 {/* 5. Revenue Area Chart */}
-                <div className="lg:col-span-8 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50">
+                <div className="lg:col-span-8 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h3 className="text-lg font-bold dark:text-white">Revenue Overview</h3>
+                            <h3 className="text-lg font-bold text-[var(--text-main)]">Revenue Overview</h3>
                             <div className="flex gap-4 text-xs font-semibold text-slate-400 mt-1">
                                 <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> Previous Year</span>
                                 <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#D9F99D]"></div> Current Year</span>
                             </div>
                         </div>
                         {/* Time period buttons */}
-                        <div className="flex gap-1 bg-gray-50 dark:bg-slate-800 p-1 rounded-lg">
+                        <div className="flex gap-1 bg-[var(--bg-input)] p-1 rounded-lg">
                             {['1W', '1M', '3M', '1Y'].map(t => (
-                                <button key={t} className={`px-3 py-1 text-xs font-bold rounded-md transition ${t === '1Y' ? 'bg-[#D9F99D] text-black shadow-sm' : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}>{t}</button>
+                                <button key={t} className={`px-3 py-1 text-xs font-bold rounded-md transition ${t === '1Y' ? 'bg-[#D9F99D] text-black shadow-sm' : 'text-slate-400 hover:text-[var(--text-main)]'}`}>{t}</button>
                             ))}
                         </div>
                     </div>
@@ -254,12 +262,12 @@ const FinancialAdminDashboard = () => {
                     <div className="grid grid-cols-3 gap-4 mb-6">
                         <div>
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Collected</p>
-                            <h4 className="text-xl font-extrabold text-[#D9F99D] dark:text-lime-400">$842,120</h4>
+                            <h4 className="text-xl font-extrabold text-lime">$842,120</h4>
                             <p className="text-[10px] font-medium text-slate-400">Last 12 months</p>
                         </div>
                         <div>
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</p>
-                            <h4 className="text-xl font-extrabold text-slate-800 dark:text-slate-200">$872,000</h4>
+                            <h4 className="text-xl font-extrabold text-[var(--text-main)]">$872,000</h4>
                             <p className="text-[10px] font-medium text-slate-400">Annual target</p>
                         </div>
                         <div>
@@ -278,10 +286,10 @@ const FinancialAdminDashboard = () => {
                                         <stop offset="95%" stopColor="#A3E635" stopOpacity={0}/>
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border-main)" opacity={0.1} />
                                 <XAxis dataKey="name" stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                                 <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000)}K`} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }} />
+                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', color: 'var(--text-main)' }} />
                                 <Area type="monotone" dataKey="previousYear" stroke="#CBD5E1" fill="transparent" strokeWidth={3} />
                                 <Area type="monotone" dataKey="currentYear" stroke="#A3E635" strokeWidth={4} fillOpacity={1} fill="url(#colorCurr)" dot={{ fill: '#A3E635', r: 4 }} />
                             </AreaChart>
@@ -290,10 +298,10 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* 6. Fleet Status Donut */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50 relative overflow-hidden">
+                <div className="lg:col-span-4 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm relative overflow-hidden">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-bold dark:text-white">Fleet Status</h3>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full"></span></button>
+                        <h3 className="text-lg font-bold text-[var(--text-main)]">Fleet Status</h3>
+                        <button className="p-1 hover:bg-[var(--bg-input)] rounded-full"><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full"></span></button>
                     </div>
                     <p className="text-xs font-medium text-slate-400 mb-4">Live vehicle distribution</p>
 
@@ -318,7 +326,7 @@ const FinancialAdminDashboard = () => {
 
                         {/* Floating Center Labels */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-black text-slate-800 dark:text-white">{totalVehicles.toLocaleString()}</span>
+                            <span className="text-3xl font-black text-[var(--text-main)]">{totalVehicles.toLocaleString()}</span>
                             <span className="text-xs font-semibold text-slate-400">Vehicles</span>
                         </div>
 
@@ -329,14 +337,14 @@ const FinancialAdminDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 mt-4 border-t border-[var(--border-main)] pt-4">
                         {donutData.map((item) => (
                             <div key={item.name} className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-main)]">
                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
                                     {item.name}
                                 </div>
-                                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-baseline gap-1">
+                                <div className="text-xs font-bold text-[var(--text-main)] flex items-baseline gap-1">
                                     {item.value}
                                     <span className="text-[9px] font-medium text-slate-400">({Math.round((item.value/totalVehicles)*100)}%)</span>
                                 </div>
@@ -347,41 +355,41 @@ const FinancialAdminDashboard = () => {
 
                 {/* ── BOTTOM SECTION ── */}
                 {/* 7. Tabs Section Placeholder for Summary */}
-                <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-transparent dark:border-slate-700/50 overflow-hidden flex flex-col">
-                    <div className="border-b dark:border-slate-800 px-6 flex gap-6 pt-4">
+                <div className="lg:col-span-7 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl shadow-sm overflow-hidden flex flex-col">
+                    <div className="border-b border-[var(--border-main)] px-6 flex gap-6 pt-4">
                         {['Overview', 'Vehicles', 'Collections', 'Risk', 'Drivers'].map((tab, idx) => (
-                            <div key={tab} className={`text-sm font-bold pb-3 cursor-pointer ${idx===0 ? 'text-lime-600 dark:text-lime-400 border-b-2 border-lime-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>{tab}</div>
+                            <div key={tab} className={`text-sm font-bold pb-3 cursor-pointer ${idx===0 ? 'text-lime border-b-2 border-lime' : 'text-slate-400 border-transparent hover:text-[var(--text-main)]'}`}>{tab}</div>
                         ))}
                     </div>
                     
-                    <div className="p-8 grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-800 h-full flex-1 items-center">
+                    <div className="p-8 grid grid-cols-3 divide-x divide-[var(--border-main)] h-full flex-1 items-center">
                         <div className="pr-4 flex flex-col justify-center">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600"><Car size={24} /></div>
+                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600"><Car size={24} /></div>
                                 <div>
-                                    <div className="text-3xl font-extrabold dark:text-white">{totalVehicles}</div>
+                                    <div className="text-3xl font-extrabold text-[var(--text-main)]">{totalVehicles}</div>
                                     <div className="text-xs font-semibold text-slate-400">Total Vehicles</div>
                                 </div>
                             </div>
                             <ul className="space-y-1.5">
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Active</span> <b className="font-bold">{(fleetStatus?.available + fleetStatus?.rented)}</b></li>
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Assigned</span> <b className="font-bold">{fleetStatus?.rented}</b></li>
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Unassigned</span> <b className="font-bold">{fleetStatus?.available}</b></li>
+                                <li className="text-sm font-medium text-[var(--text-main)] flex justify-between"><span>Active</span> <b className="font-bold">{(fleetStatus?.available + fleetStatus?.rented)}</b></li>
+                                <li className="text-sm font-medium text-[var(--text-main)] flex justify-between"><span>Assigned</span> <b className="font-bold">{fleetStatus?.rented}</b></li>
+                                <li className="text-sm font-medium text-[var(--text-main)] flex justify-between"><span>Unassigned</span> <b className="font-bold">{fleetStatus?.available}</b></li>
                             </ul>
                         </div>
 
                         <div className="px-6 flex flex-col justify-center">
-                            <div className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1">{stats?.activeDrivers}</div>
+                            <div className="text-3xl font-extrabold text-[var(--text-main)] mb-1">{stats?.activeDrivers}</div>
                             <div className="text-xs font-bold text-slate-400 uppercase mb-4">Active Vehicles</div>
                             <ul className="space-y-2">
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> On Rent</li>
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Maintenance</li>
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-purple-400"></div> Idle</li>
+                                <li className="flex items-center gap-2 text-xs font-semibold text-[var(--text-main)]"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> On Rent</li>
+                                <li className="flex items-center gap-2 text-xs font-semibold text-[var(--text-main)]"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Maintenance</li>
+                                <li className="flex items-center gap-2 text-xs font-semibold text-[var(--text-main)]"><div className="w-2 h-2 rounded-full bg-purple-400"></div> Idle</li>
                             </ul>
                         </div>
 
                         <div className="pl-6 flex flex-col justify-center">
-                            <div className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1">08</div>
+                            <div className="text-3xl font-extrabold text-[var(--text-main)] mb-1">08</div>
                             <div className="text-xs font-bold text-slate-400 uppercase mb-2">Unassigned Vehicles</div>
                             <p className="text-xs text-slate-500 leading-relaxed">Vehicles cleared from staging and available for driver assignment globally.</p>
                         </div>
@@ -389,22 +397,22 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* 8. Overdue Payments Table */}
-                <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50">
-                    <h3 className="text-base font-bold mb-4 dark:text-white">Recent Overdue Payments</h3>
+                <div className="lg:col-span-5 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm">
+                    <h3 className="text-base font-bold mb-4 text-[var(--text-main)]">Recent Overdue Payments</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">
+                                <tr className="text-[10px] font-bold text-slate-400 uppercase border-b border-[var(--border-main)]">
                                     <th className="pb-3">Customer</th>
                                     <th className="pb-3">Vehicle</th>
                                     <th className="pb-3">Amount</th>
                                     <th className="pb-3">Due Date</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-xs font-medium text-slate-700 dark:text-slate-300 divide-y divide-slate-50 dark:divide-slate-800">
+                            <tbody className="text-xs font-medium text-[var(--text-main)] divide-y divide-[var(--border-main)]">
                                 {overduePayments?.map((pay: any, i: number) => (
                                     <tr key={i}>
-                                        <td className="py-3.5 pr-2 truncate max-w-[120px] font-bold text-slate-800 dark:text-slate-200">{pay.customerName}</td>
+                                        <td className="py-3.5 pr-2 truncate max-w-[120px] font-bold text-[var(--text-main)]">{pay.customerName}</td>
                                         <td className="py-3.5 pr-2">{pay.vehicleNumber}</td>
                                         <td className="py-3.5 pr-2 font-bold">${pay.amount?.toLocaleString()}</td>
                                         <td className="py-3.5">
@@ -425,15 +433,15 @@ const FinancialAdminDashboard = () => {
 
                 {/* ── FULL WIDTH GRAPH REPLICATING SCREENSHOT 2 ── */}
                 {/* 9. Vehicles Movement Analysis */}
-                <div className="lg:col-span-12 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50 mt-2">
+                <div className="lg:col-span-12 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm mt-2">
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-extrabold tracking-wide text-slate-800 dark:text-white uppercase">Vehicles Movement Analysis</h3>
+                        <h3 className="text-lg font-extrabold tracking-wide text-[var(--text-main)] uppercase">Vehicles Movement Analysis</h3>
                     </div>
 
                     <div className="h-[350px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={vehicleMovement} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" opacity={0.1} />
                                 <XAxis 
                                     dataKey="date" 
                                     tickFormatter={(str) => format(new Date(str), 'M/d/yyyy')} 
@@ -446,7 +454,7 @@ const FinancialAdminDashboard = () => {
                                     stroke="#94A3B8"
                                 />
                                 <YAxis stroke="#94A3B8" fontSize={11} axisLine={false} tickLine={false} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }} />
+                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', color: 'var(--text-main)' }} />
                                 <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }} />
                                 
                                 {/* Mimic standard Line colors seen in provided chart snippet */}
@@ -465,7 +473,7 @@ const FinancialAdminDashboard = () => {
 // ── HELPER SUB-COMPONENTS ──
 
 const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) => (
-    <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm flex flex-col justify-between border border-transparent dark:border-slate-700/50 transition-transform hover:scale-[1.01] duration-200">
+    <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-6 shadow-sm flex flex-col justify-between transition-transform hover:scale-[1.01] duration-200">
         <div className="flex justify-between items-start">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${iconBg}`}>
                 {icon}
@@ -475,8 +483,8 @@ const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) 
             </div>
         </div>
         <div className="mt-6">
-            <div className="text-3xl font-black text-slate-800 dark:text-white">{value}</div>
-            <div className="text-sm font-semibold text-slate-400 dark:text-slate-500 mt-1">{title}</div>
+            <div className="text-3xl font-black text-[var(--text-main)]">{value}</div>
+            <div className="text-sm font-semibold text-dim mt-1">{title}</div>
         </div>
     </div>
 );
@@ -489,7 +497,7 @@ const AlertPill = ({ title, count, colorClass, description }: any) => (
             </div>
             <div className="text-xs opacity-90 font-medium mt-1">{description}</div>
         </div>
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center z-10 backdrop-blur-sm group-hover:bg-white/30">
+        <div className="w-8 h-8 bg-black/20 rounded-full flex items-center justify-center z-10 backdrop-blur-sm group-hover:bg-black/30">
             <ChevronRight size={18} className="rotate-[-45deg]" />
         </div>
     </div>
@@ -502,14 +510,14 @@ const MiniStatCard = ({ title, value, subtext, icon, color }: any) => {
         amber: 'text-amber-600 bg-amber-50'
     };
     return (
-        <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-5 shadow-sm border border-transparent dark:border-slate-700/50">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl ${colors[color] || 'bg-gray-50'}`}>
+                <div className={`p-2 rounded-xl ${colors[color] || 'bg-[var(--bg-input)]'}`}>
                     {icon}
                 </div>
                 <div className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-lg">+2%</div>
             </div>
-            <div className="text-2xl font-black text-slate-800 dark:text-white mb-1">{value}</div>
+            <div className="text-2xl font-black text-[var(--text-main)] mb-1">{value}</div>
             <div className="text-xs font-semibold text-slate-500 mb-2 truncate">{title}</div>
             <div className="text-[10px] font-medium text-slate-400">{subtext}</div>
         </div>

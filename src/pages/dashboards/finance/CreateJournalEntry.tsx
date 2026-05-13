@@ -37,18 +37,18 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                     e.stopPropagation();
                     setIsOpen(!isOpen);
                 }}
-                className="w-full flex items-center justify-between px-2 py-1.5 rounded bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded bg-[var(--bg-input)] border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-input)] hover:brightness-110 transition-all"
             >
-                <span className="text-sm text-white truncate">
+                <span className="text-sm text-[var(--text-main)] truncate">
                     {selectedCode ? `${selectedCode.code} - ${selectedCode.name}` : 'Select Account'}
                 </span>
-                <ChevronDown size={14} className={`text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-[var(--text-main)] opacity-40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-[300px] mt-2 bg-[#1A1A1A] border border-white/10 rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-3 border-b border-white/5 bg-white/5 flex items-center gap-2">
-                        <Search size={14} className="text-white/40" />
+                <div className="absolute top-full left-0 w-[300px] mt-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex items-center gap-2">
+                        <Search size={14} className="text-dim" />
                         <input
                             autoFocus
                             type="text"
@@ -56,7 +56,7 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onKeyDown={e => e.stopPropagation()}
-                            className="bg-transparent border-none text-xs text-white focus:ring-0 outline-none w-full"
+                            className="bg-transparent border-none text-xs text-[var(--text-main)] focus:ring-0 outline-none w-full"
                         />
                     </div>
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
@@ -69,20 +69,20 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                                         setIsOpen(false);
                                         setSearch('');
                                     }}
-                                    className={`px-4 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-white/[0.02] last:border-0`}
+                                    className={`px-4 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-[var(--border-main)]/10 last:border-0`}
                                 >
                                     <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-white group-hover:text-black">{code.code}</span>
-                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/60 group-hover:bg-black/10 group-hover:text-black font-bold uppercase tracking-wider">
+                                        <span className="text-xs font-bold text-[var(--text-main)] group-hover:text-black">{code.code}</span>
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-dim group-hover:bg-black/10 group-hover:text-black font-bold uppercase tracking-wider">
                                             {code.category}
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-white/60 group-hover:text-black/80 mt-0.5 truncate">{code.name}</p>
+                                    <p className="text-[11px] text-dim group-hover:text-black/80 mt-0.5 truncate">{code.name}</p>
                                 </div>
                             ))
                         ) : (
                             <div className="p-4 text-center text-xs flex flex-col items-center">
-                                <span className="text-white/40 italic block mb-2">No accounts found</span>
+                                <span className="text-dim italic block mb-2">No accounts found</span>
                                 {onAddNew && (
                                     <button
                                         type="button"
@@ -363,17 +363,17 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
     );
 
     return (
-        <div className="bg-[#121212] rounded-2xl border border-white/10 overflow-hidden max-w-5xl w-full">
+        <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)] overflow-hidden max-w-5xl w-full">
             {/* Header */}
-            <div className="p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
+            <div className="p-6 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
                 <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-[var(--text-main)] flex items-center gap-2">
                         <Calculator size={24} className="text-[#C8E600]" />
                         Create Manual Journal Entry Adjustments
                     </h2>
-                    <p className="text-xs text-white/40 mt-1">Record manual adjustments, payroll, or tax provisions</p>
+                    <p className="text-xs text-dim mt-1">Record manual adjustments, payroll, or tax provisions</p>
                 </div>
-                <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors">
+                <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--bg-input)] text-dim hover:text-[var(--text-main)] transition-colors">
                     <X size={20} />
                 </button>
             </div>
@@ -382,19 +382,19 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                 {/* Journal Header Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-white/60 uppercase">Description</label>
+                        <label className="text-xs font-semibold text-dim uppercase">Description</label>
                         <input
                             required
                             type="text"
                             placeholder="e.g. April 2026 Payroll Accrual"
                             value={header.description}
                             onChange={e => setHeader({ ...header, description: e.target.value })}
-                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 text-sm text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all"
                         />
                     </div>
                     <div className="space-y-1.5">
                         <div className="flex justify-between items-center">
-                            <label className="text-xs font-semibold text-white/60 uppercase">Branch</label>
+                            <label className="text-xs font-semibold text-dim uppercase">Branch</label>
                             {branches.length === 0 && (
                                 <button type="button" onClick={() => setShowBranchModal(true)} className="text-[10px] text-[#C8E600] font-bold hover:underline flex items-center gap-1">
                                     <Plus size={10} /> Add Branch
@@ -407,50 +407,50 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 disabled={branches.length === 0}
                                 value={header.branch}
                                 onChange={e => setHeader({ ...header, branch: e.target.value })}
-                                className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 text-sm text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <option value="">{branches.length === 0 ? 'No Branches Available' : 'Select Branch'}</option>
+                                <option value="" className="bg-[var(--bg-card)]">{branches.length === 0 ? 'No Branches Available' : 'Select Branch'}</option>
                                 {branches.map(b => (
-                                    <option key={b._id} value={b._id}>{b.name} ({b.country})</option>
+                                    <option key={b._id} value={b._id} className="bg-[var(--bg-card)]">{b.name} ({b.country})</option>
                                 ))}
                             </select>
                             {branches.length > 0 && (
-                                <button type="button" onClick={() => setShowBranchModal(true)} className="px-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 text-white/60 transition-all flex items-center justify-center" title="Quick Add Branch">
+                                <button type="button" onClick={() => setShowBranchModal(true)} className="px-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl hover:brightness-110 text-dim transition-all flex items-center justify-center" title="Quick Add Branch">
                                     <Plus size={16} />
                                 </button>
                             )}
                         </div>
                     </div>
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-white/60 uppercase">Date</label>
+                        <label className="text-xs font-semibold text-dim uppercase">Date</label>
                         <input
                             required
                             type="date"
                             value={header.date}
                             onChange={e => setHeader({ ...header, date: e.target.value })}
-                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 text-sm text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all"
                         />
                     </div>
                 </div>
 
 
                 {/* Lines Table */}
-                <div className="rounded-xl border border-white/10 overflow-hidden">
+                <div className="rounded-xl border border-[var(--border-main)] overflow-hidden">
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
-                            <thead className="bg-white/5">
+                            <thead className="bg-[var(--bg-input)]">
                                 <tr>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Accounting Code</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Description</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Type</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Amount</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Tax Option</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right"></th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Accounting Code</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Description</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Type</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Amount</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Tax Option</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider text-right"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y divide-[var(--border-main)]">
                                 {lines.map((line, index) => (
-                                    <tr key={index} className="hover:bg-white/[0.02]" style={{ position: 'relative', zIndex: openDropdownIndex === index ? 1000 : 1 }}>
+                                    <tr key={index} className="hover:bg-[var(--bg-input)]" style={{ position: 'relative', zIndex: openDropdownIndex === index ? 1000 : 1 }}>
                                         <td className="p-2 w-1/4 relative">
                                             <AccountSelector
                                                 codes={accountingCodes}
@@ -470,17 +470,17 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                 placeholder="Line memo"
                                                 value={line.description}
                                                 onChange={e => updateLine(index, 'description', e.target.value)}
-                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                                                className="w-full bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                                             />
                                         </td>
                                         <td className="p-2 w-32">
                                             <select
                                                 value={line.type}
                                                 onChange={e => updateLine(index, 'type', e.target.value)}
-                                                className="w-full bg-transparent border-none text-xs font-bold text-white focus:ring-0 outline-none"
+                                                className="w-full bg-transparent border-none text-xs font-bold text-[var(--text-main)] focus:ring-0 outline-none"
                                             >
-                                                <option value="DEBIT" className="bg-[#1A1A1A] text-emerald-500">DEBIT</option>
-                                                <option value="CREDIT" className="bg-[#1A1A1A] text-rose-500">CREDIT</option>
+                                                <option value="DEBIT" className="bg-[var(--bg-card)] text-emerald-500">DEBIT</option>
+                                                <option value="CREDIT" className="bg-[var(--bg-card)] text-rose-500">CREDIT</option>
                                             </select>
                                         </td>
                                         <td className="p-2 w-32">
@@ -490,7 +490,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                 step="0.01"
                                                 value={line.amount || ''}
                                                 onChange={e => updateLine(index, 'amount', e.target.value === '' ? 0 : Number(e.target.value))}
-                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none font-mono"
+                                                className="w-full bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none font-mono"
                                             />
                                         </td>
                                         <td className="p-2 w-40 relative group">
@@ -499,11 +499,11 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                     disabled={taxes.length === 0}
                                                     value={line.taxInfo?.taxApplied || ''}
                                                     onChange={e => updateLine(index, 'taxInfo', { taxApplied: e.target.value })}
-                                                    className="w-full bg-transparent border-none text-[10px] text-white/60 focus:ring-0 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="w-full bg-transparent border-none text-[10px] text-dim focus:ring-0 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
-                                                    <option value="" className="bg-[#1A1A1A]">{taxes.length === 0 ? 'No Tax Options' : 'No Tax'}</option>
+                                                    <option value="" className="bg-[var(--bg-card)]">{taxes.length === 0 ? 'No Tax Options' : 'No Tax'}</option>
                                                     {taxes.map(t => (
-                                                        <option key={t._id} value={t._id} className="bg-[#1A1A1A]">{t.name} ({t.rate || (t as any).percentage}%)</option>
+                                                        <option key={t._id} value={t._id} className="bg-[var(--bg-card)]">{t.name} ({t.rate || (t as any).percentage}%)</option>
                                                     ))}
                                                 </select>
                                                 <button
@@ -512,7 +512,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                         setTargetLineIndex(index);
                                                         setShowTaxModal(true);
                                                     }}
-                                                    className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 transition-all ${taxes.length === 0 ? 'opacity-100 text-[#C8E600]' : 'opacity-0 group-hover:opacity-100'}`}
+                                                    className={`p-1 rounded bg-[var(--bg-input)] hover:brightness-110 text-dim transition-all ${taxes.length === 0 ? 'opacity-100 text-[#C8E600]' : 'opacity-0 group-hover:opacity-100'}`}
                                                     title="Quick Add Tax"
                                                 >
                                                     <Plus size={12} />
@@ -536,7 +536,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <button
                             type="button"
                             onClick={handleAddLine}
-                            className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-[var(--bg-input)] hover:brightness-110 text-dim hover:text-[var(--text-main)] text-xs font-bold transition-all flex items-center justify-center gap-2"
                         >
                             <Plus size={14} /> Add Line
                         </button>
@@ -544,7 +544,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                 </div>
 
                 {/* Footer / Totals */}
-                <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pt-4 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pt-4 border-t border-[var(--border-main)]">
                     <div className="space-y-4 w-full sm:w-auto">
                         {error && (
                             <div className="flex items-center gap-2 text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl text-sm border border-rose-500/20">
@@ -553,7 +553,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         )}
                         <div className="flex items-center gap-6">
                             <div className="space-y-1">
-                                <p className="text-[10px] text-white/40 font-bold uppercase">Journal Amount</p>
+                                <p className="text-[10px] text-dim font-bold uppercase">Journal Amount</p>
                                 <p className="text-xl font-mono font-bold text-[#C8E600]">${(totals.debit + totals.credit).toFixed(2)}</p>
                             </div>
                         </div>
@@ -563,7 +563,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-bold bg-white/5 text-white hover:bg-white/10 transition-all"
+                            className="flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-bold bg-[var(--bg-input)] text-[var(--text-main)] hover:brightness-110 transition-all"
                         >
                             Cancel
                         </button>
@@ -581,25 +581,25 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             {/* Quick Create Modals */}
             {showBranchModal && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-                    <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-2xl border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-2xl border border-[var(--border-main)] shadow-2xl relative" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Building2 size={20} className="text-[#C8E600]" /> Quick Add Branch</h3>
-                            <button onClick={() => setShowBranchModal(false)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"><X size={18} /></button>
+                            <h3 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2"><Building2 size={20} className="text-[#C8E600]" /> Quick Add Branch</h3>
+                            <button onClick={() => setShowBranchModal(false)} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
                         </div>
                         {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
                         <form onSubmit={handleCreateBranch} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Branch Name</label>
-                                    <input required type="text" value={newBranch.name} onChange={e => setNewBranch({ ...newBranch, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Main Branch" />
+                                    <label className="text-xs text-dim">Branch Name</label>
+                                    <input required type="text" value={newBranch.name} onChange={e => setNewBranch({ ...newBranch, name: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="Main Branch" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Branch Code</label>
-                                    <input required type="text" value={newBranch.code} onChange={e => setNewBranch({ ...newBranch, code: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="BR01" />
+                                    <label className="text-xs text-dim">Branch Code</label>
+                                    <input required type="text" value={newBranch.code} onChange={e => setNewBranch({ ...newBranch, code: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="BR01" />
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-xs text-white/60">Country Manager</label>
+                                        <label className="text-xs text-dim">Country Manager</label>
                                         {countryManagers.length === 0 && (
                                             <button type="button" onClick={() => setShowCountryManagerModal(true)} className="text-[10px] text-[#C8E600] font-bold hover:underline flex items-center gap-1">
                                                 <Plus size={10} /> Add
@@ -620,36 +620,36 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                                     country: manager ? manager.country : ''
                                                 });
                                             }}
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] disabled:opacity-50"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] disabled:opacity-50"
                                         >
-                                            <option value="">{countryManagers.length === 0 ? 'No Managers' : 'Select Manager'}</option>
+                                            <option value="" className="bg-[var(--bg-card)]">{countryManagers.length === 0 ? 'No Managers' : 'Select Manager'}</option>
                                             {countryManagers.map(m => (
-                                                <option key={m._id} value={m._id} className="bg-[#1A1A1A]">
+                                                <option key={m._id} value={m._id} className="bg-[var(--bg-card)]">
                                                     {m.fullName} ({m.country})
                                                 </option>
                                             ))}
                                         </select>
                                         {countryManagers.length > 0 && (
-                                            <button type="button" onClick={() => setShowCountryManagerModal(true)} className="px-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 text-white/60 transition-all flex items-center justify-center">
+                                            <button type="button" onClick={() => setShowCountryManagerModal(true)} className="px-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg hover:brightness-110 text-dim transition-all flex items-center justify-center">
                                                 <Plus size={16} />
                                             </button>
                                         )}
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Email</label>
-                                    <input required type="email" value={newBranch.email} onChange={e => setNewBranch({ ...newBranch, email: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="branch@example.com" />
+                                    <label className="text-xs text-dim">Email</label>
+                                    <input required type="email" value={newBranch.email} onChange={e => setNewBranch({ ...newBranch, email: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="branch@example.com" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">City</label>
-                                    <input required type="text" value={newBranch.city} onChange={e => setNewBranch({ ...newBranch, city: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="New York" />
+                                    <label className="text-xs text-dim">City</label>
+                                    <input required type="text" value={newBranch.city} onChange={e => setNewBranch({ ...newBranch, city: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="New York" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">State</label>
-                                    <input required type="text" value={newBranch.state} onChange={e => setNewBranch({ ...newBranch, state: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="NY" />
+                                    <label className="text-xs text-dim">State</label>
+                                    <input required type="text" value={newBranch.state} onChange={e => setNewBranch({ ...newBranch, state: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="NY" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Phone</label>
+                                    <label className="text-xs text-dim">Phone</label>
                                     <PhoneInput
                                         country={countryToIso2[newBranch.country] || "in"}
                                         value={newBranch.phone}
@@ -658,39 +658,39 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                         inputStyle={{
                                             width: "100%",
                                             height: "36px",
-                                            background: "#1A1A1A",
-                                            border: "1px solid rgba(255,255,255,0.1)",
-                                            color: "white",
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)",
                                             borderRadius: "0.5rem",
                                             fontSize: "14px"
                                         }}
                                         buttonStyle={{
-                                            background: "#1A1A1A",
-                                            border: "1px solid rgba(255,255,255,0.1)"
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)"
                                         }}
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Status</label>
+                                    <label className="text-xs text-dim">Status</label>
                                     <select
                                         required
                                         value={newBranch.status}
                                         onChange={e => setNewBranch({ ...newBranch, status: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] appearance-none"
                                     >
-                                        <option value="ACTIVE" className="bg-[#1A1A1A]">Active</option>
-                                        <option value="INACTIVE" className="bg-[#1A1A1A]">Inactive</option>
-                                        <option value="MAINTENANCE" className="bg-[#1A1A1A]">Maintenance</option>
+                                        <option value="ACTIVE" className="bg-[var(--bg-card)]">Active</option>
+                                        <option value="INACTIVE" className="bg-[var(--bg-card)]">Inactive</option>
+                                        <option value="MAINTENANCE" className="bg-[var(--bg-card)]">Maintenance</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-xs text-white/60">Address</label>
-                                    <input required type="text" value={newBranch.address} onChange={e => setNewBranch({ ...newBranch, address: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="123 Street" />
+                                                <div className="space-y-1 col-span-2">
+                                    <label className="text-xs text-dim">Address</label>
+                                    <input required type="text" value={newBranch.address} onChange={e => setNewBranch({ ...newBranch, address: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="123 Street" />
                                 </div>
                             </div>
-                            <div className="flex gap-3 pt-4 border-t border-white/5">
-                                <button type="button" onClick={() => setShowBranchModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
-                                <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Branch'}</button>
+                            <div className="flex gap-3 pt-4 border-t border-[var(--border-main)]">
+                                <button type="button" onClick={() => setShowBranchModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
+                                <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:brightness-110 transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Branch'}</button>
                             </div>
                         </form>
                     </div>
@@ -699,38 +699,38 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
 
             {showCountryManagerModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-                    <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-2xl border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-2xl border border-[var(--border-main)] shadow-2xl relative" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><UserPlus size={20} className="text-[#C8E600]" /> Quick Add Country Manager</h3>
-                            <button onClick={() => setShowCountryManagerModal(false)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"><X size={18} /></button>
+                            <h3 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2"><UserPlus size={20} className="text-[#C8E600]" /> Quick Add Country Manager</h3>
+                            <button onClick={() => setShowCountryManagerModal(false)} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
                         </div>
                         {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
                         <form onSubmit={handleCreateCountryManager} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Full Name</label>
-                                    <input required type="text" value={newCountryManager.fullName} onChange={e => setNewCountryManager({ ...newCountryManager, fullName: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="John Doe" />
+                                    <label className="text-xs text-dim">Full Name</label>
+                                    <input required type="text" value={newCountryManager.fullName} onChange={e => setNewCountryManager({ ...newCountryManager, fullName: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="John Doe" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Country</label>
+                                    <label className="text-xs text-dim">Country</label>
                                     <select
                                         required
                                         value={newCountryManager.country}
                                         onChange={e => setNewCountryManager({ ...newCountryManager, country: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] appearance-none"
                                     >
-                                        <option value="" className="bg-[#1A1A1A]">Select Country</option>
+                                        <option value="" className="bg-[var(--bg-card)]">Select Country</option>
                                         {countries.map(c => (
-                                            <option key={c} value={c} className="bg-[#1A1A1A]">{c}</option>
+                                            <option key={c} value={c} className="bg-[var(--bg-card)]">{c}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Email</label>
-                                    <input required type="email" value={newCountryManager.email} onChange={e => setNewCountryManager({ ...newCountryManager, email: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="john@example.com" />
+                                    <label className="text-xs text-dim">Email</label>
+                                    <input required type="email" value={newCountryManager.email} onChange={e => setNewCountryManager({ ...newCountryManager, email: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="john@example.com" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-white/60">Phone</label>
+                                    <label className="text-xs text-dim">Phone</label>
                                     <PhoneInput
                                         country={countryToIso2[newCountryManager.country] || "in"}
                                         value={newCountryManager.phone}
@@ -739,25 +739,25 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                         inputStyle={{
                                             width: "100%",
                                             height: "36px",
-                                            background: "#1A1A1A",
-                                            border: "1px solid rgba(255,255,255,0.1)",
-                                            color: "white",
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)",
                                             borderRadius: "0.5rem",
                                             fontSize: "14px"
                                         }}
                                         buttonStyle={{
-                                            background: "#1A1A1A",
-                                            border: "1px solid rgba(255,255,255,0.1)"
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)"
                                         }}
                                     />
                                 </div>
                                 <div className="space-y-1 col-span-2">
-                                    <label className="text-xs text-white/60">Temporary Password</label>
-                                    <input required type="password" value={newCountryManager.password} onChange={e => setNewCountryManager({ ...newCountryManager, password: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="••••••••" />
+                                    <label className="text-xs text-dim">Temporary Password</label>
+                                    <input required type="password" value={newCountryManager.password} onChange={e => setNewCountryManager({ ...newCountryManager, password: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="••••••••" />
                                 </div>
                             </div>
-                            <div className="flex gap-3 pt-4 border-t border-white/5">
-                                <button type="button" onClick={() => setShowCountryManagerModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
+                            <div className="flex gap-3 pt-4 border-t border-[var(--border-main)]">
+                                <button type="button" onClick={() => setShowCountryManagerModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
                                 <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Country Manager'}</button>
                             </div>
                         </form>
@@ -766,38 +766,38 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             )}
             {showAccountingCodeModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-                    <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-md border border-[var(--border-main)] shadow-2xl relative" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Plus size={20} className="text-[#C8E600]" /> Quick Add Accounting Code</h3>
-                            <button onClick={() => setShowAccountingCodeModal(false)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"><X size={18} /></button>
+                            <h3 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2"><Plus size={20} className="text-[#C8E600]" /> Quick Add Accounting Code</h3>
+                            <button onClick={() => setShowAccountingCodeModal(false)} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
                         </div>
                         {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
                         <form onSubmit={handleCreateAccountingCode} className="space-y-4">
                             <div className="space-y-1">
-                                <label className="text-xs text-white/60">Code Number</label>
-                                <input required type="text" value={newAccountingCode.code} onChange={e => setNewAccountingCode({ ...newAccountingCode, code: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="4000" />
+                                <label className="text-xs text-dim">Code Number</label>
+                                <input required type="text" value={newAccountingCode.code} onChange={e => setNewAccountingCode({ ...newAccountingCode, code: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] font-mono" placeholder="4000" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-white/60">Account Name</label>
-                                <input required type="text" value={newAccountingCode.name} onChange={e => setNewAccountingCode({ ...newAccountingCode, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="Sales Revenue" />
+                                <label className="text-xs text-dim">Account Name</label>
+                                <input required type="text" value={newAccountingCode.name} onChange={e => setNewAccountingCode({ ...newAccountingCode, name: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="Sales Revenue" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-white/60">Category</label>
+                                <label className="text-xs text-dim">Category</label>
                                 <select
                                     required
                                     value={newAccountingCode.category}
                                     onChange={e => setNewAccountingCode({ ...newAccountingCode, category: e.target.value as any })}
-                                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] appearance-none"
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] appearance-none"
                                 >
-                                    <option value="INCOME" className="bg-[#1A1A1A]">Income</option>
-                                    <option value="EXPENSE" className="bg-[#1A1A1A]">Expense</option>
-                                    <option value="ASSET" className="bg-[#1A1A1A]">Asset</option>
-                                    <option value="LIABILITY" className="bg-[#1A1A1A]">Liability</option>
-                                    <option value="EQUITY" className="bg-[#1A1A1A]">Equity</option>
+                                    <option value="INCOME" className="bg-[var(--bg-card)]">Income</option>
+                                    <option value="EXPENSE" className="bg-[var(--bg-card)]">Expense</option>
+                                    <option value="ASSET" className="bg-[var(--bg-card)]">Asset</option>
+                                    <option value="LIABILITY" className="bg-[var(--bg-card)]">Liability</option>
+                                    <option value="EQUITY" className="bg-[var(--bg-card)]">Equity</option>
                                 </select>
                             </div>
-                            <div className="flex gap-3 pt-4 border-t border-white/5">
-                                <button type="button" onClick={() => setShowAccountingCodeModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
+                            <div className="flex gap-3 pt-4 border-t border-[var(--border-main)]">
+                                <button type="button" onClick={() => setShowAccountingCodeModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
                                 <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Code'}</button>
                             </div>
                         </form>
@@ -807,23 +807,23 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
 
             {showTaxModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-                    <div className="bg-[#121212] rounded-2xl p-6 w-full max-w-sm border border-white/10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-sm border border-[var(--border-main)] shadow-2xl relative" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Plus size={20} className="text-[#C8E600]" /> Quick Add Tax</h3>
-                            <button onClick={() => setShowTaxModal(false)} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"><X size={18} /></button>
+                            <h3 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2"><Plus size={20} className="text-[#C8E600]" /> Quick Add Tax</h3>
+                            <button onClick={() => setShowTaxModal(false)} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
                         </div>
                         {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
                         <form onSubmit={handleCreateTax} className="space-y-4">
                             <div className="space-y-1">
-                                <label className="text-xs text-white/60">Tax Name</label>
-                                <input required type="text" value={newTax.name} onChange={e => setNewTax({ ...newTax, name: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600]" placeholder="e.g. VAT" />
+                                <label className="text-xs text-dim">Tax Name</label>
+                                <input required type="text" value={newTax.name} onChange={e => setNewTax({ ...newTax, name: e.target.value })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600]" placeholder="e.g. VAT" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-white/60">Tax Rate (%)</label>
-                                <input required type="number" step="0.01" min="0" max="100" value={newTax.rate} onChange={e => setNewTax({ ...newTax, rate: Number(e.target.value) })} className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#C8E600] font-mono" placeholder="10" />
+                                <label className="text-xs text-dim">Tax Rate (%)</label>
+                                <input required type="number" step="0.01" min="0" max="100" value={newTax.rate} onChange={e => setNewTax({ ...newTax, rate: Number(e.target.value) })} className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] font-mono" placeholder="10" />
                             </div>
-                            <div className="flex gap-3 pt-4 border-t border-white/5">
-                                <button type="button" onClick={() => setShowTaxModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
+                            <div className="flex gap-3 pt-4 border-t border-[var(--border-main)]">
+                                <button type="button" onClick={() => setShowTaxModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
                                 <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Tax'}</button>
                             </div>
                         </form>
