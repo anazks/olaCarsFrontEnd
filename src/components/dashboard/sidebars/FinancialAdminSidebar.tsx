@@ -99,6 +99,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: t('sidebar.items.manageVehicles', 'Manage Vehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
+                { label: 'Fleet Performance', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
@@ -114,7 +115,12 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             id: 'collections',
             label: 'Collections',
             icon: <Library size={22} />,
-            subItems: []
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/financial-admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/financial-admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/financial-admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/financial-admin/collections/invoices' },
+            ]
         },
         {
             id: 'accounting',
