@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Settings, Sun, Moon } from 'lucide-react';
+import { Menu, Settings, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getUser, getUserRole } from '../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../services/authService';
@@ -11,14 +11,14 @@ interface TopBarProps {
     toggleSidebar: () => void;
 }
 
-const TopBar = ({ }: TopBarProps) => {
+const TopBar = ({ toggleSidebar }: TopBarProps) => {
     const { theme, toggleTheme } = useTheme();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const user = getUser();
 
     const role = getUserRole();
-
+    
     const getFormattedRole = (roleStr: string | null) => {
         if (!roleStr) return t('common.accessPanel');
 
@@ -73,7 +73,14 @@ const TopBar = ({ }: TopBarProps) => {
                 borderBottom: '1px solid var(--border-main)'
             }}
         >
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={toggleSidebar}
+                    className="p-2 rounded-lg transition-colors duration-200 text-gray-400 hover:text-lime hover:bg-gray-800/40 cursor-pointer"
+                    title="Toggle Sidebar"
+                >
+                    <Menu size={22} />
+                </button>
             </div>
 
             {/* Right Tools */}
