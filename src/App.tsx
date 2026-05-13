@@ -46,6 +46,8 @@ import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
+import CollectionsDashboard from './pages/dashboards/financialAdmin/CollectionsDashboard';
+import CollectionsLedgerView from './pages/dashboards/financialAdmin/CollectionsLedgerView';
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
 import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
@@ -259,6 +261,13 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
+              
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
 
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
                 <Route path="staff-management" element={<StaffManagement />} />

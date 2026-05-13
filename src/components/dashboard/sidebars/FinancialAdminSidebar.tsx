@@ -115,7 +115,12 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             id: 'collections',
             label: 'Collections',
             icon: <Library size={22} />,
-            subItems: []
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/financial-admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/financial-admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/financial-admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/financial-admin/collections/invoices' },
+            ]
         },
         {
             id: 'accounting',
@@ -180,7 +185,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="flex items-center border-l border-gray-700 h-7 pl-3 ml-1">
-                            <span className="text-white font-bold tracking-widest text-[16px] uppercase">Fleet</span>
+                            <span className="text-white font-bold tracking-widest text-[16px] uppercase">OLA CARS</span>
                         </div>
                     )}
                 </div>

@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { 
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
-    MapPin, Building, ChevronRight, Briefcase, CheckCircle, FilterX,
+    MapPin, Building, ChevronRight, Briefcase, FilterX,
     TrendingUp, Wallet
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
