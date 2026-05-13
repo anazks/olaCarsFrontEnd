@@ -1,13 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
 import { 
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
 import { 
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
-    MapPin, Building, ChevronRight, Briefcase, FilterX,
-    TrendingUp, Wallet
+    MapPin, Building, ChevronRight, Briefcase, CheckCircle
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
@@ -15,11 +13,9 @@ import { format, startOfMonth } from 'date-fns';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
 
-import { useTheme } from '../../context/ThemeContext';
+
 
 const FinancialAdminDashboard = () => {
-    const { t } = useTranslation();
-    const { theme } = useTheme();
     
     // Computed Colors for Recharts based on active theme
     const isDark = theme === 'dark';

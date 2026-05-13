@@ -1,23 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Users, Briefcase, Activity, Clock, Search, ChevronDown, CheckCircle, 
-    Clock3, MapPin, AlignLeft, TrendingUp, UserCheck, Calendar, BarChart3,
-    Target as TargetIcon, Eye
+    Clock3, MapPin, TrendingUp, Calendar, BarChart3,
+    ArrowUpRight, Activity, Shield, ChevronDown, Users, CheckCircle, Award, Search
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend 
 } from 'recharts';
 
-import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData, type TargetComparison } from '../../../services/staffPerformanceService';
+import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData } from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
+import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
 
 const StaffPerformanceDashboard = () => {
     const userRole = getUserRole() || '';
     const navigate = useNavigate();
-    
     
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -27,16 +26,13 @@ const StaffPerformanceDashboard = () => {
     const [branchManagers, setBranchManagers] = useState<BranchManagerPerformanceData[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManagerPerformanceData[]>([]);
     const [globalAdmins, setGlobalAdmins] = useState<GlobalAdminPerformanceData[]>([]);
-    const [targetComparison, setTargetComparison] = useState<TargetComparison[]>([]);
     const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0], // 1st of current month
+        startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
     });
     
-    // Filters
     const [staffType, setStaffType] = useState<'all' | 'finance' | 'operation' | 'branch-manager' | 'country-manager' | 'finance-admin' | 'operation-admin'>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedStaffId, setExpandedStaffId] = useState<string | null>(null);
 
     const isBranchScoped = ['branchmanager'].includes(userRole?.toLowerCase().replace(' ', '') || '');
     const isAdmin = ['admin'].includes(userRole?.toLowerCase().replace(' ', '') || '');
@@ -60,7 +56,6 @@ const StaffPerformanceDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Note: BranchManager naturally gets scoped by the backend using req.user.branchId
             const data = await getStaffPerformance({
                 branch: isBranchScoped ? undefined : selectedBranch || undefined,
                 type: staffType,
@@ -72,7 +67,6 @@ const StaffPerformanceDashboard = () => {
             setBranchManagers(data.data.branchManagers || []);
             setCountryManagers(data.data.countryManagers || []);
             setGlobalAdmins(data.data.globalAdmins || []);
-            setTargetComparison(data.data.targetComparison || []);
         } catch (error) {
             console.error('Error fetching staff performance:', error);
         } finally {
@@ -117,8 +111,7 @@ const StaffPerformanceDashboard = () => {
 
     const combinedList = displayStaff();
 
-    // -- Calculated KPIs --
-    const totalStaff = finStaff.length + opStaff.length;
+    const totalStaffCount = finStaff.length + opStaff.length;
     let totalActions = 0;
     let totalOnboardings = 0;
     let avgHours = 0;
@@ -143,7 +136,6 @@ const StaffPerformanceDashboard = () => {
 
     const fleetAvgTime = staffWithTime > 0 ? (avgHours / staffWithTime).toFixed(1) : '0';
 
-    // -- Analytical Chart Data --
     const chartData = useMemo(() => {
         const distribution: Record<string, number> = {};
         let driversOutput = 0;
@@ -186,12 +178,12 @@ const StaffPerformanceDashboard = () => {
         avgTimeArray.sort((a,b) => b.hours - a.hours);
         const topAvgTime = avgTimeArray.slice(0, 8);
 
-        const COLORS = ['#148F85', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+        const COLORS = ['#C8E600', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
 
         return {
             distribution: Object.keys(distribution).map((k, i) => ({ name: k, value: distribution[k], color: COLORS[i % COLORS.length] })),
             output: [
-                { name: 'Drivers', value: driversOutput, fill: '#148F85' },
+                { name: 'Drivers', value: driversOutput, fill: '#C8E600' },
                 { name: 'Vehicles', value: vehiclesOutput, fill: '#3b82f6' }
             ].filter(x => x.value > 0),
             velocity: topAvgTime,
@@ -202,790 +194,340 @@ const StaffPerformanceDashboard = () => {
         };
     }, [combinedList]);
 
-    const formatDateStr = (dateStr: string) => {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleString(undefined, {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-    };
-
     const getStatusColor = (status: string) => {
-        return status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-               status === 'SUSPENDED' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-               'bg-rose-500/10 text-rose-500 border-rose-500/20';
+        return status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+               status === 'SUSPENDED' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+               'bg-rose-500/10 text-rose-400 border-rose-500/20';
     };
-
-    const KPICard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
-        <div className="p-6 rounded-3xl border transition-all hover:-translate-y-1" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-            <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-2xl ${colorClass}`}>
-                    <Icon size={24} />
-                </div>
-            </div>
-            <h3 style={{ color: 'var(--text-dim)' }} className="text-sm font-medium mb-1">{title}</h3>
-            <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold font-plus-jakarta" style={{ color: 'var(--text-main)' }}>
-                    {value}
-                </span>
-                {subtext && <span className="text-sm font-medium" style={{ color: 'var(--brand-lime)' }}>{subtext}</span>}
-            </div>
-        </div>
-    );
 
     return (
-        <div className="flex-1 w-full overflow-y-auto h-screen" style={{ backgroundColor: 'var(--bg-lighter)' }}>
-            {/* Header */}
-            <div className="p-4 md:p-8 border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold font-plus-jakarta tracking-tight mb-2 flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                            <UserCheck className="text-[var(--brand-lime)]" size={32} />
-                            Staff Performance tracking
-                        </h1>
-                        <p style={{ color: 'var(--text-dim)' }} className="text-base flex items-center gap-2">
-                            <Activity size={16} /> Measuring operational efficiency via onboarding telemetry
-                        </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--bg-lighter)' }}>
-                            {(
-                                isBranchScoped 
-                                    ? ['all', 'finance', 'operation'] 
-                                    : isAdmin 
-                                        ? ['all', 'finance', 'operation', 'branch-manager', 'country-manager', 'finance-admin', 'operation-admin']
-                                        : ['all', 'finance', 'operation', 'branch-manager']
-                            ).map(type => (
-                                <button
-                                    key={type}
-                                    onClick={() => setStaffType(type as any)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                        staffType === type 
-                                            ? 'shadow-sm' 
-                                            : 'hover:bg-white/5 opacity-60'
-                                    }`}
-                                    style={staffType === type ? { 
-                                        backgroundColor: 'var(--brand-lime)', 
-                                        color: '#000000' 
-                                    } : { color: 'var(--text-main)' }}
-                                >
-                                    {type === 'country-manager' ? 'Country Manager' : 
-                                     type === 'branch-manager' ? 'Branch Manager' : 
-                                     type === 'finance-admin' ? 'Finance Admin' :
-                                     type === 'operation-admin' ? 'Operation Admin' :
-                                     type.charAt(0).toUpperCase() + type.slice(1)}
-                                </button>
-                            ))}
-                        </div>
-
-                        {!isBranchScoped && (
-                            <div className="relative">
-                                <select
-                                    value={selectedBranch}
-                                    onChange={(e) => setSelectedBranch(e.target.value)}
-                                    className="appearance-none pl-10 pr-10 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-all font-medium"
-                                    style={{ 
-                                        backgroundColor: 'var(--bg-main)', 
-                                        borderColor: 'var(--border-main)', 
-                                        color: 'var(--text-main)' 
-                                    }}
-                                >
-                                    <option value="">All Branches</option>
-                                    {branches.map(b => (
-                                        <option key={b._id} value={b._id}>{b.name}</option>
-                                    ))}
-                                </select>
-                                <MapPin size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" style={{ color: 'var(--text-main)' }} />
-                                <ChevronDown size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" style={{ color: 'var(--text-main)' }} />
+        <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
+            
+            {/* Command Header */}
+            <div className="p-8 border-b border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48" />
+                
+                <div className="max-w-[1600px] mx-auto relative z-10">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+                        <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 rounded-2xl bg-lime/10 flex items-center justify-center text-lime shadow-2xl shadow-lime/5 border border-lime/20">
+                                <Activity size={32} />
                             </div>
-                        )}
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tighter text-white">Resource Intelligence</h1>
+                                <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
+                                    <Shield size={14} className="text-lime" /> Platform Telemetry & Staff Performance
+                                </p>
+                            </div>
+                        </div>
 
-                        <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-white/5">
-                            <Calendar size={16} className="ml-2 opacity-50" />
-                            <input 
-                                type="date" 
-                                value={dateRange.startDate}
-                                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                                className="bg-transparent text-xs font-bold focus:outline-none p-1.5"
-                                style={{ color: 'var(--text-main)' }}
-                            />
-                            <span className="opacity-30">-</span>
-                            <input 
-                                type="date" 
-                                value={dateRange.endDate}
-                                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                                className="bg-transparent text-xs font-bold focus:outline-none p-1.5"
-                                style={{ color: 'var(--text-main)' }}
-                            />
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center gap-1.5 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar max-w-[90vw]">
+                                {(
+                                    isBranchScoped 
+                                        ? ['all', 'finance', 'operation'] 
+                                        : isAdmin 
+                                            ? ['all', 'finance', 'operation', 'branch-manager', 'country-manager', 'finance-admin', 'operation-admin']
+                                            : ['all', 'finance', 'operation', 'branch-manager']
+                                ).map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setStaffType(type as any)}
+                                        className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                            staffType === type 
+                                                ? 'bg-lime text-black shadow-lg shadow-lime/20 scale-[1.02]' 
+                                                : 'hover:bg-white/5 text-dim hover:text-white'
+                                        }`}
+                                    >
+                                        {type === 'country-manager' ? 'Region' : 
+                                         type === 'branch-manager' ? 'Branch' : 
+                                         type === 'finance-admin' ? 'HQ Finance' :
+                                         type === 'operation-admin' ? 'HQ Ops' :
+                                         type === 'all' ? 'Universal' :
+                                         type}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {!isBranchScoped && (
+                                <div className="relative group">
+                                    <select
+                                        value={selectedBranch}
+                                        onChange={(e) => setSelectedBranch(e.target.value)}
+                                        className="appearance-none pl-12 pr-12 py-3 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[11px] font-black uppercase tracking-widest cursor-pointer group-hover:border-lime/40"
+                                        style={{ 
+                                            backgroundColor: 'var(--bg-card)', 
+                                            borderColor: 'var(--border-main)', 
+                                            color: 'var(--text-main)' 
+                                        }}
+                                    >
+                                        <option value="">All Branch Nodes</option>
+                                        {branches.map(b => (
+                                            <option key={b._id} value={b._id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                    <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-lime opacity-60" />
+                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                                <Calendar size={14} className="ml-3 text-lime opacity-60" />
+                                <input 
+                                    type="date" 
+                                    value={dateRange.startDate}
+                                    onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-white uppercase"
+                                />
+                                <div className="w-px h-4 bg-white/10" />
+                                <input 
+                                    type="date" 
+                                    value={dateRange.endDate}
+                                    onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-white uppercase"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
 
-        </div>
-
-            {/* Main Content Area */}
-            <div className="p-4 md:p-8">
-                {/* KPIs */}
-                <div className="mb-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <KPICard 
-                            title="Total Tracked Staff" 
-                            value={totalStaff} 
-                            icon={Users} 
-                            colorClass="bg-blue-500/10 text-blue-500" 
+                        <StatCard 
+                            superTitle="Network Assets"
+                            title="Tracked Staff" 
+                            value={totalStaffCount} 
+                            icon={<Users size={18} />} 
+                            color="rgba(59, 130, 246, 0.15)"
                         />
-                        <KPICard 
-                            title="Completed Onboardings" 
+                        <StatCard 
+                            superTitle="Successful Cycles"
+                            title="Total Onboarded" 
                             value={totalOnboardings} 
-                            subtext="Active"
-                            icon={CheckCircle} 
-                            colorClass="bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]" 
+                            icon={<CheckCircle size={18} />} 
+                            color="rgba(200, 230, 0, 0.15)"
                         />
-                        <KPICard 
-                            title="Total Workflow Actions" 
+                        <StatCard 
+                            superTitle="Operational Volume"
+                            title="Workflow Actions" 
                             value={totalActions} 
-                            icon={Activity} 
-                            colorClass="bg-purple-500/10 text-purple-500" 
+                            icon={<Activity size={18} />} 
+                            color="rgba(139, 92, 246, 0.15)"
                         />
-                        <KPICard 
-                            title="Avg Stage Processing" 
+                        <StatCard 
+                            superTitle="Velocity Metrics"
+                            title="Avg Processing" 
                             value={`${fleetAvgTime}h`} 
-                            icon={Clock3} 
-                            colorClass="bg-amber-500/10 text-amber-500" 
+                            icon={<Clock3 size={18} />} 
+                            color="rgba(245, 158, 11, 0.15)"
                         />
                     </div>
                 </div>
+            </div>
 
-                {/* Analytical Grapsh */}
+            {/* Main Content */}
+            <div className="p-8 max-w-[1600px] mx-auto space-y-12 pb-24">
+                
+                {/* 2 per Row Charts - Strict Grid */}
                 {!loading && combinedList.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                        {/* 1. Staff Hierarchy */}
-                        <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
-                                    <Users size={20} />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* 1. Distribution Matrix */}
+                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
+                                        <Award size={20} />
+                                    </div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Distribution Matrix</h2>
                                 </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Staff Hierarchy</h2>
+                                <div className="flex items-center gap-2 text-[10px] font-black text-white px-3 py-1 rounded-lg bg-white/5 border border-white/5">
+                                    FINANCE vs OPERATION
+                                </div>
                             </div>
-                            <div className="h-[220px] w-full">
-                                {chartData.distribution.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={chartData.distribution} innerRadius={60} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
-                                                {chartData.distribution.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
-                                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Staff Data</div>
-                                )}
+                            <div className="h-[240px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={chartData.distribution} innerRadius={65} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
+                                            {chartData.distribution.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
+                                        </Pie>
+                                        <RechartsTooltip contentStyle={{ background: '#111', border: 'none', borderRadius: '16px' }} />
+                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
                         </div>
 
-                        {/* 2. Onboarding Output */}
-                        <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-[#148F85]/10 text-[#148F85]">
-                                    <CheckCircle size={20} />
-                                </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Total Onboarded</h2>
-                            </div>
-                            <div className="h-[220px] w-full">
-                                {chartData.output.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData.output} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                            <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
-                                            <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="value" name="Total" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                                {chartData.output.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Deployments</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 3. Pace & Velocity */}
-                        <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500">
-                                    <Clock3 size={20} />
-                                </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Stage Bottlenecks (Hrs)</h2>
-                            </div>
-                            <div className="h-[220px] w-full">
-                                {chartData.velocity.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData.velocity} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} />
-                                            <XAxis type="number" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
-                                            <YAxis dataKey="name" type="category" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} width={40} />
-                                            <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="hours" name="Avg Hours" radius={[0, 4, 4, 0]} maxBarSize={20} fill="#f97316" />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Timing Data</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 4. Action Frequency */}
-                        <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+                        {/* 2. Task Momentum */}
+                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
                                     <TrendingUp size={20} />
                                 </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Task Momentum</h2>
+                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Task Momentum</h2>
                             </div>
-                            <div className="h-[220px] w-full">
-                                {chartData.frequency.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={chartData.frequency} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
-                                                {chartData.frequency.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
-                                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Tasks Logged</div>
-                                )}
+                            <div className="h-[240px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={chartData.frequency} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
+                                            {chartData.frequency.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
+                                        </Pie>
+                                        <RechartsTooltip contentStyle={{ background: '#111', border: 'none', borderRadius: '16px' }} />
+                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* Hierarchical Comparison Chart */}
-                {!loading && (
-                    <div className="mb-8">
-                        <div className="rounded-3xl border p-8 shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
-                                        <BarChart3 size={24} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold font-plus-jakarta">
-                                            {(() => {
-                                                const role = userRole.toLowerCase().replace(' ', '');
-                                                if (role === 'admin') return 'National Country Performance';
-                                                if (role === 'countrymanager') return selectedBranch ? 'Branch Staff Performance' : 'Regional Branch Performance';
-                                                return 'Branch Staff Performance';
-                                            })()}
-                                        </h2>
-                                        <p className="text-xs text-dim font-medium uppercase tracking-wider mt-1">
-                                            Target vs Actual Comparison
-                                        </p>
-                                    </div>
+                        {/* 3. Asset Deployment */}
+                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-2xl bg-lime/10 text-lime">
+                                    <BarChart3 size={20} />
                                 </div>
+                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Asset Deployment</h2>
                             </div>
+                            <div className="h-[240px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData.output} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                                        <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                        <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ background: '#111', border: 'none', borderRadius: '12px' }} />
+                                        <Bar dataKey="value" name="Total" radius={[10, 10, 2, 2]} maxBarSize={40}>
+                                            {chartData.output.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
 
-                            <div className="h-[350px] w-full">
-                                {(() => {
-                                    let data: any[] = [];
-                                    const role = userRole.toLowerCase().replace(' ', '');
-                                    
-                                    if (role === 'admin') {
-                                        data = countryManagers.map(cm => ({
-                                            name: cm.country,
-                                            Target: cm.targetStats?.DRIVER_ACQUISITION?.target || 0,
-                                            Actual: cm.targetStats?.DRIVER_ACQUISITION?.actual || 0,
-                                        }));
-                                    } else if (role === 'countrymanager') {
-                                        // If a branch is selected, show staff comparison. Otherwise show branch comparison.
-                                        if (selectedBranch) {
-                                            data = [...finStaff, ...opStaff].map(s => ({
-                                                name: s.fullName.split(' ')[0],
-                                                Target: s.targetStats?.DRIVER_ACQUISITION?.target || s.targetStats?.VEHICLE_ACQUISITION?.target || 0,
-                                                Actual: s.targetStats?.DRIVER_ACQUISITION?.actual || s.targetStats?.VEHICLE_ACQUISITION?.actual || 0,
-                                            }));
-                                        } else {
-                                            data = branchManagers.map(bm => ({
-                                                name: bm.branchName,
-                                                Target: bm.targetStats?.DRIVER_ACQUISITION?.target || 0,
-                                                Actual: bm.targetStats?.DRIVER_ACQUISITION?.actual || 0,
-                                            }));
-                                        }
-                                    } else if (role === 'branchmanager' || isBranchScoped) {
-                                        data = [...finStaff, ...opStaff].map(s => ({
-                                            name: s.fullName.split(' ')[0],
-                                            Target: s.targetStats?.DRIVER_ACQUISITION?.target || s.targetStats?.VEHICLE_ACQUISITION?.target || 0,
-                                            Actual: s.targetStats?.DRIVER_ACQUISITION?.actual || s.targetStats?.VEHICLE_ACQUISITION?.actual || 0,
-                                        }));
-                                    }
-
-                                    if (data.length === 0) return (
-                                        <div className="h-full flex flex-col items-center justify-center opacity-30">
-                                            <BarChart3 size={48} className="mb-4" />
-                                            <p className="text-sm font-bold uppercase">No hierarchical data available</p>
-                                        </div>
-                                    );
-
-                                    return (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                                <XAxis 
-                                                    dataKey="name" 
-                                                    stroke="var(--text-dim)" 
-                                                    fontSize={12} 
-                                                    tickLine={false} 
-                                                    axisLine={false}
-                                                    dy={10}
-                                                />
-                                                <YAxis 
-                                                    stroke="var(--text-dim)" 
-                                                    fontSize={12} 
-                                                    tickLine={false} 
-                                                    axisLine={false}
-                                                />
-                                                <RechartsTooltip 
-                                                    cursor={{fill: 'rgba(255,255,255,0.05)'}} 
-                                                    contentStyle={{ 
-                                                        background: 'var(--bg-popover)', 
-                                                        border: '1px solid var(--border-main)', 
-                                                        borderRadius: '12px', 
-                                                        color: 'var(--text-main)', 
-                                                        fontSize: '14px',
-                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                                                    }} 
-                                                />
-                                                <Legend iconType="circle" />
-                                                <Bar dataKey="Target" fill="var(--border-main)" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                                                <Bar dataKey="Actual" fill="var(--brand-lime)" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    );
-                                })()}
+                        {/* 4. Process Bottlenecks */}
+                        <div className="rounded-[2rem] border border-white/5 bg-white/5 p-8 relative overflow-hidden group">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
+                                    <Clock3 size={20} />
+                                </div>
+                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Process Bottlenecks</h2>
+                            </div>
+                            <div className="h-[240px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData.velocity} layout="vertical" margin={{ top: 0, right: 0, left: 20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" horizontal={false} />
+                                        <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={9} tickLine={false} axisLine={false} />
+                                        <YAxis dataKey="name" type="category" stroke="white" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} width={60} />
+                                        <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ background: '#111', border: 'none', borderRadius: '12px' }} />
+                                        <Bar dataKey="hours" name="Avg Hours" radius={[0, 8, 8, 0]} maxBarSize={15} fill="#f97316" />
+                                    </BarChart>
+                                </ResponsiveContainer>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Target vs Actual Comparison */}
-                {!loading && targetComparison.length > 0 && (
-                    <div className="mb-8">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2.5 rounded-xl bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]">
-                                <TargetIcon size={20} />
-                            </div>
-                            <h2 className="text-xl font-bold font-plus-jakarta">Target vs Actual Performance</h2>
+                {/* Staff Roster Table */}
+                <div className="rounded-[2.5rem] border border-white/5 bg-white/5 overflow-hidden">
+                    <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/[0.02]">
+                        <div>
+                            <h2 className="text-2xl font-black text-white">Staff Telemetry Ledger</h2>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-dim mt-1">Real-time performance audit of network resources</p>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {targetComparison.map((t, idx) => {
-                                const percent = Math.min(100, Math.round((t.actualValue / t.targetValue) * 100));
-                                return (
-                                    <div key={idx} className="p-6 rounded-3xl border shadow-sm" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">{t.category.replace('_', ' ')}</p>
-                                                <h3 className="font-bold text-lg">{t.period} PROGRESS</h3>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-2xl font-black text-[var(--brand-lime)]">{percent}%</span>
-                                            </div>
-                                        </div>
 
-                                        <div className="flex items-end gap-2 mb-4">
-                                            <div className="flex-1">
-                                                <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className="h-full rounded-full transition-all duration-1000" 
-                                                        style={{ 
-                                                            width: `${percent}%`, 
-                                                            backgroundColor: percent >= 100 ? 'var(--brand-lime)' : percent > 50 ? '#3b82f6' : '#f59e0b' 
-                                                        }}
-                                                    ></div>
+                        <div className="relative group">
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-lime opacity-40 group-focus-within:opacity-100 transition-opacity" />
+                            <input
+                                type="text"
+                                placeholder="Search resources..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-12 pr-6 py-3.5 rounded-2xl border w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all font-bold text-[10px] uppercase tracking-widest bg-black/40 border-white/10 text-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-black/20">
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 pl-8">Resource</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Designation</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">Hub Node</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Output</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-center">Velocity</th>
+                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5 text-right pr-8">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {loading ? (
+                                    [1, 2, 3, 4, 5].map(i => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td colSpan={6} className="p-6"><div className="h-4 bg-white/5 rounded-full w-full" /></td>
+                                        </tr>
+                                    ))
+                                ) : combinedList.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-20 text-center text-dim font-bold uppercase tracking-widest italic opacity-30">No matching resources found</td>
+                                    </tr>
+                                ) : (
+                                    combinedList.map(staff => (
+                                        <tr key={staff.staffId} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="p-5 pl-8">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black text-sm border border-lime/10">
+                                                        {staff.fullName.split(' ')[0].charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-white group-hover:text-lime transition-colors">{staff.fullName}</p>
+                                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mt-1 inline-block ${getStatusColor(staff.status)}`}>
+                                                            {staff.status}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-between items-center text-sm font-bold">
-                                            <div className="flex flex-col">
-                                                <span className="opacity-40 text-[10px] uppercase">Actual</span>
-                                                <span className="text-lg">{t.actualValue}</span>
-                                            </div>
-                                            <div className="flex flex-col text-right">
-                                                <span className="opacity-40 text-[10px] uppercase">Target</span>
-                                                <span className="text-lg">{t.targetValue}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold font-plus-jakarta" style={{ color: 'var(--text-main)' }}>
-                        Staff Roster & Telemetry
-                    </h2>
-                    <div className="relative">
-                        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" style={{ color: 'var(--text-main)' }} />
-                        <input
-                            type="text"
-                            placeholder="Search name, branch..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-2.5 rounded-xl border w-64 focus:outline-none focus:ring-2 transition-all font-medium text-sm"
-                            style={{ 
-                                backgroundColor: 'var(--bg-main)', 
-                                borderColor: 'var(--border-main)', 
-                                color: 'var(--text-main)' 
-                            }}
-                        />
+                                            </td>
+                                            <td className="p-5">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                    {staff._listType.replace('-', ' ')}
+                                                </p>
+                                                <p className="text-[9px] font-bold text-dim mt-0.5">{staff.email}</p>
+                                            </td>
+                                            <td className="p-5">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                    {staff._listType === 'country-manager' ? (staff as any).country : 
+                                                     (staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? 'Global HQ' : 
+                                                     staff.branchName}
+                                                </p>
+                                                <p className="text-[9px] font-bold text-dim mt-0.5 flex items-center gap-1">
+                                                    <MapPin size={8} className="text-lime" /> Telemetry Active
+                                                </p>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                                <p className="text-lg font-black text-white leading-none">
+                                                    {staff.metrics.totalDriversOnboarded ?? staff.metrics.totalVehiclesOnboarded ?? 0}
+                                                </p>
+                                                <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Onboarded</p>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                                <p className="text-lg font-black text-orange-400 leading-none">
+                                                    {staff.metrics.avgTimePerStageHours}h
+                                                </p>
+                                                <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Avg Cycle</p>
+                                            </td>
+                                            <td className="p-5 text-right pr-8">
+                                                <button 
+                                                    onClick={() => {
+                                                        const currentPath = window.location.pathname;
+                                                        const basePath = currentPath.split('/staff-performance')[0];
+                                                        navigate(`${basePath}/staff-performance/${staff.staffId}`);
+                                                    }}
+                                                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 hover:bg-lime text-dim hover:text-black transition-all border border-white/5 hover:border-lime font-black text-[10px] uppercase tracking-widest"
+                                                >
+                                                    Profile <ArrowUpRight size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                {loading ? (
-                    <div className="h-64 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--brand-lime)' }}></div>
-                    </div>
-                ) : combinedList.length === 0 ? (
-                    <div className="text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                        <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 opacity-30 bg-black/5 dark:bg-white/5">
-                            <Search size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">No Staff Found</h3>
-                        <p style={{ color: 'var(--text-dim)' }}>Try adjusting your branch or type filters.</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4 mb-20">
-                        {combinedList.map(staff => (
-                            <div key={staff.staffId} className="rounded-2xl border overflow-hidden transition-all" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                {/* Row Header */}
-                                <div 
-                                    className="p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
-                                    onClick={() => setExpandedStaffId(expandedStaffId === staff.staffId ? null : staff.staffId)}
-                                >
-                                    <div className="flex items-center gap-4 min-w-[200px] flex-1">
-                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg" 
-                                             style={{ backgroundColor: 'var(--bg-lighter)', color: 'var(--brand-lime)', border: '1px solid var(--border-main)' }}>
-                                            {staff.fullName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-base flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                {staff.fullName}
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getStatusColor(staff.status)}`}>
-                                                    {staff.status}
-                                                </span>
-                                            </h3>
-                                            <div className="flex items-center gap-3 text-xs opacity-70 mt-1 font-medium">
-                                                <span className="flex items-center gap-1"><MapPin size={12}/> {
-                                                    staff._listType === 'country-manager' ? (staff as any).country : 
-                                                    (staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? 'Global Platform' : 
-                                                    staff.branchName
-                                                }</span>
-                                                <span className="flex items-center gap-1 uppercase">
-                                                    {(staff._listType === 'finance' || staff._listType === 'finance-admin') ? <Briefcase size={12}/> : <AlignLeft size={12}/>}
-                                                    {staff._listType.replace('-', ' ')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-6 md:gap-12 text-sm">
-                                        {(staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? (
-                                            <>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Plat. Drivers</p>
-                                                    <p className="font-bold text-lg text-[var(--brand-lime)]">
-                                                        {staff.metrics.totalGlobalDrivers}
-                                                    </p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Plat. Vehicles</p>
-                                                    <p className="font-bold text-lg">{staff.metrics.totalGlobalVehicles}</p>
-                                                </div>
-                                                <div className="text-center hidden sm:block">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Active Assets</p>
-                                                    <p className="font-bold text-lg text-amber-500">{staff.metrics.activeGlobalDrivers + staff.metrics.activeGlobalVehicles}</p>
-                                                </div>
-                                            </>
-                                        ) : staff._listType === 'country-manager' ? (
-                                            <>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Nat. Drivers</p>
-                                                    <p className="font-bold text-lg text-[var(--brand-lime)]">
-                                                        {staff.metrics.totalCountryDrivers}
-                                                    </p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Nat. Vehicles</p>
-                                                    <p className="font-bold text-lg">{staff.metrics.totalCountryVehicles}</p>
-                                                </div>
-                                                <div className="text-center hidden sm:block">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Active Assets</p>
-                                                    <p className="font-bold text-lg text-amber-500">{staff.metrics.activeCountryDrivers + staff.metrics.activeCountryVehicles}</p>
-                                                </div>
-                                            </>
-                                        ) : staff._listType === 'branch-manager' ? (
-                                            <>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Branch Drivers</p>
-                                                    <p className="font-bold text-lg text-[var(--brand-lime)]">
-                                                        {staff.metrics.totalBranchDrivers}
-                                                    </p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Branch Vehicles</p>
-                                                    <p className="font-bold text-lg">{staff.metrics.totalBranchVehicles}</p>
-                                                </div>
-                                                <div className="text-center hidden sm:block">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Active Assets</p>
-                                                    <p className="font-bold text-lg text-amber-500">{staff.metrics.activeBranchDrivers + staff.metrics.activeBranchVehicles}</p>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Onboarded</p>
-                                                    <p className="font-bold text-lg text-[var(--brand-lime)]">
-                                                        {staff.metrics.totalDriversOnboarded ?? staff.metrics.totalVehiclesOnboarded ?? 0}
-                                                    </p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Total Actions</p>
-                                                    <p className="font-bold text-lg">{staff.metrics.totalStageActions}</p>
-                                                </div>
-                                                <div className="text-center hidden sm:block">
-                                                    <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Avg Time/Stage</p>
-                                                    <p className="font-bold text-lg text-amber-500">{staff.metrics.avgTimePerStageHours}h</p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <div className="pl-4 border-l border-white/10 hidden lg:block">
-                                        <p className="opacity-60 mb-1 text-[11px] uppercase tracking-wider font-bold">Last Login</p>
-                                        <p className="font-medium">{formatDateStr(staff.lastLoginAt)}</p>
-                                    </div>
-
-                                    <div className="flex items-center gap-3 ml-auto">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const currentPath = window.location.pathname;
-                                                const basePath = currentPath.split('/staff-performance')[0];
-                                                navigate(`${basePath}/staff-performance/${staff.staffId}`);
-                                            }}
-                                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#C8E600]/10 hover:bg-[#C8E600] text-[#C8E600] hover:text-black transition-all border border-[#C8E600]/20 font-black text-[10px] uppercase tracking-wider shadow-lg shadow-[#C8E600]/5"
-                                            title="View Full Profile"
-                                        >
-                                            <Eye size={14} />
-                                            View
-                                        </button>
-                                        <div className="p-2 opacity-50">
-                                            <ChevronDown size={20} className={`transform transition-transform ${expandedStaffId === staff.staffId ? 'rotate-180' : ''}`} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Expanded Details */}
-                                {expandedStaffId === staff.staffId && (
-                                    <div className="p-6 border-t border-dashed grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-lighter)' }}>
-                                        {/* Left Side: Stats & Breakdown */}
-                                        <div className="space-y-6">
-                                            {(staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? (
-                                                <div>
-                                                    <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                        <TrendingUp size={16} className="text-[var(--brand-lime)]" /> 
-                                                        Global Portfolio Health
-                                                    </h4>
-                                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                                        <div className="col-span-2 p-4 rounded-xl border flex flex-col justify-center text-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Total Branches Overseen</span>
-                                                            <span className="text-3xl font-bold">{staff.metrics.totalGlobalBranches}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Drivers</span>
-                                                            <span className="text-2xl font-bold">{staff.metrics.activeGlobalDrivers} <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalGlobalDrivers}</span></span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalGlobalDrivers ? (staff.metrics.activeGlobalDrivers / staff.metrics.totalGlobalDrivers) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Vehicles</span>
-                                                            <span className="text-2xl font-bold tracking-tight">
-                                                                {staff.metrics.activeGlobalVehicles}
-                                                                <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalGlobalVehicles}</span>
-                                                            </span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalGlobalVehicles ? (staff.metrics.activeGlobalVehicles / staff.metrics.totalGlobalVehicles) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : staff._listType === 'country-manager' ? (
-                                                <div>
-                                                    <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                        <TrendingUp size={16} className="text-[var(--brand-lime)]" /> 
-                                                        National Portfolio Health
-                                                    </h4>
-                                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                                        <div className="col-span-2 p-4 rounded-xl border flex flex-col justify-center text-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Total Branches Overseen</span>
-                                                            <span className="text-3xl font-bold">{staff.metrics.totalCountryBranches}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Drivers</span>
-                                                            <span className="text-2xl font-bold">{staff.metrics.activeCountryDrivers} <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalCountryDrivers}</span></span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalCountryDrivers ? (staff.metrics.activeCountryDrivers / staff.metrics.totalCountryDrivers) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Vehicles</span>
-                                                            <span className="text-2xl font-bold tracking-tight">
-                                                                {staff.metrics.activeCountryVehicles}
-                                                                <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalCountryVehicles}</span>
-                                                            </span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalCountryVehicles ? (staff.metrics.activeCountryVehicles / staff.metrics.totalCountryVehicles) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : staff._listType === 'branch-manager' ? (
-                                                <div>
-                                                    <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                        <TrendingUp size={16} className="text-[var(--brand-lime)]" /> 
-                                                        Branch Portfolio Health
-                                                    </h4>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Drivers</span>
-                                                            <span className="text-2xl font-bold">{staff.metrics.activeBranchDrivers} <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalBranchDrivers}</span></span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalBranchDrivers ? (staff.metrics.activeBranchDrivers / staff.metrics.totalBranchDrivers) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                            <span className="text-xs font-bold uppercase opacity-60 mb-1">Active / Total Vehicles</span>
-                                                            <span className="text-2xl font-bold tracking-tight">
-                                                                {staff.metrics.activeBranchVehicles}
-                                                                <span className="text-sm font-normal opacity-60 ml-2">/ {staff.metrics.totalBranchVehicles}</span>
-                                                            </span>
-                                                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1 mt-2">
-                                                                <div className="h-full rounded-full" style={{ width: `${staff.metrics.totalBranchVehicles ? (staff.metrics.activeBranchVehicles / staff.metrics.totalBranchVehicles) * 100 : 0}%`, backgroundColor: 'var(--brand-lime)' }}></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div>
-                                                        <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                            <TrendingUp size={16} className="text-[var(--brand-lime)]" /> 
-                                                            Volume & Velocity
-                                                        </h4>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                                <span className="text-xs font-bold uppercase opacity-60 mb-1">Actions This Month</span>
-                                                                <span className="text-2xl font-bold">{staff.metrics.actionsThisMonth} <span className="text-sm font-normal opacity-60 ml-2">actions</span></span>
-                                                            </div>
-                                                            <div className="p-4 rounded-xl border flex flex-col justify-center" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)' }}>
-                                                                <span className="text-xs font-bold uppercase opacity-60 mb-1">Items Touched</span>
-                                                                <span className="text-2xl font-bold tracking-tight">
-                                                                    {staff.metrics.totalDriversTouched ?? staff.metrics.totalVehiclesTouched ?? 0}
-                                                                    <span className="text-sm font-normal opacity-60 ml-2">entities</span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                            <AlignLeft size={16} className="text-[var(--brand-lime)]" /> 
-                                                            Stage Breakdown (All Time)
-                                                        </h4>
-                                                        <div className="space-y-3">
-                                                            {(Object.entries(staff.metrics.stageBreakdown || {}) as [string, number][]).sort((a, b) => b[1] - a[1]).map(([stage, count], i) => (
-                                                                <div key={i} className="flex items-center gap-3">
-                                                                    <div className="flex-1 text-sm font-medium">{stage}</div>
-                                                                    <div className="w-1/2 bg-black/10 dark:bg-white/10 rounded-full h-2 overflow-hidden">
-                                                                        <div 
-                                                                            className="h-full rounded-full" 
-                                                                            style={{ 
-                                                                                width: `${(count / Math.max(...(Object.values(staff.metrics.stageBreakdown || {}) as number[]))) * 100}%`,
-                                                                                backgroundColor: 'var(--brand-lime)'
-                                                                            }}
-                                                                        ></div>
-                                                                    </div>
-                                                                    <div className="w-10 text-right font-bold text-sm tracking-widest">{count}</div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        {/* Right Side: Timeline Activity */}
-                                        <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-6 border" style={{ borderColor: 'var(--border-main)' }}>
-                                            <h4 className="font-bold mb-6 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                <Clock size={16} className="text-[var(--brand-lime)]" /> 
-                                                Recent Activity Log
-                                            </h4>
-                                            
-                                            {staff.recentActivity && staff.recentActivity.length > 0 ? (
-                                                <div className="space-y-5 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
-                                                    {staff.recentActivity.map((log: any, idx: number) => (
-                                                        <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                                            <div className="flex items-center justify-center w-5 h-5 rounded-full border-[3px] shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10"
-                                                                style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--brand-lime)' }}>
-                                                            </div>
-                                                            <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-xl border shadow-sm transition-all hover:-translate-y-0.5"
-                                                                style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
-                                                                <div className="flex items-center justify-between mb-1">
-                                                                    <span className="font-bold text-xs uppercase tracking-wider text-[var(--brand-lime)]">
-                                                                        {log.status}
-                                                                    </span>
-                                                                    <span className="text-[10px] opacity-60 font-medium">
-                                                                        {formatDateStr(log.timestamp)}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="text-sm font-medium mb-1 truncate">
-                                                                    {(log.driverName || log.vehicleName) && (
-                                                                        <span className="opacity-70 mr-1">For</span>
-                                                                    )}
-                                                                    {log.driverName || log.vehicleName || 'Unknown Entity'}
-                                                                </div>
-                                                                {log.notes && (
-                                                                    <div className="text-[11px] opacity-60 italic border-t pt-1 mt-1 border-white/5 line-clamp-2">
-                                                                        "{log.notes}"
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-8 opacity-50">
-                                                    No recent activity recorded
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
     );

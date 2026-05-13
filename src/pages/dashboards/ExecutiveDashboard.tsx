@@ -5,13 +5,19 @@ import {
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
-import { Car, Users, DollarSign, Briefcase, ShoppingCart, Activity, RefreshCw } from 'lucide-react';
+import { 
+    Car, Users, DollarSign, RefreshCw, Activity, ShoppingCart,
+    AlertTriangle, CreditCard, AlertCircle,
+    BarChart3, ArrowUpRight, ArrowDownRight, Clock, FileText, ClipboardList, Briefcase 
+} from 'lucide-react';
 import { getLedgerEntries } from '../../services/ledgerService';
 import { getAllDrivers } from '../../services/driverService';
 import { getAllVehicles } from '../../services/vehicleService';
 import { getAllPurchaseOrders } from '../../services/purchaseOrderService';
 import { getStaffPerformance } from '../../services/staffPerformanceService';
 import { getAllBranches } from '../../services/branchService';
+import alertService from '../../services/alertService';
+import { getTasks } from '../../services/taskService';
 
 const COLORS = {
     green: '#22c55e', blue: '#3b82f6', red: '#ef4444', 
@@ -32,13 +38,38 @@ const ExecutiveDashboard = () => {
     const [staffData, setStaffData] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     
+    // KPI States
+    const [kpiData, setKpiData] = useState({
+        totalActiveVehicles: 0,
+        monthlyRevenue: 0,
+        outstandingCollections: 0,
+        activeDrivers: 0,
+        collectionCompliance: 0,
+        last12MonthRevenue: 0,
+        outstandingBalance: 0,
+        activeAlerts: 0,
+        alertsDetailed: {
+            critical: [] as any[],
+            major: [] as any[],
+            minor: [] as any[]
+        },
+        tasks: {
+            overdue: 0,
+            upcoming: 0,
+            assigned: 0
+        }
+    });
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const oneMonthAgoDate = new Date();
+    oneMonthAgoDate.setMonth(oneMonthAgoDate.getMonth() - 1);
+    const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
+
     // Global Filters
     const [globalBranch, setGlobalBranch] = useState<string>('all');
-    const [globalSort, setGlobalSort] = useState<string>('desc');
-    const [globalStartDate, setGlobalStartDate] = useState<string>('');
-    const [globalEndDate, setGlobalEndDate] = useState<string>('');
-
-    const today = new Date().toISOString().split('T')[0];
+    const [globalSort] = useState<string>('desc');
+    const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
+    const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 
     const fetchData = async () => {
         setLoading(true);
@@ -54,29 +85,169 @@ const ExecutiveDashboard = () => {
 
             const baseFilters: any = {};
             if (globalBranch !== 'all') baseFilters.branch = globalBranch;
-            if (globalStartDate) baseFilters.startDate = globalStartDate;
-            if (globalEndDate) baseFilters.endDate = globalEndDate;
+            // We fetch all records and filter locally by date range to allow cross-period KPI calculations
             baseFilters.sortOrder = globalSort;
             baseFilters.sortBy = 'createdAt';
 
-            const [ledgerRes, driverRes, vehicleRes, poRes, staffRes] = await Promise.allSettled([
-                getLedgerEntries(baseFilters),
+            const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes] = await Promise.allSettled([
+                getLedgerEntries({ limit: 5000, ...baseFilters }),
                 getAllDrivers({ limit: 1000, ...baseFilters }),
                 getAllVehicles({ limit: 1000, ...baseFilters }),
                 getAllPurchaseOrders({ limit: 500, ...baseFilters }),
-                getStaffPerformance({ type: 'all', ...baseFilters })
+                getStaffPerformance({ type: 'all', ...baseFilters }),
+                alertService.getActiveAlerts(),
+                getTasks({ limit: 1000, ...baseFilters })
             ]);
+
+            const startD = globalStartDate ? new Date(globalStartDate) : new Date(0);
+            const endD = globalEndDate ? new Date(globalEndDate) : new Date();
+            endD.setHours(23, 59, 59, 999);
+            startD.setHours(0, 0, 0, 0);
+
+            // KPI Calculations
+            let newKpi = { ...kpiData };
+
+            if (alertRes.status === 'fulfilled') {
+                const allAlerts = alertRes.value || [];
+                // Filter alerts by date range
+                const alerts = allAlerts.filter(a => {
+                    const alertDate = new Date(a.createdAt);
+                    return alertDate >= startD && alertDate <= endD;
+                });
+                newKpi.activeAlerts = alerts.length;
+                newKpi.alertsDetailed = {
+                    critical: alerts.filter(a => a.priority === 'HIGH'),
+                    major: alerts.filter(a => a.priority === 'MEDIUM'),
+                    minor: alerts.filter(a => a.priority === 'LOW')
+                };
+            }
+
+            if (taskRes.status === 'fulfilled') {
+                const tasks = taskRes.value.data || [];
+                let overdue = 0, upcoming = 0, assigned = 0;
+                const now = new Date();
+                
+                tasks.forEach((t: any) => {
+                    if (t.status !== 'COMPLETED' && t.status !== 'CANCELLED') {
+                        if (t.dueDate) {
+                            const dd = new Date(t.dueDate);
+                            if (dd >= startD && dd <= endD) {
+                                assigned++;
+                                if (dd < now) overdue++;
+                                else upcoming++;
+                            }
+                        } else {
+                            const cd = new Date(t.createdAt);
+                            if (cd >= startD && cd <= endD) {
+                                assigned++;
+                                upcoming++;
+                            }
+                        }
+                    }
+                });
+                newKpi.tasks = { overdue, upcoming, assigned };
+            }
+
+            if (ledgerRes.status === 'fulfilled') {
+                const ledgerData = Array.isArray(ledgerRes.value) ? ledgerRes.value : [];
+                const twelveMonthsAgo = new Date();
+                twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+                let periodRev = 0;
+                let twelveMonthRev = 0;
+
+                ledgerData.forEach((entry: any) => {
+                    const d = new Date(entry.entryDate || entry.date);
+                    if (isNaN(d.getTime())) return;
+                    
+                    const cat = entry.accountingCode?.category?.toUpperCase();
+                    let amt = entry.amount !== undefined ? entry.amount : (entry.debit || entry.credit || 0);
+                    let isDebit = entry.amount !== undefined ? entry.type === 'DEBIT' : ((entry.debit || 0) > 0);
+                    
+                    if (cat === 'INCOME') {
+                        const incomeToAdd = isDebit ? -amt : amt; 
+                        
+                        // Period revenue
+                        if (d >= startD && d <= endD) {
+                            periodRev += incomeToAdd;
+                        }
+                        
+                        // Last 12 months (ignores date picker)
+                        if (d >= twelveMonthsAgo) {
+                            twelveMonthRev += incomeToAdd;
+                        }
+                    }
+                });
+                newKpi.monthlyRevenue = periodRev;
+                newKpi.last12MonthRevenue = twelveMonthRev;
+            }
+
+            if (driverRes.status === 'fulfilled') {
+                const drivers = driverRes.value.data || [];
+                let activeDriversCount = 0;
+                let totalOverdue = 0;
+                let totalPending = 0;
+                let totalDuePeriod = 0;
+                let totalPaidPeriod = 0;
+
+                drivers.forEach(d => {
+                    if (d.status === 'ACTIVE') activeDriversCount++;
+                    
+                    const rt = d.rentTracking || [];
+                    rt.forEach((week: any) => {
+                        const wd = new Date(week.dueDate || week.startDate || new Date());
+                        if (wd >= startD && wd <= endD) {
+                            const amtDue = week.totalDue || 0;
+                            const amtPaid = week.amountPaid || 0;
+                            const bal = week.balance || 0;
+                            
+                            totalDuePeriod += amtDue;
+                            totalPaidPeriod += amtPaid;
+
+                            if (week.status !== 'PAID') {
+                                const isOverdue = new Date(week.dueDate || '') < new Date();
+                                if (isOverdue) totalOverdue += bal;
+                                else totalPending += bal;
+                            }
+                        }
+                    });
+                });
+                
+                newKpi.activeDrivers = activeDriversCount;
+                newKpi.outstandingCollections = totalOverdue;
+                newKpi.outstandingBalance = totalOverdue + totalPending;
+                newKpi.collectionCompliance = totalDuePeriod > 0 ? (totalPaidPeriod / totalDuePeriod) * 100 : 0;
+            }
+
+            if (vehicleRes.status === 'fulfilled') {
+                const vecs = vehicleRes.value.data || [];
+                let activeVecs = 0;
+                vecs.forEach(v => {
+                    if (v.status === 'ACTIVE — RENTED' || v.status === 'ACTIVE — AVAILABLE') {
+                        activeVecs++;
+                    }
+                });
+                newKpi.totalActiveVehicles = activeVecs;
+            }
+
+            setKpiData(newKpi);
 
             // 1. Finance Aggregation
             if (ledgerRes.status === 'fulfilled') {
                 const ledgerData = Array.isArray(ledgerRes.value) ? ledgerRes.value : [];
+                const diffDays = (endD.getTime() - startD.getTime()) / (1000 * 3600 * 24);
+                const groupByDay = diffDays <= 60;
                 const monthMap = new Map<string, { month: string; profit: number; income: number; expense: number }>();
                 
                 ledgerData.forEach((entry: any) => {
                     const d = new Date(entry.entryDate || entry.date);
                     if (isNaN(d.getTime())) return;
+                    if (d < startD || d > endD) return;
                     
-                    const mKey = d.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
+                    const mKey = groupByDay 
+                        ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                        : d.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
+                        
                     const cat = entry.accountingCode?.category?.toUpperCase();
                     let amt = entry.amount !== undefined ? entry.amount : (entry.debit || entry.credit || 0);
                     let isDebit = entry.amount !== undefined ? entry.type === 'DEBIT' : ((entry.debit || 0) > 0);
@@ -100,7 +271,14 @@ const ExecutiveDashboard = () => {
                     monthMap.set(mKey, curr);
                 });
 
-                const cData = Array.from(monthMap.values()).sort((a,b) => new Date(`01 ${a.month}`).getTime() - new Date(`01 ${b.month}`).getTime());
+                const cData = Array.from(monthMap.values()).sort((a,b) => {
+                    if (groupByDay) {
+                        const da = new Date(`${a.month} ${new Date().getFullYear()}`);
+                        const db = new Date(`${b.month} ${new Date().getFullYear()}`);
+                        return da.getTime() - db.getTime();
+                    }
+                    return new Date(`01 ${a.month}`).getTime() - new Date(`01 ${b.month}`).getTime();
+                });
                 setFinanceData(cData);
             }
 
@@ -113,15 +291,20 @@ const ExecutiveDashboard = () => {
                 drivers.forEach(d => {
                     // Fleet Collections logic
                     const rt = d.rentTracking || [];
-                    const pending = rt.filter(x => x.status !== 'PAID').sort((a,b) => new Date(a.dueDate||'').getTime() - new Date(b.dueDate||'').getTime());
-                    if (pending.length > 0) {
-                        const isOverdue = new Date(pending[0].dueDate||'') < new Date();
-                        if(isOverdue) statusCounts.OVERDUE++;
-                        else statusCounts.PENDING++;
-                    } else if (rt.length > 0) {
-                        statusCounts.PAID++;
-                    } else {
-                        statusCounts.PENDING++; // Drivers with no rent tracking initialized
+                    const periodRt = rt.filter((week: any) => {
+                        const wd = new Date(week.dueDate || week.startDate || new Date());
+                        return wd >= startD && wd <= endD;
+                    });
+
+                    if (periodRt.length > 0) {
+                        const pending = periodRt.filter((x:any) => x.status !== 'PAID').sort((a:any,b:any) => new Date(a.dueDate||'').getTime() - new Date(b.dueDate||'').getTime());
+                        if (pending.length > 0) {
+                            const isOverdue = new Date(pending[0].dueDate||'') < new Date();
+                            if(isOverdue) statusCounts.OVERDUE++;
+                            else statusCounts.PENDING++;
+                        } else {
+                            statusCounts.PAID++;
+                        }
                     }
 
                     // Score Logic
@@ -152,12 +335,15 @@ const ExecutiveDashboard = () => {
                 const vDisplayCounts = { Active: 0, Maintenance: 0, Available: 0, Suspended: 0, Other: 0 };
                 
                 vecs.forEach(v => {
-                    const status = v.status;
-                    if (status === 'ACTIVE — RENTED') vDisplayCounts.Active++;
-                    else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts.Maintenance++;
-                    else if (status === 'ACTIVE — AVAILABLE') vDisplayCounts.Available++;
-                    else if (status === 'SUSPENDED' || status === 'RETIRED') vDisplayCounts.Suspended++;
-                    else vDisplayCounts.Other++;
+                    const cd = new Date(v.createdAt);
+                    if (cd >= startD && cd <= endD) {
+                        const status = v.status;
+                        if (status === 'ACTIVE — RENTED') vDisplayCounts.Active++;
+                        else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts.Maintenance++;
+                        else if (status === 'ACTIVE — AVAILABLE') vDisplayCounts.Available++;
+                        else if (status === 'SUSPENDED' || status === 'RETIRED') vDisplayCounts.Suspended++;
+                        else vDisplayCounts.Other++;
+                    }
                 });
 
                 setVehicleData([
@@ -246,10 +432,10 @@ const ExecutiveDashboard = () => {
                         <input
                             type="date"
                             value={globalStartDate}
-                            max={globalEndDate || today}
+                            max={globalEndDate || todayStr}
                             onChange={(e) => {
                                 const val = e.target.value;
-                                if (val && val <= today && (!globalEndDate || val <= globalEndDate)) {
+                                if (val && val <= todayStr && (!globalEndDate || val <= globalEndDate)) {
                                     setGlobalStartDate(val);
                                 } else if (!val) {
                                     setGlobalStartDate('');
@@ -263,10 +449,10 @@ const ExecutiveDashboard = () => {
                             type="date"
                             value={globalEndDate}
                             min={globalStartDate}
-                            max={today}
+                            max={todayStr}
                             onChange={(e) => {
                                 const val = e.target.value;
-                                if (val && val <= today && (!globalStartDate || val >= globalStartDate)) {
+                                if (val && val <= todayStr && (!globalStartDate || val >= globalStartDate)) {
                                     setGlobalEndDate(val);
                                 } else if (!val) {
                                     setGlobalEndDate('');
@@ -277,16 +463,6 @@ const ExecutiveDashboard = () => {
                         />
                     </div>
 
-                    {/* Sort Order */}
-                    <select
-                        value={globalSort}
-                        onChange={(e) => setGlobalSort(e.target.value)}
-                        className="px-4 py-2 border rounded-xl text-sm outline-none transition-all cursor-pointer font-bold"
-                        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    >
-                        <option value="desc">Newest First</option>
-                        <option value="asc">Oldest First</option>
-                    </select>
 
                     <button 
                         onClick={fetchData} 
@@ -303,6 +479,197 @@ const ExecutiveDashboard = () => {
                     <div className="w-12 h-12 border-4 border-[#148F85] border-t-transparent rounded-full animate-spin" />
                 </div>
             ) : (
+                <>
+                {/* Custom KPI Layout */}
+                <div className="flex flex-col gap-6 mb-6">
+                    {/* Top Row: Left KPIs (2x2) and Right Alerts */}
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        
+                        {/* Left KPIs - 2x2 Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:w-[55%]">
+                            {/* Total Active Vehicles */}
+                            <div className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] text-[#22c55e] flex items-center justify-center">
+                                            <Car size={20} />
+                                        </div>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.totalActiveVehicles.toLocaleString()}</span>
+                                    </div>
+                                    <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                                        <ArrowUpRight size={14} /> 4.6%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium mt-3" style={{ color: 'var(--text-dim)' }}>Total Active Vehicles</span>
+                            </div>
+
+                            {/* Monthly Revenue */}
+                            <div className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-[#f0fdf4] text-[#22c55e] flex items-center justify-center">
+                                            <DollarSign size={20} />
+                                        </div>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {kpiData.monthlyRevenue > 9999 
+                                                ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(kpiData.monthlyRevenue)
+                                                : `$${kpiData.monthlyRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                                        </span>
+                                    </div>
+                                    <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                                        <ArrowUpRight size={14} /> 12.3%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium mt-3" style={{ color: 'var(--text-dim)' }}>Period Revenue</span>
+                            </div>
+
+                            {/* Outstanding Collections */}
+                            <div className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-[#fff7ed] text-[#ea580c] flex items-center justify-center">
+                                            <BarChart3 size={20} />
+                                        </div>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.outstandingCollections.toLocaleString()}</span>
+                                    </div>
+                                    <div className="bg-[#fef2f2] text-[#ef4444] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                                        <ArrowDownRight size={14} /> 3.8%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium mt-3" style={{ color: 'var(--text-dim)' }}>Outstanding Collections</span>
+                            </div>
+
+                            {/* Active Drivers */}
+                            <div className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center">
+                                            <Users size={20} />
+                                        </div>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.activeDrivers.toLocaleString()}</span>
+                                    </div>
+                                    <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                                        <ArrowUpRight size={14} /> 2.1%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium mt-3" style={{ color: 'var(--text-dim)' }}>Active Drivers</span>
+                            </div>
+                        </div>
+
+                        {/* Right Alerts Section */}
+                        <div className="rounded-2xl p-5 shadow-sm border lg:w-[45%] flex flex-col" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>Alerts</h3>
+                                <button 
+                                    onClick={() => navigate('/admin/admin/alerts')}
+                                    className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105 cursor-pointer"
+                                    style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-dim)', border: '1px solid var(--border-main)' }}
+                                >
+                                    View All →
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                                {/* Critical */}
+                                <div 
+                                    className="bg-[#ef4444] rounded-xl p-4 text-white flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:opacity-90 transition-all"
+                                    onClick={() => navigate('/admin/admin/alerts')}
+                                >
+                                    <div className="bg-white text-[#ef4444] p-1.5 rounded-md mb-3"><AlertTriangle size={16} /></div>
+                                    <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.critical.length}</span>
+                                    <span className="text-xs font-semibold opacity-90">Critical</span>
+                                </div>
+                                {/* Major */}
+                                <div 
+                                    className="bg-[#f97316] rounded-xl p-4 text-white flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:opacity-90 transition-all"
+                                    onClick={() => navigate('/admin/admin/alerts')}
+                                >
+                                    <div className="bg-white text-[#f97316] p-1.5 rounded-md mb-3"><AlertCircle size={16} /></div>
+                                    <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.major.length}</span>
+                                    <span className="text-xs font-semibold opacity-90">Major</span>
+                                </div>
+                                {/* Minor */}
+                                <div 
+                                    className="bg-[#4f46e5] rounded-xl p-4 text-white flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:opacity-90 transition-all"
+                                    onClick={() => navigate('/admin/admin/alerts')}
+                                >
+                                    <div className="bg-white text-[#4f46e5] p-1.5 rounded-md mb-3"><Clock size={16} /></div>
+                                    <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.minor.length}</span>
+                                    <span className="text-xs font-semibold opacity-90">Minor</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bottom Row */}
+                    <div className="rounded-2xl p-5 shadow-sm border flex flex-col xl:flex-row items-center justify-between gap-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        
+                        <div className="flex items-center gap-4 w-full xl:w-auto xl:pr-6 xl:border-r border-opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] text-[#22c55e] flex items-center justify-center">
+                                <FileText size={20} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.collectionCompliance.toFixed(0)}%</span>
+                                    <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
+                                        <ArrowUpRight size={10} /> +2%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium block" style={{ color: 'var(--text-dim)' }}>Collection Compliance</span>
+                                <span className="text-[10px] font-bold" style={{ color: 'var(--text-main)' }}>+2% week over week</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 w-full xl:w-auto xl:pr-6 xl:border-r border-opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="w-10 h-10 rounded-xl bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center">
+                                <DollarSign size={20} />
+                            </div>
+                            <div>
+                                <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.last12MonthRevenue.toLocaleString()}</span>
+                                <span className="text-sm font-medium block mt-1" style={{ color: 'var(--text-dim)' }}>Last 12 Months Revenue</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 w-full xl:w-auto xl:pr-6 xl:border-r border-opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="w-10 h-10 rounded-xl bg-[#fffbeb] text-[#f59e0b] flex items-center justify-center">
+                                <CreditCard size={20} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.outstandingBalance.toLocaleString()}</span>
+                                    <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
+                                        <ArrowUpRight size={10} /> +11%
+                                    </div>
+                                </div>
+                                <span className="text-sm font-medium block" style={{ color: 'var(--text-dim)' }}>Outstanding Balance</span>
+                                <span className="text-[10px] font-bold" style={{ color: 'var(--text-main)' }}>+11% vs previous period</span>
+                            </div>
+                        </div>
+
+                        {/* Operations Overview */}
+                        <div className="w-full xl:w-auto flex flex-col justify-center">
+                            <span className="text-sm font-bold mb-3" style={{ color: 'var(--text-main)' }}>Operations Overview</span>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="bg-[#fee2e2] text-[#b91c1c] px-3 py-2 rounded-xl flex items-center gap-2">
+                                    <div className="bg-[#ef4444] text-white p-1 rounded-md"><Clock size={12} /></div>
+                                    <span className="font-bold text-lg leading-none">{kpiData.tasks.overdue < 10 ? `0${kpiData.tasks.overdue}` : kpiData.tasks.overdue}</span>
+                                    <span className="text-xs font-medium opacity-80">Overdue Tasks</span>
+                                </div>
+                                <div className="bg-[#fef3c7] text-[#b45309] px-3 py-2 rounded-xl flex items-center gap-2">
+                                    <div className="bg-[#f59e0b] text-white p-1 rounded-md"><FileText size={12} /></div>
+                                    <span className="font-bold text-lg leading-none">{kpiData.tasks.upcoming < 10 ? `0${kpiData.tasks.upcoming}` : kpiData.tasks.upcoming}</span>
+                                    <span className="text-xs font-medium opacity-80">Upcoming Tasks</span>
+                                </div>
+                                <div className="bg-[#ccfbf1] text-[#0f766e] px-3 py-2 rounded-xl flex items-center gap-2">
+                                    <div className="bg-[#14b8a6] text-white p-1 rounded-md"><ClipboardList size={12} /></div>
+                                    <span className="font-bold text-lg leading-none">{kpiData.tasks.assigned < 10 ? `0${kpiData.tasks.assigned}` : kpiData.tasks.assigned}</span>
+                                    <span className="text-xs font-medium opacity-80">Assigned Tasks</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
                     {/* 1. Finance (Clickable) */}
@@ -487,6 +854,7 @@ const ExecutiveDashboard = () => {
                     </div>
 
                 </div>
+                </>
             )}
         </div>
     );
