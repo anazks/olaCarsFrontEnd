@@ -64,7 +64,7 @@ const CreatePurchaseOrder = () => {
     const addItem = () => {
         setFormData({
             ...formData,
-            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: 0, description: '', images: [] }]
+            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: '' as any, description: '', images: [] }]
         });
     };
 
@@ -81,7 +81,11 @@ const CreatePurchaseOrder = () => {
     };
 
     const calculateTotal = () => {
-        return formData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        return formData.items.reduce((sum, item) => {
+            const q = Number(item.quantity) || 0;
+            const p = Number(item.unitPrice) || 0;
+            return sum + (q * p);
+        }, 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -102,15 +106,45 @@ const CreatePurchaseOrder = () => {
             return;
         }
 
-        const invalidItems = formData.items.some(item => !item.itemName || item.quantity <= 0 || item.unitPrice <= 0);
-        if (invalidItems) {
-            setError('Please ensure all items have a name, quantity > 0, and price > 0');
+        // Filter out completely empty items automatically
+        const validItems = formData.items.filter(item => {
+            const hasName = item.itemName && item.itemName.trim() !== '';
+            const hasPrice = item.unitPrice !== '' && Number(item.unitPrice) > 0;
+            const hasDescription = item.description && item.description.trim() !== '';
+            const changedQuantity = item.quantity !== 1 && item.quantity !== '' && item.quantity !== 0;
+            
+            // If they entered literally anything meaningful, we keep it (and validate it)
+            return hasName || hasPrice || hasDescription || changedQuantity;
+        });
+
+        if (validItems.length === 0) {
+            setError('Please add at least one valid item to the purchase order.');
+            setLoading(false);
+            return;
+        }
+
+        const invalidItems = validItems.filter(item => {
+            const q = Number(item.quantity);
+            const p = Number(item.unitPrice);
+            return !item.itemName || item.itemName.trim() === '' || isNaN(q) || q <= 0 || isNaN(p) || p < 0 || String(item.unitPrice) === '';
+        });
+        if (invalidItems.length > 0) {
+            console.error("Invalid items in PO:", invalidItems);
+            setError(`Validation failed for item "${invalidItems[0].itemName || 'Unnamed item'}". Please check name, quantity > 0, and price ≥ 0.`);
             setLoading(false);
             return;
         }
 
         try {
-            await createPurchaseOrder(formData);
+            const formattedData = {
+                ...formData,
+                items: validItems.map(item => ({
+                    ...item,
+                    quantity: Number(item.quantity) || 0,
+                    unitPrice: Number(item.unitPrice) || 0
+                }))
+            };
+            await createPurchaseOrder(formattedData);
             setSuccess(true);
             setTimeout(() => navigate('..'), 2000);
         } catch (err: any) {
@@ -288,7 +322,7 @@ const CreatePurchaseOrder = () => {
                                         type="number"
                                         min="1"
                                         value={item.quantity}
-                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value))}
                                         className="w-full bg-transparent outline-none text-sm"
                                         style={{ color: 'var(--text-main)' }}
                                     />
@@ -302,7 +336,7 @@ const CreatePurchaseOrder = () => {
                                             step="0.01"
                                             min="0"
                                             value={item.unitPrice}
-                                            onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                            onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' : parseFloat(e.target.value))}
                                             className="w-full bg-transparent outline-none text-sm"
                                             style={{ color: 'var(--text-main)' }}
                                         />
@@ -311,7 +345,7 @@ const CreatePurchaseOrder = () => {
                                 <div className="md:col-span-2 space-y-1">
                                     <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Subtotal</label>
                                     <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                        ${(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 </div>
                                 <div className="md:col-span-11 mt-4 space-y-3">

@@ -175,7 +175,7 @@ const CollectionsDashboard = () => {
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             
             {/* HEADER SECTION WITH LOGO/DESCRIPTIVE LABELS */}
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         <Library className="text-[#C8E600]" /> Collections Central
@@ -192,7 +192,7 @@ const CollectionsDashboard = () => {
                 </div>
 
                 {/* CONTROL BOARD: FILTERS */}
-                <div className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto transition-colors"
+                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     
                     {/* Country Dropdown */}
@@ -367,30 +367,36 @@ const CollectionsDashboard = () => {
                         <h3 className="text-lg font-bold flex items-center gap-2"><ShieldAlert className="text-red-500" size={18} /> Critical Aging Receivables</h3>
                         <span className="text-[11px] font-black px-2 py-0.5 rounded bg-red-500/10 text-red-500 uppercase">Highest Risk</span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="text-[10px] font-black tracking-wider uppercase border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
-                                    <th className="pb-3">Account / Fleet</th>
-                                    <th className="pb-3">Due Date</th>
-                                    <th className="pb-3 text-right">Aging</th>
-                                    <th className="pb-3 text-right">Arrears</th>
+                    <div className="overflow-x-auto w-full border rounded-xl shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead style={{ backgroundColor: 'var(--bg-input)' }}>
+                                <tr className="text-[11px] font-black tracking-wider uppercase border-b opacity-60" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    <th className="py-4 pl-4 pr-2 w-10">
+                                        <input type="checkbox" className="rounded border-gray-300" />
+                                    </th>
+                                    <th className="py-4 px-3">Account / Fleet</th>
+                                    <th className="py-4 px-3">Due Date</th>
+                                    <th className="py-4 px-3 text-right">Aging</th>
+                                    <th className="py-4 pr-4 pl-3 text-right">Arrears</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-xs divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                 {recentOverdue.map(entry => (
-                                    <tr key={entry.id} className="group">
-                                        <td className="py-3.5 font-bold text-white group-hover:text-[#C8E600] transition-colors">
-                                            {entry.driverName}
-                                            <div className="text-[10px] opacity-50 font-medium tracking-wide mt-0.5">{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                    <tr key={entry.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                        <td className="py-4 pl-4 pr-2">
+                                            <input type="checkbox" className="rounded border-gray-300" />
                                         </td>
-                                        <td className="py-3.5 font-semibold opacity-70">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
-                                        <td className="py-3.5 text-right"><span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black">{entry.daysOverdue} Days</span></td>
-                                        <td className="py-3.5 text-right font-black text-red-500 text-sm">${entry.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-3">
+                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{entry.driverName}</div>
+                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                        </td>
+                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 text-right"><span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">{entry.daysOverdue} Days</span></td>
+                                        <td className="py-4 pr-4 pl-3 text-right font-black text-red-500">${entry.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 {recentOverdue.length === 0 && (
-                                    <tr><td colSpan={4} className="py-10 text-center opacity-40 italic font-medium">Fantastic. Perfect sheet, zero aging debts found.</td></tr>
+                                    <tr><td colSpan={5} className="py-10 text-center text-sm font-bold opacity-50 uppercase tracking-widest">Fantastic. Perfect sheet, zero aging debts found.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -404,30 +410,36 @@ const CollectionsDashboard = () => {
                         <h3 className="text-lg font-bold flex items-center gap-2"><Clock className="text-blue-400" size={18} /> Imminent Receivables (Forecast)</h3>
                         <span className="text-[11px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 uppercase">Next Inflow</span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="text-[10px] font-black tracking-wider uppercase border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
-                                    <th className="pb-3">Account / Fleet</th>
-                                    <th className="pb-3">Incoming Due</th>
-                                    <th className="pb-3 text-right">Target Value</th>
-                                    <th className="pb-3 text-right">Net Outstanding</th>
+                    <div className="overflow-x-auto w-full border rounded-xl shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead style={{ backgroundColor: 'var(--bg-input)' }}>
+                                <tr className="text-[11px] font-black tracking-wider uppercase border-b opacity-60" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    <th className="py-4 pl-4 pr-2 w-10">
+                                        <input type="checkbox" className="rounded border-gray-300" />
+                                    </th>
+                                    <th className="py-4 px-3">Account / Fleet</th>
+                                    <th className="py-4 px-3">Incoming Due</th>
+                                    <th className="py-4 px-3 text-right">Target Value</th>
+                                    <th className="py-4 pr-4 pl-3 text-right">Net Outstanding</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-xs divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                 {upcomingPayments.map(entry => (
-                                    <tr key={entry.id} className="group">
-                                        <td className="py-3.5 font-bold text-white group-hover:text-[#C8E600] transition-colors">
-                                            {entry.driverName}
-                                            <div className="text-[10px] opacity-50 font-medium tracking-wide mt-0.5">{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                    <tr key={entry.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                        <td className="py-4 pl-4 pr-2">
+                                            <input type="checkbox" className="rounded border-gray-300" />
                                         </td>
-                                        <td className="py-3.5 font-semibold text-[#C8E600]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
-                                        <td className="py-3.5 text-right font-bold opacity-70">${entry.totalDue.toLocaleString()}</td>
-                                        <td className="py-3.5 text-right font-black text-white text-sm">${entry.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-3">
+                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{entry.driverName}</div>
+                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                        </td>
+                                        <td className="py-4 px-3 font-semibold text-[#D4F12E]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 text-right font-bold" style={{ color: 'var(--text-muted)' }}>${entry.totalDue.toLocaleString()}</td>
+                                        <td className="py-4 pr-4 pl-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${entry.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 {upcomingPayments.length === 0 && (
-                                    <tr><td colSpan={4} className="py-10 text-center opacity-40 italic font-medium">No near-future billing queues pending execution.</td></tr>
+                                    <tr><td colSpan={5} className="py-10 text-center text-sm font-bold opacity-50 uppercase tracking-widest">No near-future billing queues pending execution.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -444,119 +456,138 @@ const CollectionsDashboard = () => {
                     <h3 className="text-lg font-bold">Collections Ledger</h3>
                     
                     <div className="flex flex-wrap items-center gap-3">
-                        
-                        {/* Search Bar */}
-                        <div className="relative flex-1 min-w-[220px]">
+                        <div className="relative flex-1 md:min-w-[300px]">
                             <input 
                                 type="text" 
                                 placeholder="Search driver, plate, fleet, ID..." 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border transition-all outline-none focus:ring-1 focus:ring-[#C8E600]"
-                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                className="w-full border py-2.5 pl-10 pr-4 rounded-xl font-medium text-sm shadow-sm outline-none focus:border-brand-lime transition-all"
+                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />
-                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
+                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" style={{ color: 'var(--text-dim)' }} />
                         </div>
-
-                        {/* Status filter Select */}
+                        
                         <div className="relative">
                             <select 
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="pl-8 pr-8 py-2 text-sm font-semibold rounded-xl border appearance-none cursor-pointer outline-none transition-all"
-                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                className="pl-4 pr-10 py-2 rounded-xl border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer transition-colors"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">All Invoice States</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="PARTIAL">Partial</option>
-                                <option value="PAID">Settled</option>
-                                <option value="OVERDUE">Overdue</option>
+                                <option value="" style={{ background: 'var(--bg-card)' }}>All Invoice States</option>
+                                <option value="PENDING" style={{ background: 'var(--bg-card)' }}>Pending</option>
+                                <option value="PARTIAL" style={{ background: 'var(--bg-card)' }}>Partial</option>
+                                <option value="PAID" style={{ background: 'var(--bg-card)' }}>Settled</option>
+                                <option value="OVERDUE" style={{ background: 'var(--bg-card)' }}>Overdue</option>
                             </select>
-                            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
+                            <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
                         </div>
+                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                            <FileText size={16} /> Export
+                        </button>
                     </div>
                 </div>
 
-                {/* TABLE VIEWPORT */}
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="text-[10px] font-black uppercase tracking-wider border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
-                                <th className="pb-4">Invoice #</th>
-                                <th className="pb-4">Driver / Customer</th>
-                                <th className="pb-4">Fleet / Asset</th>
-                                <th className="pb-4">Branch (Country)</th>
-                                <th className="pb-4">Due Date</th>
-                                <th className="pb-4 text-right">Billed</th>
-                                <th className="pb-4 text-right">Net Paid</th>
-                                <th className="pb-4 text-right">Balance</th>
-                                <th className="pb-4 text-center">Status</th>
+                <div className="overflow-x-auto w-full border rounded-xl shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead style={{ backgroundColor: 'var(--bg-input)' }}>
+                            <tr className="text-[11px] font-black uppercase tracking-wider opacity-60 border-b" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                <th className="py-4 pl-4 pr-2 w-10">
+                                    <input type="checkbox" className="rounded border-gray-300" />
+                                </th>
+                                <th className="py-4 px-3">Sl No.</th>
+                                <th className="py-4 px-3">Invoice #</th>
+                                <th className="py-4 px-3">Driver / Customer</th>
+                                <th className="py-4 px-3">Fleet / Asset</th>
+                                <th className="py-4 px-3">Branch (Country)</th>
+                                <th className="py-4 px-3">Due Date</th>
+                                <th className="py-4 px-3 text-right">Billed</th>
+                                <th className="py-4 px-3 text-right">Net Paid</th>
+                                <th className="py-4 px-3 text-right">Balance</th>
+                                <th className="py-4 pr-4 pl-3 text-center">Status</th>
                             </tr>
                         </thead>
-                        <tbody className="text-xs divide-y divide-gray-800" style={{ borderColor: 'var(--border-main)' }}>
-                            {listItems.map((item) => (
-                                <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
-                                    <td className="py-4 font-black text-[#C8E600]">{item.invoiceNumber}</td>
-                                    <td className="py-4 font-bold text-white">{item.driverName}</td>
-                                    <td className="py-4">
-                                        <span className="font-semibold">{item.vehicleNumber}</span>
-                                        <div className="text-[10px] opacity-50">Fleet #{item.fleetNumber}</div>
+                        <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            {listItems.map((item, index) => (
+                                <tr key={item.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                    <td className="py-4 pl-4 pr-2">
+                                        <input type="checkbox" className="rounded border-gray-300" />
                                     </td>
-                                    <td className="py-4">
-                                        <span className="font-medium opacity-90">{item.branch}</span>
-                                        <div className="text-[10px] opacity-50 font-bold uppercase">{item.country}</div>
+                                    <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 10).toString().padStart(2, '0')}</td>
+                                    <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                    <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</td>
+                                    <td className="py-4 px-3">
+                                        <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
+                                        <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Fleet #{item.fleetNumber}</div>
                                     </td>
-                                    <td className="py-4 font-bold opacity-80">{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
-                                    <td className="py-4 text-right font-semibold opacity-70">${item.totalAmountDue.toLocaleString()}</td>
-                                    <td className="py-4 text-right font-bold text-emerald-400">${item.amountPaid.toLocaleString()}</td>
-                                    <td className="py-4 text-right font-black text-white">${item.balance.toLocaleString()}</td>
-                                    <td className="py-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                                            item.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500' :
+                                    <td className="py-4 px-3">
+                                        <div className="font-medium" style={{ color: 'var(--text-main)' }}>{item.branch}</div>
+                                        <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
+                                    </td>
+                                    <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
+                                    <td className="py-4 px-3 text-right font-semibold" style={{ color: 'var(--text-muted)' }}>${item.totalAmountDue.toLocaleString()}</td>
+                                    <td className="py-4 px-3 text-right font-bold text-green-500">${item.amountPaid.toLocaleString()}</td>
+                                    <td className="py-4 px-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${item.balance.toLocaleString()}</td>
+                                    <td className="py-4 pr-4 pl-3 text-center">
+                                        <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
+                                            item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
                                             item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
-                                            item.status === 'PARTIAL' ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-700/50 text-gray-300'
+                                            item.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-gray-500/10 text-gray-500'
                                         }`}>
-                                            {item.status}
+                                            • {item.status}
                                         </span>
                                     </td>
                                 </tr>
                             ))}
                             {listItems.length === 0 && !listLoading && (
-                                <tr><td colSpan={9} className="py-16 text-center italic font-medium opacity-50">No collections invoices match chosen filter matrix. Try relaxing boundaries.</td></tr>
+                                <tr><td colSpan={11} className="py-12 text-center text-sm font-bold opacity-50 uppercase tracking-widest">No collections invoices match chosen filter matrix. Try relaxing boundaries.</td></tr>
                             )}
                             {listLoading && (
-                                <tr><td colSpan={9} className="py-16 text-center"><div className="animate-pulse font-bold text-[#C8E600]">Refreshing record arrays...</div></td></tr>
+                                <tr><td colSpan={11} className="py-12 text-center"><div className="animate-pulse font-bold text-[#D4F12E] uppercase tracking-widest text-sm">Refreshing record arrays...</div></td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* PAGINATION FOOTER */}
-                {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <p className="text-xs font-medium opacity-50">Total records: <span className="font-bold">{pagination.total}</span> invoices</p>
-                        
-                        <div className="flex items-center gap-2">
-                            <button 
-                                disabled={pagination.page <= 1}
-                                onClick={() => loadList(pagination.page - 1)}
-                                className="p-2 rounded-xl border disabled:opacity-30 transition-colors hover:bg-white/5"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <span className="text-xs font-bold px-4 py-2 rounded-xl bg-white/5">Page {pagination.page} of {pagination.pages}</span>
-                            <button 
-                                disabled={pagination.page >= pagination.pages}
-                                onClick={() => loadList(pagination.page + 1)}
-                                className="p-2 rounded-xl border disabled:opacity-30 transition-colors hover:bg-white/5"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
+                {/* PAGINATION */}
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-2">
+                        <select className="px-3 py-1.5 rounded-lg border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer shadow-sm" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                            <option value="10" style={{ background: 'var(--bg-card)' }}>10 ˅</option>
+                            <option value="50" style={{ background: 'var(--bg-card)' }}>50 ˅</option>
+                        </select>
                     </div>
-                )}
+                    <div className="flex items-center gap-1 text-sm font-bold">
+                        <button 
+                            disabled={pagination.page <= 1}
+                            onClick={() => loadList(pagination.page - 1)}
+                            className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {'<'}
+                        </button>
+                        {[...Array(Math.min(pagination.pages, 5))].map((_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                                <button 
+                                    key={pageNum}
+                                    onClick={() => loadList(pageNum)}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                >
+                                    {pageNum.toString().padStart(2, '0')}
+                                </button>
+                            );
+                        })}
+                        {pagination.pages > 5 && <span className="px-1.5">...</span>}
+                        <button 
+                            disabled={pagination.page >= pagination.pages}
+                            onClick={() => loadList(pagination.page + 1)}
+                            className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {'>'}
+                        </button>
+                    </div>
+                </div>
 
             </div>
 

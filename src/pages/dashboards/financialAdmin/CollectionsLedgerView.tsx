@@ -143,7 +143,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             
             {/* HEADER & DESCRIPTION */}
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         {meta.icon} {meta.title}
@@ -164,7 +164,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 </div>
 
                 {/* REUSABLE FILTER WRAPPER */}
-                <div className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto transition-colors"
+                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     
                     {/* Country */}
@@ -232,58 +232,62 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                     </h3>
                     
                     <div className="flex flex-wrap items-center gap-3">
-                        {/* Search Input */}
-                        <div className="relative flex-1 md:w-[280px]">
+                        <div className="relative flex-1 md:min-w-[300px]">
                             <input 
                                 type="text" 
                                 placeholder="Search ID, Driver, Plate or Fleet..." 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none focus:ring-1 focus:ring-[#C8E600] transition-all"
-                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                className="w-full border py-2.5 pl-10 pr-4 rounded-xl font-medium text-sm shadow-sm outline-none focus:border-brand-lime transition-all"
+                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />
-                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
+                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" style={{ color: 'var(--text-dim)' }} />
                         </div>
 
-                        {/* Status Filter */}
                         {type !== 'OVERDUE' && (
                             <div className="relative">
                                 <select 
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="pl-8 pr-8 py-2 text-sm font-semibold rounded-xl border appearance-none cursor-pointer outline-none transition-colors"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    className="pl-4 pr-10 py-2 rounded-xl border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer transition-colors"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <option value="">All Statuses</option>
-                                    <option value="PENDING">Pending</option>
-                                    <option value="PARTIAL">Partial</option>
-                                    <option value="PAID">Settled</option>
-                                    <option value="OVERDUE">Overdue</option>
+                                    <option value="" style={{ background: 'var(--bg-card)' }}>All Statuses</option>
+                                    <option value="PENDING" style={{ background: 'var(--bg-card)' }}>Pending</option>
+                                    <option value="PARTIAL" style={{ background: 'var(--bg-card)' }}>Partial</option>
+                                    <option value="PAID" style={{ background: 'var(--bg-card)' }}>Settled</option>
+                                    <option value="OVERDUE" style={{ background: 'var(--bg-card)' }}>Overdue</option>
                                 </select>
-                                <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
+                                <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
                             </div>
                         )}
+                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                            <FileSpreadsheet size={16} /> Export
+                        </button>
                     </div>
                 </div>
 
-                {/* TABLE GRID */}
-                <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="text-[10px] font-black tracking-wider uppercase border-b opacity-60" style={{ borderColor: 'var(--border-main)' }}>
-                                <th className="pb-4 pl-2">Invoice Number</th>
-                                <th className="pb-4">Driver Details</th>
-                                <th className="pb-4">Vehicle / Fleet</th>
-                                <th className="pb-4">Node Location</th>
-                                <th className="pb-4">Due Date</th>
-                                {type === 'OVERDUE' && <th className="pb-4 text-right">Aging Deficit</th>}
-                                <th className="pb-4 text-right">Gross Billed</th>
-                                <th className="pb-4 text-right">Net Settled</th>
-                                <th className="pb-4 text-right pr-2">Current Balance</th>
-                                {type !== 'OVERDUE' && <th className="pb-4 text-center">Status</th>}
+                <div className="overflow-x-auto w-full border rounded-xl shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead style={{ backgroundColor: 'var(--bg-input)' }}>
+                            <tr className="text-[11px] font-black uppercase tracking-wider opacity-60 border-b" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                <th className="py-4 pl-4 pr-2 w-10">
+                                    <input type="checkbox" className="rounded border-gray-300" />
+                                </th>
+                                <th className="py-4 px-3">Sl No.</th>
+                                <th className="py-4 px-3">Invoice Number</th>
+                                <th className="py-4 px-3">Driver Details</th>
+                                <th className="py-4 px-3">Vehicle / Fleet</th>
+                                <th className="py-4 px-3">Node Location</th>
+                                <th className="py-4 px-3">Due Date</th>
+                                {type === 'OVERDUE' && <th className="py-4 px-3 text-right">Aging Deficit</th>}
+                                <th className="py-4 px-3 text-right">Gross Billed</th>
+                                <th className="py-4 px-3 text-right">Net Settled</th>
+                                <th className="py-4 px-3 text-right">Current Balance</th>
+                                {type !== 'OVERDUE' && <th className="py-4 pr-4 pl-3 text-center">Status</th>}
                             </tr>
                         </thead>
-                        <tbody className="text-xs divide-y divide-gray-800" style={{ borderColor: 'var(--border-main)' }}>
+                        <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
                                     <td colSpan={type === 'OVERDUE' ? 9 : 9} className="py-24 text-center">
@@ -292,49 +296,53 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 </tr>
                             ) : (
                                 <>
-                                    {listItems.map((item) => (
-                                        <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                                            <td className="py-4 font-black text-[#C8E600] pl-2 group-hover:translate-x-0.5 transition-transform">{item.invoiceNumber}</td>
-                                            <td className="py-4 font-bold text-white">
-                                                {item.driverName}
-                                                <div className="text-[10px] font-medium opacity-40 mt-0.5">{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
+                                    {listItems.map((item, index) => (
+                                        <tr key={item.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                            <td className="py-4 pl-4 pr-2">
+                                                <input type="checkbox" className="rounded border-gray-300" />
                                             </td>
-                                            <td className="py-4">
-                                                <span className="font-semibold">{item.vehicleNumber}</span>
-                                                <div className="text-[10px] opacity-50 font-bold">Fleet #{item.fleetNumber}</div>
+                                            <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 15).toString().padStart(2, '0')}</td>
+                                            <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                            <td className="py-4 px-3">
+                                                <div className="font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</div>
+                                                <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
                                             </td>
-                                            <td className="py-4">
-                                                <span className="font-semibold">{item.branch}</span>
-                                                <div className="text-[10px] opacity-50 font-black uppercase">{item.country}</div>
+                                            <td className="py-4 px-3">
+                                                <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
+                                                <div className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Fleet #{item.fleetNumber}</div>
                                             </td>
-                                            <td className="py-4 font-bold opacity-80">
+                                            <td className="py-4 px-3">
+                                                <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.branch}</div>
+                                                <div className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
+                                            </td>
+                                            <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>
                                                 {format(new Date(item.dueDate), 'MMMM dd, yyyy')}
                                             </td>
                                             
                                             {type === 'OVERDUE' && (
-                                                <td className="py-4 text-right">
-                                                    <span className="px-2.5 py-0.5 rounded bg-red-500/10 text-red-500 font-black text-[10px]">
+                                                <td className="py-4 px-3 text-right">
+                                                    <span className="px-2.5 py-1 rounded bg-red-500/10 text-red-500 font-black text-[10px] uppercase tracking-widest">
                                                         {item.daysOverdue} Days
                                                     </span>
                                                 </td>
                                             )}
 
-                                            <td className="py-4 text-right font-medium opacity-60">${item.totalAmountDue.toLocaleString()}</td>
-                                            <td className="py-4 text-right font-bold text-emerald-400">${item.amountPaid.toLocaleString()}</td>
-                                            <td className="py-4 text-right font-black text-white pr-2">
-                                                <span className={item.balance > 0 && type === 'OVERDUE' ? 'text-red-500' : 'text-white'}>
+                                            <td className="py-4 px-3 text-right font-medium" style={{ color: 'var(--text-muted)' }}>${item.totalAmountDue.toLocaleString()}</td>
+                                            <td className="py-4 px-3 text-right font-bold text-green-500">${item.amountPaid.toLocaleString()}</td>
+                                            <td className="py-4 px-3 text-right font-black">
+                                                <span className={item.balance > 0 && type === 'OVERDUE' ? 'text-red-500' : ''} style={{ color: item.balance > 0 && type === 'OVERDUE' ? undefined : 'var(--text-main)' }}>
                                                     ${item.balance.toLocaleString()}
                                                 </span>
                                             </td>
 
                                             {type !== 'OVERDUE' && (
-                                                <td className="py-4 text-center">
-                                                    <span className={`px-2.5 py-0.5 rounded text-[9px] font-black tracking-wide uppercase ${
-                                                        item.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                <td className="py-4 pr-4 pl-3 text-center">
+                                                    <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
+                                                        item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
                                                         item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
-                                                        item.status === 'PARTIAL' ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-700/50 text-gray-300'
+                                                        item.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-gray-500/10 text-gray-500'
                                                     }`}>
-                                                        {item.status}
+                                                        • {item.status}
                                                     </span>
                                                 </td>
                                             )}
@@ -353,34 +361,44 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                     </table>
                 </div>
 
-                {/* PAGINATION CONTROL STRIP */}
-                {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between mt-auto pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <p className="text-xs font-medium opacity-50">Showing row interval. Net population: <span className="font-bold">{pagination.total}</span> lines</p>
-                        
-                        <div className="flex items-center gap-2">
-                            <button 
-                                disabled={pagination.page <= 1 || loading}
-                                onClick={() => fetchPage(pagination.page - 1)}
-                                className="p-2 rounded-xl border disabled:opacity-25 cursor-pointer transition-all hover:bg-white/5"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <span className="text-xs font-bold bg-white/5 border px-4 py-2 rounded-xl" style={{ borderColor: 'var(--border-main)' }}>
-                                Page {pagination.page} of {pagination.pages}
-                            </span>
-                            <button 
-                                disabled={pagination.page >= pagination.pages || loading}
-                                onClick={() => fetchPage(pagination.page + 1)}
-                                className="p-2 rounded-xl border disabled:opacity-25 cursor-pointer transition-all hover:bg-white/5"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
+                {/* PAGINATION */}
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-2">
+                        <select className="px-3 py-1.5 rounded-lg border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer shadow-sm" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                            <option value="15" style={{ background: 'var(--bg-card)' }}>15 ˅</option>
+                            <option value="50" style={{ background: 'var(--bg-card)' }}>50 ˅</option>
+                        </select>
                     </div>
-                )}
+                    <div className="flex items-center gap-1 text-sm font-bold">
+                        <button 
+                            disabled={pagination.page <= 1 || loading}
+                            onClick={() => fetchPage(pagination.page - 1)}
+                            className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {'<'}
+                        </button>
+                        {[...Array(Math.min(pagination.pages, 5))].map((_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                                <button 
+                                    key={pageNum}
+                                    onClick={() => fetchPage(pageNum)}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                >
+                                    {pageNum.toString().padStart(2, '0')}
+                                </button>
+                            );
+                        })}
+                        {pagination.pages > 5 && <span className="px-1.5">...</span>}
+                        <button 
+                            disabled={pagination.page >= pagination.pages || loading}
+                            onClick={() => fetchPage(pagination.page + 1)}
+                            className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {'>'}
+                        </button>
+                    </div>
+                </div>
             </div>
 
         </div>

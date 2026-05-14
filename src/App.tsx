@@ -54,6 +54,7 @@ import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
+import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -257,6 +258,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
@@ -315,6 +317,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
@@ -323,9 +326,11 @@ function App() {
               </Route>
 
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
+              <Route path="insurance-claims" element={<InsuranceClaimsView />} />
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
@@ -486,6 +491,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
               </Route>
