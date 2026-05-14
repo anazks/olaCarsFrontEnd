@@ -182,6 +182,10 @@ function App() {
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
@@ -247,6 +251,10 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
+
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
@@ -308,6 +316,10 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
               </Route>
 
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
@@ -468,6 +480,10 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
+
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
@@ -494,6 +510,10 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
