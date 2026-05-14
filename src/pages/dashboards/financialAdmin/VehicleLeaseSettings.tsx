@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { Car, Search, Save, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Car, Search, Save, CheckCircle2, AlertCircle, Filter, FileText } from 'lucide-react';
 import { getAllVehicles, updateVehicleLeaseSettings } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
@@ -112,107 +112,148 @@ const VehicleLeaseSettings = () => {
                 </div>
             </div>
 
-            <div className="relative">
-                <input
-                    type="text"
-                    placeholder="Search by make, model, VIN or registration..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full border p-4 pl-12 rounded-2xl font-bold shadow-sm outline-none focus:border-brand-lime transition-all"
-                    style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                />
-                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" style={{ color: 'var(--text-dim)' }} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredVehicles.map(vehicle => {
-                    const isSaving = savingId === vehicle._id;
-                    const editState = edits[vehicle._id] || { durationWeeks: 260, weeklyRent: 0 };
-                    
-                    const hasChanged = 
-                        Number(editState.durationWeeks) !== (vehicle.basicDetails.leaseDurationWeeks || 260) || 
-                        Number(editState.weeklyRent) !== (vehicle.basicDetails.weeklyRent || 0);
-
-                    return (
-                        <div key={vehicle._id} className="p-6 rounded-2xl border transition-all hover:shadow-md" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-start justify-between mb-4 pb-4 border-b border-dashed" style={{ borderColor: 'var(--border-main)' }}>
-                                <div>
-                                    <h3 className="font-bold text-lg leading-tight" style={{ color: 'var(--text-main)' }}>
-                                        {vehicle.basicDetails.make} {vehicle.basicDetails.model}
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-widest bg-black/5 text-dim">
-                                            {vehicle.basicDetails.year}
-                                        </span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                            VIN: {vehicle.basicDetails.vin}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className={`px-2 py-1 rounded text-[9px] font-black tracking-widest uppercase ${
-                                    vehicle.status.includes('ACTIVE') ? 'bg-brand-lime/20 text-brand-lime' : 'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                    {vehicle.status}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Duration (Weeks)</label>
-                                    <select
-                                        value={editState.durationWeeks}
-                                        onChange={(e) => handleEditChange(vehicle._id, 'durationWeeks', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all appearance-none"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="52">52 Weeks (1 Year)</option>
-                                        <option value="104">104 Weeks (2 Years)</option>
-                                        <option value="156">156 Weeks (3 Years)</option>
-                                        <option value="208">208 Weeks (4 Years)</option>
-                                        <option value="260">260 Weeks (5 Years)</option>
-                                        <option value="312">312 Weeks (6 Years)</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Weekly Rent (USD)</label>
-                                    <input
-                                        type="number"
-                                        value={editState.weeklyRent}
-                                        onChange={(e) => handleEditChange(vehicle._id, 'weeklyRent', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold focus:border-brand-lime transition-all"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => handleSave(vehicle._id)}
-                                disabled={isSaving || !hasChanged}
-                                className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${
-                                    hasChanged 
-                                        ? 'bg-brand-lime text-black hover:scale-[1.02] shadow-xl active:scale-95' 
-                                        : 'bg-black/5 text-dim cursor-not-allowed opacity-50 grayscale'
-                                }`}
-                            >
-                                {isSaving ? (
-                                    <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> Saving...</>
-                                ) : hasChanged ? (
-                                    <><Save size={16} /> Save Changes</>
-                                ) : (
-                                    <><CheckCircle2 size={16} /> Up to date</>
-                                )}
-                            </button>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {filteredVehicles.length === 0 && (
-                <div className="py-20 text-center flex flex-col items-center rounded-2xl border border-dashed" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                    <AlertCircle size={48} className="mb-4 text-dim opacity-50" />
-                    <p className="font-bold uppercase tracking-widest text-sm text-dim">No Vehicles Found</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 mt-2">
+                <div className="relative flex-1 md:max-w-md">
+                    <input
+                        type="text"
+                        placeholder="Search by make, model, VIN..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full border py-2.5 pl-10 pr-4 rounded-xl font-medium text-sm shadow-sm outline-none focus:border-brand-lime transition-all"
+                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" style={{ color: 'var(--text-dim)' }} />
                 </div>
-            )}
+                
+                <div className="flex flex-wrap items-center gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                        <Filter size={16} /> Filter <span className="bg-[#D4F12E] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">02</span>
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                        <FileText size={16} /> Export
+                    </button>
+                    <select className="px-4 py-2 rounded-xl border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                        <option value="active" style={{ background: 'var(--bg-card)' }}>Active</option>
+                        <option value="all" style={{ background: 'var(--bg-card)' }}>All</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto w-full border rounded-xl shadow-sm" style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-card)' }}>
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead style={{ backgroundColor: 'var(--bg-input)' }}>
+                        <tr className="text-[11px] font-black uppercase tracking-wider opacity-60 border-b" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                            <th className="py-4 pl-4 pr-2 w-10">
+                                <input type="checkbox" className="rounded border-gray-300" />
+                            </th>
+                            <th className="py-4 px-3">Sl No.</th>
+                            <th className="py-4 px-3">Vehicle</th>
+                            <th className="py-4 px-3">Status</th>
+                            <th className="py-4 px-3">Duration (Weeks)</th>
+                            <th className="py-4 px-3">Weekly Rent (USD)</th>
+                            <th className="py-4 pr-4 pl-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                        {filteredVehicles.map((vehicle, index) => {
+                            const isSaving = savingId === vehicle._id;
+                            const editState = edits[vehicle._id] || { durationWeeks: 260, weeklyRent: 0 };
+                            
+                            const hasChanged = 
+                                Number(editState.durationWeeks) !== (vehicle.basicDetails.leaseDurationWeeks || 260) || 
+                                Number(editState.weeklyRent) !== (vehicle.basicDetails.weeklyRent || 0);
+
+                            return (
+                                <tr key={vehicle._id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                    <td className="py-4 pl-4 pr-2">
+                                        <input type="checkbox" className="rounded border-gray-300" />
+                                    </td>
+                                    <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1).toString().padStart(2, '0')}</td>
+                                    <td className="py-4 px-3">
+                                        <div className="font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.basicDetails.make} {vehicle.basicDetails.model}</div>
+                                        <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>VIN: {vehicle.basicDetails.vin}</div>
+                                    </td>
+                                    <td className="py-4 px-3">
+                                        <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
+                                            vehicle.status.includes('ACTIVE') ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+                                        }`}>
+                                            • {vehicle.status}
+                                        </span>
+                                    </td>
+                                    <td className="py-4 px-3">
+                                        <select
+                                            value={editState.durationWeeks}
+                                            onChange={(e) => handleEditChange(vehicle._id, 'durationWeeks', e.target.value)}
+                                            className="px-3 py-1.5 rounded-lg border outline-none font-bold focus:border-brand-lime transition-all appearance-none"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="52">52 Weeks (1 Year)</option>
+                                            <option value="104">104 Weeks (2 Years)</option>
+                                            <option value="156">156 Weeks (3 Years)</option>
+                                            <option value="208">208 Weeks (4 Years)</option>
+                                            <option value="260">260 Weeks (5 Years)</option>
+                                            <option value="312">312 Weeks (6 Years)</option>
+                                        </select>
+                                    </td>
+                                    <td className="py-4 px-3">
+                                        <input
+                                            type="number"
+                                            value={editState.weeklyRent}
+                                            onChange={(e) => handleEditChange(vehicle._id, 'weeklyRent', e.target.value)}
+                                            className="w-28 px-3 py-1.5 rounded-lg border outline-none font-bold focus:border-brand-lime transition-all"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </td>
+                                    <td className="py-4 pr-4 pl-3 flex justify-end">
+                                        <button
+                                            onClick={() => handleSave(vehicle._id)}
+                                            disabled={isSaving || !hasChanged}
+                                            className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-1 ${
+                                                hasChanged 
+                                                    ? 'bg-[#D4F12E] text-black hover:scale-[1.02] active:scale-95' 
+                                                    : 'bg-black/5 dark:bg-white/5 text-gray-500 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            {isSaving ? (
+                                                <><div className="w-3 h-3 border border-black border-t-transparent rounded-full animate-spin"></div> Saving...</>
+                                            ) : hasChanged ? (
+                                                <><Save size={14} /> Save</>
+                                            ) : (
+                                                <><CheckCircle2 size={14} /> Saved</>
+                                            )}
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {filteredVehicles.length === 0 && (
+                            <tr>
+                                <td colSpan={7} className="py-12 text-center text-sm font-bold opacity-50 uppercase tracking-widest">
+                                    No Vehicles Found
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center gap-2">
+                    <select className="px-3 py-1.5 rounded-lg border font-bold text-sm bg-transparent outline-none appearance-none cursor-pointer shadow-sm" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                        <option value="15" style={{ background: 'var(--bg-card)' }}>15 ˅</option>
+                        <option value="50" style={{ background: 'var(--bg-card)' }}>50 ˅</option>
+                    </select>
+                </div>
+                <div className="flex items-center gap-1 text-sm font-bold">
+                    <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 opacity-50 cursor-not-allowed">{'<'}</button>
+                    <button className="px-2.5 py-1 rounded bg-[#D4F12E] text-black">01</button>
+                    <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">02</button>
+                    <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">03</button>
+                    <span className="px-1.5">...</span>
+                    <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">140</button>
+                    <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">{'>'}</button>
+                </div>
+            </div>
         </div>
     );
 };
