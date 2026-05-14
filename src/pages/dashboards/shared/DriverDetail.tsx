@@ -440,7 +440,7 @@ const DriverDetail = () => {
                             </HasPermission>
                         )}
 
-                        {driver.status === 'PENDING REVIEW' && (isFinanceStaff || userRole === 'countrymanager' || userRole === 'branchmanager') && (
+                        {driver.status === 'PENDING REVIEW' && (
                             <HasPermission permission="DRIVER_ONBOARD">
                                 <button
                                     onClick={() => handleProgress('VERIFICATION', { notes: 'Finance/Manager Review Completed' })}

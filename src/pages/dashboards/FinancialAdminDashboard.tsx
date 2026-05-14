@@ -1,21 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
 import { 
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
-    MapPin, Building, ChevronRight, Briefcase, CheckCircle
+    MapPin, Building, ChevronRight, Briefcase, CheckCircle, FilterX, TrendingUp, Wallet
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
-// Services
+// Context & Services
+import { useTheme } from '../../context/ThemeContext';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
 
 
 
 const FinancialAdminDashboard = () => {
+    const { theme } = useTheme();
+    const navigate = useNavigate();
     
     // Computed Colors for Recharts based on active theme
     const isDark = theme === 'dark';
@@ -243,9 +247,9 @@ const FinancialAdminDashboard = () => {
                 >
                     <h3 className="text-lg font-bold mb-5">Priority Alerts</h3>
                     <div className="flex flex-col gap-3 flex-1 justify-center">
-                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" />
-                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" />
-                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" desc="General fleet notifications" />
+                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" onClick={() => navigate('alerts')} />
+                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" onClick={() => navigate('alerts')} />
+                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" desc="General fleet notifications" onClick={() => navigate('alerts')} />
                     </div>
                 </div>
             </div>
@@ -568,8 +572,8 @@ const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) 
     </div>
 );
 
-const AlertPill = ({ title, count, colorClass, desc }: any) => (
-    <div className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md cursor-pointer transition-transform hover:-translate-y-0.5 relative overflow-hidden group`}>
+const AlertPill = ({ title, count, colorClass, desc, onClick }: any) => (
+    <div onClick={onClick} className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md cursor-pointer transition-transform hover:-translate-y-0.5 relative overflow-hidden group`}>
         <div className="flex-1 relative z-10">
             <div className="font-black text-xl leading-none">{count}</div>
             <div className="text-xs font-bold uppercase tracking-wider opacity-90">{title} Notifications</div>
