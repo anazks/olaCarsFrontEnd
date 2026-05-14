@@ -20,16 +20,9 @@ import {
 import { toast } from 'react-hot-toast';
 import { getSalaryStructures, updateSalaryStructure, processPayroll } from '../../../services/salaryService';
 import type { SalaryStructure } from '../../../services/salaryService';
-import { getAllFinanceStaff } from '../../../services/financeStaffService';
-import { getAllOperationStaff } from '../../../services/operationStaffService';
-import { getAllBranchManagers } from '../../../services/branchManagerService';
-import { getAllCountryManagers } from '../../../services/countryManagerService';
-import { getAllWorkshopManagers } from '../../../services/workshopManagerService';
-import { getAllWorkshopStaff } from '../../../services/workshopStaffService';
 import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
-import { getAllFinancialAdmins } from '../../../services/financialAdminService';
-import { getAllOperationalAdmins } from '../../../services/operationalAdminService';
+import { getUnifiedStaff } from '../../../services/reportingService';
 import { getUserRole } from '../../../utils/auth';
 
 const StaffSalaries = () => {
@@ -39,6 +32,9 @@ const StaffSalaries = () => {
     const [staffList, setStaffList] = useState<any[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>([]);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const [pagination, setPagination] = useState({ total: 0, pages: 1 });
     
     // Filters
     const [search, setSearch] = useState('');
@@ -68,54 +64,37 @@ const StaffSalaries = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page, limit, roleFilter, branchFilter]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [roleFilter, branchFilter, search]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [
                 structuresRes, 
-                finStaffRes, 
-                opStaffRes, 
-                bmRes, 
-                cmRes,
-                wmRes, 
-                wsRes,
-                branchesRes,
-                faRes,
-                oaRes
+                staffRes,
+                branchesRes
             ] = await Promise.all([
                 getSalaryStructures(),
-                getAllFinanceStaff(),
-                getAllOperationStaff(),
-                getAllBranchManagers(),
-                getAllCountryManagers(),
-                getAllWorkshopManagers(),
-                getAllWorkshopStaff(),
-                getAllBranches(),
-                role === 'admin' ? getAllFinancialAdmins() : Promise.resolve({ data: [] }),
-                role === 'admin' ? getAllOperationalAdmins() : Promise.resolve({ data: [] })
+                getUnifiedStaff({
+                    search: search,
+                    role: roleFilter,
+                    branchId: branchFilter,
+                    page,
+                    limit
+                }),
+                getAllBranches()
             ]);
 
             setSalaryStructures(structuresRes.data || []);
             setBranches(branchesRes.data || []);
-            
-            // Combine staff lists with explicit role tagging
-            const combined = [
-                ...(finStaffRes.data || []).map((s: any) => ({ ...s, role: 'FINANCESTAFF' })),
-                ...(opStaffRes.data || []).map((s: any) => ({ ...s, role: 'OPERATIONSTAFF' })),
-                ...(bmRes.data || []).map((s: any) => ({ ...s, role: 'BRANCHMANAGER' })),
-                ...(cmRes.data || []).map((s: any) => ({ ...s, role: 'COUNTRYMANAGER' })),
-                ...(wmRes.data || []).map((s: any) => ({ ...s, role: 'WORKSHOPMANAGER' })),
-                ...(wsRes.data || []).map((s: any) => ({ ...s, role: 'WORKSHOPSTAFF' })),
-                ...(faRes?.data || []).map((s: any) => ({ ...s, role: 'FINANCEADMIN' })),
-                ...(oaRes?.data || []).map((s: any) => ({ ...s, role: 'OPERATIONADMIN' }))
-            ];
-            
-            setStaffList(combined);
-            
-            if (combined.length === 0) {
-                console.log('No staff found in any department');
+            setStaffList(staffRes.data || []);
+            if (staffRes.pagination) {
+                setPagination(staffRes.pagination);
             }
         } catch (error) {
             console.error('Error fetching salary data:', error);
@@ -389,6 +368,20 @@ const StaffSalaries = () => {
                             ))}
                         </select>
                     </div>
+
+                    {(search || roleFilter !== 'ALL' || branchFilter !== 'ALL') && (
+                        <button
+                            onClick={() => {
+                                setSearch('');
+                                setRoleFilter('ALL');
+                                setBranchFilter('ALL');
+                                setPage(1);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-rose-500/20 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500/10 transition-all active:scale-95"
+                        >
+                            <X size={14} /> 
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -483,6 +476,54 @@ const StaffSalaries = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {!loading && staffList.length > 0 && pagination && (
+                    <div className="p-6 border-t border-[var(--border-main)] flex flex-col md:flex-row items-center justify-between gap-4 bg-[var(--bg-card)]">
+                        <p className="text-xs font-bold text-dim uppercase tracking-widest">
+                            Showing <span className="text-[var(--text-main)]">{((page - 1) * limit) + 1}</span> - <span className="text-[var(--text-main)]">{Math.min(page * limit, pagination.total)}</span> of <span className="text-[var(--text-main)]">{pagination.total}</span> Staff
+                        </p>
+                        
+                        <div className="flex items-center gap-3">
+                            <select 
+                                value={limit}
+                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-1.5 text-[10px] font-bold text-[var(--text-main)] focus:outline-none"
+                            >
+                                <option value="10">10 / PAGE</option>
+                                <option value="25">25 / PAGE</option>
+                                <option value="50">50 / PAGE</option>
+                                <option value="100">100 / PAGE</option>
+                            </select>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-xs font-bold transition-all disabled:opacity-30 hover:bg-[var(--bg-input)]"
+                                    style={{ color: page === 1 ? 'var(--text-dim)' : '#C8E600' }}
+                                >
+                                    Previous
+                                </button>
+                                
+                                <div className="px-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)]">
+                                    <span className="text-xs font-black text-[var(--text-main)] italic">
+                                        {page} <span className="text-dim opacity-30 mx-1">/</span> {pagination.pages}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                                    disabled={page === pagination.pages}
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-xs font-bold transition-all disabled:opacity-30 hover:bg-[var(--bg-input)]"
+                                    style={{ color: page === pagination.pages ? 'var(--text-dim)' : '#C8E600' }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Salary Structure Modal */}

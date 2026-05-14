@@ -69,3 +69,8 @@ export const getBalanceSheetReport = async (filters: ReportFilters) => {
     const response = await api.get('/api/reporting/balance-sheet', { params: filters });
     return response.data;
 };
+
+export const getUnifiedStaff = async (filters: any) => {
+    const response = await api.get('/api/reporting/staff/unified', { params: filters });
+    return response.data;
+};

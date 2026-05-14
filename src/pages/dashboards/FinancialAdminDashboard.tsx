@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
-    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
+import {
+    ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area
 } from 'recharts';
-import { 
-    Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
+import {
+    Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar,
     MapPin, Building, ChevronRight, Briefcase, CheckCircle, TrendingUp, Wallet, FilterX
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
@@ -20,7 +20,7 @@ import { getAllBranches } from '../../services/branchService';
 const FinancialAdminDashboard = () => {
     const navigate = useNavigate();
     const { theme } = useTheme();
-    
+
     // Computed Colors for Recharts based on active theme
     const isDark = theme === 'dark';
     const chartColors = {
@@ -33,7 +33,7 @@ const FinancialAdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [allBranches, setAllBranches] = useState<any[]>([]);
-    
+
     // New Tabs State
     const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections'>('overview');
 
@@ -100,7 +100,7 @@ const FinancialAdminDashboard = () => {
 
     if (loading && !dashboardData) {
         return (
-            <div 
+            <div
                 className="h-screen w-full flex items-center justify-center transition-colors"
                 style={{ background: 'var(--bg-main)' }}
             >
@@ -122,11 +122,11 @@ const FinancialAdminDashboard = () => {
     ].filter(i => i.value > 0);
 
     return (
-        <div 
+        <div
             className="p-6 md:p-8 min-h-screen transition-colors duration-300"
             style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
         >
-            
+
             {/* HEADER SECTION */}
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
                 <div>
@@ -137,15 +137,15 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* FILTER WIDGET (Mapped to app background standards) */}
-                <div 
+                <div
                     className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    
+
                     {/* Dynamic Country */}
                     <div className="relative">
-                        <select 
-                            value={filters.country} 
+                        <select
+                            value={filters.country}
                             onChange={(e) => handleFilterChange('country', e.target.value)}
                             className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
                             style={{ color: 'var(--text-main)' }}
@@ -160,8 +160,8 @@ const FinancialAdminDashboard = () => {
 
                     {/* Cascaded Branch */}
                     <div className="relative">
-                        <select 
-                            value={filters.branch} 
+                        <select
+                            value={filters.branch}
                             onChange={(e) => handleFilterChange('branch', e.target.value)}
                             className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
                             style={{ color: 'var(--text-main)' }}
@@ -177,7 +177,7 @@ const FinancialAdminDashboard = () => {
                     {/* Explicit Date Range Inputs */}
                     <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                         <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
-                        <input 
+                        <input
                             type="date"
                             value={filters.startDate}
                             onChange={(e) => handleFilterChange('startDate', e.target.value)}
@@ -185,7 +185,7 @@ const FinancialAdminDashboard = () => {
                             style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                         />
                         <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
-                        <input 
+                        <input
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => handleFilterChange('endDate', e.target.value)}
@@ -193,7 +193,7 @@ const FinancialAdminDashboard = () => {
                             style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                         />
                         {(filters.startDate || filters.endDate) && (
-                            <button onClick={() => setFilters(p => ({...p, startDate: '', endDate: ''}))} className="ml-1 text-red-500 hover:text-red-600">
+                            <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="ml-1 text-red-500 hover:text-red-600">
                                 <FilterX size={14} />
                             </button>
                         )}
@@ -206,32 +206,32 @@ const FinancialAdminDashboard = () => {
 
                 {/* Large Stats Grid */}
                 <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <DashboardStatCard 
-                        title="Total Active Vehicles" 
+                    <DashboardStatCard
+                        title="Total Active Vehicles"
                         value={(stats?.totalActiveVehicles || 0).toLocaleString()}
                         trend="+4.6%"
                         trendUp={true}
                         icon={<Car className="text-[#C8E600]" />}
                         iconBg="bg-[#C8E600]/10"
                     />
-                    <DashboardStatCard 
-                        title="Monthly Revenue" 
+                    <DashboardStatCard
+                        title="Monthly Revenue"
                         value={`$${(stats?.monthlyRevenue || 0).toLocaleString()}`}
                         trend="+12.3%"
                         trendUp={true}
                         icon={<DollarSign className="text-emerald-500" />}
                         iconBg="bg-emerald-500/10"
                     />
-                    <DashboardStatCard 
-                        title="Pending Collections" 
+                    <DashboardStatCard
+                        title="Pending Collections"
                         value={`$${(stats?.outstandingCollections || 0).toLocaleString()}`}
                         trend="-3.8%"
                         trendUp={false}
                         icon={<Briefcase className="text-orange-500" />}
                         iconBg="bg-orange-500/10"
                     />
-                    <DashboardStatCard 
-                        title="Active Drivers" 
+                    <DashboardStatCard
+                        title="Active Drivers"
                         value={(stats?.activeDrivers || 0).toLocaleString()}
                         trend="+2.1%"
                         trendUp={true}
@@ -241,11 +241,20 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* Alerts Side Strip */}
-                <div 
+                <div
                     className="lg:col-span-4 rounded-3xl p-6 shadow-sm border flex flex-col transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    <h3 className="text-lg font-bold mb-5">Priority Alerts</h3>
+                    <div className="flex justify-between items-center mb-5">
+                        <h3 className="text-lg font-bold">Priority Alerts</h3>
+                        <button 
+                            onClick={() => navigate('alerts')}
+                            className="p-2 rounded-xl bg-white text-black shadow-sm border border-gray-100 hover:bg-gray-50 transition-all cursor-pointer flex items-center justify-center"
+                            title="View All Alerts"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
                     <div className="flex flex-col gap-3 flex-1 justify-center">
                         <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" />
                         <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" />
@@ -256,8 +265,8 @@ const FinancialAdminDashboard = () => {
 
             {/* ── 2. ANALYTICS ROW ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
-                 {/* Main Revenue Chart */}
-                <div 
+                {/* Main Revenue Chart */}
+                <div
                     className="lg:col-span-8 rounded-3xl p-6 shadow-sm border transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -270,7 +279,7 @@ const FinancialAdminDashboard = () => {
                             </div>
                         </div>
                     </div>
- 
+
                     <div className="grid grid-cols-3 gap-4 mb-8">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Total Ledger Income</p>
@@ -291,14 +300,14 @@ const FinancialAdminDashboard = () => {
                             <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
                                 <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
                                 <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
-                                <RechartsTooltip 
+                                <RechartsTooltip
                                     contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
                                     itemStyle={{ color: '#C8E600' }}
                                     labelStyle={{ color: chartColors.text }}
@@ -311,13 +320,13 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* Fleet Donut */}
-                <div 
+                <div
                     className="lg:col-span-4 rounded-3xl p-6 shadow-sm border flex flex-col transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <h3 className="text-lg font-bold">Fleet Utilization</h3>
                     <p className="text-xs font-medium mb-6" style={{ color: 'var(--text-dim)' }}>Distribution snapshot</p>
- 
+
                     <div className="h-[220px] relative flex items-center justify-center flex-1">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <PieChart>
@@ -326,13 +335,13 @@ const FinancialAdminDashboard = () => {
                                 </Pie>
                             </PieChart>
                         </ResponsiveContainer>
-                        
+
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                             <span className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</span>
                             <span className="text-xs font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>TOTAL</span>
                         </div>
-                        
-                        <div 
+
+                        <div
                             className="absolute right-0 top-2 rounded-xl p-2 text-center shadow-lg border transition-colors"
                             style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}
                         >
@@ -340,7 +349,7 @@ const FinancialAdminDashboard = () => {
                             <div className="text-lg font-black text-[#C8E600]">{utilizationRate}%</div>
                         </div>
                     </div>
- 
+
                     <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                         {donutData.map((item) => (
                             <div key={item.name} className="flex items-center justify-between">
@@ -357,31 +366,31 @@ const FinancialAdminDashboard = () => {
 
             {/* ── 3. BOTTOM SECTION: FUNCTIONAL TABS & TABLE ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
-                
+
                 {/* Interactive Detailed Metrics Card */}
-                <div 
+                <div
                     className="lg:col-span-7 rounded-3xl shadow-sm border overflow-hidden flex flex-col min-h-[300px] transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    
+
                     {/* Functional Tab Headers */}
                     <div className="flex border-b px-6 pt-4 gap-8" style={{ borderColor: 'var(--border-main)' }}>
-                        <button 
-                            onClick={() => setActiveTab('overview')} 
+                        <button
+                            onClick={() => setActiveTab('overview')}
                             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
                             style={{ color: activeTab === 'overview' ? '#C8E600' : 'var(--text-dim)' }}
                         >
                             Overview
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('vehicles')} 
+                        <button
+                            onClick={() => setActiveTab('vehicles')}
                             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'vehicles' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
                             style={{ color: activeTab === 'vehicles' ? '#C8E600' : 'var(--text-dim)' }}
                         >
                             Vehicles
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('collections')} 
+                        <button
+                            onClick={() => setActiveTab('collections')}
                             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collections' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
                             style={{ color: activeTab === 'collections' ? '#C8E600' : 'var(--text-dim)' }}
                         >
@@ -390,7 +399,7 @@ const FinancialAdminDashboard = () => {
                     </div>
 
                     <div className="p-8 flex-1 flex flex-col justify-center transition-all duration-300">
-                        
+
                         {activeTab === 'overview' && (
                             <div className="grid grid-cols-3 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="pr-4">
@@ -463,12 +472,12 @@ const FinancialAdminDashboard = () => {
                 </div>
 
                 {/* Dynamic Overdue Table */}
-                <div 
+                <div
                     className="lg:col-span-5 rounded-3xl p-6 shadow-sm border transition-colors"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <h3 className="text-lg font-bold mb-4 flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
-                        Recent Arrears 
+                        Recent Arrears
                         {overduePayments?.length > 0 && <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs">{overduePayments.length} Accounts</span>}
                     </h3>
                     <div className="overflow-x-auto max-h-[220px] custom-scrollbar">
@@ -502,7 +511,7 @@ const FinancialAdminDashboard = () => {
             </div>
 
             {/* ── 4. FULL WIDTH MOVEMENT TREND ── */}
-            <div 
+            <div
                 className="lg:col-span-12 rounded-3xl p-6 shadow-sm border transition-colors"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
             >
@@ -512,15 +521,15 @@ const FinancialAdminDashboard = () => {
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <LineChart data={vehicleMovement} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
-                                <XAxis 
-                                    dataKey="date" 
-                                    tickFormatter={(str) => format(new Date(str), 'MM/dd')} 
-                                    fontSize={11} 
+                                <XAxis
+                                    dataKey="date"
+                                    tickFormatter={(str) => format(new Date(str), 'MM/dd')}
+                                    fontSize={11}
                                     stroke={chartColors.text}
                                     axisLine={false}
                                 />
                                 <YAxis stroke={chartColors.text} fontSize={12} axisLine={false} tickLine={false} />
-                                <RechartsTooltip 
+                                <RechartsTooltip
                                     contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, color: chartColors.tooltipText, borderRadius: '8px' }}
                                     labelStyle={{ color: chartColors.text }}
                                 />
@@ -553,7 +562,7 @@ const FinancialAdminDashboard = () => {
 // ── HELPER COMPONENTS TIED TO APP DARK THEME VARS ──
 
 const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) => (
-    <div 
+    <div
         className="rounded-3xl p-6 shadow-sm flex flex-col justify-between border transition-all hover:-translate-y-1 duration-300"
         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
     >
@@ -573,13 +582,13 @@ const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) 
 );
 
 const AlertPill = ({ title, count, colorClass, desc }: any) => (
-    <div className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md cursor-pointer transition-transform hover:-translate-y-0.5 relative overflow-hidden group`}>
+    <div className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md relative overflow-hidden group`}>
         <div className="flex-1 relative z-10">
             <div className="font-black text-xl leading-none">{count}</div>
             <div className="text-xs font-bold uppercase tracking-wider opacity-90">{title} Notifications</div>
             <div className="text-[10px] opacity-80 mt-0.5">{desc}</div>
         </div>
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10 group-hover:bg-white/30 transition-colors">
+        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10">
             <ChevronRight size={18} />
         </div>
         <div className="absolute right-[-10px] bottom-[-10px] text-white opacity-10 transform rotate-[-12deg]">
