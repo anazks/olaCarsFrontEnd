@@ -7,7 +7,7 @@ import {
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
     MapPin, Building, ChevronRight, Briefcase, CheckCircle
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 
 // Services
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
@@ -17,31 +17,70 @@ import { getAllBranches } from '../../services/branchService';
 
 const FinancialAdminDashboard = () => {
     
-    // State
+    // Computed Colors for Recharts based on active theme
+    const isDark = theme === 'dark';
+    const chartColors = {
+        grid: isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+        text: isDark ? '#94A3B8' : '#64748B',
+        tooltipBg: isDark ? '#1C1C1C' : '#FFFFFF',
+        tooltipBorder: isDark ? '#2A2A2A' : '#E5E7EB',
+        tooltipText: isDark ? '#FFFFFF' : '#0A0A0A',
+    };
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState<any>(null);
-    const [branches, setBranches] = useState<any[]>([]);
+    const [allBranches, setAllBranches] = useState<any[]>([]);
+    
+    // New Tabs State
+    const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections'>('overview');
 
-    // Filter State
+    // Set Initial Filter state with current month's span so inputs aren't blank
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: '',
-        endDate: ''
+        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+        endDate: format(new Date(), 'yyyy-MM-dd')
     });
 
+    // 1. Fetch Config
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const bRes = await getAllBranches({ limit: 1000 });
+                setAllBranches(bRes.data || []);
+            } catch (err) {
+                console.error('Error loading configs', err);
+            }
+        };
+        loadConfig();
+    }, []);
+
+    // 2. Filter Lookups
+    const availableCountries = useMemo(() => {
+        const list = allBranches.map(b => b.country).filter(c => !!c);
+        return Array.from(new Set(list)).sort();
+    }, [allBranches]);
+
+    const filteredBranches = useMemo(() => {
+        if (!filters.country) return allBranches;
+        return allBranches.filter(b => b.country === filters.country);
+    }, [filters.country, allBranches]);
+
+    // Reset child filter if parent changes and child becomes invalid
+    useEffect(() => {
+        if (filters.branch) {
+            const match = filteredBranches.find(b => b._id === filters.branch);
+            if (!match) setFilters(prev => ({ ...prev, branch: '' }));
+        }
+    }, [filters.country, filteredBranches]);
+
+    // 3. Primary Data Fetch
     const fetchData = async () => {
         setLoading(true);
         try {
             const data = await getFinancialDashboardSummary(filters);
             setDashboardData(data);
-            
-            if (branches.length === 0) {
-                const bRes = await getAllBranches({ limit: 100 });
-                setBranches(bRes.data || []);
-            }
         } catch (error) {
-            console.error('Error reloading dashboard', error);
+            console.error('Error loading dashboard metrics', error);
         } finally {
             setLoading(false);
         }
@@ -57,469 +96,491 @@ const FinancialAdminDashboard = () => {
 
     if (loading && !dashboardData) {
         return (
-            <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#0f172a]">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#148F85]"></div>
+            <div 
+                className="h-screen w-full flex items-center justify-center transition-colors"
+                style={{ background: 'var(--bg-main)' }}
+            >
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
             </div>
         );
     }
 
     const { stats, alerts, fleetStatus, revenueOverview, overduePayments, vehicleMovement } = dashboardData || {};
+    const totalVehicles = dashboardData?.totalVehicles || 0;
+    const utilizationRate = totalVehicles > 0 ? Math.round(((fleetStatus?.rented || 0) / totalVehicles) * 100) : 0;
+    const currentTotalRevenue = (revenueOverview || []).reduce((a: any, b: any) => a + (b.currentYear || 0), 0);
 
-    // Donut Data format
     const donutData = [
-        { name: 'Available', value: fleetStatus?.available || 0, color: '#22C55E' },
-        { name: 'Maintenance', value: fleetStatus?.maintenance || 0, color: '#F97316' },
-        { name: 'Rented', value: fleetStatus?.rented || 0, color: '#EAB308' },
+        { name: 'Available', value: fleetStatus?.available || 0, color: '#C8E600' }, // Brand Lime
+        { name: 'Maintenance', value: fleetStatus?.maintenance || 0, color: '#E67E22' },
+        { name: 'Rented', value: fleetStatus?.rented || 0, color: '#3B82F6' },
         { name: 'Retired', value: fleetStatus?.retired || 0, color: '#94A3B8' }
     ].filter(i => i.value > 0);
 
-    const totalVehicles = dashboardData?.totalVehicles || 0;
-
     return (
-        <div className="p-6 md:p-8 bg-gray-50 dark:bg-[#0f172a] min-h-screen transition-colors duration-300">
+        <div 
+            className="p-6 md:p-8 min-h-screen transition-colors duration-300"
+            style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
+        >
             
-            {/* Top Control Header */}
+            {/* HEADER SECTION */}
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                        <Briefcase className="text-[#148F85]" /> Executive Dashboard
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
+                        <Briefcase className="text-[#C8E600]" /> Financial Dashboard
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Live orchestration across operating ecosystems</p>
+                    <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Ecosystem Telemetry</p>
                 </div>
 
-                {/* Floating Filter Bar */}
-                <div className="bg-white dark:bg-[#1e293b] shadow-sm dark:shadow-none dark:border dark:border-slate-700 p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                {/* FILTER WIDGET (Mapped to app background standards) */}
+                <div 
+                    className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
                     
-                    {/* Country Select */}
+                    {/* Dynamic Country */}
                     <div className="relative">
                         <select 
                             value={filters.country} 
                             onChange={(e) => handleFilterChange('country', e.target.value)}
-                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-slate-700 dark:text-slate-200 appearance-none cursor-pointer"
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
+                            style={{ color: 'var(--text-main)' }}
                         >
-                            <option value="">All Countries</option>
-                            <option value="India">India</option>
-                            <option value="Mexico">Mexico</option>
-                            <option value="Ghana">Ghana</option>
+                            <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
+                            {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
                         </select>
-                        <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
                     </div>
 
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
 
-                    {/* Branch Select */}
+                    {/* Cascaded Branch */}
                     <div className="relative">
                         <select 
                             value={filters.branch} 
                             onChange={(e) => handleFilterChange('branch', e.target.value)}
-                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent text-slate-700 dark:text-slate-200 appearance-none cursor-pointer max-w-[150px]"
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
+                            style={{ color: 'var(--text-main)' }}
                         >
-                            <option value="">All Branches</option>
-                            {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+                            <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
+                            {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
                         </select>
-                        <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
                     </div>
 
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
 
-                    {/* Date */}
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-1.5">
-                        <Calendar size={15} className="text-slate-500" />
+                    {/* Explicit Date Range Inputs */}
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                        <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
                         <input 
                             type="date"
                             value={filters.startDate}
                             onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                            className="bg-transparent text-xs font-bold border-none outline-none text-slate-700 dark:text-slate-200"
+                            className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors"
+                            style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                         />
-                        <span className="text-slate-400 text-xs">-</span>
+                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
                         <input 
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                            className="bg-transparent text-xs font-bold border-none outline-none text-slate-700 dark:text-slate-200"
+                            className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors"
+                            style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                         />
+                        {(filters.startDate || filters.endDate) && (
+                            <button onClick={() => setFilters(p => ({...p, startDate: '', endDate: ''}))} className="ml-1 text-red-500 hover:text-red-600">
+                                <FilterX size={14} />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* ── MAIN GRID LAYOUT ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* ── 1. PRIMARY METRIC ROW ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
 
-                {/* 1. Primary Stats Grid (Top-Left Large Box Area) */}
-                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Large Stats Grid */}
+                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <DashboardStatCard 
                         title="Total Active Vehicles" 
                         value={(stats?.totalActiveVehicles || 0).toLocaleString()}
                         trend="+4.6%"
                         trendUp={true}
-                        icon={<Car className="text-[#A3E635]" />}
-                        iconBg="bg-[#ECFCCB]"
+                        icon={<Car className="text-[#C8E600]" />}
+                        iconBg="bg-[#C8E600]/10"
                     />
                     <DashboardStatCard 
                         title="Monthly Revenue" 
-                        value={`$${((stats?.monthlyRevenue || 0) / 1000000).toFixed(2)}M`}
+                        value={`$${(stats?.monthlyRevenue || 0).toLocaleString()}`}
                         trend="+12.3%"
                         trendUp={true}
-                        icon={<DollarSign className="text-green-600" />}
-                        iconBg="bg-green-100"
+                        icon={<DollarSign className="text-emerald-500" />}
+                        iconBg="bg-emerald-500/10"
                     />
                     <DashboardStatCard 
-                        title="Outstanding Collections" 
+                        title="Pending Collections" 
                         value={`$${(stats?.outstandingCollections || 0).toLocaleString()}`}
                         trend="-3.8%"
                         trendUp={false}
-                        icon={<Briefcase className="text-orange-600" />}
-                        iconBg="bg-orange-100"
+                        icon={<Briefcase className="text-orange-500" />}
+                        iconBg="bg-orange-500/10"
                     />
                     <DashboardStatCard 
                         title="Active Drivers" 
                         value={(stats?.activeDrivers || 0).toLocaleString()}
                         trend="+2.1%"
                         trendUp={true}
-                        icon={<Users className="text-blue-600" />}
-                        iconBg="bg-blue-100"
+                        icon={<Users className="text-blue-500" />}
+                        iconBg="bg-blue-500/10"
                     />
                 </div>
 
-                {/* 2. Alerts Side Panel */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm flex flex-col border border-transparent dark:border-slate-700/50">
-                    <div className="flex justify-between items-center mb-5">
-                        <h3 className="text-lg font-bold dark:text-white">Priority Alerts</h3>
-                        <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><span className="block h-1.5 w-1.5 rounded-full bg-slate-400 mb-0.5"></span><span className="block h-1.5 w-1.5 rounded-full bg-slate-400 mb-0.5"></span><span className="block h-1.5 w-1.5 rounded-full bg-slate-400"></span></button>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" description="Vehicle Accidents / Immediate Attention" />
-                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" description="Payment Overdue Escalations" />
-                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" description="General Maintenance Due" />
-                    </div>
-                </div>
-
-                {/* ── SECONDARY ROW ── */}
-                {/* 3. Secondary Mini Stats */}
-                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <MiniStatCard 
-                        title="Collection Compliance" 
-                        value={`${stats?.collectionCompliance || 0}%`} 
-                        subtext="+2% week over week" 
-                        icon={<CheckCircle className="text-emerald-600" />} 
-                        color="emerald" 
-                    />
-                    <MiniStatCard 
-                        title="Last 12 Months Revenue" 
-                        value={`$${(stats?.last12MonthsRevenue || 0).toLocaleString()}`} 
-                        subtext="Aggregated run-rate" 
-                        icon={<DollarSign className="text-blue-600" />} 
-                        color="blue" 
-                    />
-                    <MiniStatCard 
-                        title="Outstanding Balance" 
-                        value={`$${(stats?.outstandingBalance || 0).toLocaleString()}`} 
-                        subtext="+11% vs previous period" 
-                        icon={<Briefcase className="text-amber-600" />} 
-                        color="amber" 
-                    />
-                </div>
-
-                {/* 4. Operations Snapshot */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-5 shadow-sm border border-transparent dark:border-slate-700/50">
-                    <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Operations Overview</h3>
-                    <div className="flex gap-2">
-                        <OpBadge count={18} label="Overdue Tasks" color="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" />
-                        <OpBadge count={11} label="Upcoming Tasks" color="bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300" />
-                        <OpBadge count={9} label="Assigned Tasks" color="bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300" />
+                {/* Alerts Side Strip */}
+                <div 
+                    className="lg:col-span-4 rounded-3xl p-6 shadow-sm border flex flex-col transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <h3 className="text-lg font-bold mb-5">Priority Alerts</h3>
+                    <div className="flex flex-col gap-3 flex-1 justify-center">
+                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" />
+                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" />
+                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" desc="General fleet notifications" />
                     </div>
                 </div>
+            </div>
 
-                {/* ── MIDDLE SECTION: CHARTS ── */}
-                
-                {/* 5. Revenue Area Chart */}
-                <div className="lg:col-span-8 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50">
+            {/* ── 2. ANALYTICS ROW ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+                 {/* Main Revenue Chart */}
+                <div 
+                    className="lg:col-span-8 rounded-3xl p-6 shadow-sm border transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h3 className="text-lg font-bold dark:text-white">Revenue Overview</h3>
-                            <div className="flex gap-4 text-xs font-semibold text-slate-400 mt-1">
-                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> Previous Year</span>
-                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#D9F99D]"></div> Current Year</span>
+                            <h3 className="text-lg font-bold">Revenue Breakdown</h3>
+                            <div className="flex gap-4 text-xs font-semibold mt-1" style={{ color: 'var(--text-dim)' }}>
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{ background: isDark ? '#4B5563' : '#CBD5E1' }}></div> Prev Year</span>
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#C8E600]"></div> Curr Year</span>
                             </div>
                         </div>
-                        {/* Time period buttons */}
-                        <div className="flex gap-1 bg-gray-50 dark:bg-slate-800 p-1 rounded-lg">
-                            {['1W', '1M', '3M', '1Y'].map(t => (
-                                <button key={t} className={`px-3 py-1 text-xs font-bold rounded-md transition ${t === '1Y' ? 'bg-[#D9F99D] text-black shadow-sm' : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}>{t}</button>
-                            ))}
+                    </div>
+ 
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Total Ledger Income</p>
+                            <h4 className="text-2xl font-black text-[#C8E600] mt-1">${currentTotalRevenue.toLocaleString()}</h4>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Expected Dues</p>
+                            <h4 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>${(stats?.outstandingCollections || 0).toLocaleString()}</h4>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Collection Rate</p>
+                            <h4 className="text-2xl font-black text-emerald-500 mt-1">{stats?.collectionCompliance || 94}%</h4>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Collected</p>
-                            <h4 className="text-xl font-extrabold text-[#D9F99D] dark:text-lime-400">$842,120</h4>
-                            <p className="text-[10px] font-medium text-slate-400">Last 12 months</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</p>
-                            <h4 className="text-xl font-extrabold text-slate-800 dark:text-slate-200">$872,000</h4>
-                            <p className="text-[10px] font-medium text-slate-400">Annual target</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Difference</p>
-                            <h4 className="text-xl font-extrabold text-yellow-500">$29,880</h4>
-                            <p className="text-[10px] font-medium text-slate-400">Remaining to target</p>
-                        </div>
-                    </div>
-
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
-                                    <linearGradient id="colorCurr" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#A3E635" stopOpacity={0.2}/>
-                                        <stop offset="95%" stopColor="#A3E635" stopOpacity={0}/>
+                                    <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0}/>
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                                <XAxis dataKey="name" stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000)}K`} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }} />
-                                <Area type="monotone" dataKey="previousYear" stroke="#CBD5E1" fill="transparent" strokeWidth={3} />
-                                <Area type="monotone" dataKey="currentYear" stroke="#A3E635" strokeWidth={4} fillOpacity={1} fill="url(#colorCurr)" dot={{ fill: '#A3E635', r: 4 }} />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
+                                <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                                <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                                <RechartsTooltip 
+                                    contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
+                                    itemStyle={{ color: '#C8E600' }}
+                                    labelStyle={{ color: chartColors.text }}
+                                />
+                                <Area type="monotone" dataKey="previousYear" stroke={isDark ? "#64748B" : "#94A3B8"} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
+                                <Area type="monotone" dataKey="currentYear" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#brandGrad)" dot={{ fill: '#C8E600', r: 4 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* 6. Fleet Status Donut */}
-                <div className="lg:col-span-4 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50 relative overflow-hidden">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-bold dark:text-white">Fleet Status</h3>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full mb-0.5"></span><span className="block h-1 w-1 bg-slate-400 rounded-full"></span></button>
-                    </div>
-                    <p className="text-xs font-medium text-slate-400 mb-4">Live vehicle distribution</p>
-
-                    <div className="h-[240px] relative flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
+                {/* Fleet Donut */}
+                <div 
+                    className="lg:col-span-4 rounded-3xl p-6 shadow-sm border flex flex-col transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <h3 className="text-lg font-bold">Fleet Utilization</h3>
+                    <p className="text-xs font-medium mb-6" style={{ color: 'var(--text-dim)' }}>Distribution snapshot</p>
+ 
+                    <div className="h-[220px] relative flex items-center justify-center flex-1">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <PieChart>
-                                <Pie 
-                                    data={donutData} 
-                                    innerRadius={70} 
-                                    outerRadius={100} 
-                                    paddingAngle={5} 
-                                    dataKey="value" 
-                                    stroke="none"
-                                    cornerRadius={5}
-                                >
-                                    {donutData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
+                                <Pie data={donutData} innerRadius={65} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none" cornerRadius={6}>
+                                    {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                                 </Pie>
                             </PieChart>
                         </ResponsiveContainer>
-
-                        {/* Floating Center Labels */}
+                        
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-black text-slate-800 dark:text-white">{totalVehicles.toLocaleString()}</span>
-                            <span className="text-xs font-semibold text-slate-400">Vehicles</span>
+                            <span className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</span>
+                            <span className="text-xs font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>TOTAL</span>
                         </div>
-
-                        {/* Embedded overlay badge mimics screenshot */}
-                        <div className="absolute right-0 top-8 bg-black text-white rounded-lg p-2 text-[10px]">
-                            <span className="text-slate-400">Fleet Utilization</span>
-                            <div className="text-sm font-bold text-lime-400">83%</div>
+                        
+                        <div 
+                            className="absolute right-0 top-2 rounded-xl p-2 text-center shadow-lg border transition-colors"
+                            style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}
+                        >
+                            <div className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-dim)' }}>In Use</div>
+                            <div className="text-lg font-black text-[#C8E600]">{utilizationRate}%</div>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+ 
+                    <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                         {donutData.map((item) => (
                             <div key={item.name} className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
                                     {item.name}
                                 </div>
-                                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-baseline gap-1">
-                                    {item.value}
-                                    <span className="text-[9px] font-medium text-slate-400">({Math.round((item.value/totalVehicles)*100)}%)</span>
-                                </div>
+                                <div className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{item.value}</div>
                             </div>
                         ))}
                     </div>
                 </div>
+            </div>
 
-                {/* ── BOTTOM SECTION ── */}
-                {/* 7. Tabs Section Placeholder for Summary */}
-                <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-transparent dark:border-slate-700/50 overflow-hidden flex flex-col">
-                    <div className="border-b dark:border-slate-800 px-6 flex gap-6 pt-4">
-                        {['Overview', 'Vehicles', 'Collections', 'Risk', 'Drivers'].map((tab, idx) => (
-                            <div key={tab} className={`text-sm font-bold pb-3 cursor-pointer ${idx===0 ? 'text-lime-600 dark:text-lime-400 border-b-2 border-lime-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>{tab}</div>
-                        ))}
-                    </div>
+            {/* ── 3. BOTTOM SECTION: FUNCTIONAL TABS & TABLE ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+                
+                {/* Interactive Detailed Metrics Card */}
+                <div 
+                    className="lg:col-span-7 rounded-3xl shadow-sm border overflow-hidden flex flex-col min-h-[300px] transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
                     
-                    <div className="p-8 grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-800 h-full flex-1 items-center">
-                        <div className="pr-4 flex flex-col justify-center">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600"><Car size={24} /></div>
-                                <div>
-                                    <div className="text-3xl font-extrabold dark:text-white">{totalVehicles}</div>
-                                    <div className="text-xs font-semibold text-slate-400">Total Vehicles</div>
+                    {/* Functional Tab Headers */}
+                    <div className="flex border-b px-6 pt-4 gap-8" style={{ borderColor: 'var(--border-main)' }}>
+                        <button 
+                            onClick={() => setActiveTab('overview')} 
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
+                            style={{ color: activeTab === 'overview' ? '#C8E600' : 'var(--text-dim)' }}
+                        >
+                            Overview
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('vehicles')} 
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'vehicles' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
+                            style={{ color: activeTab === 'vehicles' ? '#C8E600' : 'var(--text-dim)' }}
+                        >
+                            Vehicles
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('collections')} 
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collections' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
+                            style={{ color: activeTab === 'collections' ? '#C8E600' : 'var(--text-dim)' }}
+                        >
+                            Collections
+                        </button>
+                    </div>
+
+                    <div className="p-8 flex-1 flex flex-col justify-center transition-all duration-300">
+                        
+                        {activeTab === 'overview' && (
+                            <div className="grid grid-cols-3 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pr-4">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600]"><TrendingUp size={24} /></div>
+                                        <div>
+                                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                            <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
+                                </div>
+                                <div className="px-6 text-center flex flex-col items-center" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="text-4xl font-black text-[#C8E600] mb-2">{stats?.collectionCompliance || 94}%</div>
+                                    <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
+                                    <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
+                                        <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
+                                    </div>
+                                </div>
+                                <div className="pl-6" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="text-2xl font-black mb-1" style={{ color: 'var(--text-main)' }}>${(stats?.outstandingBalance || 0).toLocaleString()}</div>
+                                    <div className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Awaiting Settlement</div>
+                                    <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Accumulated ledger deficit currently flagged for recovery pipeline tracking.</p>
                                 </div>
                             </div>
-                            <ul className="space-y-1.5">
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Active</span> <b className="font-bold">{(fleetStatus?.available + fleetStatus?.rented)}</b></li>
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Assigned</span> <b className="font-bold">{fleetStatus?.rented}</b></li>
-                                <li className="text-sm font-medium text-slate-700 dark:text-slate-300 flex justify-between"><span>Unassigned</span> <b className="font-bold">{fleetStatus?.available}</b></li>
-                            </ul>
-                        </div>
+                        )}
 
-                        <div className="px-6 flex flex-col justify-center">
-                            <div className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1">{stats?.activeDrivers}</div>
-                            <div className="text-xs font-bold text-slate-400 uppercase mb-4">Active Vehicles</div>
-                            <ul className="space-y-2">
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> On Rent</li>
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Maintenance</li>
-                                <li className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400"><div className="w-2 h-2 rounded-full bg-purple-400"></div> Idle</li>
-                            </ul>
-                        </div>
+                        {activeTab === 'vehicles' && (
+                            <div className="grid grid-cols-3 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pr-4">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500"><Car size={24} /></div>
+                                        <div>
+                                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
+                                            <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Total Global Fleet</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="px-6 flex flex-col justify-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
+                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
+                                </div>
+                                <div className="pl-6 flex flex-col justify-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
+                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Decommissioned</span> <span className="text-lg font-bold" style={{ color: 'var(--text-dim)' }}>{fleetStatus?.retired || 0}</span></div>
+                                </div>
+                            </div>
+                        )}
 
-                        <div className="pl-6 flex flex-col justify-center">
-                            <div className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1">08</div>
-                            <div className="text-xs font-bold text-slate-400 uppercase mb-2">Unassigned Vehicles</div>
-                            <p className="text-xs text-slate-500 leading-relaxed">Vehicles cleared from staging and available for driver assignment globally.</p>
-                        </div>
+                        {activeTab === 'collections' && (
+                            <div className="grid grid-cols-2 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pr-6 flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500"><Wallet size={32} /></div>
+                                    <div>
+                                        <div className="text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
+                                        <div className="text-4xl font-black" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div className="pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><ShieldAlert size={32} /></div>
+                                    <div>
+                                        <div className="text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
+                                        <div className="text-4xl font-black text-red-500">${(stats?.outstandingCollections || 0).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
 
-                {/* 8. Overdue Payments Table */}
-                <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50">
-                    <h3 className="text-base font-bold mb-4 dark:text-white">Recent Overdue Payments</h3>
-                    <div className="overflow-x-auto">
+                {/* Dynamic Overdue Table */}
+                <div 
+                    className="lg:col-span-5 rounded-3xl p-6 shadow-sm border transition-colors"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <h3 className="text-lg font-bold mb-4 flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
+                        Recent Arrears 
+                        {overduePayments?.length > 0 && <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs">{overduePayments.length} Accounts</span>}
+                    </h3>
+                    <div className="overflow-x-auto max-h-[220px] custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100 dark:border-slate-800">
-                                    <th className="pb-3">Customer</th>
-                                    <th className="pb-3">Vehicle</th>
-                                    <th className="pb-3">Amount</th>
-                                    <th className="pb-3">Due Date</th>
+                                <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                    <th className="pb-3">Driver / Asset</th>
+                                    <th className="pb-3 text-right">Balance</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-xs font-medium text-slate-700 dark:text-slate-300 divide-y divide-slate-50 dark:divide-slate-800">
+                            <tbody className="text-xs divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                 {overduePayments?.map((pay: any, i: number) => (
-                                    <tr key={i}>
-                                        <td className="py-3.5 pr-2 truncate max-w-[120px] font-bold text-slate-800 dark:text-slate-200">{pay.customerName}</td>
-                                        <td className="py-3.5 pr-2">{pay.vehicleNumber}</td>
-                                        <td className="py-3.5 pr-2 font-bold">${pay.amount?.toLocaleString()}</td>
-                                        <td className="py-3.5">
-                                            <div>{format(new Date(pay.dueDate), 'dd MMM yyyy')}</div>
-                                            <div className="text-[10px] text-red-500 flex items-center gap-1 font-bold mt-0.5"><div className="w-1 h-1 bg-red-500 rounded-full animate-pulse"></div> {pay.daysOverdue} Days</div>
+                                    <tr key={i} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                        <td className="py-3 font-bold truncate max-w-[150px]">
+                                            {pay.customerName}
+                                            <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.vehicleNumber}</div>
+                                        </td>
+                                        <td className="py-3 text-right font-black text-red-500 text-sm">
+                                            ${pay.amount?.toLocaleString()}
+                                            <div className="text-[9px] font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.daysOverdue}d due</div>
                                         </td>
                                     </tr>
                                 ))}
                                 {(!overduePayments || overduePayments.length === 0) && (
-                                    <tr>
-                                        <td colSpan={4} className="text-center py-10 text-slate-400 font-medium italic">No pending overdue payments found.</td>
-                                    </tr>
+                                    <tr><td colSpan={2} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>Clean sheet. No active accounts in arrears.</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </div>
 
-                {/* ── FULL WIDTH GRAPH REPLICATING SCREENSHOT 2 ── */}
-                {/* 9. Vehicles Movement Analysis */}
-                <div className="lg:col-span-12 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-transparent dark:border-slate-700/50 mt-2">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-extrabold tracking-wide text-slate-800 dark:text-white uppercase">Vehicles Movement Analysis</h3>
-                    </div>
-
-                    <div className="h-[350px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+            {/* ── 4. FULL WIDTH MOVEMENT TREND ── */}
+            <div 
+                className="lg:col-span-12 rounded-3xl p-6 shadow-sm border transition-colors"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+            >
+                <h3 className="text-lg font-black tracking-wide uppercase mb-6" style={{ color: 'var(--text-main)' }}>Vehicle Movement Flow</h3>
+                <div className="h-[350px] w-full">
+                    {vehicleMovement && vehicleMovement.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <LineChart data={vehicleMovement} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
                                 <XAxis 
                                     dataKey="date" 
-                                    tickFormatter={(str) => format(new Date(str), 'M/d/yyyy')} 
-                                    fontSize={10} 
-                                    fontFamily="monospace"
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={50}
-                                    dy={10}
-                                    stroke="#94A3B8"
+                                    tickFormatter={(str) => format(new Date(str), 'MM/dd')} 
+                                    fontSize={11} 
+                                    stroke={chartColors.text}
+                                    axisLine={false}
                                 />
-                                <YAxis stroke="#94A3B8" fontSize={11} axisLine={false} tickLine={false} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }} />
-                                <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }} />
-                                
-                                {/* Mimic standard Line colors seen in provided chart snippet */}
-                                <Line type="monotone" dataKey="removed" stroke="#71A078" strokeWidth={4} dot={false} name="Removed" />
-                                <Line type="monotone" dataKey="returned" stroke="#3B6EAD" strokeWidth={4} dot={false} name="Returned" />
-                                <Line type="monotone" dataKey="sale" stroke="#EEB341" strokeWidth={4} dot={false} name="Sale" />
+                                <YAxis stroke={chartColors.text} fontSize={12} axisLine={false} tickLine={false} />
+                                <RechartsTooltip 
+                                    contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, color: chartColors.tooltipText, borderRadius: '8px' }}
+                                    labelStyle={{ color: chartColors.text }}
+                                />
+                                <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', color: chartColors.text }} />
+                                <Line type="stepAfter" dataKey="removed" stroke="#E67E22" strokeWidth={4} dot={{ r: 3 }} name="Derailed" />
+                                <Line type="monotone" dataKey="returned" stroke="#3B82F6" strokeWidth={4} dot={{ r: 3 }} name="Returned" />
+                                <Line type="monotone" dataKey="sale" stroke="#C8E600" strokeWidth={5} dot={{ r: 4, fill: '#000', strokeWidth: 2 }} name="Deployed" />
                             </LineChart>
                         </ResponsiveContainer>
-                    </div>
+                    ) : (
+                        <div className="h-full flex items-center justify-center italic border border-dashed rounded-2xl" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>Waiting for historical fleet movement logs.</div>
+                    )}
                 </div>
             </div>
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.3s ease-out forwards;
+                }
+            `}</style>
+
         </div>
     );
 };
 
-// ── HELPER SUB-COMPONENTS ──
+// ── HELPER COMPONENTS TIED TO APP DARK THEME VARS ──
 
 const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) => (
-    <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm flex flex-col justify-between border border-transparent dark:border-slate-700/50 transition-transform hover:scale-[1.01] duration-200">
+    <div 
+        className="rounded-3xl p-6 shadow-sm flex flex-col justify-between border transition-all hover:-translate-y-1 duration-300"
+        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+    >
         <div className="flex justify-between items-start">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${iconBg}`}>
                 {icon}
             </div>
-            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${trendUp ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                 {trendUp ? <ArrowUpRight size={12} /> : <div className="rotate-90"><ArrowUpRight size={12} /></div>} {trend}
             </div>
         </div>
-        <div className="mt-6">
-            <div className="text-3xl font-black text-slate-800 dark:text-white">{value}</div>
-            <div className="text-sm font-semibold text-slate-400 dark:text-slate-500 mt-1">{title}</div>
+        <div className="mt-8">
+            <div className="text-3xl font-black leading-none tracking-tight" style={{ color: 'var(--text-main)' }}>{value}</div>
+            <div className="text-sm font-bold mt-2 uppercase tracking-wider text-[11px]" style={{ color: 'var(--text-dim)' }}>{title}</div>
         </div>
     </div>
 );
 
-const AlertPill = ({ title, count, colorClass, description }: any) => (
-    <div className={`${colorClass} text-white rounded-2xl p-4 relative flex items-center shadow-md group cursor-pointer overflow-hidden transition-transform hover:-translate-y-0.5`}>
-        <div className="flex-1 z-10">
-            <div className="flex items-center gap-2 font-extrabold text-lg uppercase tracking-wide">
-                <ShieldAlert size={18} /> {title} ({count})
-            </div>
-            <div className="text-xs opacity-90 font-medium mt-1">{description}</div>
+const AlertPill = ({ title, count, colorClass, desc }: any) => (
+    <div className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md cursor-pointer transition-transform hover:-translate-y-0.5 relative overflow-hidden group`}>
+        <div className="flex-1 relative z-10">
+            <div className="font-black text-xl leading-none">{count}</div>
+            <div className="text-xs font-bold uppercase tracking-wider opacity-90">{title} Notifications</div>
+            <div className="text-[10px] opacity-80 mt-0.5">{desc}</div>
         </div>
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center z-10 backdrop-blur-sm group-hover:bg-white/30">
-            <ChevronRight size={18} className="rotate-[-45deg]" />
+        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10 group-hover:bg-white/30 transition-colors">
+            <ChevronRight size={18} />
         </div>
-    </div>
-);
-
-const MiniStatCard = ({ title, value, subtext, icon, color }: any) => {
-    const colors: any = {
-        emerald: 'text-emerald-600 bg-emerald-50',
-        blue: 'text-blue-600 bg-blue-50',
-        amber: 'text-amber-600 bg-amber-50'
-    };
-    return (
-        <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-5 shadow-sm border border-transparent dark:border-slate-700/50">
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl ${colors[color] || 'bg-gray-50'}`}>
-                    {icon}
-                </div>
-                <div className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-lg">+2%</div>
-            </div>
-            <div className="text-2xl font-black text-slate-800 dark:text-white mb-1">{value}</div>
-            <div className="text-xs font-semibold text-slate-500 mb-2 truncate">{title}</div>
-            <div className="text-[10px] font-medium text-slate-400">{subtext}</div>
+        <div className="absolute right-[-10px] bottom-[-10px] text-white opacity-10 transform rotate-[-12deg]">
+            <ShieldAlert size={64} />
         </div>
-    );
-};
-
-const OpBadge = ({ count, label, color }: any) => (
-    <div className={`flex-1 rounded-xl p-3 flex items-center gap-3 ${color} transition-opacity hover:opacity-90 cursor-pointer`}>
-        <div className="text-xl font-black leading-none">{count.toString().padStart(2, '0')}</div>
-        <div className="text-[10px] font-bold leading-tight uppercase tracking-wider">{label.split(' ').join('\n')}</div>
     </div>
 );
 

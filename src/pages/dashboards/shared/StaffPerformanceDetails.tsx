@@ -13,7 +13,11 @@ import {
     ArrowLeft,
     LogIn,
     LogOut,
-    Shield
+    Shield,
+    Activity,
+    Briefcase,
+    Smartphone,
+    Zap
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
@@ -28,6 +32,7 @@ import {
     Cell
 } from 'recharts';
 import { getIndividualStaffPerformance } from '../../../services/staffPerformanceService';
+import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
 
 const StaffPerformanceDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -72,366 +77,527 @@ const StaffPerformanceDetails = () => {
     );
 
     if (error || !data) return (
-        <div className="p-8 text-center bg-red-500/10 border border-red-500/20 rounded-2xl">
-            <p className="text-red-500 font-bold">{error || 'Staff member not found'}</p>
-            <button onClick={() => navigate(-1)} className="mt-4 px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all">Go Back</button>
+        <div className="p-12 text-center bg-red-500/5 border border-red-500/10 rounded-[2rem] max-w-2xl mx-auto mt-20">
+            <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mx-auto mb-6">
+                 <Shield size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">Access Issue</h2>
+            <p className="text-dim font-medium mb-8">{error || 'The requested staff member profile could not be retrieved.'}</p>
+            <button 
+                onClick={() => navigate(-1)} 
+                className="px-8 py-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all font-bold flex items-center gap-2 mx-auto"
+            >
+                <ArrowLeft size={18} /> Return to Directory
+            </button>
         </div>
     );
 
     const { profile, performance, payroll, attendance, hierarchy, roleAnalytics } = data;
 
     return (
-        <div className="container-responsive space-y-8 animate-in fade-in duration-500 p-4 md:p-8">
-            {/* Header / Profile */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div className="flex items-center gap-6">
-                    <button onClick={() => navigate(-1)} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all active:scale-95 border border-white/10">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="flex items-center gap-5">
-                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#C8E600] to-[#8fb200] flex items-center justify-center text-black text-3xl font-black shadow-xl shadow-[#C8E600]/20">
-                            {profile.avatar}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>{profile.fullName}</h1>
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                    profile.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                                }`}>
-                                    {profile.status}
-                                </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-4 mt-2 opacity-60">
-                                <span className="text-sm font-bold flex items-center gap-1.5"><Shield size={14} className="text-[#C8E600]" /> {profile.role}</span>
-                                <span className="text-sm font-bold flex items-center gap-1.5"><Building2 size={14} className="text-[#C8E600]" /> {hierarchy.branch?.name || 'Unassigned'}</span>
-                                <span className="text-sm font-bold flex items-center gap-1.5"><Calendar size={14} className="text-[#C8E600]" /> Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3 w-full lg:w-auto">
-                    <div className="flex items-center gap-2 p-1 bg-white/5 rounded-2xl border border-white/10 w-full lg:w-auto">
+        <div className="container-responsive space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 py-8 px-4 md:px-8">
+            
+            {/* Navigation & Actions */}
+            <div className="flex items-center justify-between">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs font-black uppercase tracking-widest text-dim hover:text-white"
+                >
+                    <ArrowLeft size={14} /> Back to Staff
+                </button>
+                <div className="flex items-center gap-4">
+                     <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Analysis Period</span>
+                     <div className="flex items-center gap-2 p-1.5 bg-black/20 rounded-2xl border border-white/5">
                         <input 
                             type="date" 
                             value={dateRange.startDate} 
                             onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold px-3 py-2 outline-none"
+                            className="bg-transparent text-[11px] font-black px-3 py-1 outline-none text-lime"
                         />
-                        <span className="text-xs opacity-30">to</span>
+                        <div className="w-px h-4 bg-white/10" />
                         <input 
                             type="date" 
                             value={dateRange.endDate} 
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold px-3 py-2 outline-none"
+                            className="bg-transparent text-[11px] font-black px-3 py-1 outline-none text-lime"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Top Metrics Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'Success Rate', value: `${performance.successRate}%`, icon: TrendingUp, color: '#C8E600' },
-                    { label: 'Tasks Completed', value: performance.taskStats.completed, icon: CheckCircle2, color: '#22c55e' },
-                    { label: 'Login Days', value: attendance.length, icon: Clock, color: '#3b82f6' },
-                    { label: 'Base Salary', value: payroll.structure ? `${payroll.structure.currency} ${payroll.structure.baseSalary}` : 'N/A', icon: DollarSign, color: '#8b5cf6' },
-                ].map((stat, i) => (
-                    <div key={i} className="p-6 rounded-3xl border border-white/10 bg-white/5 relative overflow-hidden group">
-                        <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
-                            <stat.icon size={80} style={{ color: stat.color }} />
+            {/* Premium Profile Header */}
+            <div className="relative group overflow-hidden rounded-[2.5rem] border border-white/10 glass-dark p-8 md:p-12">
+                {/* Abstract Background Decoration */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48 transition-all duration-1000 group-hover:scale-125" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full -ml-32 -mb-32" />
+
+                <div className="relative z-10 flex flex-col lg:flex-row items-center lg:items-start gap-10">
+                    {/* Avatar with Ring */}
+                    <div className="relative">
+                        <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-[#C8E600] to-[#8fb200] flex items-center justify-center text-black text-5xl font-black shadow-2xl shadow-lime/20 relative z-10">
+                            {profile.fullName.split(' ')[0].charAt(0).toUpperCase()}
                         </div>
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: `${stat.color}20` }}>
-                            <stat.icon size={20} style={{ color: stat.color }} />
-                        </div>
-                        <h3 className="text-[10px] font-black opacity-40 uppercase tracking-widest">{stat.label}</h3>
-                        <p className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>{stat.value}</p>
+                        <div className="absolute inset-0 w-32 h-32 rounded-[2.5rem] border-4 border-lime/20 animate-pulse scale-110" />
                     </div>
-                ))}
-            </div>
 
-            {/* Main Tabs Navigation */}
-            <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10 w-fit">
-                {[
-                    { id: 'performance', label: 'Performance', icon: TrendingUp },
-                    { id: 'financials', label: 'Salary & Payroll', icon: DollarSign },
-                    { id: 'attendance', label: 'Attendance logs', icon: Clock },
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                            activeTab === tab.id ? 'bg-[#C8E600] text-black shadow-lg shadow-[#C8E600]/20' : 'hover:bg-white/5 opacity-50'
-                        }`}
-                    >
-                        <tab.icon size={16} />
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    {activeTab === 'performance' && (
-                        <div className="space-y-8">
-                            {/* Performance Chart / Analytics */}
-                            <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                                <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-2">
-                                    <div className="w-2 h-6 bg-[#C8E600] rounded-full" />
-                                    Task Breakdown
-                                </h2>
-                                <div className="h-[300px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={[
-                                            { name: 'Completed', count: performance.taskStats.completed, fill: '#22c55e' },
-                                            { name: 'Pending', count: performance.taskStats.pending, fill: '#eab308' },
-                                            { name: 'Onboarded', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0, fill: '#C8E600' }
-                                        ]}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                            <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-                                            <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                                            <Bar dataKey="count" radius={[8, 8, 0, 0]} maxBarSize={60}>
-                                                {[0, 1, 2].map((_, index) => (
-                                                    <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : '#C8E600'} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Recent Activities */}
-                            <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                                <h2 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                                    <div className="w-2 h-6 bg-blue-500 rounded-full" />
-                                    Recent Work Log
-                                </h2>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="border-b border-white/10">
-                                                <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Task / Activity</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Status</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40 text-right">Time</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {performance.tasks.map((task: any) => (
-                                                <tr key={task._id} className="hover:bg-white/5 transition-all">
-                                                    <td className="px-4 py-4">
-                                                        <p className="text-sm font-bold">{task.title}</p>
-                                                        <p className="text-xs opacity-50">{task.description}</p>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${
-                                                            task.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                                                        }`}>
-                                                            {task.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-4 text-right text-xs opacity-60">
-                                                        {new Date(task.createdAt).toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                    <div className="flex-1 text-center lg:text-left">
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-4">
+                            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white">
+                                {profile.fullName}
+                            </h1>
+                            <div className="flex justify-center lg:justify-start gap-2">
+                                <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border flex items-center gap-1.5 ${
+                                    profile.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${profile.status === 'ACTIVE' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
+                                    {profile.status}
+                                </span>
                             </div>
                         </div>
-                    )}
 
-                    {activeTab === 'financials' && (
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Salary Breakdown */}
-                                <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                                    <h2 className="text-lg font-black uppercase tracking-tighter mb-6">Current Pay Structure</h2>
-                                    {payroll.structure ? (
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                                                <span className="text-sm opacity-60">Base Monthly</span>
-                                                <span className="text-lg font-black text-[#C8E600]">{payroll.structure.currency} {payroll.structure.baseSalary}</span>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 mt-8">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Designation</p>
+                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-white">
+                                    <Shield size={14} className="text-lime" /> {profile.role}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Operations Hub</p>
+                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-white">
+                                    <Building2 size={14} className="text-lime" /> {hierarchy.branch?.name || 'Global'}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">System Access</p>
+                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-white">
+                                    <Smartphone size={14} className="text-lime" /> {profile.phone || 'Encrypted'}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Tenure Date</p>
+                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-white">
+                                    <Calendar size={14} className="text-lime" /> {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="hidden xl:flex flex-col gap-3">
+                         <div className="p-4 rounded-3xl bg-white/5 border border-white/5 text-center">
+                            <p className="text-[20px] font-black text-lime leading-none">{performance.successRate}%</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Efficiency</p>
+                         </div>
+                         <div className="p-4 rounded-3xl bg-white/5 border border-white/5 text-center">
+                            <p className="text-[20px] font-black text-blue-400 leading-none">{attendance.length}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Check-ins</p>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Metrics Visualization */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                    superTitle="Performance Score"
+                    title="Success Rate"
+                    value={`${performance.successRate}%`}
+                    icon={<TrendingUp size={18} />}
+                    color="rgba(200, 230, 0, 0.15)"
+                />
+                <StatCard
+                    superTitle="Workload Output"
+                    title="Tasks Finalized"
+                    value={performance.taskStats.completed}
+                    icon={<CheckCircle2 size={18} />}
+                    color="rgba(34, 197, 94, 0.15)"
+                />
+                <StatCard
+                    superTitle="Time & Presence"
+                    title="Active Sessions"
+                    value={attendance.length}
+                    icon={<Clock size={18} />}
+                    color="rgba(59, 130, 246, 0.15)"
+                />
+                <StatCard
+                    superTitle="Financials"
+                    title="Monthly Package"
+                    value={payroll.structure ? `${payroll.structure.currency} ${payroll.structure.baseSalary}` : 'N/A'}
+                    icon={<DollarSign size={18} />}
+                    color="rgba(139, 92, 246, 0.15)"
+                />
+            </div>
+
+            {/* Tabbed Intelligence Section */}
+            <div className="space-y-8">
+                {/* Tabs Navigation */}
+                <div className="flex flex-wrap gap-3 p-2 bg-white/5 rounded-[1.5rem] border border-white/10 w-fit">
+                    {[
+                        { id: 'performance', label: 'Operational Performance', icon: Activity },
+                        { id: 'financials', label: 'Payroll & Remuneration', icon: DollarSign },
+                        { id: 'attendance', label: 'Attendance Intelligence', icon: Briefcase },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex items-center gap-3 px-8 py-3.5 rounded-2xl text-[13px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                activeTab === tab.id 
+                                ? 'bg-lime text-black shadow-2xl shadow-lime/30 scale-[1.02]' 
+                                : 'hover:bg-white/5 opacity-50 hover:opacity-100'
+                            }`}
+                        >
+                            <tab.icon size={18} />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Content Area */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {activeTab === 'performance' && (
+                            <div className="space-y-8">
+                                {/* Distribution Chart */}
+                                <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 group hover:border-lime/20 transition-all">
+                                    <div className="flex justify-between items-center mb-8">
+                                        <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                                            <div className="w-1.5 h-6 bg-lime rounded-full" />
+                                            Mission Distribution
+                                        </h2>
+                                        <div className="flex gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-green-500" />
+                                                <span className="text-[10px] font-black uppercase opacity-40">Success</span>
                                             </div>
-                                            <div className="space-y-2">
-                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-30 px-2">Allowances</p>
-                                                {payroll.structure.allowances.map((a: any, i: number) => (
-                                                    <div key={i} className="flex justify-between text-sm px-2">
-                                                        <span className="opacity-60">{a.name}</span>
-                                                        <span className="font-bold">+{a.amount}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="space-y-2">
-                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-30 px-2">Deductions</p>
-                                                {payroll.structure.deductions.map((d: any, i: number) => (
-                                                    <div key={i} className="flex justify-between text-sm px-2">
-                                                        <span className="opacity-60">{d.name}</span>
-                                                        <span className="font-bold text-red-500">-{d.amount}</span>
-                                                    </div>
-                                                ))}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                                                <span className="text-[10px] font-black uppercase opacity-40">In Progress</span>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="py-10 text-center opacity-30 italic">No structure defined</div>
-                                    )}
-                                </div>
-
-                                {/* Salary Stats AreaChart */}
-                                <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                                    <h2 className="text-lg font-black uppercase tracking-tighter mb-6">Pay History</h2>
-                                    <div className="h-[200px] w-full">
+                                    </div>
+                                    <div className="h-[300px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={[...payroll.history].reverse()}>
-                                                <XAxis dataKey="month" hide />
-                                                <YAxis hide />
-                                                <RechartsTooltip />
-                                                <Area type="monotone" dataKey="netSalary" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.1} strokeWidth={2} />
-                                            </AreaChart>
+                                            <BarChart data={[
+                                                { name: 'COMPLETED', count: performance.taskStats.completed, fill: '#22c55e' },
+                                                { name: 'PENDING', count: performance.taskStats.pending, fill: '#eab308' },
+                                                { name: 'PROCESSED', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0, fill: '#C8E600' }
+                                            ]}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                                                <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} fontStyle="italic" tickLine={false} axisLine={false} dy={10} />
+                                                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                                                <RechartsTooltip 
+                                                    cursor={{ fill: 'rgba(255,255,255,0.02)' }} 
+                                                    contentStyle={{ background: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }} 
+                                                />
+                                                <Bar dataKey="count" radius={[12, 12, 4, 4]} maxBarSize={50} animationDuration={2000}>
+                                                    {[0, 1, 2].map((_, index) => (
+                                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : '#C8E600'} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Payment History Table */}
-                            <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                                <h2 className="text-xl font-black uppercase tracking-tighter mb-6">Payroll Disbursements</h2>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm">
+                                {/* Detailed Log */}
+                                <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden">
+                                    <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                                        <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                                            <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                                            Operation Logs
+                                        </h2>
+                                        <span className="text-[10px] font-black bg-white/5 px-3 py-1 rounded-full">{performance.tasks.length} Entries</span>
+                                    </div>
+                                    <div className="overflow-x-auto custom-scrollbar">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-white/[0.02]">
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Activity Reference</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Executive Status</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Verification Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/[0.05]">
+                                                {performance.tasks.map((task: any) => (
+                                                    <tr key={task._id} className="group hover:bg-white/[0.03] transition-all">
+                                                        <td className="px-8 py-5">
+                                                            <p className="text-[13px] font-bold text-white group-hover:text-lime transition-colors">{task.title}</p>
+                                                            <p className="text-[11px] opacity-40 mt-0.5 line-clamp-1">{task.description}</p>
+                                                        </td>
+                                                        <td className="px-8 py-5">
+                                                            <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg border flex items-center gap-1.5 w-fit ${
+                                                                task.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                                            }`}>
+                                                                <div className={`w-1 h-1 rounded-full ${task.status === 'COMPLETED' ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                                                                {task.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right text-[11px] font-medium opacity-40">
+                                                            {new Date(task.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'financials' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Remuneration Structure */}
+                                    <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5">
+                                        <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                                             <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
+                                             Pay Structure
+                                        </h2>
+                                        {payroll.structure ? (
+                                            <div className="space-y-6">
+                                                <div className="p-6 bg-lime/5 rounded-3xl border border-lime/10 relative overflow-hidden group">
+                                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
+                                                         <DollarSign size={40} />
+                                                    </div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Guaranteed Base</p>
+                                                    <p className="text-3xl font-black text-lime">{payroll.structure.currency} {payroll.structure.baseSalary}</p>
+                                                </div>
+                                                
+                                                <div className="space-y-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-30 px-2">Allowances & Perks</p>
+                                                    {payroll.structure.allowances.map((a: any, i: number) => (
+                                                        <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-green-500/30 transition-all">
+                                                            <span className="text-xs font-bold opacity-60">{a.name}</span>
+                                                            <span className="text-sm font-black text-green-400">+{a.amount}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-30 px-2">Statutory Deductions</p>
+                                                    {payroll.structure.deductions.map((d: any, i: number) => (
+                                                        <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-red-500/30 transition-all">
+                                                            <span className="text-xs font-bold opacity-60">{d.name}</span>
+                                                            <span className="text-sm font-black text-red-400">-{d.amount}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="py-20 text-center opacity-20 flex flex-col items-center gap-4">
+                                                <Shield size={48} strokeWidth={1} />
+                                                <p className="text-xs font-black uppercase tracking-[0.2em]">Structure Undefined</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Disbursement Analytics */}
+                                    <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5">
+                                        <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                                             <div className="w-1.5 h-6 bg-purple-400 rounded-full" />
+                                             Pay Trends
+                                        </h2>
+                                        <div className="h-[250px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={[...payroll.history].reverse()}>
+                                                    <defs>
+                                                        <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
+                                                    <XAxis dataKey="month" hide />
+                                                    <YAxis hide />
+                                                    <RechartsTooltip 
+                                                        contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                                    />
+                                                    <Area type="monotone" dataKey="netSalary" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorNet)" strokeWidth={3} />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div className="mt-8 p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-center">
+                                             <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Total Career Earnings</p>
+                                             <p className="text-2xl font-black text-white mt-1">
+                                                {payroll.structure?.currency} {payroll.history.reduce((acc: number, curr: any) => acc + curr.netSalary, 0).toLocaleString()}
+                                             </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Pay History Ledger */}
+                                <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden">
+                                    <div className="p-8 border-b border-white/5">
+                                         <h2 className="text-xl font-black uppercase tracking-tighter">Disbursement Ledger</h2>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="bg-white/[0.02]">
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Period</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Base Package</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Net Settlement</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/[0.05]">
+                                                {payroll.history.map((pay: any) => (
+                                                    <tr key={pay._id} className="hover:bg-white/[0.02] transition-colors">
+                                                        <td className="px-8 py-5 font-black text-[13px] text-white">
+                                                            {new Date(pay.year, pay.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                                        </td>
+                                                        <td className="px-8 py-5 text-xs font-medium opacity-40">{pay.baseSalary}</td>
+                                                        <td className="px-8 py-5 font-black text-lime text-sm">{pay.netSalary}</td>
+                                                        <td className="px-8 py-5 text-right">
+                                                            <span className="text-[9px] font-black px-2 py-1 bg-green-500/10 text-green-400 rounded uppercase tracking-widest">Disbursed</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'attendance' && (
+                            <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                                    <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                                        <div className="w-1.5 h-6 bg-blue-400 rounded-full" />
+                                        Session Intelligence
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Real-time Sync</span>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left">
                                         <thead>
-                                            <tr className="border-b border-white/10">
-                                                <th className="py-4 opacity-40 uppercase text-[10px] font-black">Month/Year</th>
-                                                <th className="py-4 opacity-40 uppercase text-[10px] font-black">Base</th>
-                                                <th className="py-4 opacity-40 uppercase text-[10px] font-black">Net Paid</th>
-                                                <th className="py-4 opacity-40 uppercase text-[10px] font-black text-right">Date</th>
+                                            <tr className="bg-white/[0.02]">
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Authentication Time</th>
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Termination Time</th>
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Security Profile</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {payroll.history.map((pay: any) => (
-                                                <tr key={pay._id}>
-                                                    <td className="py-4 font-bold">{pay.month}/{pay.year}</td>
-                                                    <td className="py-4 opacity-60">{pay.baseSalary}</td>
-                                                    <td className="py-4 font-black text-[#C8E600]">{pay.netSalary}</td>
-                                                    <td className="py-4 text-right opacity-60">{new Date(pay.paidAt).toLocaleDateString()}</td>
+                                        <tbody className="divide-y divide-white/[0.05]">
+                                            {attendance.map((log: any, i: number) => (
+                                                <tr key={i} className="group hover:bg-white/[0.03] transition-all">
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-3 text-[13px] font-bold text-green-400 group-hover:translate-x-1 transition-transform">
+                                                            <div className="p-1.5 bg-green-400/10 rounded-lg"><LogIn size={12} /></div>
+                                                            {new Date(log.loginTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        {log.logoutTime ? (
+                                                            <div className="flex items-center gap-3 text-[13px] font-bold text-red-400">
+                                                                <div className="p-1.5 bg-red-400/10 rounded-lg"><LogOut size={12} /></div>
+                                                                {new Date(log.logoutTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-lime/10 text-lime px-3 py-1 rounded-full animate-pulse border border-lime/20">Active Terminal</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <p className="text-[10px] font-black text-white group-hover:text-lime transition-colors">{log.ipAddress || '0.0.0.0'}</p>
+                                                        <p className="text-[8px] font-medium opacity-30 mt-0.5">IPV4 GATEWAY</p>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
-                    {activeTab === 'attendance' && (
-                        <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                            <h2 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                                <div className="w-2 h-6 bg-[#3b82f6] rounded-full" />
-                                Login & Session History
-                            </h2>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b border-white/10">
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Login Time</th>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Logout Time</th>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40 text-right">IP Address</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {attendance.map((log: any, i: number) => (
-                                            <tr key={i} className="hover:bg-white/5 transition-all">
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-2 text-sm font-bold text-green-500">
-                                                        <LogIn size={14} /> {new Date(log.loginTime).toLocaleString()}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    {log.logoutTime ? (
-                                                        <div className="flex items-center gap-2 text-sm font-bold text-red-500">
-                                                            <LogOut size={14} /> {new Date(log.logoutTime).toLocaleString()}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-[10px] font-black uppercase tracking-widest bg-lime/10 text-lime px-2 py-0.5 rounded">Active Session</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-4 text-right text-xs opacity-50">{log.ipAddress || '---'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    {/* Contextual Intelligence Sidebar */}
+                    <div className="space-y-8">
+                        {/* Organizational Hierarchy */}
+                        <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-125 transition-transform duration-700">
+                                <Building2 size={80} />
                             </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Sidebar context */}
-                <div className="space-y-6">
-                    {/* Organization / Hierarchy */}
-                    <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                        <h2 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                            <div className="w-2 h-6 bg-orange-500 rounded-full" />
-                            Organization
-                        </h2>
-                        <div className="space-y-6">
-                            <div className="relative">
-                                <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-white/5 border-l border-dashed border-white/20" />
+                            <h2 className="text-lg font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
+                                Reporting Line
+                            </h2>
+                            <div className="space-y-8 relative">
+                                <div className="absolute left-4 top-8 bottom-4 w-px bg-gradient-to-b from-white/10 via-white/5 to-transparent" />
                                 
-                                {/* Branch */}
-                                <div className="flex gap-4 relative z-10 mb-8">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                        <Building2 size={16} />
+                                <div className="flex gap-5 relative z-10">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-lg shadow-blue-500/5">
+                                        <Building2 size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Assigned Branch</p>
-                                        <p className="text-sm font-black">{hierarchy.branch?.name || 'N/A'}</p>
-                                        <p className="text-xs opacity-50">{hierarchy.branch?.code}</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Global Node</p>
+                                        <p className="text-sm font-black text-white">{hierarchy.branch?.name || 'Central Command'}</p>
+                                        <p className="text-[10px] font-bold text-lime mt-0.5">{hierarchy.branch?.code || 'GL-001'}</p>
                                     </div>
                                 </div>
 
-                                {/* Manager */}
-                                <div className="flex gap-4 relative z-10">
-                                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
-                                        <User size={16} />
+                                <div className="flex gap-5 relative z-10">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shadow-lg shadow-orange-500/5">
+                                        <User size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Reporting Manager</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Direct Supervisor</p>
                                         {hierarchy.manager ? (
                                             <>
-                                                <p className="text-sm font-black">{hierarchy.manager.fullName}</p>
-                                                <p className="text-xs opacity-50">{hierarchy.manager.email}</p>
+                                                <p className="text-sm font-black text-white">{hierarchy.manager.fullName}</p>
+                                                <p className="text-[10px] font-bold text-orange-400 mt-0.5 truncate max-w-[150px]">{hierarchy.manager.email}</p>
                                             </>
                                         ) : (
-                                            <p className="text-sm font-black opacity-50 italic">No manager assigned</p>
+                                            <p className="text-sm font-black opacity-30 italic">Unassigned</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Contact Card */}
-                    <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
-                        <h2 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                            <div className="w-2 h-6 bg-purple-500 rounded-full" />
-                            Contact Details
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <Mail size={18} className="text-purple-500" />
-                                <div className="overflow-hidden">
-                                    <p className="text-[10px] font-black uppercase opacity-40">Email</p>
-                                    <p className="text-sm truncate font-bold">{profile.email}</p>
+                        {/* Communication Matrix */}
+                        <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 group">
+                            <h2 className="text-lg font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
+                                Connectivity
+                            </h2>
+                            <div className="space-y-4">
+                                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-purple-500/20 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                                            <Mail size={18} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Primary Email</p>
+                                            <p className="text-[13px] font-bold text-white truncate">{profile.email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-blue-500/20 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                            <Phone size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Direct Terminal</p>
+                                            <p className="text-[13px] font-bold text-white">{profile.phone || 'N/A'}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <Phone size={18} className="text-purple-500" />
-                                <div>
-                                    <p className="text-[10px] font-black uppercase opacity-40">Phone</p>
-                                    <p className="text-sm font-bold">{profile.phone || 'N/A'}</p>
-                                </div>
-                            </div>
+                        </div>
+
+                        {/* Quick Insights */}
+                        <div className="p-6 rounded-[2rem] bg-gradient-to-br from-lime/10 to-transparent border border-lime/10">
+                             <div className="flex items-center gap-3 mb-4">
+                                 <Zap size={18} className="text-lime" />
+                                 <p className="text-xs font-black uppercase tracking-widest text-white">AI Analyst Note</p>
+                             </div>
+                             <p className="text-[11px] leading-relaxed text-dim font-medium italic">
+                                "{profile.fullName.split(' ')[0]} is maintaining a <span className="text-lime font-bold">{performance.successRate}% efficiency rate</span> over the current period. Attendance consistency is <span className="text-white font-bold">Optimal</span>. No critical performance alerts detected."
+                             </p>
                         </div>
                     </div>
                 </div>

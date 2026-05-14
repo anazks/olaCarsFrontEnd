@@ -1,0 +1,584 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { 
+    ResponsiveContainer, AreaChart, Area, 
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+
+} from 'recharts';
+import {
+    Library, DollarSign, ShieldAlert, Calendar,
+    MapPin, Building, ChevronLeft, ChevronRight, Search, Filter,
+    TrendingUp, Wallet, FileText, Clock, FilterX
+} from 'lucide-react';
+import { format, startOfMonth } from 'date-fns';
+
+// Services
+import { 
+    getCollectionsOverview, 
+    getCollectionsList, 
+    type CollectionsMetricData, 
+    type TrendDataPoint, 
+    type OverdueEntry, 
+    type UpcomingEntry, 
+    type CollectionListItem 
+} from '../../../services/collectionService';
+import { getAllBranches } from '../../../services/branchService';
+import { useTheme } from '../../../context/ThemeContext';
+
+const CollectionsDashboard = () => {
+    const { t } = useTranslation();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    // Color map matching dashboard layout specs
+    const chartColors = {
+        grid: isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+        text: isDark ? '#94A3B8' : '#64748B',
+        tooltipBg: isDark ? '#1C1C1C' : '#FFFFFF',
+        tooltipBorder: isDark ? '#2A2A2A' : '#E5E7EB',
+        tooltipText: isDark ? '#FFFFFF' : '#0A0A0A',
+    };
+
+    // Loading & Stats state
+    const [loading, setLoading] = useState(true);
+    const [metrics, setMetrics] = useState<CollectionsMetricData | null>(null);
+    const [trend, setTrend] = useState<TrendDataPoint[]>([]);
+    const [recentOverdue, setRecentOverdue] = useState<OverdueEntry[]>([]);
+    const [upcomingPayments, setUpcomingPayments] = useState<UpcomingEntry[]>([]);
+
+    // List and Paginated state
+    const [listItems, setListItems] = useState<CollectionListItem[]>([]);
+    const [listLoading, setListLoading] = useState(false);
+    const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1 });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+
+    // Lookup collections
+    const [allBranches, setAllBranches] = useState<any[]>([]);
+
+    // Filter presets
+    const [filters, setFilters] = useState({
+        country: '',
+        branch: '',
+        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+        endDate: format(new Date(), 'yyyy-MM-dd')
+    });
+
+    // 1. Fetch Initial Setup (Branches)
+    useEffect(() => {
+        const loadBranches = async () => {
+            try {
+                const res = await getAllBranches({ limit: 1000 });
+                setAllBranches(res.data || []);
+            } catch (err) {
+                console.error('Error loading branches', err);
+            }
+        };
+        loadBranches();
+    }, []);
+
+    // Resolving country and cascaded branch options
+    const availableCountries = useMemo(() => {
+        const countries = allBranches.map(b => b.country).filter(c => !!c);
+        return Array.from(new Set(countries)).sort();
+    }, [allBranches]);
+
+    const filteredBranches = useMemo(() => {
+        if (!filters.country) return allBranches;
+        return allBranches.filter(b => b.country === filters.country);
+    }, [filters.country, allBranches]);
+
+    // Auto clear selected branch if country removes it from bounds
+    useEffect(() => {
+        if (filters.branch) {
+            const exists = filteredBranches.some(b => b._id === filters.branch);
+            if (!exists) setFilters(p => ({ ...p, branch: '' }));
+        }
+    }, [filters.country, filteredBranches]);
+
+    // Debounce search string input
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // 2. Fetch Primary Analytics/Overview
+    const loadAnalytics = async () => {
+        setLoading(true);
+        try {
+            const data = await getCollectionsOverview(filters);
+            setMetrics(data.metrics);
+            setTrend(data.trend);
+            setRecentOverdue(data.recentOverdue);
+            setUpcomingPayments(data.upcomingPayments);
+        } catch (err) {
+            console.error('Failed fetching collections overview', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 3. Fetch Detailed Invoices List
+    const loadList = async (pageNumber = 1) => {
+        setListLoading(true);
+        try {
+            const payload = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                page: pageNumber,
+                limit: 10
+            };
+            const data = await getCollectionsList(payload);
+            setListItems(data.items || []);
+            setPagination({
+                page: data.pagination.page,
+                total: data.pagination.total,
+                pages: data.pagination.pages
+            });
+        } catch (err) {
+            console.error('Failed fetching invoice grid', err);
+        } finally {
+            setListLoading(false);
+        }
+    };
+
+    // Sync primary analytics trigger on core filters change
+    useEffect(() => {
+        loadAnalytics();
+    }, [filters.country, filters.branch, filters.startDate, filters.endDate]);
+
+    // Sync list fetch on any interactive element change
+    useEffect(() => {
+        loadList(1);
+    }, [filters.country, filters.branch, filters.startDate, filters.endDate, debouncedSearch, statusFilter]);
+
+    const updateFilter = (key: string, val: string) => {
+        setFilters(p => ({ ...p, [key]: val }));
+    };
+
+    const clearDates = () => {
+        setFilters(p => ({ ...p, startDate: '', endDate: '' }));
+    };
+
+    // Inline Loading spinner component
+    if (loading && !metrics) {
+        return (
+            <div className="h-screen w-full flex items-center justify-center transition-colors" style={{ background: 'var(--bg-main)' }}>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+            
+            {/* HEADER SECTION WITH LOGO/DESCRIPTIVE LABELS */}
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
+                <div>
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
+                        <Library className="text-[#C8E600]" /> Collections Central
+                    </h1>
+                    <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Aggregate recovery analysis and forecasts</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
+                        <p className="text-xs font-bold text-[#C8E600]">
+                            {filters.startDate || filters.endDate 
+                                ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM dd, yyyy') : 'Genesis'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : 'Today'}`
+                                : 'Span: All-Time Dataset'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* CONTROL BOARD: FILTERS */}
+                <div className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    
+                    {/* Country Dropdown */}
+                    <div className="relative">
+                        <select value={filters.country} 
+                                onChange={(e) => updateFilter('country', e.target.value)}
+                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
+                                style={{ color: 'var(--text-main)' }}>
+                            <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
+                            {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
+                        </select>
+                        <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                    </div>
+
+                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                    {/* Branch Select */}
+                    <div className="relative">
+                        <select value={filters.branch} 
+                                onChange={(e) => updateFilter('branch', e.target.value)}
+                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
+                                style={{ color: 'var(--text-main)' }}>
+                            <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
+                            {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
+                        </select>
+                        <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                    </div>
+
+                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                    {/* Date Constraints */}
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
+                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                        <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
+                        <input type="date" value={filters.startDate} 
+                               onChange={(e) => updateFilter('startDate', e.target.value)}
+                               className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                               style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
+                        <input type="date" value={filters.endDate} 
+                               onChange={(e) => updateFilter('endDate', e.target.value)}
+                               className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                               style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                        {(filters.startDate || filters.endDate) && (
+                            <button onClick={clearDates} className="ml-1 text-red-500 hover:text-red-600" title="Clear dates">
+                                <FilterX size={14} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* STAT CARDS COMPACT GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <MetricStatCard 
+                    title="Total Billed" 
+                    value={`$${(metrics?.totalInvoiced || 0).toLocaleString()}`} 
+                    description="Gross expected revenue"
+                    icon={<FileText size={22} className="text-blue-500" />}
+                    iconBg="bg-blue-500/10"
+                />
+                <MetricStatCard 
+                    title="Collections Received" 
+                    value={`$${(metrics?.totalCollected || 0).toLocaleString()}`} 
+                    description="Settled payments"
+                    icon={<Wallet size={22} className="text-[#C8E600]" />}
+                    iconBg="bg-[#C8E600]/10"
+                />
+                <MetricStatCard 
+                    title="Pending Recoveries" 
+                    value={`$${(metrics?.pendingCollected || 0).toLocaleString()}`} 
+                    description="Awaiting deposit"
+                    icon={<Clock size={22} className="text-amber-500" />}
+                    iconBg="bg-amber-500/10"
+                />
+                <MetricStatCard 
+                    title="Total Overdue" 
+                    value={`$${(metrics?.overdueAmount || 0).toLocaleString()}`} 
+                    description="Delinquent balance"
+                    highlight={true}
+                    icon={<ShieldAlert size={22} className="text-red-500" />}
+                    iconBg="bg-red-500/10"
+                />
+            </div>
+
+            {/* REVENUE FLOW CHART & HIGHLIGHT STATS ROW */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+                
+                {/* EXPECTED VS REALIZED CHART */}
+                <div className="lg:col-span-8 rounded-3xl p-6 border shadow-sm flex flex-col justify-between transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                        <div>
+                            <h3 className="text-lg font-bold">Expected vs Realized Collections</h3>
+                            <p className="text-xs font-medium text-gray-500 mt-0.5">Projected billing targets compared against actual deposits</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-full border border-dashed border-blue-400" /> Projected
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#C8E600]" /> Realized
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="h-[280px] w-full">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <AreaChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="gradCollected" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.25}/>
+                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
+                                <XAxis dataKey="label" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                                <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                                <RechartsTooltip 
+                                    contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
+                                    formatter={(v: any) => [`$${v.toLocaleString()}`, '']}
+                                    labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                                />
+                                <Area type="monotone" dataKey="expected" stroke="#3B82F6" fill="transparent" strokeWidth={2} strokeDasharray="4 4" name="Expected" />
+                                <Area type="monotone" dataKey="collected" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#gradCollected)" name="Collected" dot={{ fill: '#C8E600', r: 4 }} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* SECONDARY KPI PILLS PANEL */}
+                <div className="lg:col-span-4 flex flex-col gap-6">
+                    <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
+                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-start">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                <TrendingUp size={24} className="text-emerald-500" />
+                            </div>
+                            <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500">MTD Active</div>
+                        </div>
+                        <div className="mt-8">
+                            <div className="text-3xl font-black text-[#C8E600]">${(metrics?.mtdCollected || 0).toLocaleString()}</div>
+                            <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Month-To-Date Collected</p>
+                            <p className="text-xs opacity-40 mt-4">Consolidated total of settled receipts logged since first call of the current month cycle.</p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
+                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-start">
+                            <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center">
+                                <DollarSign size={24} className="text-[#C8E600]" />
+                            </div>
+                            <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400">Forecast 30d</div>
+                        </div>
+                        <div className="mt-8">
+                            <div className="text-3xl font-black text-white">${(metrics?.forecastAmount || 0).toLocaleString()}</div>
+                            <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Projected Collections</p>
+                            <p className="text-xs opacity-40 mt-4">Calculated future billing inflows pending execution between today and the coming 30 days.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* MID-WAY LOGS: OVERDUE VS UPCOMING SPLIT VIEW */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                
+                {/* TOP OVERDUE ITEMS LIST */}
+                <div className="rounded-3xl p-6 border shadow-sm transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold flex items-center gap-2"><ShieldAlert className="text-red-500" size={18} /> Critical Aging Receivables</h3>
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded bg-red-500/10 text-red-500 uppercase">Highest Risk</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-[10px] font-black tracking-wider uppercase border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="pb-3">Account / Fleet</th>
+                                    <th className="pb-3">Due Date</th>
+                                    <th className="pb-3 text-right">Aging</th>
+                                    <th className="pb-3 text-right">Arrears</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-xs divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                {recentOverdue.map(entry => (
+                                    <tr key={entry.id} className="group">
+                                        <td className="py-3.5 font-bold text-white group-hover:text-[#C8E600] transition-colors">
+                                            {entry.driverName}
+                                            <div className="text-[10px] opacity-50 font-medium tracking-wide mt-0.5">{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                        </td>
+                                        <td className="py-3.5 font-semibold opacity-70">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-3.5 text-right"><span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black">{entry.daysOverdue} Days</span></td>
+                                        <td className="py-3.5 text-right font-black text-red-500 text-sm">${entry.balance.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                                {recentOverdue.length === 0 && (
+                                    <tr><td colSpan={4} className="py-10 text-center opacity-40 italic font-medium">Fantastic. Perfect sheet, zero aging debts found.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* UPCOMING INFLOWS LIST */}
+                <div className="rounded-3xl p-6 border shadow-sm transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold flex items-center gap-2"><Clock className="text-blue-400" size={18} /> Imminent Receivables (Forecast)</h3>
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 uppercase">Next Inflow</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-[10px] font-black tracking-wider uppercase border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="pb-3">Account / Fleet</th>
+                                    <th className="pb-3">Incoming Due</th>
+                                    <th className="pb-3 text-right">Target Value</th>
+                                    <th className="pb-3 text-right">Net Outstanding</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-xs divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                {upcomingPayments.map(entry => (
+                                    <tr key={entry.id} className="group">
+                                        <td className="py-3.5 font-bold text-white group-hover:text-[#C8E600] transition-colors">
+                                            {entry.driverName}
+                                            <div className="text-[10px] opacity-50 font-medium tracking-wide mt-0.5">{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                        </td>
+                                        <td className="py-3.5 font-semibold text-[#C8E600]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-3.5 text-right font-bold opacity-70">${entry.totalDue.toLocaleString()}</td>
+                                        <td className="py-3.5 text-right font-black text-white text-sm">${entry.balance.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                                {upcomingPayments.length === 0 && (
+                                    <tr><td colSpan={4} className="py-10 text-center opacity-40 italic font-medium">No near-future billing queues pending execution.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* BOTTOM CORE LEDGER: COMPLETE PAGINATED GRID */}
+            <div className="rounded-3xl p-6 border shadow-sm transition-colors"
+                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                
+                {/* INTERACTIVE FILTER BAR FOR DATA TABLE */}
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
+                    <h3 className="text-lg font-bold">Collections Ledger</h3>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                        
+                        {/* Search Bar */}
+                        <div className="relative flex-1 min-w-[220px]">
+                            <input 
+                                type="text" 
+                                placeholder="Search driver, plate, fleet, ID..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border transition-all outline-none focus:ring-1 focus:ring-[#C8E600]"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
+                        </div>
+
+                        {/* Status filter Select */}
+                        <div className="relative">
+                            <select 
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="pl-8 pr-8 py-2 text-sm font-semibold rounded-xl border appearance-none cursor-pointer outline-none transition-all"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Invoice States</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="PARTIAL">Partial</option>
+                                <option value="PAID">Settled</option>
+                                <option value="OVERDUE">Overdue</option>
+                            </select>
+                            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* TABLE VIEWPORT */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="text-[10px] font-black uppercase tracking-wider border-b opacity-50" style={{ borderColor: 'var(--border-main)' }}>
+                                <th className="pb-4">Invoice #</th>
+                                <th className="pb-4">Driver / Customer</th>
+                                <th className="pb-4">Fleet / Asset</th>
+                                <th className="pb-4">Branch (Country)</th>
+                                <th className="pb-4">Due Date</th>
+                                <th className="pb-4 text-right">Billed</th>
+                                <th className="pb-4 text-right">Net Paid</th>
+                                <th className="pb-4 text-right">Balance</th>
+                                <th className="pb-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-xs divide-y divide-gray-800" style={{ borderColor: 'var(--border-main)' }}>
+                            {listItems.map((item) => (
+                                <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
+                                    <td className="py-4 font-black text-[#C8E600]">{item.invoiceNumber}</td>
+                                    <td className="py-4 font-bold text-white">{item.driverName}</td>
+                                    <td className="py-4">
+                                        <span className="font-semibold">{item.vehicleNumber}</span>
+                                        <div className="text-[10px] opacity-50">Fleet #{item.fleetNumber}</div>
+                                    </td>
+                                    <td className="py-4">
+                                        <span className="font-medium opacity-90">{item.branch}</span>
+                                        <div className="text-[10px] opacity-50 font-bold uppercase">{item.country}</div>
+                                    </td>
+                                    <td className="py-4 font-bold opacity-80">{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
+                                    <td className="py-4 text-right font-semibold opacity-70">${item.totalAmountDue.toLocaleString()}</td>
+                                    <td className="py-4 text-right font-bold text-emerald-400">${item.amountPaid.toLocaleString()}</td>
+                                    <td className="py-4 text-right font-black text-white">${item.balance.toLocaleString()}</td>
+                                    <td className="py-4 text-center">
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                            item.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500' :
+                                            item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
+                                            item.status === 'PARTIAL' ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-700/50 text-gray-300'
+                                        }`}>
+                                            {item.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                            {listItems.length === 0 && !listLoading && (
+                                <tr><td colSpan={9} className="py-16 text-center italic font-medium opacity-50">No collections invoices match chosen filter matrix. Try relaxing boundaries.</td></tr>
+                            )}
+                            {listLoading && (
+                                <tr><td colSpan={9} className="py-16 text-center"><div className="animate-pulse font-bold text-[#C8E600]">Refreshing record arrays...</div></td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* PAGINATION FOOTER */}
+                {pagination.pages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-xs font-medium opacity-50">Total records: <span className="font-bold">{pagination.total}</span> invoices</p>
+                        
+                        <div className="flex items-center gap-2">
+                            <button 
+                                disabled={pagination.page <= 1}
+                                onClick={() => loadList(pagination.page - 1)}
+                                className="p-2 rounded-xl border disabled:opacity-30 transition-colors hover:bg-white/5"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-xs font-bold px-4 py-2 rounded-xl bg-white/5">Page {pagination.page} of {pagination.pages}</span>
+                            <button 
+                                disabled={pagination.page >= pagination.pages}
+                                onClick={() => loadList(pagination.page + 1)}
+                                className="p-2 rounded-xl border disabled:opacity-30 transition-colors hover:bg-white/5"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+            </div>
+
+        </div>
+    );
+};
+
+// Helper Visual Components matching Dashboard specs
+const MetricStatCard = ({ title, value, description, icon, iconBg, highlight }: any) => (
+    <div className={`rounded-3xl p-6 border shadow-sm flex flex-col justify-between hover:-translate-y-1 duration-300 transition-all`}
+         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+        <div className="flex justify-between items-start">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${iconBg}`}>
+                {icon}
+            </div>
+        </div>
+        <div className="mt-6">
+            <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : 'text-white'}`}>{value}</div>
+            <p className="text-[11px] font-black tracking-wider uppercase mt-2 opacity-40">{title}</p>
+            <p className="text-[10px] font-medium text-[#C8E600] mt-1">{description}</p>
+        </div>
+    </div>
+);
+
+export default CollectionsDashboard;
