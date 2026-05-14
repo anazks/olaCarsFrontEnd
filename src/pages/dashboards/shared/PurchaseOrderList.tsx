@@ -11,6 +11,18 @@ import HasPermission from '../../../components/HasPermission';
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
     const styles = {
+        REQUESTED: {
+            bg: 'rgba(59, 130, 246, 0.1)',
+            text: '#3b82f6',
+            border: 'rgba(59, 130, 246, 0.3)',
+            icon: <Clock size={12} />
+        },
+        MANAGER_APPROVED: {
+            bg: 'rgba(139, 92, 246, 0.1)',
+            text: '#8b5cf6',
+            border: 'rgba(139, 92, 246, 0.3)',
+            icon: <CheckCircle size={12} />
+        },
         WAITING: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
@@ -231,7 +243,9 @@ const PurchaseOrderList = () => {
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">{t('management.common.allStatuses')}</option>
+                                <option value="ALL">{t('management.common.filters.allStatuses')}</option>
+                                <option value="REQUESTED">Requested</option>
+                                <option value="MANAGER_APPROVED">Manager Approved</option>
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>
                                 <option value="APPROVED">{t('management.common.status.approved')}</option>
                                 <option value="REJECTED">{t('management.common.status.rejected')}</option>

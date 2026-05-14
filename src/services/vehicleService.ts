@@ -31,6 +31,7 @@ export type MaintenanceType = 'Scheduled' | 'Unscheduled' | 'Emergency';
 export type SuspensionReason = 'Accident' | 'Legal' | 'Police' | 'Dispute' | 'Other';
 export type TransportMethod = 'Driven' | 'Flatbed' | 'Shipping';
 export type RetirementReason = 'Sold' | 'Written Off' | 'End of Life' | 'Beyond Repair';
+export type VehicleCondition = 'New' | 'Used';
 
 // ── Nested Interfaces ─────────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ export interface BasicDetails {
     gpsSerialNumber?: string;
     leaseDurationWeeks?: number;
     fleetNumber?: string;
+    condition?: VehicleCondition;
 }
 
 export interface LegalDocs {
@@ -257,6 +259,7 @@ export interface CreateVehiclePayload {
         odometer?: number;
         gpsSerialNumber?: string;
         fleetNumber?: string;
+        condition?: VehicleCondition;
     };
     insuranceId?: string;
     handlingStaff?: string;
@@ -314,8 +317,9 @@ export const assignVehicleToDriver = async (
     vehicleId: string, 
     driverId: string,
     leaseDetails: {
-        durationWeeks: number;
-        weeklyRent: number;
+        durationMonths: number;
+        monthlyRent: number;
+        depositAmount?: number;
         notes?: string;
     }
 ): Promise<any> => {

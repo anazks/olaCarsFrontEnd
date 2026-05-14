@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 // ── Shared UI Constants ──────────────────────────────────────────────────────
 
 const PAYMENT_METHODS: PaymentMethod[] = ['Cash', 'Bank Transfer', 'Finance'];
+const VEHICLE_CONDITIONS: string[] = ['New', 'Used'];
 
 const inputStyle = { background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' };
 const inputClass = 'w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all text-sm';
@@ -65,7 +66,8 @@ const CreateVehicle = () => {
         },
         handlingStaff: '',
         basicDetails: {
-            fleetNumber: ''
+            fleetNumber: '',
+            condition: 'New'
         } as any
     });
 
@@ -516,6 +518,21 @@ const CreateVehicle = () => {
                                 style={inputStyle}
                             >
                                 {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </FormField>
+
+                        <FormField label="Vehicle Condition" required>
+                            <select
+                                required
+                                value={formData.basicDetails?.condition || 'New'}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    basicDetails: { ...prev.basicDetails, condition: e.target.value } as any
+                                }))}
+                                className={inputClass}
+                                style={inputStyle}
+                            >
+                                {VEHICLE_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </FormField>
                     </div>

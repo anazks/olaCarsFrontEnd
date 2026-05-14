@@ -70,6 +70,7 @@ import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
 import DriverList from './pages/dashboards/shared/DriverList';
 import CreateDriver from './pages/dashboards/shared/CreateDriver';
 import DriverDetail from './pages/dashboards/shared/DriverDetail';
+import DriverRentPlan from './pages/dashboards/shared/DriverRentPlan';
 import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssignment';
 import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerformanceDashboard';
 import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
@@ -87,6 +88,7 @@ import FinancialStatements from './pages/dashboards/finance/FinancialStatements'
 import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
+import InvoiceList from './pages/dashboards/finance/InvoiceList';
 
 
 function App() {
@@ -183,6 +185,8 @@ function App() {
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
@@ -194,6 +198,7 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="invoices" element={<InvoiceList />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -245,6 +250,8 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
+                <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               </Route>
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
@@ -308,6 +315,7 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               </Route>
 
@@ -322,6 +330,7 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="invoices" element={<InvoiceList />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -366,6 +375,7 @@ function App() {
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               </Route>
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
@@ -384,6 +394,7 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="invoices" element={<InvoiceList />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -425,6 +436,7 @@ function App() {
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               </Route>
 
@@ -459,6 +471,7 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
               </Route>
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
@@ -487,6 +500,7 @@ function App() {
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               </Route>
 
@@ -498,6 +512,7 @@ function App() {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="invoices" element={<InvoiceList />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />

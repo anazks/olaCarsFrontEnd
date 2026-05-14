@@ -119,6 +119,26 @@ export interface Driver {
             note?: string;
         }>;
     }>;
+    additionalPayments?: Array<{
+        _id: string;
+        type: 'DEPOSIT' | 'ADMIN_FEE' | 'PENALTY' | 'OTHER';
+        label: string;
+        amount: number;
+        dueDate: string;
+        status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'CANCELLED';
+        amountPaid: number;
+        balance: number;
+        paidAt?: string;
+        payments: Array<{
+            amount: number;
+            paidAt: string;
+            paymentMethod?: string;
+            transactionId?: string;
+            note?: string;
+        }>;
+        relatedVehicle?: string;
+        notes?: string;
+    }>;
     appliedAt: string;
     createdAt?: string;
     updatedAt?: string;
@@ -201,6 +221,15 @@ export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
 
+export const payAdditionalPayment = async (
+    driverId: string,
+    paymentId: string,
+    data: { amount: number; paymentMethod: string; note?: string }
+): Promise<Driver> => {
+    const response = await api.post(`/api/driver/${driverId}/additional-payments/${paymentId}/pay`, data);
+    return response.data.data;
+};
+
 export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promise<{ message: string; data: BulkUploadResult }> => {
     const payload: any = { drivers };
     if (branch) payload.branch = branch;
@@ -231,7 +260,8 @@ export const driverService = {
     markRentAsPaid,
     deleteDriver,
     bulkCreateDrivers,
-    dataMigrateDrivers
+    dataMigrateDrivers,
+    payAdditionalPayment
 };
 
 export default driverService;

@@ -189,7 +189,7 @@ const GeneralLedger = () => {
             </div>
             
             {/* Navigation Shortcuts */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div 
                     onClick={() => navigate('../vouchers')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
@@ -248,6 +248,18 @@ const GeneralLedger = () => {
                     </div>
                     <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Purchase Bills</h4>
                     <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Track vendor bills</p>
+                </div>
+
+                <div 
+                    onClick={() => navigate('../invoices')}
+                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
+                        <FileText size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Invoices</h4>
+                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage rent invoices</p>
                 </div>
             </div>
 

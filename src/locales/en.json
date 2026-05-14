@@ -765,6 +765,7 @@
         "vin": "VIN",
         "year": "Year",
         "category": "Category",
+        "condition": "Condition",
         "price": "Price"
       },
       "empty": {
@@ -906,6 +907,7 @@
           "engineCapacity": "Engine Capacity (cc)",
           "odometer": "Odometer",
           "gpsSerial": "GPS Serial",
+          "condition": "Condition",
           "monthlyRent": "Monthly Rent",
           "vendor": "Vendor / Supplier",
           "purchaseDate": "Purchase Date",

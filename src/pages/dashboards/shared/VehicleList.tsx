@@ -331,6 +331,7 @@ const VehicleList = () => {
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.year')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.condition')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price')}</th>
                                         <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
@@ -377,6 +378,11 @@ const VehicleList = () => {
                                             <td className="px-6 py-4">
                                                 <div className="text-sm" style={{ color: 'var(--text-main)' }}>
                                                     {v.basicDetails?.category ? t(`management.vehicles.categories.${v.basicDetails.category}`) : '—'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>
+                                                    {v.basicDetails?.condition || '—'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

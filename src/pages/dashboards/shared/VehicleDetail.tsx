@@ -130,6 +130,7 @@ const VehicleDetail = () => {
         bodyType: '' as BodyType,
         odometer: 0,
         gpsSerialNumber: '',
+        condition: 'New' as any,
     });
 
     // Stage-specific form state
@@ -186,6 +187,7 @@ const VehicleDetail = () => {
                     bodyType: data.basicDetails.bodyType || '' as BodyType,
                     odometer: data.basicDetails.odometer || 0,
                     gpsSerialNumber: data.basicDetails.gpsSerialNumber || '',
+                    condition: data.basicDetails.condition || 'New',
                 });
             }
 
@@ -556,6 +558,13 @@ const VehicleDetail = () => {
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
                                 <input type="number" value={editBasicDetails.odometer || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                             </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.condition')}</label>
+                                <select value={editBasicDetails.condition} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, condition: e.target.value as any }))} className={inputClass} style={inputStyle}>
+                                    <option value="New">New</option>
+                                    <option value="Used">Used</option>
+                                </select>
+                            </div>
 
                         </div>
                     ) : (
@@ -572,6 +581,7 @@ const VehicleDetail = () => {
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails?.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.condition')} value={vehicle.basicDetails?.condition || '—'} />
 
                         </div>
                     )}
