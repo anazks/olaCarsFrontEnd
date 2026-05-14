@@ -33,6 +33,16 @@ export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> 
     return response.data.data.data || response.data.data || response.data;
 };
 
+export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], total?: number}> => {
+    const params = new URLSearchParams();
+    if (filters.status && filters.status !== 'ALL') {
+        params.append('status', filters.status);
+    }
+    // Add other filters as needed
+    const response = await api.get(`/api/invoices?${params.toString()}`);
+    return { data: response.data.data.data || response.data.data || [] };
+};
+
 export const payInvoice = async (invoiceId: string, paymentData: any): Promise<Invoice> => {
     const response = await api.post(`/api/invoices/${invoiceId}/pay`, paymentData);
     return response.data.data;

@@ -2,7 +2,7 @@ import api from './api';
 import type { Supplier } from './supplierService';
 import type { Branch } from './branchService';
 
-export type POStatus = 'WAITING' | 'APPROVED' | 'REJECTED';
+export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED';
 export type POPurpose = 'Vehicle' | 'Spare Parts' | 'Others';
 
 export interface PurchaseOrderItem {
@@ -63,7 +63,7 @@ export interface CreatePurchaseOrderPayload {
 }
 
 export interface ApproveRejectPurchaseOrderPayload {
-    status: 'APPROVED' | 'REJECTED';
+    status: POStatus;
     notes?: string;
     rejectionReason?: string;
 }
