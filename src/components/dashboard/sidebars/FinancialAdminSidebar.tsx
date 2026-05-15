@@ -144,6 +144,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Staff Performance', path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/financial-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {

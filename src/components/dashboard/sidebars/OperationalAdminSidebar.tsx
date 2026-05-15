@@ -95,6 +95,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/operational-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {

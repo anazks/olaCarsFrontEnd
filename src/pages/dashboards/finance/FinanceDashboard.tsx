@@ -4,31 +4,38 @@ import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getTasks, updateTaskStatus } from '../../../services/taskService';
+import type { StaffTask } from '../../../services/taskService';
+import { getUser } from '../../../utils/auth';
+import { toast } from 'react-hot-toast';
 
 const FinanceDashboard = () => {
     const [recentEntries, setRecentEntries] = useState<LedgerEntry[]>([]);
     const [monthlyData, setMonthlyData] = useState<any[]>([]);
     const [totals, setTotals] = useState({ income: 0, expense: 0 });
+    const [tasks, setTasks] = useState<StaffTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
+    const user = getUser();
 
     const fetchDashboardData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const ledgerData = await getLedgerEntries();
+            const [ledgerData, taskData] = await Promise.all([
+                getLedgerEntries(),
+                getTasks({ assignedTo: user?.id || user?._id })
+            ]);
             
             const sorted = Array.isArray(ledgerData) 
                 ? [...ledgerData].sort((a, b) => new Date(b.date || b.entryDate || '').getTime() - new Date(a.date || a.entryDate || '').getTime())
                 : [];
             
-            // Keep the last 10 entries for the bottom table preview
             setRecentEntries(sorted.slice(0, 10));
+            setTasks(Array.isArray(taskData) ? taskData.slice(0, 5) : []);
 
-            // Aggregate all historical ledger entries for charts & global totals
             const monthMap = new Map<string, { month: string; income: number; expense: number; netProfit: number }>();
-            
             let totalIncome = 0;
             let totalExpense = 0;
 
@@ -37,7 +44,6 @@ const FinanceDashboard = () => {
                 if (isNaN(eDate.getTime())) return;
                 
                 const monthKey = eDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
-                
                 let amt = 0;
                 let isDebit = false;
                 
@@ -45,29 +51,17 @@ const FinanceDashboard = () => {
                     amt = entry.amount;
                     isDebit = entry.type === 'DEBIT';
                 } else {
-                    if ((entry.credit || 0) > 0) {
-                        amt = entry.credit || 0;
-                        isDebit = false;
-                    } else if ((entry.debit || 0) > 0) {
-                        amt = entry.debit || 0;
-                        isDebit = true;
-                    }
+                    amt = (entry.credit || 0) > 0 ? entry.credit : (entry.debit || 0);
+                    isDebit = (entry.debit || 0) > 0;
                 }
 
-                // Determine effective money directional flow utilizing Accounting Codes
                 const cat = entry.accountingCode?.category?.toUpperCase();
-                
                 let incomeToAdd = 0;
                 let expenseToAdd = 0;
 
-                // Broaden expense calculation to include Assets (like vehicle purchases) 
-                // and fallback to transaction type if category is missing
-                if (cat === 'INCOME') {
-                    incomeToAdd = isDebit ? -amt : amt; // debit to income account decreases overall income
-                } else if (cat === 'EXPENSE' || cat === 'ASSET') {
-                    expenseToAdd = isDebit ? amt : -amt; // credit to expense/asset account decreases overall expense
-                } else {
-                    // Fallback to cash basis
+                if (cat === 'INCOME') incomeToAdd = isDebit ? -amt : amt;
+                else if (cat === 'EXPENSE' || cat === 'ASSET') expenseToAdd = isDebit ? amt : -amt;
+                else {
                     if (isDebit) expenseToAdd = amt;
                     else incomeToAdd = amt;
                 }
@@ -82,7 +76,6 @@ const FinanceDashboard = () => {
                 monthMap.set(monthKey, current);
             });
 
-            // Convert to array and reverse so the oldest month plots on the left
             const chartData = Array.from(monthMap.values()).reverse();
             setMonthlyData(chartData);
             setTotals({ income: totalIncome, expense: totalExpense });
@@ -91,6 +84,20 @@ const FinanceDashboard = () => {
             setError(err.response?.data?.message || err.message || 'Failed to fetch dashboard data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTaskUpdate = async (taskId: string, newStatus: string) => {
+        try {
+            let feedback = '';
+            if (newStatus === 'COMPLETED') {
+                feedback = window.prompt('Mission Feedback (Optional):') || '';
+            }
+            await updateTaskStatus(taskId, newStatus, feedback);
+            toast.success('Mission status synchronized');
+            fetchDashboardData();
+        } catch (err) {
+            toast.error('Synchronization failed');
         }
     };
 
@@ -125,21 +132,33 @@ const FinanceDashboard = () => {
     return (
         <div className="container-responsive space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <BarChart3 size={28} style={{ color: '#C8E600' }} />
-                        Finance Dashboard
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                        <div className="p-2.5 rounded-xl" style={{ background: 'var(--brand-lime)', color: '#000' }}>
+                            <BarChart3 size={24} />
+                        </div>
+                        Finance Command Center
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Overview of financial health and recent activities</p>
+                    <p className="text-sm mt-1 font-medium" style={{ color: 'var(--text-dim)' }}>
+                        Institutional oversight of corporate liquidity and fiscal operations.
+                    </p>
                 </div>
-                <button
-                    onClick={fetchDashboardData}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-white/5"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
-                >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
-                </button>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button
+                        onClick={() => navigate('../vouchers')} // Vouchers often used to generate invoices/payments
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-lime text-black text-[11px] font-black uppercase tracking-widest shadow-xl shadow-lime/20 hover:scale-105 transition-all"
+                    >
+                        <Receipt size={16} /> Generate Invoice
+                    </button>
+                    <button
+                        onClick={fetchDashboardData}
+                        className="p-3 rounded-xl border border-white/5 transition-all hover:bg-white/5"
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
             </div>
 
             {/* Error */}
@@ -213,180 +232,206 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {summaryCards.map((card, idx) => (
-                    <div key={idx} className="p-6 rounded-2xl border transition-colors duration-300 flex items-center gap-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: card.bg, color: card.color }}>
-                            <card.icon size={24} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>{card.title}</p>
-                            <h3 className="text-2xl font-bold font-mono" style={{ color: 'var(--text-main)' }}>
-                                {card.value}
-                            </h3>
+                    <div key={idx} className="p-8 rounded-2xl border flex flex-col justify-between group transition-all hover:border-white/10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{card.title}</p>
+                                <h3 className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>
+                                    <span className="text-sm text-dim mr-1 opacity-40">$</span>
+                                    {card.value}
+                                </h3>
+                            </div>
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: card.bg, color: card.color }}>
+                                <card.icon size={24} />
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Profit/Loss Chart */}
-                <div className="rounded-2xl border transition-colors duration-300 flex flex-col p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                     <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <BarChart3 size={20} style={{ color: '#C8E600' }} />
-                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Monthly Profit & Loss</h2>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Main Visuals */}
+                <div className="xl:col-span-2 space-y-6">
+                    {/* Charts Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Profit/Loss Chart */}
+                        <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                             <div className="flex items-center gap-3 mb-6">
+                                <div className="w-1 h-6 bg-lime rounded-full" />
+                                <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Fiscal Trajectory</h2>
+                             </div>
+                             
+                             <div style={{ width: '100%', height: 300 }}>
+                                {loading ? (
+                                    <div className="flex items-center justify-center h-full">
+                                        <div className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                            <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                                            <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
+                                            <Tooltip 
+                                                cursor={{fill: 'rgba(255,255,255,0.02)'}}
+                                                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }}
+                                            />
+                                            <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                            <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                             </div>
                         </div>
-                     </div>
-                     
-                     <div style={{ width: '100%', height: 350 }}>
-                        {loading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        ) : monthlyData.length === 0 ? (
-                            <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--text-dim)' }}>
-                                No financial data available to chart
-                            </div>
-                        ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                                    <Tooltip 
-                                        cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                        contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)' }}
-                                        itemStyle={{ fontSize: '13px', fontWeight: 600 }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                                    <Bar dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                                    <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
-                     </div>
-                </div>
 
-                {/* Net Profit Trend Line Chart */}
-                <div className="rounded-2xl border transition-colors duration-300 flex flex-col p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <Activity size={20} style={{ color: '#C8E600' }} />
-                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Net Profit Trend</h2>
+                        {/* Net Profit Trend */}
+                        <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-1 h-6 bg-blue-500 rounded-full" />
+                                <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Net Profit Trend</h2>
+                            </div>
+                            
+                            <div style={{ width: '100%', height: 300 }}>
+                                {loading ? (
+                                    <div className="flex items-center justify-center h-full">
+                                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                            <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                                            <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
+                                            <Tooltip 
+                                                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }}
+                                            />
+                                            <Line type="monotone" dataKey="netProfit" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    
-                    <div style={{ width: '100%', height: 350 }}>
-                        {loading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                </div>
+
+                {/* Sidebar Intelligence (Missions & New Tasks) */}
+                <div className="space-y-6">
+                    <div className="p-8 rounded-2xl border flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-lime flex items-center gap-2">
+                                <Activity size={14} /> Assigned Missions
+                            </h2>
+                            <span className="text-[9px] font-bold opacity-40">{tasks.length} Active</span>
+                        </div>
+
+                        <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar">
+                            {tasks.length === 0 ? (
+                                <div className="py-12 text-center opacity-20 flex flex-col items-center gap-3">
+                                    <List size={32} strokeWidth={1} />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">No Operational Alerts</p>
+                                </div>
+                            ) : (
+                                tasks.map((task) => (
+                                    <div key={task._id} className="p-4 rounded-xl border border-white/5 bg-white/5 group hover:border-lime/30 transition-all">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <p className="text-xs font-black text-white group-hover:text-lime transition-colors">{task.title}</p>
+                                            <div className="flex gap-1">
+                                                <button 
+                                                    onClick={() => handleTaskUpdate(task._id!, 'COMPLETED')}
+                                                    className="w-6 h-6 rounded bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 text-[10px] transition-all"
+                                                >
+                                                    ✓
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-dim font-medium line-clamp-2 mb-3">{task.description}</p>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-dim">
+                                                {task.status}
+                                            </span>
+                                            <span className="text-[8px] font-bold opacity-30">
+                                                Due: {new Date(task.dueDate).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-white/5">
+                            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Corporate Sync</p>
+                                </div>
+                                <p className="text-[10px] leading-relaxed text-dim italic">"Real-time mission tracking enabled. Ensure all fiscal directives from Central Management are acknowledged immediately."</p>
                             </div>
-                        ) : monthlyData.length === 0 ? (
-                            <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--text-dim)' }}>
-                                No financial data available to chart
-                            </div>
-                        ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                                    <Tooltip 
-                                        contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)' }}
-                                        itemStyle={{ fontSize: '13px', fontWeight: 600 }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                                    <Line type="monotone" dataKey="netProfit" name="Net Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "var(--bg-card)" }} activeDot={{ r: 6 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Recent Transactions */}
-            <div className="rounded-2xl border transition-colors duration-300 flex flex-col" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', minHeight: '400px' }}>
-                <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
+            {/* Recent Transactions (Full Width Table) */}
+            <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                     <div className="flex items-center gap-3">
-                        <List size={20} style={{ color: '#C8E600' }} />
-                        <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Recent Transactions</h2>
+                        <div className="w-1.5 h-6 bg-lime rounded-full" />
+                        <h2 className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-main)' }}>Global Transaction Ledger</h2>
                     </div>
-                    {/* The navigation path relies on how the app routes are structured. E.g., navigating to "ledger" in the sidebar context */}
                     <button 
                         onClick={() => navigate('../ledger')} 
-                        className="text-sm font-medium hover:underline transition-all"
-                        style={{ color: '#C8E600' }}
+                        className="text-[10px] font-black uppercase tracking-widest text-lime hover:opacity-70 transition-all px-4 py-2 bg-lime/5 rounded-lg border border-lime/10"
                     >
-                        View Full Ledger →
+                        View System Ledger →
                     </button>
                 </div>
                 
-                <div className="overflow-x-auto flex-grow">
+                <div className="overflow-x-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center h-full min-h-[300px]">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
-                        </div>
-                    ) : recentEntries.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full min-h-[300px]" style={{ color: 'var(--text-dim)' }}>
-                            <Activity size={48} className="mb-4 opacity-30" />
-                            <p className="text-lg font-medium">No recent transactions</p>
+                        <div className="py-20 flex justify-center">
+                            <div className="w-10 h-10 border-2 border-lime border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Description</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Accounting Code</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Amount</th>
+                                <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Transaction Date</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Entry Description</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Fiscal Mapping</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Settlement</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                 {recentEntries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime()) 
-                                        ? `${dateObj.toLocaleDateString()}` 
-                                        : entryDateStr;
-                                        
-                                    let amount = 0;
-                                    let isDebit = false;
-
-                                    if (entry.amount !== undefined) {
-                                        amount = entry.amount;
-                                        isDebit = entry.type === 'DEBIT';
-                                    } else {
-                                        if ((entry.credit || 0) > 0) {
-                                            amount = entry.credit || 0;
-                                            isDebit = false;
-                                        } else if ((entry.debit || 0) > 0) {
-                                            amount = entry.debit || 0;
-                                            isDebit = true;
-                                        }
-                                    }
+                                    const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
+                                    const amount = (entry.amount !== undefined) ? entry.amount : ((entry.credit || 0) > 0 ? entry.credit : (entry.debit || 0));
+                                    const isDebit = (entry.amount !== undefined) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
                                     return (
-                                        <tr key={entry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
+                                        <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="px-8 py-5">
+                                                <div className="text-xs font-bold text-white">{formattedDate}</div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{entry.description}</div>
+                                            <td className="px-8 py-5">
+                                                <div className="text-xs font-medium text-dim group-hover:text-white transition-colors">{entry.description}</div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-xs font-mono" style={{ color: 'var(--text-dim)' }}>
-                                                    {entry.accountingCode?.code} - {entry.accountingCode?.name}
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono text-dim">
+                                                        {entry.accountingCode?.code}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-dim">{entry.accountingCode?.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className={`font-mono text-sm font-bold ${isDebit ? 'text-red-400' : 'text-green-400'}`}>
+                                            <td className="px-8 py-5 text-right">
+                                                <div className={`text-sm font-black font-mono ${isDebit ? 'text-red-400' : 'text-green-400'}`}>
                                                     {isDebit ? '-' : '+'}{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </div>
-                                                <div className="text-[10px] uppercase tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-dim)' }}>
-                                                    {isDebit ? 'DR' : 'CR'}
-                                                </div>
+                                                <p className="text-[9px] font-black opacity-30 uppercase">{isDebit ? 'Debit Entry' : 'Credit Entry'}</p>
                                             </td>
                                         </tr>
                                     );
@@ -396,6 +441,7 @@ const FinanceDashboard = () => {
                     )}
                 </div>
             </div>
+
         </div>
     );
 };
