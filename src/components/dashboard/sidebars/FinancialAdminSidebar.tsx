@@ -12,7 +12,8 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    Shield
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -134,7 +135,16 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
                 { label: 'Add Journal Entry', path: '/admin/financial-admin/ledger?action=create', permission: 'JOURNAL_CREATE' },
                 { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
-                { label: 'Insurance Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
+            ]
+        },
+        {
+            id: 'insurance',
+            label: 'Insurance',
+            icon: <Shield size={22} />,
+            subItems: [
+                { label: 'All Insurance', path: '/admin/financial-admin/vehicle-policies' },
+                { label: 'Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
+                { label: 'Settings', path: '/admin/financial-admin/insurances' },
             ]
         },
         {

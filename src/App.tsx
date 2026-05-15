@@ -43,6 +43,10 @@ import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import Reports from './pages/dashboards/shared/Reports';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
+import VehiclePolicyList from './pages/dashboards/shared/VehiclePolicyList';
+import VehiclePolicyDetail from './pages/dashboards/shared/VehiclePolicyDetail';
+import InsuranceClaimDetail from './pages/dashboards/financialAdmin/InsuranceClaimDetail';
+import CreateInsuranceClaim from './pages/dashboards/financialAdmin/CreateInsuranceClaim';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
@@ -328,10 +332,14 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
                 <Route path="insurances" element={<ManageInsurances />} />
+                <Route path="vehicle-policies" element={<VehiclePolicyList />} />
+                <Route path="vehicle-policies/:id" element={<VehiclePolicyDetail />} />
               </Route>
 
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
               <Route path="insurance-claims" element={<InsuranceClaimsView />} />
+              <Route path="insurance-claims/new" element={<CreateInsuranceClaim />} />
+              <Route path="insurance-claims/:id" element={<InsuranceClaimDetail />} />
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />

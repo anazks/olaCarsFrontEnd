@@ -7,10 +7,10 @@ import {
     Zap, Wrench, Clock, Send, Edit2, Save
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
-import { getEligibleInsurances } from '../../../services/insuranceService';
+import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
 import { hasPermission as checkPermission } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType, BasicDetails } from '../../../services/vehicleService';
-import type { Insurance } from '../../../services/insuranceService';
+import type { Insurance, VehiclePolicy } from '../../../services/insuranceService';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
 import InsuranceManagementModal from './InsuranceManagementModal';
 import VehicleGpsMap from '../../../components/maps/VehicleGpsMap';
@@ -147,6 +147,7 @@ const VehicleDetail = () => {
     // Upload state
     const [uploadFiles, setUploadFiles] = useState<Record<string, File | File[]>>({});
     const [eligibleInsurances, setEligibleInsurances] = useState<Insurance[]>([]);
+    const [vehiclePolicies, setVehiclePolicies] = useState<VehiclePolicy[]>([]);
     const [uploadLoading, setUploadLoading] = useState(false);
     const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const extPhotoRef = useRef<HTMLInputElement | null>(null);
@@ -162,6 +163,16 @@ const VehicleDetail = () => {
             console.error('Failed to fetch eligible insurances:', err);
         }
     }, []);
+
+    const fetchVehiclePolicies = useCallback(async () => {
+        if (!id || id === 'create') return;
+        try {
+            const data = await getVehiclePoliciesByVehicleId(id);
+            setVehiclePolicies(data || []);
+        } catch (err) {
+            console.error('Failed to fetch vehicle policies:', err);
+        }
+    }, [id]);
 
     const fetchVehicle = useCallback(async () => {
         if (!id || id === 'create') return;
@@ -252,8 +263,9 @@ const VehicleDetail = () => {
     useEffect(() => {
         fetchVehicle();
         fetchEligibleInsurances();
+        fetchVehiclePolicies();
         fetchAlerts();
-    }, [fetchVehicle, fetchEligibleInsurances, fetchAlerts]);
+    }, [fetchVehicle, fetchEligibleInsurances, fetchVehiclePolicies, fetchAlerts]);
 
     const getStatusTranslation = (status: string) => {
         return t(`management.vehicles.statusLabels.${status}`, status);
@@ -618,71 +630,70 @@ const VehicleDetail = () => {
                     <div className={`${cardClass} flex flex-col`} style={cardStyle}>
                         <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.insurancePolicy')} />
                         <div className="flex-1 flex flex-col">
-                            <div className="space-y-4 flex-1">
-                            <div className="flex justify-between items-start">
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.provider')}
-                                    value={vehicle.insuranceDetails?.provider || (typeof vehicle.insuranceDetails?.supplier === 'object' ? vehicle.insuranceDetails?.supplier?.name : '') || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        const supplierName = typeof plan?.supplier === 'object' ? (plan?.supplier as any)?.name : '';
-                                        return plan?.provider || supplierName || (vehicle.insurancePolicy as any)?.providerName || '—';
-                                    })()}
-                                />
-                                <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
-                                    {vehicle.insuranceDetails?.insuranceNumber ? t('management.vehicles.statusLabels.ACTIVE') : 'MISSING'}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehicle.insuranceDetails?.insuranceNumber || '—'} />
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.type')}
-                                    value={vehicle.insuranceDetails?.policyType || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        return plan?.policyType || '—';
-                                    })()}
-                                />
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
-                                    value={vehicle.insuranceDetails?.coverageType || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        return plan?.coverageType || '—';
-                                    })()}
-                                />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toLocaleDateString() : '—'} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toLocaleDateString() : '—'} />
-                            </div>
-
-                            {/* Supplier Contact Info */}
-                            {vehicle.insuranceDetails?.supplier && (
-                                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                    <p className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Supplier Contact Info</p>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Name</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.name || '—'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Email</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.email || '—'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Phone</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.phone || '—'}</span>
+                            {vehiclePolicies.length > 0 ? (
+                                <div className="space-y-4 flex-1">
+                                    <div className="flex justify-between items-start">
+                                        <InfoRow
+                                            label={t('management.vehicles.vehicleDetail.labels.provider')}
+                                            value={typeof vehiclePolicies[0].insurance.supplier === 'object' ? vehiclePolicies[0].insurance.supplier?.name : ''}
+                                        />
+                                        <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehiclePolicies[0].status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehiclePolicies[0].status === 'ACTIVE' ? '#22c55e' : '#ef4444' }}>
+                                            {vehiclePolicies[0].status}
                                         </div>
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehiclePolicies[0].policyNumber || '—'} />
+                                        <InfoRow
+                                            label={t('management.vehicles.vehicleDetail.labels.type')}
+                                            value={vehiclePolicies[0].insurance.policyType || '—'}
+                                        />
+                                        <InfoRow
+                                            label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
+                                            value={vehiclePolicies[0].insurance.coverageType || '—'}
+                                        />
+                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehiclePolicies[0].startDate ? new Date(vehiclePolicies[0].startDate).toLocaleDateString() : '—'} />
+                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehiclePolicies[0].expiryDate ? new Date(vehiclePolicies[0].expiryDate).toLocaleDateString() : '—'} />
+                                    </div>
+
+                                    {/* Supplier Contact Info */}
+                                    {vehiclePolicies[0].insurance.supplier && (
+                                        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                            <p className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Supplier Contact Info</p>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span style={{ color: 'var(--text-dim)' }}>Name</span>
+                                                    <span className="font-medium" style={{ color: 'var(--text-main)' }}>{typeof vehiclePolicies[0].insurance.supplier === 'object' ? vehiclePolicies[0].insurance.supplier.name : '—'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span style={{ color: 'var(--text-dim)' }}>Email</span>
+                                                    <span className="font-medium" style={{ color: 'var(--text-main)' }}>{typeof vehiclePolicies[0].insurance.supplier === 'object' ? vehiclePolicies[0].insurance.supplier.email : '—'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span style={{ color: 'var(--text-dim)' }}>Phone</span>
+                                                    <span className="font-medium" style={{ color: 'var(--text-main)' }}>{typeof vehiclePolicies[0].insurance.supplier === 'object' ? vehiclePolicies[0].insurance.supplier.phone : '—'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {vehiclePolicies[0].certificate && (
+                                        <a
+                                            href={toFullUrl(vehiclePolicies[0].certificate)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
+                                        >
+                                            <FileText size={10} /> View Insurance Certificate
+                                        </a>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+                                    <Shield size={32} className="opacity-20 mb-3" style={{ color: 'var(--text-dim)' }} />
+                                    <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>No active policy</p>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>Add a policy to ensure coverage</p>
                                 </div>
                             )}
-                            {vehicle.insuranceDetails?.certificate && (
-                                <a
-                                    href={toFullUrl(vehicle.insuranceDetails.certificate)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
-                                >
-                                    <FileText size={10} /> View Insurance Certificate
-                                </a>
-                            )}
-                            </div>
+
                             {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION' || (vehicle.status as string) === 'BRANCH MANAGER APPROVAL') && (
                                 <div className="mt-5">
                                     <HasPermission permission="VEHICLE_EDIT">
@@ -691,7 +702,7 @@ const VehicleDetail = () => {
                                             className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                                             style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
                                         >
-                                            {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
+                                            {vehiclePolicies.length > 0 ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
                                         </button>
                                     </HasPermission>
                                 </div>
@@ -1490,8 +1501,10 @@ const VehicleDetail = () => {
                 onClose={() => setIsInsuranceManagerOpen(false)}
                 vehicle={vehicle}
                 eligibleInsurances={eligibleInsurances}
+                currentPolicies={vehiclePolicies}
                 onSuccess={() => {
                     fetchVehicle();
+                    fetchVehiclePolicies();
                     setActionSuccess('Insurance tracking details updated successfully');
                     setTimeout(() => setActionSuccess(null), 3000);
                 }}

@@ -92,14 +92,6 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
                                             <p className="font-medium" style={{ color: 'var(--text-main)' }}>{ins.coverageType?.replace('_', ' ') || 'COMPREHENSIVE'}</p>
                                         </div>
                                         <div>
-                                            <p className="font-bold mb-0.5 uppercase tracking-wider text-[10px]" style={{ color: 'var(--text-dim)' }}>Insured Value</p>
-                                            <p className="font-medium flex items-center gap-1" style={{ color: 'var(--text-main)' }}><DollarSign size={12}/>{ins.insuredValue?.toLocaleString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-bold mb-0.5 uppercase tracking-wider text-[10px]" style={{ color: 'var(--text-dim)' }}>Valid Until</p>
-                                            <p className="font-medium flex items-center gap-1" style={{ color: 'var(--text-main)' }}><Calendar size={12}/>{ins.expiryDate ? new Date(ins.expiryDate).toLocaleDateString() : 'N/A'}</p>
-                                        </div>
-                                        <div>
                                             <p className="font-bold mb-0.5 uppercase tracking-wider text-[10px]" style={{ color: 'var(--text-dim)' }}>Contact details</p>
                                             <p className="font-medium truncate" style={{ color: 'var(--text-main)' }}>
                                                 {typeof ins.supplier === 'object' ? ins.supplier?.name : ins.providerContact?.name || '—'}

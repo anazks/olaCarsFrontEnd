@@ -48,8 +48,6 @@ const ManageInsurances = () => {
         country: 'Global',
         policyType: 'INDIVIDUAL',
         coverageType: 'COMPREHENSIVE',
-        startDate: '',
-        expiryDate: '',
         insuredValue: 0,
     });
 
@@ -120,8 +118,6 @@ const ManageInsurances = () => {
             country: 'Global',
             policyType: 'INDIVIDUAL',
             coverageType: 'COMPREHENSIVE',
-            startDate: '',
-            expiryDate: '',
             insuredValue: 0,
         });
         setPolicyFile(null);
@@ -137,11 +133,9 @@ const ManageInsurances = () => {
             fd.append('country', formData.country);
             fd.append('policyType', formData.policyType);
             fd.append('coverageType', formData.coverageType);
-            
-            if (formData.startDate) fd.append('startDate', new Date(formData.startDate).toISOString());
-            if (formData.expiryDate) fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
-            
-            fd.append('insuredValue', formData.insuredValue.toString());
+            if (formData.insuredValue !== undefined) {
+                fd.append('insuredValue', formData.insuredValue.toString());
+            }
             
             if (policyFile) {
                 fd.append('policyDocument', policyFile);
@@ -295,8 +289,6 @@ const ManageInsurances = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.providerPolicy')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.typeCoverage')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.expiry')}</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.insuredValue')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.table.docs')}</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.actions')}</th>
                                 </tr>
@@ -328,12 +320,6 @@ const ManageInsurances = () => {
                                             }}>
                                                 {t(`management.insurances.statusLabels.${ins.status || 'UNKNOWN'}`)}
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>
-                                            {ins.expiryDate ? new Date(ins.expiryDate).toLocaleDateString() : 'N/A'}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                            ${(ins.insuredValue || 0).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4">
                                             {ins.documents?.policyDocumentUrl ? (
@@ -463,6 +449,17 @@ const ManageInsurances = () => {
                                             onChange={(e) => setFormData({...formData, country: e.target.value})}
                                         />
                                     </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs text-dim uppercase">Insured Value ($)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="e.g. 50000"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            value={formData.insuredValue || ''}
+                                            onChange={(e) => setFormData({...formData, insuredValue: Number(e.target.value)})}
+                                        />
+                                    </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
@@ -490,39 +487,7 @@ const ManageInsurances = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.financialsTimeline')}</h3>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs text-dim uppercase">Insured Value ($)</label>
-                                        <input
-                                            required
-                                            type="number"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
-                                            value={formData.insuredValue}
-                                            onChange={(e) => setFormData({...formData, insuredValue: Number(e.target.value)})}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.startDate')} (Opt)</label>
-                                            <input
-                                                type="date"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
-                                                value={formData.startDate}
-                                                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs text-dim uppercase">{t('management.insurances.form.expiryDate')} (Opt)</label>
-                                            <input
-                                                type="date"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
-                                                value={formData.expiryDate}
-                                                onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+
                             </div>
                                 <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
