@@ -7,6 +7,7 @@ import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
 import { getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -98,6 +99,13 @@ const GeneralLedger = () => {
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '#' },
+                    { label: 'General Ledger', active: true }
+                ]} 
+            />
+            
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>

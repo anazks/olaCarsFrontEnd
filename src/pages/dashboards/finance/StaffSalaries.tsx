@@ -24,6 +24,7 @@ import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
 import { getUnifiedStaff } from '../../../services/reportingService';
 import { getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StaffSalaries = () => {
 
@@ -38,6 +39,7 @@ const StaffSalaries = () => {
     
     // Filters
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('ALL');
     const [branchFilter, setBranchFilter] = useState('ALL');
     
@@ -63,8 +65,13 @@ const StaffSalaries = () => {
     });
 
     useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => {
         fetchData();
-    }, [page, limit, roleFilter, branchFilter]);
+    }, [page, limit, roleFilter, branchFilter, debouncedSearch]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -81,7 +88,7 @@ const StaffSalaries = () => {
             ] = await Promise.all([
                 getSalaryStructures(),
                 getUnifiedStaff({
-                    search: search,
+                    search: debouncedSearch,
                     role: roleFilter,
                     branchId: branchFilter,
                     page,
@@ -186,18 +193,15 @@ const StaffSalaries = () => {
         }
     };
 
-    const filteredStaff = staffList.filter(s => {
-        const matchesSearch = s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                            s.email.toLowerCase().includes(search.toLowerCase());
-        const matchesRole = roleFilter === 'ALL' || s.role === roleFilter;
-        const staffBranchId = s.branchId?._id || s.branchId;
-        const matchesBranch = branchFilter === 'ALL' || staffBranchId === branchFilter;
-        
-        return matchesSearch && matchesRole && matchesBranch;
-    });
+    // Statistics (now using staffList from server)
+    const stats = {
+        totalPayroll: salaryStructures.reduce((sum, s) => sum + s.baseSalary, 0),
+        activeStaff: pagination.total || staffList.length,
+        pendingPayments: pagination.total || staffList.length
+    };
 
     const handleBulkPayroll = async () => {
-        const staffWithStructure = filteredStaff.filter(s => {
+        const staffWithStructure = staffList.filter(s => {
             const structure = getStructureForStaff(s._id);
             return structure && structure.baseSalary > 0;
         });
@@ -242,13 +246,8 @@ const StaffSalaries = () => {
         }
     };
 
-    const stats = {
-        totalPayroll: salaryStructures.reduce((sum, s) => sum + s.baseSalary, 0),
-        activeStaff: staffList.length,
-        pendingPayments: staffList.length
-    };
-
-    if (loading) {
+    // Only show full-page loader on initial load
+    if (loading && staffList.length === 0 && !debouncedSearch) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-200px)]">
                 <Loader2 className="animate-spin text-[#C8E600]" size={48} />
@@ -257,7 +256,14 @@ const StaffSalaries = () => {
     }
 
     return (
-        <div className="p-8 space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 space-y-6 animate-in fade-in duration-700">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '#' },
+                    { label: 'Staff Payrolls', active: true }
+                ]} 
+            />
+            
             {/* Header & Stats */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
@@ -398,15 +404,20 @@ const StaffSalaries = () => {
                                 <th className="px-6 py-4 text-[10px] font-black text-dim uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border-main)]">
-                            {filteredStaff.length === 0 ? (
+                        <tbody className="divide-y divide-[var(--border-main)] relative">
+                            {loading && (
+                                <div className="absolute inset-0 bg-[var(--bg-card)]/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                                    <Loader2 className="animate-spin text-[#C8E600]" size={24} />
+                                </div>
+                            )}
+                            {staffList.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center opacity-20 italic">
                                         No staff members found matching the current filters.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredStaff.map((staff) => {
+                                staffList.map((staff) => {
                                     const structure = getStructureForStaff(staff._id);
                                     const totalAllowances = structure?.allowances.reduce((s, a) => s + a.amount, 0) || 0;
                                     const totalBonuses = structure?.bonuses.reduce((s, b) => s + b.amount, 0) || 0;
