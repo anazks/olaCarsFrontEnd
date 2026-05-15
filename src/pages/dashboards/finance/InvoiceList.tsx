@@ -99,98 +99,106 @@ const InvoiceList = () => {
         <div className="container-responsive space-y-6">
             <Breadcrumbs 
                 items={[
-                    { label: 'Finance', path: '#' },
-                    { label: 'Rent Invoices', active: true }
+                    { label: 'Sales', path: '#' },
+                    { label: 'Invoices', active: true }
                 ]} 
             />
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} className="text-brand-lime" />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <FileText size={20} className="text-brand-lime" />
                         Invoices Management
                     </h1>
-                    <p className="text-sm font-medium opacity-60" style={{ color: 'var(--text-dim)' }}>Monitor rent invoices and record manual payments</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Monitor rent invoices and record manual payments</p>
                 </div>
                 <button
                     onClick={fetchData}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-dim hover:text-white transition-all"
+                    className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-dim hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300"
                 >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                    <RefreshCw size={13} className={`transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} /> 
+                    Refresh
                 </button>
             </div>
 
-            {/* Filters Bar */}
-            <div className="flex flex-wrap items-center gap-4 p-4 rounded-3xl border bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
-                {/* Search */}
-                <div className="flex-1 min-w-[280px] relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={16} />
+            {/* Premium Compact Filters Bar */}
+            <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 transition-colors w-fit max-w-full"
+                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                
+                {/* Search Inline Input */}
+                <div className="relative min-w-[240px]">
                     <input 
                         type="text" 
                         placeholder="Search Invoice # or Driver..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none text-xs transition-all focus:border-brand-lime/30"
+                        className="w-full pl-8 pr-4 py-2 border rounded-xl font-medium text-[11px] outline-none transition-all focus:border-brand-lime/40"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={14} />
                 </div>
 
-                {/* Status */}
-                <div className="w-full sm:w-auto min-w-[140px]">
+                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                {/* Status Select */}
+                <div className="relative">
                     <select 
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-xs cursor-pointer focus:border-brand-lime/30"
-                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        className="pl-8 pr-6 py-2 border-none outline-none text-[11px] font-black uppercase tracking-wider bg-transparent appearance-none cursor-pointer transition-colors"
+                        style={{ color: 'var(--text-main)' }}
                     >
-                        <option value="ALL">All Statuses</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="PARTIAL">Partial</option>
-                        <option value="PAID">Paid</option>
-                        <option value="OVERDUE">Overdue</option>
+                        <option value="ALL" style={{ background: 'var(--bg-card)' }}>All Statuses</option>
+                        <option value="PENDING" style={{ background: 'var(--bg-card)' }}>• Pending</option>
+                        <option value="PARTIAL" style={{ background: 'var(--bg-card)' }}>• Partial</option>
+                        <option value="PAID" style={{ background: 'var(--bg-card)' }}>• Settled</option>
+                        <option value="OVERDUE" style={{ background: 'var(--bg-card)' }}>• Overdue</option>
                     </select>
+                    <Filter className="absolute left-2 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" size={13} style={{ color: 'var(--text-dim)' }} />
                 </div>
 
-                {/* Date Range */}
-                <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-main)]">
-                    <input 
-                        type="date" 
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
-                    />
-                    <div className="w-px h-4 bg-white/10"></div>
-                    <input 
-                        type="date" 
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
-                    />
+                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                {/* Date Span Constraints */}
+                <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
+                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                    <Calendar size={13} className="opacity-50" style={{ color: 'var(--text-dim)' }} />
+                    <input type="date" value={startDate} 
+                           onChange={(e) => setStartDate(e.target.value)}
+                           className="bg-transparent text-[10px] font-bold border-none outline-none cursor-pointer"
+                           style={{ colorScheme: 'dark', color: 'var(--text-main)' }} />
+                    <span className="text-[10px] opacity-30">-</span>
+                    <input type="date" value={endDate} 
+                           onChange={(e) => setEndDate(e.target.value)}
+                           className="bg-transparent text-[10px] font-bold border-none outline-none cursor-pointer"
+                           style={{ colorScheme: 'dark', color: 'var(--text-main)' }} />
+                    {(startDate || endDate) && (
+                        <button onClick={() => { setStartDate(''); setEndDate(''); }} className="text-rose-500 hover:text-rose-400 active:scale-95 ml-1 transition-all" title="Clear dates">
+                            <X size={12}/>
+                        </button>
+                    )}
                 </div>
 
-                {/* Clear Button (Icon only) */}
-                {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
+                {/* Reset Constraints Button */}
+                {(searchQuery || statusFilter !== 'ALL') && (
                     <button
                         onClick={() => {
                             setSearchQuery('');
                             setStatusFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
                         }}
-                        title="Clear Filters"
-                        className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"
+                        className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
+                        title="Clear Constraints"
                     >
-                        <X size={16} />
+                        <X size={14} />
                     </button>
                 )}
             </div>
 
-            {/* Table */}
-            <div className="rounded-[2rem] border overflow-hidden bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
+            {/* Premium Table Container */}
+            <div className="rounded-[2.5rem] border border-white/10 bg-black/40 backdrop-blur-2xl shadow-2xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none"></div>
+                <div className="overflow-x-auto relative z-10">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-black/20 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">
@@ -205,11 +213,21 @@ const InvoiceList = () => {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {loading && invoices.length === 0 ? (
-                                <tr><td colSpan={7} className="p-20 text-center animate-pulse text-xs font-black uppercase tracking-widest opacity-40">Loading Invoices...</td></tr>
+                                <tr><td colSpan={7} className="p-24 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-4 animate-pulse">
+                                        <div className="w-12 h-12 rounded-full border-t-2 border-brand-lime animate-spin"></div>
+                                        <span className="text-xs font-black uppercase tracking-widest text-brand-lime/50">Loading Invoices...</span>
+                                    </div>
+                                </td></tr>
                             ) : invoices.length === 0 ? (
-                                <tr><td colSpan={7} className="p-20 text-center text-dim text-sm font-medium">No invoices found matching your criteria.</td></tr>
+                                <tr><td colSpan={7} className="p-24 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-4 opacity-50">
+                                        <FileText size={48} className="text-dim" />
+                                        <span className="text-sm font-medium text-dim">No invoices found matching your criteria.</span>
+                                    </div>
+                                </td></tr>
                             ) : invoices.map((inv) => (
-                                <tr key={inv._id} className="group hover:bg-white/[0.02] transition-all">
+                                <tr key={inv._id} className="group hover:bg-white/[0.04] transition-all duration-300 cursor-pointer">
                                     <td className="p-6">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</span>
@@ -233,7 +251,7 @@ const InvoiceList = () => {
                                         </div>
                                     </td>
                                     <td className="p-6">
-                                        <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</span>
+                                        <span className="text-sm font-black transition-colors" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</span>
                                     </td>
                                     <td className="p-6">
                                         <span className={`text-sm font-black ${inv.balance > 0 ? 'text-orange-400' : 'text-brand-lime'}`}>
@@ -244,21 +262,28 @@ const InvoiceList = () => {
                                         <StatusBadge status={inv.status} />
                                     </td>
                                     <td className="p-6 text-right">
-                                        <div className="flex items-center justify-end gap-2">
+                                        <div className="flex items-center justify-end gap-2.5">
                                             {inv.status !== 'PAID' && (
                                                 <button 
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setSelectedInvoice(inv);
                                                         setPaymentAmount(inv.balance);
                                                     }}
-                                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime text-black text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-brand-lime/20 transition-all"
+                                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-lime text-[#0A0A0A] text-[10px] font-black uppercase tracking-wider shadow-md shadow-brand-lime/10 hover:scale-105 hover:shadow-brand-lime/20 active:scale-95 transition-all cursor-pointer"
+                                                    style={{ backgroundColor: 'var(--brand-lime)' }}
                                                 >
-                                                    <DollarSign size={14} />
-                                                    Pay
+                                                    <DollarSign size={12} strokeWidth={3} />
+                                                    Pay Now
                                                 </button>
                                             )}
-                                            <button className="p-2 rounded-xl bg-white/5 border border-white/10 text-dim hover:text-white transition-all">
-                                                <Download size={16} />
+                                            <button 
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-dim hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                                                style={{ borderColor: 'var(--border-main)' }}
+                                                title="Download Invoice"
+                                            >
+                                                <Download size={14} />
                                             </button>
                                         </div>
                                     </td>
@@ -320,64 +345,76 @@ const InvoiceList = () => {
             {/* Payment Modal */}
             {selectedInvoice && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Record Payment</h2>
-                            <p className="text-xs font-bold text-dim uppercase tracking-widest mt-1">Invoice: {selectedInvoice.invoiceNumber}</p>
+                    <div className="w-full max-w-md bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+                         style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <h2 className="text-md font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                <DollarSign size={18} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                                Record Payment
+                            </h2>
+                            <p className="text-xs font-medium text-dim mt-0.5">Invoice: {selectedInvoice.invoiceNumber}</p>
                         </div>
-                        <form onSubmit={handleRecordPayment} className="p-8 space-y-6">
-                            <div className="space-y-1">
+                        <form onSubmit={handleRecordPayment} className="p-6 space-y-5">
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Amount (USD)</label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-lime" size={18} />
+                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-lime" style={{ color: 'var(--brand-lime)' }} size={16} />
                                     <input 
                                         type="number"
                                         required
                                         max={selectedInvoice.balance}
                                         value={paymentAmount}
                                         onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                        className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime transition-all"
+                                        className="w-full pl-11 pr-4 py-2.5 border rounded-xl font-bold outline-none focus:border-brand-lime transition-all text-sm shadow-inner"
+                                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
-                                <p className="text-[10px] font-bold text-dim mt-1">Remaining Balance: ${selectedInvoice.balance}</p>
+                                <p className="text-[10px] font-medium text-dim mt-1 flex justify-between">
+                                    <span>Remaining Balance:</span>
+                                    <span className="font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>${selectedInvoice.balance.toLocaleString()}</span>
+                                </p>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Method</label>
                                 <select 
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime appearance-none cursor-pointer"
+                                    className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none focus:border-brand-lime cursor-pointer text-sm"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <option value="Cash">Cash</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Card">Credit/Debit Card</option>
-                                    <option value="Mobile Money">Mobile Money</option>
+                                    <option value="Cash" style={{ background: 'var(--bg-card)' }}>Cash</option>
+                                    <option value="Bank Transfer" style={{ background: 'var(--bg-card)' }}>Bank Transfer</option>
+                                    <option value="Card" style={{ background: 'var(--bg-card)' }}>Credit/Debit Card</option>
+                                    <option value="Mobile Money" style={{ background: 'var(--bg-card)' }}>Mobile Money</option>
                                 </select>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-dim">Notes / Reference</label>
                                 <textarea 
                                     value={paymentNote}
                                     onChange={(e) => setPaymentNote(e.target.value)}
                                     placeholder="Any additional details..."
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white text-sm outline-none focus:border-brand-lime h-24 resize-none"
+                                    className="w-full px-4 py-2.5 border rounded-xl text-xs font-medium outline-none focus:border-brand-lime h-20 resize-none shadow-inner"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
 
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex gap-3 pt-2">
                                 <button 
                                     type="button"
                                     onClick={() => setSelectedInvoice(null)}
-                                    className="flex-1 py-3 rounded-2xl bg-white/5 text-dim font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
+                                    className="flex-1 py-2.5 rounded-xl border bg-transparent text-dim font-black text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit"
                                     disabled={processingPayment}
-                                    className="flex-1 py-3 rounded-2xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:shadow-brand-lime/20 transition-all disabled:opacity-50"
+                                    className="flex-1 py-2.5 rounded-xl bg-brand-lime text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-md cursor-pointer"
+                                    style={{ backgroundColor: 'var(--brand-lime)' }}
                                 >
                                     {processingPayment ? 'Processing...' : 'Confirm Payment'}
                                 </button>
@@ -393,13 +430,13 @@ const InvoiceList = () => {
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
         case 'PAID':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-[9px] font-black uppercase border border-green-500/20"><CheckCircle2 size={10} /> Paid</span>;
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[9px] font-black uppercase tracking-widest border border-green-500/20"><CheckCircle2 size={10} strokeWidth={3} /> Paid</span>;
         case 'PARTIAL':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-[9px] font-black uppercase border border-yellow-500/20"><Clock size={10} /> Partial</span>;
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[9px] font-black uppercase tracking-widest border border-yellow-500/20"><Clock size={10} strokeWidth={3} /> Partial</span>;
         case 'OVERDUE':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[9px] font-black uppercase border border-red-500/20"><AlertCircle size={10} /> Overdue</span>;
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest border border-red-500/20"><AlertCircle size={10} strokeWidth={3} /> Overdue</span>;
         default:
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-dim text-[9px] font-black uppercase border border-white/10">Pending</span>;
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-white/5 text-dim text-[9px] font-black uppercase tracking-widest border border-white/10">Pending</span>;
     }
 };
 

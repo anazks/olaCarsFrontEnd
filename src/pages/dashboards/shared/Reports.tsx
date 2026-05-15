@@ -24,6 +24,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const Reports = () => {
     const { t } = useTranslation();
@@ -164,31 +165,32 @@ const Reports = () => {
 
     return (
         <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Reports', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <TrendingUp size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         {t('reports.title', 'Operational Reports')}
                     </h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                        {t('reports.subtitle', 'Comprehensive performance analytics and financial tracking')}
-                    </p>
+                    <p className="text-xs font-medium text-dim mt-0.5">{t('reports.subtitle', 'Comprehensive analytics and financial tracking')}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button 
                         onClick={exportExcel}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:scale-105"
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold border transition-all hover:bg-white/5 cursor-pointer"
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
                     >
-                        <Download size={16} /> Excel
+                        <Download size={14} /> Excel
                     </button>
                     <button 
                         onClick={exportPDF}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105"
-                        style={{ background: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
-                        <FileText size={16} /> PDF Report
+                        <FileText size={14} /> PDF Report
                     </button>
                 </div>
             </div>

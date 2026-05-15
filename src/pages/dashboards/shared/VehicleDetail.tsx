@@ -18,6 +18,7 @@ import HasPermission from '../../../components/HasPermission';
 import alertService from '../../../services/alertService';
 import type { Alert } from '../../../services/alertService';
 import { updateMaintenanceSettings } from '../../../services/vehicleService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const PIPELINE: VehicleStatus[] = [
@@ -384,6 +385,8 @@ const VehicleDetail = () => {
     );
     if (error || !vehicle) return (
         <div className="max-w-4xl mx-auto py-20 text-center space-y-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Section Header', active: true }]} />
+
             <AlertTriangle size={48} className="mx-auto text-red-500 opacity-60" />
             <p className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>{error || t('management.vehicles.empty.noVehicles')}</p>
             <button onClick={() => navigate('..')} className="px-6 py-2 rounded-xl text-sm font-medium cursor-pointer" style={{ background: '#C8E600', color: '#0A0A0A' }}>
@@ -403,7 +406,7 @@ const VehicleDetail = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
+                        <h1 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
                             {vehicle.basicDetails?.make || 'New'} {vehicle.basicDetails?.model || 'Vehicle'} {vehicle.basicDetails?.year || ''}
                         </h1>
                         <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</p>

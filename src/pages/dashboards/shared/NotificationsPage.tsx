@@ -6,6 +6,7 @@ import alertService from '../../../services/alertService';
 import type { Alert } from '../../../services/alertService';
 import { getUserRole } from '../../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../../services/authService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const NotificationsPage: React.FC = () => {
     const { t } = useTranslation();
@@ -71,9 +72,11 @@ const NotificationsPage: React.FC = () => {
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'handle Alert Click', active: true }]} />
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-main">{t('common.notifications') || 'Notifications'}</h1>
+                    <h1 className="text-lg font-bold text-main">{t('common.notifications') || 'Notifications'}</h1>
                     <p className="text-dim text-sm mt-1">Manage and view all your system alerts.</p>
                 </div>
             </div>

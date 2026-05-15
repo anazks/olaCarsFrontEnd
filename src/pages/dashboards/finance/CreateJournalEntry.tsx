@@ -12,6 +12,7 @@ import 'react-phone-input-2/lib/style.css';
 import type { AccountingCode } from '../../../services/accountingService';
 import type { JournalLine } from '../../../services/ledgerService';
 import type { CountryManager } from '../../../services/countryManagerService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAddNew }: {
     codes: AccountingCode[],

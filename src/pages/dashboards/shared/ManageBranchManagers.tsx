@@ -19,6 +19,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -248,10 +249,12 @@ const ManageBranchManagers = () => {
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Branch Managers', active: true }]} />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <UserCheck size={28} style={{ color: '#C8E600' }} />
                         {t('management.branchManagers.title')}
                     </h1>
@@ -561,7 +564,7 @@ const ManageBranchManagers = () => {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
+                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
                                 {modalMode === 'create' ? t('management.branchManagers.modalTitleCreate') : t('management.branchManagers.modalTitleEdit')}
                             </h2>
                             <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
@@ -770,7 +773,7 @@ const ManageBranchManagers = () => {
                         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: 'rgba(239,68,68,0.1)' }}>
                             <Trash2 size={40} style={{ color: '#ef4444' }} />
                         </div>
-                        <h2 className="text-2xl font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>{t('management.branchManagers.deleteTitle')}</h2>
+                        <h2 className="text-lg font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>{t('management.branchManagers.deleteTitle')}</h2>
                         <p className="text-center mb-8" style={{ color: 'var(--text-dim)' }}>
                             {t('management.branchManagers.deleteConfirm', { name: deleteTarget.fullName })}
                         </p>

@@ -15,6 +15,7 @@ import {
 import ApproveRejectModal from './ApproveRejectModal';
 import PurchaseBillModal from './PurchaseBillModal';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const PurchaseOrderDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -92,6 +93,8 @@ const PurchaseOrderDetail = () => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Order Detail', active: true }]} />
+
                 <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                 <p style={{ color: 'var(--text-dim)' }}>Loading order details...</p>
             </div>
@@ -137,7 +140,7 @@ const PurchaseOrderDetail = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                        <h1 className="text-lg font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                             {po.purchaseOrderNumber}
                         </h1>
                         <div className="flex items-center gap-2 mt-1">

@@ -5,6 +5,7 @@ import InsuranceSelectorModal from './InsuranceSelectorModal';
 import { uploadVehicleDocuments, progressVehicle, getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import { createVehiclePolicy, type Insurance, type VehiclePolicy } from '../../../services/insuranceService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const inputStyle = { background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' };
 const inputClass = 'w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all text-sm';
@@ -88,6 +89,8 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all" style={{ background: 'rgba(0,0,0,0.8)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'to Full Url', active: true }]} />
+
             <div className="w-full max-w-3xl rounded-3xl border flex flex-col max-h-[90vh] shadow-2xl" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>

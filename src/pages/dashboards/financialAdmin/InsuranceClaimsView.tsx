@@ -4,6 +4,7 @@ import { getClaims } from '../../../services/insuranceClaimService';
 import type { InsuranceClaim } from '../../../services/insuranceClaimService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const InsuranceClaimsView = () => {
     const navigate = useNavigate();
@@ -35,6 +36,8 @@ const InsuranceClaimsView = () => {
     if (loading) {
         return (
             <div className="p-8 text-center animate-pulse flex flex-col items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Insurance Claims View', active: true }]} />
+
                 <ShieldAlert size={32} className="animate-bounce text-dim opacity-50" />
                 <span className="font-bold text-muted uppercase tracking-widest">Loading Claims...</span>
             </div>
@@ -42,22 +45,26 @@ const InsuranceClaimsView = () => {
     }
 
     return (
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-dashed pb-6" style={{ borderColor: 'var(--border-main)' }}>
+        <div className="max-w-[1400px] mx-auto space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Insurance Claims View', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
-                        <ShieldAlert className="text-[#D4F12E]" size={32} />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <ShieldAlert size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Insurance Claims
                     </h1>
-                    <p className="text-sm mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>
-                        Track and manage all vehicle insurance claims.
-                    </p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Track and manage all system-wide vehicle insurance claims.</p>
                 </div>
+                
                 <button
                     onClick={() => navigate('/admin/financial-admin/insurance-claims/new')}
-                    className="px-6 py-2.5 rounded-xl bg-[#D4F12E] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-all flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                    style={{ backgroundColor: 'var(--brand-lime)' }}
                 >
-                    <PlusCircle size={18} /> File Manual Claim
+                    <PlusCircle size={14} strokeWidth={3} />
+                    File Manual Claim
                 </button>
             </div>
 

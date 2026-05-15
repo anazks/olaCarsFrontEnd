@@ -11,6 +11,7 @@ import type { CreateClaimPayload } from '../../../services/insuranceClaimService
 import { getAllVehicles, getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CreateInsuranceClaim = () => {
     const navigate = useNavigate();
@@ -88,6 +89,8 @@ const CreateInsuranceClaim = () => {
 
     return (
         <div className="p-6 max-w-[800px] mx-auto space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Create Insurance Claim', active: true }]} />
+
             <button 
                 onClick={() => navigate(-1)}
                 className="flex items-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity"
@@ -96,7 +99,7 @@ const CreateInsuranceClaim = () => {
             </button>
 
             <div className="border-b border-white/10 pb-6">
-                <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
+                <h1 className="text-xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
                     <ShieldAlert className="text-[#D4F12E]" size={32} />
                     File Manual Claim
                 </h1>

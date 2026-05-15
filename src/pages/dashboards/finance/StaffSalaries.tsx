@@ -15,7 +15,8 @@ import {
     X,
     Loader2,
     Filter,
-    Building2
+    Building2,
+    RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSalaryStructures, updateSalaryStructure, processPayroll } from '../../../services/salaryService';
@@ -264,28 +265,31 @@ const StaffSalaries = () => {
                 ]} 
             />
             
-            {/* Header & Stats */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight italic uppercase">
-                        Staff <span className="text-[#C8E600]">Payrolls</span>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Staff Payrolls
                     </h1>
-                    <p className="text-dim mt-1 font-medium">Manage salary structures and monthly cost allocation</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Manage salary structures and monthly cost allocation</p>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button 
                         onClick={fetchData}
-                        className="px-6 py-3 rounded-2xl bg-[var(--bg-input)] text-dim font-bold text-sm hover:bg-[var(--bg-card)] transition-all border border-[var(--border-main)]"
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
-                        Refresh Data
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button 
                         onClick={handleBulkPayroll}
                         disabled={processing}
-                        className="px-6 py-3 rounded-2xl bg-[#C8E600] text-black font-bold text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(200,230,0,0.2)] flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
                     >
-                        {processing ? <Loader2 className="animate-spin" size={18} /> : <DollarSign size={18} />} 
+                        {processing ? <Loader2 className="animate-spin" size={14} /> : <DollarSign size={14} />} 
                         Process Full Payroll
                     </button>
                 </div>

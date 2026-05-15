@@ -4,6 +4,7 @@ import { User, Mail, Phone, Calendar, Briefcase, FileText, ChevronLeft, Building
 import { driverService } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ─── Country Codes ────────────────────────────────────────────────────
 const COUNTRY_CODES = [
@@ -301,6 +302,8 @@ const CreateDriver = () => {
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'is Valid Phone Digits', active: true }]} />
+
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <button
@@ -311,7 +314,7 @@ const CreateDriver = () => {
                     Back to List
                 </button>
                 <div className="text-right">
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>New Driver Application</h1>
+                    <h1 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>New Driver Application</h1>
                     <p className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Step 1: Basic Information Entry</p>
                 </div>
             </div>

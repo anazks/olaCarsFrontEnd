@@ -15,6 +15,7 @@ import type { VehiclePolicy } from '../../../services/insuranceService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VehiclePolicyDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -64,6 +65,8 @@ const VehiclePolicyDetail = () => {
     if (loading || !policy) {
         return (
             <div className="p-8 text-center animate-pulse flex flex-col items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Policy Detail', active: true }]} />
+
                 <ShieldAlert size={32} className="animate-bounce text-dim opacity-50" />
                 <span className="font-bold text-muted uppercase tracking-widest">Loading Policy Profile...</span>
             </div>
@@ -84,7 +87,7 @@ const VehiclePolicyDetail = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
                 <div>
-                    <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
                         <ShieldAlert className="text-[#D4F12E]" size={32} />
                         Vehicle Policy Details
                     </h1>

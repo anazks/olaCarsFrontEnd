@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ── Status Styles ──────────────────────────────────────────────────────────────
 
@@ -152,59 +153,57 @@ const VehicleList = () => {
 
     return (
         <div className="container-responsive space-y-8 p-6 lg:p-8 animate-in fade-in duration-500">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-[var(--bg-card)] to-transparent p-6 rounded-3xl border shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="flex items-center gap-4">
-                    <div className="p-3.5 rounded-2xl shadow-lg" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        <Car size={28} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {t('management.vehicles.title', 'Vehicle Fleet')}
-                        </h1>
-                        <p className="text-sm font-medium mt-1 opacity-80" style={{ color: 'var(--text-dim)' }}>
-                            {t('management.vehicles.subtitle', 'Manage and monitor all company vehicles.')}
-                        </p>
-                    </div>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Fleet', active: true }]} />
+
+            {/* Compact Header Area */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Car size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        {t('management.vehicles.title', 'Vehicle Fleet')}
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">
+                        {t('management.vehicles.subtitle', 'Manage and monitor all company vehicles.')}
+                    </p>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={() => fetchVehicles()}
-                        className="flex items-center justify-center p-3 rounded-2xl transition-all duration-300 hover:rotate-180 hover:bg-white/10 active:scale-95"
+                        className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         title="Refresh Data"
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     
                     <HasPermission permission="INSURANCE_VIEW">
                         <button
                             onClick={() => navigate('../insurances')}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Shield size={18} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
+                            <Shield size={14} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
                         </button>
                     </HasPermission>
                     
                     <HasPermission permission="DRIVER_VIEW">
                         <button
                             onClick={() => navigate('../drivers')}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Users size={18} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
+                            <Users size={14} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
                         </button>
                     </HasPermission>
                     
                     <HasPermission permission="VEHICLE_CREATE">
                         <button
                             onClick={() => navigate('create')}
-                            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
-                            style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 20px rgba(200, 230, 0, 0.3)' }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
+                            <Plus size={14} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
                         </button>
                     </HasPermission>
                 </div>

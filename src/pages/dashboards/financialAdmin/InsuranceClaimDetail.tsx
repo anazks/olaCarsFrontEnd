@@ -15,6 +15,7 @@ import type { InsuranceClaim, ProgressClaimPayload, ClaimStatus } from '../../..
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const STATUS_ORDER: ClaimStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAYMENT_RECEIVED', 'CLOSED'];
 
@@ -117,6 +118,8 @@ const InsuranceClaimDetail = () => {
     if (loading || !claim) {
         return (
             <div className="p-8 text-center animate-pulse flex flex-col items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Insurance Claim Detail', active: true }]} />
+
                 <ShieldAlert size={32} className="animate-bounce text-dim opacity-50" />
                 <span className="font-bold text-muted uppercase tracking-widest">Loading Claim Profile...</span>
             </div>
@@ -137,7 +140,7 @@ const InsuranceClaimDetail = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/10 pb-6">
                 <div>
-                    <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
                         <ShieldAlert className="text-[#D4F12E]" size={32} />
                         Claim {claim.claimNumber}
                     </h1>

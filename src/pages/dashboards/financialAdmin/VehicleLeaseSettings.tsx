@@ -4,6 +4,7 @@ import { Car, Search, Save, CheckCircle2, AlertCircle, Filter, FileText } from '
 import { getAllVehicles, updateVehicleLeaseSettings } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VehicleLeaseSettings = () => {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -95,6 +96,8 @@ const VehicleLeaseSettings = () => {
     if (loading) {
         return (
             <div className="p-8 text-center animate-pulse flex flex-col items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Lease Settings', active: true }]} />
+
                 <Car size={32} className="animate-bounce text-dim opacity-50" />
                 <span className="font-bold text-muted uppercase tracking-widest">Loading Vehicles...</span>
             </div>
@@ -102,13 +105,17 @@ const VehicleLeaseSettings = () => {
     }
 
     return (
-        <div className="p-6 container-responsive space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-dashed pb-6" style={{ borderColor: 'var(--border-main)' }}>
+        <div className="container-responsive space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Lease Settings', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>Vehicle Lease Settings</h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                        Manage standard lease durations and weekly rent rates globally. These will map directly to driver assignment contracts.
-                    </p>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Car size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Vehicle Lease Settings
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">Global configuration for standard lease durations and rental rates.</p>
                 </div>
             </div>
 

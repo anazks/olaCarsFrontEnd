@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, Plus, Trash2, Upload, X, Check, AlertTriangle, Search, Eye, Download } from 'lucide-react';
+import { Shield, Plus, Trash2, Upload, X, Check, AlertTriangle, Search, Eye, Download, RefreshCw } from 'lucide-react';
 import {
     getAllInsurances,
     createInsurance,
@@ -12,6 +12,7 @@ import {
     type CoverageType
 } from '../../../services/insuranceService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageInsurances = () => {
     const { t } = useTranslation();
@@ -164,19 +165,33 @@ const ManageInsurances = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Insurances', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                        <Shield className="text-lime" /> {t('management.insurances.title')}
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Shield size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        {t('management.insurances.title')}
                     </h1>
-                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.insurances.subtitle')}</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">{t('management.insurances.subtitle')}</p>
                 </div>
-                <button
-                    onClick={handleOpenCreateModal}
-                    className="flex items-center gap-2 bg-lime text-black px-6 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(163,230,53,0.3)] transition-all hover:-translate-y-0.5"
-                >
-                    <Plus size={20} /> {t('management.insurances.add')}
-                </button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={fetchInsurances}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={handleOpenCreateModal}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <Plus size={14} strokeWidth={3} /> {t('management.insurances.add')}
+                    </button>
+                </div>
             </div>
 
             {/* Search and Advanced Filters */}

@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Calculator, AlertTriangle, Check, X } from 'lucide-rea
 import { getAllTaxes, createTax, updateTaxStatus } from '../../../services/taxService';
 import type { Tax, CreateTaxPayload } from '../../../services/taxService';
 import { getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const TaxManagement = () => {
     const [taxes, setTaxes] = useState<Tax[]>([]);
@@ -62,30 +63,32 @@ const TaxManagement = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Tax Management', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Calculator size={28} style={{ color: '#C8E600' }} />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Calculator size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Tax Management
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Manage tax profiles and percentage rates</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Manage tax profiles and percentage rates</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={fetchTaxes}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canManageTaxes && !isAddRouteActive && (
                         <button
                             onClick={() => setIsAddRouteActive(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)' }}
                         >
-                            <Plus size={18} /> Add Tax Profile
+                            <Plus size={14} strokeWidth={3} /> Add Tax Profile
                         </button>
                     )}
                 </div>

@@ -98,6 +98,17 @@ import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
 
+// Sales Pages
+import PaymentsReceived from './pages/dashboards/finance/Sales/PaymentsReceived';
+import CreditNotes from './pages/dashboards/finance/Sales/CreditNotes';
+
+// Purchases Pages
+import Expenses from './pages/dashboards/finance/Purchases/Expenses';
+import RecurringExpenses from './pages/dashboards/finance/Purchases/RecurringExpenses';
+import RecurringBills from './pages/dashboards/finance/Purchases/RecurringBills';
+import PaymentsMade from './pages/dashboards/finance/Purchases/PaymentsMade';
+import VendorCredits from './pages/dashboards/finance/Purchases/VendorCredits';
+
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -370,6 +381,17 @@ function App() {
               <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
+
+              {/* Sales Routes */}
+              <Route path="payments-received" element={<PaymentsReceived />} />
+              <Route path="credit-notes" element={<CreditNotes />} />
+
+              {/* Purchases Routes */}
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="recurring-expenses" element={<RecurringExpenses />} />
+              <Route path="recurring-bills" element={<RecurringBills />} />
+              <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="vendor-credits" element={<VendorCredits />} />
             </Route>
           </Route>
 

@@ -13,7 +13,9 @@ import {
     ChevronUp,
     User,
     X,
-    Shield
+    Shield,
+    ShoppingCart,
+    ShoppingBag
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -121,6 +123,31 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Overdue Payments', path: '/admin/financial-admin/collections/overdue' },
                 { label: 'Upcoming Payments', path: '/admin/financial-admin/collections/upcoming' },
                 { label: 'Invoices Ledger', path: '/admin/financial-admin/collections/invoices' },
+            ]
+        },
+        {
+            id: 'sales',
+            label: 'Sales',
+            icon: <ShoppingCart size={22} />,
+            subItems: [
+                { label: 'Invoices', path: '/admin/financial-admin/invoices' },
+                { label: 'Payments Received', path: '/admin/financial-admin/payments-received' },
+                { label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' },
+            ]
+        },
+        {
+            id: 'purchases',
+            label: 'Purchases',
+            icon: <ShoppingBag size={22} />,
+            subItems: [
+                { label: 'Vendors', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: 'Expenses', path: '/admin/financial-admin/expenses' },
+                { label: 'Recurring Expenses', path: '/admin/financial-admin/recurring-expenses' },
+                { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Bills', path: '/admin/financial-admin/purchase-bills' },
+                { label: 'Recurring Bills', path: '/admin/financial-admin/recurring-bills' },
+                { label: 'Payments Made', path: '/admin/financial-admin/payments-made' },
+                { label: 'Vendor Credits', path: '/admin/financial-admin/vendor-credits' },
             ]
         },
         {

@@ -22,6 +22,7 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import { changePassword } from '../../../services/authService';
 import systemSettingsService from '../../../services/systemSettingsService';
 import ManageBankAccounts from '../finance/ManageBankAccounts';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DashboardSettings = () => {
     const { t, i18n } = useTranslation();
@@ -128,10 +129,12 @@ const DashboardSettings = () => {
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-8 animate-in fade-in duration-500">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Dashboard Settings', active: true }]} />
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <div className="p-2.5 rounded-xl" style={{ background: 'var(--brand-lime)', color: '#000' }}>
                             <Settings size={24} />
                         </div>

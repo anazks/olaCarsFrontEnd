@@ -12,6 +12,7 @@ import {
 } from '../../../services/accidentReportService';
 import { getUserRole, getUser } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const AccidentReports = () => {
     const userRole = getUserRole() || '';
@@ -100,53 +101,48 @@ const AccidentReports = () => {
 
     return (
         <div className="flex-1 w-full overflow-hidden flex flex-col bg-[#F8F9FA] dark:bg-[#050505]">
-            {/* Premium Header */}
-            <header className="p-6 md:p-10 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#0A0A0A] z-30">
-                <div className="max-w-[1600px] mx-auto">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-white shadow-xl shadow-red-500/20 transform hover:scale-105 transition-transform">
-                                <ShieldAlert size={32} strokeWidth={2.5} />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white uppercase italic">Incident <span className="text-red-500">Command</span></h1>
-                                <p className="text-gray-500 dark:text-dim font-bold flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
-                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Live Accident Monitoring System
-                                </p>
-                            </div>
-                        </div>
+            <div className="px-6 md:px-8 pt-4 bg-white dark:bg-[#0A0A0A]">
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Accident Reports', active: true }]} />
+            </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="relative group min-w-[300px]">
-                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search fleet, drivers or locations..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all text-gray-900 dark:text-white"
-                                />
-                            </div>
-                            
-                            <select 
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="bg-gray-100 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-700 dark:text-white focus:outline-none cursor-pointer appearance-none lg:appearance-auto"
-                            >
-                                <option value="ALL" className="dark:bg-[#1A1A1A] dark:text-white">All Status</option>
-                                <option value="SUBMITTED" className="dark:bg-[#1A1A1A] dark:text-white">Submitted</option>
-                                <option value="UNDER_REVIEW" className="dark:bg-[#1A1A1A] dark:text-white">In Review</option>
-                                <option value="RESOLVED" className="dark:bg-[#1A1A1A] dark:text-white">Resolved</option>
-                                <option value="CLOSED" className="dark:bg-[#1A1A1A] dark:text-white">Closed</option>
-                            </select>
-
-                            <button onClick={fetchReports} className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-dim hover:text-red-500 hover:border-red-500/30 transition-all shadow-sm">
-                                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                            </button>
-                        </div>
-                    </div>
+            {/* Compact Header */}
+            <div className="px-6 md:px-8 py-4 border-b border-gray-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-30 bg-white dark:bg-[#0A0A0A]">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2 uppercase italic">
+                        <ShieldAlert size={20} className="text-red-500" /> Incident <span className="text-red-500">Command</span>
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">Live Fleet Incident & Accident Monitoring</p>
                 </div>
-            </header>
+                
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <div className="relative group min-w-[220px]">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
+                        <input 
+                            type="text" 
+                            placeholder="Search fleet, drivers..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all text-gray-900 dark:text-white"
+                        />
+                    </div>
+                    
+                    <select 
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="bg-gray-100 dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-bold text-gray-700 dark:text-white focus:outline-none cursor-pointer appearance-none"
+                    >
+                        <option value="ALL">All Status</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="UNDER_REVIEW">In Review</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+
+                    <button onClick={fetchReports} className="flex items-center justify-center p-2 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-dim hover:text-red-500 hover:border-red-500/30 transition-all">
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+            </div>
 
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row relative">
                 
@@ -267,7 +263,7 @@ const AccidentReports = () => {
                                         <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-[0.2em] border border-red-500/20">Incident Case</span>
                                         <StatusBadge status={selectedReport.status} />
                                     </div>
-                                    <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">{selectedReport.vehicleNumber}</h2>
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">{selectedReport.vehicleNumber}</h2>
                                     <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Case ID: {selectedReport._id}</p>
                                 </div>
                                 <button 

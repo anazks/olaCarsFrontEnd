@@ -13,6 +13,7 @@ import { getAllVehiclePolicies } from '../../../services/insuranceService';
 import type { VehiclePolicy } from '../../../services/insuranceService';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VehiclePolicyList = () => {
     const { t } = useTranslation();
@@ -73,9 +74,11 @@ const VehiclePolicyList = () => {
 
     return (
         <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Policy List', active: true }]} />
+
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-xl font-black flex items-center gap-3 tracking-tight" style={{ color: 'var(--text-main)' }}>
                         <Shield className="text-[#D4F12E]" size={32} />
                         All Vehicle Policies
                     </h1>

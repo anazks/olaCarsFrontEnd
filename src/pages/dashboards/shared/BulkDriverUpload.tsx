@@ -10,6 +10,7 @@ import { getAllCountryManagers, createCountryManager, type CountryManager, type 
 import { getDecodedToken } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedDriver {
     fullName: string;
@@ -410,6 +411,8 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Bulk Driver Upload', active: true }]} />
+
             <div
                 className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}

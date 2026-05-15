@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import HasPermission from '../../../components/HasPermission';
 import { getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StaffManagement = () => {
     const { t } = useTranslation();
@@ -143,18 +144,18 @@ const StaffManagement = () => {
 
     return (
         <div className="p-4 sm:p-8 min-h-full transition-colors duration-300" style={{ background: 'var(--bg-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Staff Management', active: true }]} />
+
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-10">
-                    <h1 className="text-3xl font-black flex items-center gap-4 tracking-tight" style={{ color: 'var(--text-main)' }}>
-                        <div className="p-3 rounded-2xl" style={{ background: 'var(--brand-lime)', color: '#000' }}>
-                            <Users size={28} />
-                        </div>
-                        {t('sidebar.sections.staffManagement', 'Staff Management')}
-                    </h1>
-                    <p className="text-sm mt-2 max-w-2xl font-medium" style={{ color: 'var(--text-dim)' }}>
-                        Comprehensive workforce oversight. Manage administrative hierarchies, branch personnel, technical staff, and monitor organizational performance from a unified interface.
-                    </p>
+                {/* Compact Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-8">
+                    <div>
+                        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                            <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                            {t('sidebar.sections.staffManagement', 'Staff Management')}
+                        </h1>
+                        <p className="text-xs font-medium text-dim mt-0.5">Comprehensive administrative hierarchies, branch personnel, and workforce performance.</p>
+                    </div>
                 </div>
 
                 {/* Staff Roles Section */}
