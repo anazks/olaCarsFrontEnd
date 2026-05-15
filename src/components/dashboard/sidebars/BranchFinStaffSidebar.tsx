@@ -103,6 +103,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Assigned Missions', path: '/admin/branch-fin-staff/my-tasks' },
+                { label: 'Task & Target Management', path: '/admin/branch-fin-staff/target-management' },
                 { label: 'Accident Reports', path: '/admin/branch-fin-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-fin-staff/vehicles' },
                 { label: 'Manage Drivers', path: '/admin/branch-fin-staff/drivers' },

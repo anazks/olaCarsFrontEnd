@@ -50,7 +50,7 @@ import CollectionsDashboard from './pages/dashboards/financialAdmin/CollectionsD
 import CollectionsLedgerView from './pages/dashboards/financialAdmin/CollectionsLedgerView';
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
-import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
+// import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
@@ -213,7 +213,6 @@ function App() {
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
@@ -286,7 +285,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
-              
+
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
               <Route path="collections/dashboard" element={<CollectionsDashboard />} />
@@ -359,7 +358,6 @@ function App() {
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
             </Route>
@@ -422,7 +420,6 @@ function App() {
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
@@ -474,7 +471,6 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="alerts" element={<AlertsManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
@@ -512,6 +508,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="target-management" element={<TargetManagement />} />
             </Route>
           </Route>
 
@@ -556,6 +553,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="target-management" element={<TargetManagement />} />
             </Route>
           </Route>
 

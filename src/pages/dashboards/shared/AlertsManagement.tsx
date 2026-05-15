@@ -339,6 +339,7 @@ const AlertsManagement = () => {
                     <option value="MAINTENANCE">Maintenance</option>
                     <option value="INSURANCE">Insurance</option>
                     <option value="REGISTRATION">Registration</option>
+                    <option value="INVOICE">Invoice</option>
                     <option value="OTHER">Other</option>
                 </select>
 

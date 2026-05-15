@@ -4,13 +4,16 @@ export interface StaffTask {
     _id?: string;
     title: string;
     description: string;
-    assignedTo: string;
-    assignedToRole: string;
-    assignedToRoleModel: string;
+    targetType: 'COUNTRY' | 'BRANCH' | 'STAFF';
+    targetId: string;
     status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
     dueDate: string;
     notes?: string;
     feedback?: string;
+    assignedBy?: {
+        _id: string;
+        fullName: string;
+    };
 }
 
 export const delegateTask = async (taskData: StaffTask) => {
