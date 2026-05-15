@@ -96,7 +96,6 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Accident Reports', path: '/admin/branch-manager/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
@@ -120,7 +119,8 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Intelligence Reports', path: '/admin/branch-manager/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/branch-manager/alerts' },
                 { label: 'Support Desk', path: '/admin/branch-manager/complaints' },
-            ]
+           
+                { label: 'Accident Reports', path: '/admin/branch-manager/accident-reports', permission: 'STAFF_VIEW' }, ]
         },
         {
             id: 'settings',

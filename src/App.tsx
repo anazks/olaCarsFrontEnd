@@ -279,6 +279,7 @@ function App() {
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
@@ -476,6 +477,7 @@ function App() {
               <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 

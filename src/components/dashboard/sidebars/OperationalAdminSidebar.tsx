@@ -95,7 +95,6 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/operational-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
@@ -118,7 +117,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Legal Agreements', path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/operational-admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/operational-admin/alerts' },
-            ]
+           
+                { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' }, ]
         },
         {
             id: 'settings',

@@ -6,6 +6,7 @@ import { getAllVehicles } from '../../services/vehicleService';
 import { getAllDrivers } from '../../services/driverService';
 import { getActiveAlerts } from '../../services/alertService';
 import { getAllEnquiries } from '../../services/enquiryService';
+import { getBranchAccidentReports } from '../../services/accidentReportService';
 import { getUser } from '../../utils/auth';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,7 @@ const BranchManagerDashboard = () => {
     const [vehicleStatusData, setVehicleStatusData] = useState<any[]>([]);
     const [handovers, setHandovers] = useState<any[]>([]);
     const [tasks, setTasks] = useState<any[]>([]);
+    const [todayAccidents, setTodayAccidents] = useState<any[]>([]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -47,11 +49,12 @@ const BranchManagerDashboard = () => {
                     return;
                 }
 
-                const [vehiclesRes, driversRes, alertsRes, enquiriesRes] = await Promise.allSettled([
+                const [vehiclesRes, driversRes, alertsRes, enquiriesRes, accidentsRes] = await Promise.allSettled([
                     getAllVehicles({ limit: 1000, branch: branchId }),
                     getAllDrivers({ limit: 1000, branch: branchId }),
                     getActiveAlerts(),
-                    getAllEnquiries({ branchId, limit: 1 }) // Just to get total if meta is provided, or fetch all
+                    getAllEnquiries({ branchId, limit: 1 }), // Just to get total if meta is provided, or fetch all
+                    getBranchAccidentReports(branchId)
                 ]);
 
                 let totalV = 0;
@@ -127,6 +130,13 @@ const BranchManagerDashboard = () => {
                     totalC = (enquiriesRes.value.data || []).length;
                 }
 
+                if (accidentsRes.status === 'fulfilled') {
+                    const allAccidents = accidentsRes.value.data || [];
+                    const todayStr = new Date().toDateString();
+                    const todays = allAccidents.filter((a: any) => new Date(a.createdAt).toDateString() === todayStr);
+                    setTodayAccidents(todays);
+                }
+
                 setStats({
                     totalVehicles: totalV,
                     availableVehicles: availV,
@@ -143,7 +153,7 @@ const BranchManagerDashboard = () => {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [user?.branchId]);
 
     if (loading) {
         return (
@@ -155,6 +165,30 @@ const BranchManagerDashboard = () => {
 
     return (
         <div className="container-responsive space-y-8 py-6">
+            {/* Today's Accidents Alert Banner */}
+            {todayAccidents.length > 0 && (
+                <div 
+                    onClick={() => navigate('/admin/branch-manager/accident-reports')}
+                    className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-red-500/20 transition-all shadow-sm"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-red-500 font-bold text-lg">Urgent: New Accident Reports</h3>
+                            <p className="text-sm text-red-500/80 font-medium">
+                                {todayAccidents.length} accident{todayAccidents.length > 1 ? 's' : ''} reported today. Immediate attention required.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-red-500 font-bold">
+                        <span className="hidden sm:inline">View Details</span>
+                        <ChevronRight size={20} />
+                    </div>
+                </div>
+            )}
+
             {/* Header / Greetings Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-white/5 to-transparent p-6 rounded-3xl border border-white/10 glass-dark">
                 <div>
