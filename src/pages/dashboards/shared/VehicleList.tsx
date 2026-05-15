@@ -177,13 +177,14 @@ const VehicleList = () => {
                     >
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
-                    <HasPermission permission="INSURANCE_VIEW">
+                    
+                    <HasPermission permission="PURCHASE_ORDER_VIEW">
                         <button
-                            onClick={() => navigate('../insurances')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            onClick={() => navigate('../purchase-orders')}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Shield size={18} />{t('sidebar.items.insurance', 'Insurance Plans')}
+                            <Package size={18} className="opacity-70" /> {t('sidebar.items.purchaseOrders', 'Orders')}
                         </button>
                     </HasPermission>
                     
@@ -376,35 +377,30 @@ const VehicleList = () => {
                             )}
                         </div>
                     ) : (
-                        <>
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet #</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.year')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.condition')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {vehicles.map((v) => (
-                                        <tr
-                                            key={v._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
-                                            style={{ borderColor: 'var(--border-main)' }}
-                                            onClick={() => navigate(v._id)}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.make || '—'} {v.basicDetails?.model || ''}
-                                                    {v.basicDetails?.colour && (
-                                                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ background: v.basicDetails.colour.toLowerCase() }} />
-                                                    )}
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr className="border-b" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle', 'Vehicle Details')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet & Staff</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin', 'VIN / Reg')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Specs</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status', 'Status')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price', 'Value')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vehicles.map((v) => (
+                                    <tr
+                                        key={v._id}
+                                        onClick={() => navigate(v._id)}
+                                        className="group border-b last:border-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
+                                        style={{ borderColor: 'var(--border-main)' }}
+                                    >
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm" 
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                    <Car size={24} style={{ color: v.basicDetails?.colour?.toLowerCase() || 'var(--text-dim)' }} />
                                                 </div>
                                                 <div>
                                                     <div className="text-sm font-black tracking-wide" style={{ color: 'var(--text-main)' }}>
@@ -419,78 +415,59 @@ const VehicleList = () => {
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.condition || '—'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <StatusBadge status={v.status} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {v.purchaseDetails?.currency || ""} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2 text-right">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
-                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95 ml-auto"
-                                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
-                                                        title={t('common.view')}
-                                                    >
-                                                        <Eye size={15} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {/* Pagination */}
-                            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                <div className="text-xs font-black tracking-widest uppercase opacity-60" style={{ color: 'var(--text-dim)' }}>
-                                    {t('management.vehicles.pagination.showing', { count: vehicles.length, total: pagination.total })}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        disabled={filters.page === 1}
-                                        onClick={() => handlePageChange(filters.page - 1)}
-                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <div className="flex items-center gap-1.5">
-                                        {[...Array(pagination.totalPages)].map((_, i) => (
-                                            <button
-                                                key={i + 1}
-                                                onClick={() => handlePageChange(i + 1)}
-                                                className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20 scale-105' : 'hover:bg-white/10 opacity-50 hover:opacity-100'}`}
-                                                style={{
-                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
-                                                    border: '1px solid var(--border-main)',
-                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button
-                                        disabled={filters.page === pagination.totalPages}
-                                        onClick={() => handlePageChange(filters.page + 1)}
-                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </>
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-mono font-black" style={{ color: '#C8E600' }}>
+                                                {v.basicDetails?.fleetNumber || 'UNASSIGNED'}
+                                            </div>
+                                            <div className="text-xs font-semibold mt-1.5 opacity-80" style={{ color: 'var(--text-dim)' }}>
+                                                {v.handlingStaff ? (typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`) : 'No Staff'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {v.basicDetails?.vin || 'NO VIN'}
+                                            </div>
+                                            <div className="text-xs mt-1.5 font-bold tracking-widest uppercase opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                {v.legalDocs?.registrationNumber || 'UNREGISTERED'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {v.basicDetails?.category || 'General'}
+                                            </div>
+                                            <div className="text-xs mt-1.5 flex items-center gap-1.5 font-medium" style={{ color: 'var(--text-dim)' }}>
+                                                {v.basicDetails?.fuelType || 'N/A'} <span className="opacity-50">•</span> {v.basicDetails?.transmission || 'N/A'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <StatusBadge status={v.status} />
+                                        </td>
+                                        
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
+                                                {v.purchaseDetails?.currency || "AED"} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
+                                            </div>
+                                            <div className="mt-2 flex justify-end">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
+                                                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={14} strokeWidth={2.5} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
 

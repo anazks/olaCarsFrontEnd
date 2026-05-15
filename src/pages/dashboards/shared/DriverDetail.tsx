@@ -453,7 +453,7 @@ const DriverDetail = () => {
                             </HasPermission>
                         )}
 
-                        {driver.status === 'VERIFICATION' && (isFinanceStaff || userRole === 'countrymanager') && (
+                        {driver.status === 'VERIFICATION' && (
                             <HasPermission permission="DRIVER_ONBOARD">
                                 <button
                                     onClick={() => {
@@ -473,14 +473,14 @@ const DriverDetail = () => {
                             </HasPermission>
                         )}
 
-                        {driver.status === 'CREDIT CHECK' && (isFinanceStaff || userRole === 'countrymanager') && (
+                        {driver.status === 'CREDIT CHECK' && (
                             <div className="px-6 py-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center gap-3">
                                 <Clock size={20} className="text-yellow-500 animate-spin" />
                                 <span className="text-xs font-black text-yellow-500 uppercase">System Assessment in Progress</span>
                             </div>
                         )}
 
-                        {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && isManager && (
+                        {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
                             <div className="flex gap-4">
                                 <HasPermission permission="DRIVER_ONBOARD">
                                     <button
@@ -513,7 +513,7 @@ const DriverDetail = () => {
                             </div>
                         )}
 
-                        {driver.status === 'APPROVED' && isStaff && (
+                        {driver.status === 'APPROVED' && (
                             <HasPermission permission="DRIVER_ONBOARD">
                                 <button
                                     onClick={() => handleProgress('ACTIVE', { notes: 'Activated after Policy Approval' })}
@@ -527,7 +527,7 @@ const DriverDetail = () => {
 
 
 
-                        {driver.status === 'ACTIVE' && isStaff && !driver.currentVehicle && (
+                        {driver.status === 'ACTIVE' && !driver.currentVehicle && (
                             <HasPermission permission="DRIVER_ASSIGN_VEHICLE">
                                 <button
                                     onClick={() => navigate('assign-vehicle')}
@@ -540,7 +540,7 @@ const DriverDetail = () => {
                         )}
 
                         {/* Helpful Status Messages */}
-                        {(isFinanceStaff || userRole === 'countrymanager') && (driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
+                        {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
                             <div className="px-6 py-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3">
                                 <Clock size={20} className="text-blue-500" />
                                 <span className="text-xs font-black text-blue-500 uppercase">Awaiting Manager Approval</span>
