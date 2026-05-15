@@ -12,46 +12,77 @@ import {
     CheckCircle2,
     Clock,
     XCircle,
-    AlertCircle
+    AlertCircle,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    Calendar,
+    ArrowUpRight
 } from 'lucide-react';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const PurchaseBillList = () => {
     const { t } = useTranslation();
     const [payments, setPayments] = useState<PaymentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // Filters State
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    // Debounce search effect
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Reset to page 1 on filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [statusFilter, debouncedSearch, startDate, endDate]);
 
     const fetchPayments = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllPayments({ transactionCategory: 'EXPENSE' });
-            setPayments(data);
+            const filters: any = {
+                transactionCategory: 'EXPENSE',
+                page,
+                limit,
+                search: debouncedSearch,
+                status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined
+            };
+
+            const response = await getAllPayments(filters);
+            setPayments(response?.data || []);
+            setTotal(response?.pagination?.total || 0);
+            setTotalPages(response?.pagination?.totalPages || 0);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || t('management.purchaseBills.fetchFailed', { defaultValue: 'Failed to fetch payments' }));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, limit, debouncedSearch, statusFilter, startDate, endDate, t]);
 
     useEffect(() => {
         fetchPayments();
     }, [fetchPayments]);
 
-    const filteredPayments = payments.filter(p => {
-        const matchesSearch =
-            p.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
-
-        return matchesSearch && matchesStatus;
-    });
-
-    const statusConfig = {
+    const statusConfig: any = {
         PENDING: { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', icon: <Clock size={14} /> },
         COMPLETED: { color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', icon: <CheckCircle2 size={14} /> },
         FAILED: { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', icon: <XCircle size={14} /> },
@@ -60,6 +91,13 @@ const PurchaseBillList = () => {
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '#' },
+                    { label: 'Purchase Bills', active: true }
+                ]} 
+            />
+            
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -71,7 +109,7 @@ const PurchaseBillList = () => {
                 </div>
                 <button
                     onClick={fetchPayments}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-white/5 border border-[var(--border-main)]"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:bg-white/5 border border-[var(--border-main)]"
                     style={{ color: 'var(--text-dim)' }}
                 >
                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -79,97 +117,223 @@ const PurchaseBillList = () => {
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 relative">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" style={{ color: 'var(--text-main)' }} />
-                    <input
-                        type="text"
-                        placeholder={t('management.purchaseBills.searchPlaceholder')}
+            {/* Filters Bar */}
+            <div className="flex flex-wrap items-center gap-4 p-4 rounded-3xl border bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
+                {/* Search */}
+                <div className="flex-1 min-w-[280px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="Search PO #, Supplier, or Notes..."
                         value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] outline-none text-sm focus:ring-2 focus:ring-[#C8E600]/50 transition-all font-medium"
-                        style={{ color: 'var(--text-main)' }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none text-xs transition-all focus:border-brand-lime/30"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
-                <div className="relative">
-                    <Filter size={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" style={{ color: 'var(--text-main)' }} />
-                    <select
+
+                {/* Status */}
+                <div className="w-full sm:w-auto min-w-[140px]">
+                    <select 
                         value={statusFilter}
-                        onChange={e => setStatusFilter(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[#C8E600]/50 transition-all font-bold"
-                        style={{ color: 'var(--text-main)' }}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-xs cursor-pointer focus:border-brand-lime/30"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
-                        <option value="ALL">{t('management.common.allStatuses')}</option>
-                        <option value="PENDING">{t('management.purchaseBills.statusLabels.PENDING')}</option>
-                        <option value="COMPLETED">{t('management.purchaseBills.statusLabels.COMPLETED')}</option>
-                        <option value="FAILED">{t('management.purchaseBills.statusLabels.FAILED')}</option>
-                        <option value="CANCELLED">{t('management.purchaseBills.statusLabels.CANCELLED')}</option>
+                        <option value="ALL">All Statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="FAILED">Failed</option>
+                        <option value="CANCELLED">Cancelled</option>
                     </select>
                 </div>
+
+                {/* Date Range */}
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-main)]">
+                    <input 
+                        type="date" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
+                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                    />
+                    <div className="w-px h-4 bg-white/10"></div>
+                    <input 
+                        type="date" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
+                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                    />
+                </div>
+
+                {/* Clear Button */}
+                {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
+                    <button
+                        onClick={() => {
+                            setSearchQuery('');
+                            setStatusFilter('ALL');
+                            setStartDate('');
+                            setEndDate('');
+                        }}
+                        title="Clear Filters"
+                        className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"
+                    >
+                        <X size={16} />
+                    </button>
+                )}
             </div>
 
-            {/* Content */}
-            <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
+            {/* Content Container */}
+            <div className="rounded-[32px] border bg-white/[0.02] overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
                 {loading ? (
-                    <div className="py-20 flex flex-col items-center gap-4">
+                    <div className="py-24 flex flex-col items-center gap-4">
                         <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
-                        <p className="text-sm font-medium opacity-50">{t('management.purchaseBills.loading')}</p>
+                        <p className="text-sm font-bold opacity-40 uppercase tracking-widest">{t('management.purchaseBills.loading')}</p>
                     </div>
                 ) : error ? (
-                    <div className="py-20 text-center space-y-4">
-                        <AlertCircle size={48} className="mx-auto text-red-500 opacity-30" />
-                        <p className="text-red-500 font-medium">{error}</p>
-                        <button onClick={fetchPayments} className="px-6 py-2 bg-[#C8E600] text-black rounded-xl font-bold">{t('management.common.tryAgain', { defaultValue: 'Try Again' })}</button>
+                    <div className="py-24 text-center space-y-4">
+                        <AlertCircle size={48} className="mx-auto text-red-500 opacity-20" />
+                        <p className="text-red-500 font-bold">{error}</p>
+                        <button onClick={fetchPayments} className="px-6 py-3 bg-[#C8E600] text-black rounded-2xl font-black text-xs uppercase tracking-widest">{t('management.common.tryAgain')}</button>
                     </div>
-                ) : filteredPayments.length === 0 ? (
-                    <div className="py-20 text-center space-y-4">
+                ) : payments.length === 0 ? (
+                    <div className="py-24 text-center space-y-4">
                         <Receipt size={64} className="mx-auto opacity-10" style={{ color: 'var(--text-main)' }} />
-                        <p className="text-xl font-bold opacity-30">{t('management.purchaseBills.empty.noBills')}</p>
-                        <p className="text-sm opacity-20">{t('management.purchaseBills.empty.refine')}</p>
+                        <p className="text-xl font-black opacity-30 uppercase tracking-tighter">{t('management.purchaseBills.empty.noBills')}</p>
+                        <p className="text-sm opacity-20 font-medium">{t('management.purchaseBills.empty.refine')}</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-white/5 border-b border-[var(--border-main)]">
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest opacity-50">{t('management.purchaseBills.table.dateMethod')}</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest opacity-50">{t('management.purchaseBills.table.description')}</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest opacity-50 text-right">{t('management.purchaseBills.table.amount')}</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest opacity-50">{t('management.common.table.status')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border-main)]">
-                                {filteredPayments.map(p => {
-                                    const sc = statusConfig[p.status] || statusConfig.PENDING;
-                                    return (
-                                        <tr key={p._id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A'}
-                                                </p>
-                                                <p className="text-[10px] uppercase font-black opacity-40 mt-1">{p.paymentMethod.replace('_', ' ')}</p>
-                                            </td>
-                                            <td className="px-6 py-4 max-w-xs">
-                                                <p className="text-sm font-medium line-clamp-1" style={{ color: 'var(--text-main)' }}>{p.notes || t('management.common.noDescription', { defaultValue: 'No description' })}</p>
-                                                <p className="text-[10px] opacity-40 mt-1">ID: ...{p._id.slice(-8)}</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <p className="text-base font-black text-[#C8E600]">${p.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                                <p className="text-[10px] opacity-40 mt-1">{t('management.tax.title', { defaultValue: 'Tax' })}: ${p.taxAmount.toFixed(2)}</p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black border"
-                                                    style={{ background: sc.bg, color: sc.color, borderColor: `${sc.color}33` }}>
-                                                    {sc.icon} {t(`management.purchaseBills.statusLabels.${p.status}`)}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">{t('management.purchaseBills.table.dateMethod')}</th>
+                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Supplier / PO</th>
+                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">{t('management.purchaseBills.table.description')}</th>
+                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">{t('management.purchaseBills.table.amount')}</th>
+                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">{t('management.common.table.status')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y" style={{ dividerColor: 'var(--border-main)' }}>
+                                    {payments.map(p => {
+                                        const sc = statusConfig[p.status] || statusConfig.PENDING;
+                                        return (
+                                            <tr key={p._id} className="hover:bg-white/[0.03] transition-all group">
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-[#C8E600]/20 transition-all">
+                                                            <Calendar size={18} className="opacity-40" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
+                                                                {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A'}
+                                                            </p>
+                                                            <p className="text-[10px] uppercase font-black opacity-30 tracking-widest mt-0.5">{p.paymentMethod.replace('_', ' ')}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-black text-brand-lime truncate max-w-[150px]">
+                                                            {(p as any).supplier?.name || 'Unknown Supplier'}
+                                                        </p>
+                                                        <div className="flex items-center gap-1.5 opacity-40">
+                                                            <ArrowUpRight size={12} />
+                                                            <span className="text-[10px] font-bold">#{(p as any).po?.purchaseOrderNumber || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5 max-w-xs">
+                                                    <p className="text-xs font-bold leading-relaxed line-clamp-1" style={{ color: 'var(--text-main)' }}>
+                                                        {p.notes || t('management.common.noDescription')}
+                                                    </p>
+                                                    <p className="text-[10px] font-bold opacity-30 mt-1 uppercase tracking-tighter">{(p as any).accountingCode?.name || 'Expense'}</p>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <p className="text-lg font-black text-[#C8E600] tracking-tighter">
+                                                        ${p.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </p>
+                                                    <div className="flex items-center justify-end gap-1 opacity-30 mt-0.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest">Tax:</span>
+                                                        <span className="text-[10px] font-bold">${p.taxAmount.toFixed(2)}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex justify-center">
+                                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest border transition-all group-hover:scale-105"
+                                                            style={{ background: sc.bg, color: sc.color, borderColor: `${sc.color}33` }}>
+                                                            {sc.icon} {t(`management.purchaseBills.statusLabels.${p.status}`)}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Professional Pagination Footer */}
+                        <div className="p-6 border-t bg-white/[0.01] flex flex-col md:flex-row items-center justify-between gap-6" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col">
+                                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest mb-1">Rows per page</p>
+                                    <select 
+                                        value={limit}
+                                        onChange={(e) => setLimit(Number(e.target.value))}
+                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer hover:border-brand-lime/30 transition-all"
+                                        style={{ color: 'var(--text-main)' }}
+                                    >
+                                        {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v} bills</option>)}
+                                    </select>
+                                </div>
+                                <div className="w-px h-8 bg-white/10 hidden md:block"></div>
+                                <p className="text-xs font-bold opacity-40">
+                                    Showing <span className="text-brand-lime font-black">{((page-1)*limit)+1}</span> to <span className="text-brand-lime font-black">{Math.min(page*limit, total)}</span> of <span className="text-[var(--text-main)] font-black">{total}</span> records
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    disabled={page === 1}
+                                    onClick={() => setPage(p => p - 1)}
+                                    className="p-2.5 rounded-xl border border-white/10 hover:bg-white/5 disabled:opacity-20 transition-all active:scale-90"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                
+                                <div className="flex items-center gap-1">
+                                    {[...Array(totalPages)].map((_, i) => {
+                                        const pNum = i + 1;
+                                        // Show 5 pages max around current
+                                        if (totalPages > 5 && (pNum < page - 2 || pNum > page + 2)) return null;
+                                        return (
+                                            <button
+                                                key={pNum}
+                                                onClick={() => setPage(pNum)}
+                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-90 ${page === pNum ? 'bg-brand-lime text-black shadow-[0_0_15px_rgba(200,230,0,0.3)]' : 'hover:bg-white/5 border border-white/5 opacity-40'}`}
+                                                style={{ color: page === pNum ? '#000' : 'var(--text-main)' }}
+                                            >
+                                                {pNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage(p => p + 1)}
+                                    className="p-2.5 rounded-xl border border-white/10 hover:bg-white/5 disabled:opacity-20 transition-all active:scale-90"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

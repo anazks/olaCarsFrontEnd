@@ -82,7 +82,7 @@ const BranchDetails = () => {
                 <p className="text-red-500 font-bold">{error || 'Branch not found'}</p>
                 <button
                     onClick={() => navigate(-1)}
-                    className="mt-4 px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                    className="mt-4 px-6 py-2 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] rounded-xl transition-all"
                 >
                     Go Back
                 </button>
@@ -125,7 +125,7 @@ const BranchDetails = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all active:scale-95 border border-white/10"
+                        className="p-3 rounded-2xl bg-[var(--bg-input)] hover:bg-[var(--bg-card)] transition-all active:scale-95 border border-[var(--border-main)]"
                     >
                         <ArrowLeft size={20} />
                     </button>
@@ -146,7 +146,7 @@ const BranchDetails = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-2 p-1 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)]">
                         <input
                             type="date"
                             value={dateRange.startDate}
@@ -178,7 +178,7 @@ const BranchDetails = () => {
                     { label: 'Tasks Completed', value: analytics.taskSummary.completed, icon: CheckCircle2, color: '#8b5cf6' },
                     { label: 'Tasks Pending', value: analytics.taskSummary.pending, icon: Clock, color: '#eab308' },
                 ].map((stat, i) => (
-                    <div key={i} className="p-6 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all group overflow-hidden relative">
+                    <div key={i} className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-input)] transition-all group overflow-hidden relative">
                         <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
                             <stat.icon size={80} style={{ color: stat.color }} />
                         </div>
@@ -199,7 +199,7 @@ const BranchDetails = () => {
                 {/* Branch Info & Manager */}
                 <div className="lg:col-span-1 space-y-6">
                     {/* Branch Manager Card */}
-                    <div className="p-8 rounded-3xl border border-white/10 bg-white/5 relative overflow-hidden">
+                    <div className="p-8 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4">
                             <User className="opacity-10" size={60} />
                         </div>
@@ -215,33 +215,33 @@ const BranchDetails = () => {
                                     </p>
                                     <p className="text-xs font-bold opacity-50 uppercase tracking-widest">Full Time Overseer</p>
                                 </div>
-                                <div className="space-y-3 pt-4 border-t border-white/10">
+                                <div className="space-y-3 pt-4 border-t border-[var(--border-main)]">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-white/5"><Mail size={14} className="text-[#C8E600]" /></div>
+                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Mail size={14} className="text-[#C8E600]" /></div>
                                         <span className="text-sm truncate">{typeof branch.branchManager === 'object' ? branch.branchManager.email : 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-white/5"><Phone size={14} className="text-[#C8E600]" /></div>
+                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Phone size={14} className="text-[#C8E600]" /></div>
                                         <span className="text-sm">{branch.phone || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <div className="py-4 text-center border-2 border-dashed border-white/10 rounded-2xl">
+                            <div className="py-4 text-center border-2 border-dashed border-[var(--border-main)] rounded-2xl">
                                 <p className="text-sm opacity-50 italic">No manager assigned</p>
                             </div>
                         )}
                     </div>
 
                     {/* Contact & Location */}
-                    <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
+                    <div className="p-8 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)]">
                         <h2 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
                             <div className="w-2 h-6 bg-blue-500 rounded-full" />
                             Location Details
                         </h2>
                         <div className="space-y-6">
                             <div className="flex gap-4">
-                                <div className="p-3 rounded-2xl bg-white/5 h-fit"><MapPin size={20} className="text-blue-500" /></div>
+                                <div className="p-3 rounded-2xl bg-[var(--bg-input)] h-fit"><MapPin size={20} className="text-blue-500" /></div>
                                 <div>
                                     <p className="text-sm font-bold opacity-60 uppercase tracking-widest mb-1">Full Address</p>
                                     <p className="text-sm leading-relaxed" style={{ color: 'var(--text-main)' }}>
@@ -251,7 +251,7 @@ const BranchDetails = () => {
                                 </div>
                             </div>
                             <div className="flex gap-4">
-                                <div className="p-3 rounded-2xl bg-white/5 h-fit"><Mail size={20} className="text-blue-500" /></div>
+                                <div className="p-3 rounded-2xl bg-[var(--bg-input)] h-fit"><Mail size={20} className="text-blue-500" /></div>
                                 <div>
                                     <p className="text-sm font-bold opacity-60 uppercase tracking-widest mb-1">Official Email</p>
                                     <p className="text-sm truncate" style={{ color: 'var(--text-main)' }}>{branch.email}</p>
@@ -263,7 +263,7 @@ const BranchDetails = () => {
 
                 {/* Staff Analytics & List */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="p-8 rounded-3xl border border-white/10 bg-white/5 min-h-[600px] flex flex-col">
+                    <div className="p-8 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] min-h-[600px] flex flex-col">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                             <div>
                                 <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
@@ -279,7 +279,7 @@ const BranchDetails = () => {
                                     placeholder="Search staff..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm outline-none focus:border-[#C8E600]/50 transition-all"
+                                    className="w-full pl-12 pr-4 py-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl text-sm outline-none focus:border-[#C8E600]/50 transition-all"
                                 />
                             </div>
                         </div>
@@ -287,7 +287,7 @@ const BranchDetails = () => {
                         <div className="flex-1 overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>
-                                    <tr className="border-b border-white/10">
+                                    <tr className="border-b border-[var(--border-main)]">
                                         <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Personnel</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40">Role</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40 text-center">Tasks</th>
@@ -296,14 +296,14 @@ const BranchDetails = () => {
                                         <th className="px-4 py-4 text-xs font-black uppercase tracking-widest opacity-40 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-[var(--border-main)]">
                                     {filteredStaff.map((person: any) => {
                                         const successRate = person.analytics.totalTasks > 0
                                             ? Math.round((person.analytics.completedTasks / person.analytics.totalTasks) * 100)
                                             : 0;
 
                                         return (
-                                            <tr key={person._id} className="group hover:bg-white/5 transition-all">
+                                            <tr key={person._id} className="group hover:bg-[var(--bg-input)] transition-all">
                                                 <td className="px-4 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C8E600] to-[#8fb200] flex items-center justify-center text-black font-black">
@@ -316,7 +316,7 @@ const BranchDetails = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4">
-                                                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-lg">
+                                                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest bg-[var(--bg-input)] px-2 py-1 rounded-lg">
                                                         {person.role.replace('STAFF', '')}
                                                     </span>
                                                 </td>
@@ -328,7 +328,7 @@ const BranchDetails = () => {
                                                         <span className="text-xs font-black" style={{ color: successRate > 70 ? '#22c55e' : successRate > 40 ? '#eab308' : '#ef4444' }}>
                                                             {successRate}%
                                                         </span>
-                                                        <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="w-16 h-1 bg-[var(--border-main)] rounded-full overflow-hidden">
                                                             <div
                                                                 className="h-full transition-all duration-1000"
                                                                 style={{
@@ -381,7 +381,7 @@ const BranchDetails = () => {
             </div>
 
             {/* Analytics Charts Section */}
-            <div className="p-8 rounded-3xl border border-white/10 bg-white/5">
+            <div className="p-8 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)]">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
@@ -401,10 +401,10 @@ const BranchDetails = () => {
                                         <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.3} />
                                 <XAxis
                                     dataKey="_id"
-                                    stroke="rgba(255,255,255,0.3)"
+                                    stroke="var(--text-dim)"
                                     fontSize={10}
                                     tickLine={false}
                                     axisLine={false}
@@ -413,9 +413,9 @@ const BranchDetails = () => {
                                         return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                                     }}
                                 />
-                                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
                                 <RechartsTooltip
-                                    contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }}
                                     itemStyle={{ color: '#C8E600', fontWeight: 'bold' }}
                                 />
                                 <Area

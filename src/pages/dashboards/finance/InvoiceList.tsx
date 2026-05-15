@@ -1,15 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, Filter, Search, Download, DollarSign, User, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { FileText, RefreshCw, Filter, Search, Download, DollarSign, User, Calendar, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
 import { getInvoices, payInvoice } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const InvoiceList = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const [pagination, setPagination] = useState({ totalItems: 0, totalPages: 1 });
     
     // Payment Modal State
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -18,22 +27,41 @@ const InvoiceList = () => {
     const [paymentNote, setPaymentNote] = useState('');
     const [processingPayment, setProcessingPayment] = useState(false);
 
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Reset to page 1 on filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [statusFilter, debouncedSearch, startDate, endDate]);
+
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const filters: any = {};
+            const filters: any = {
+                page,
+                limit
+            };
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (debouncedSearch) filters.search = debouncedSearch;
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
             
             const response = await getInvoices(filters);
             setInvoices(response.data || []);
+            if (response.pagination) {
+                setPagination(response.pagination);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch invoices');
             toast.error('Error loading invoices');
         } finally {
             setLoading(false);
         }
-    }, [statusFilter]);
+    }, [statusFilter, debouncedSearch, page, limit, startDate, endDate]);
 
     useEffect(() => {
         fetchData();
@@ -65,16 +93,17 @@ const InvoiceList = () => {
         }
     };
 
-    const filteredInvoices = invoices.filter(inv => {
-        const query = searchQuery.toLowerCase();
-        return (
-            inv.invoiceNumber.toLowerCase().includes(query) ||
-            (inv.driver as any)?.personalInfo?.fullName?.toLowerCase().includes(query)
-        );
-    });
+    // Filtering is now handled on the server
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '#' },
+                    { label: 'Rent Invoices', active: true }
+                ]} 
+            />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -92,24 +121,27 @@ const InvoiceList = () => {
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-3xl border bg-white/[0.02]" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="md:col-span-2 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" size={16} />
+            {/* Filters Bar */}
+            <div className="flex flex-wrap items-center gap-4 p-4 rounded-3xl border bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
+                {/* Search */}
+                <div className="flex-1 min-w-[280px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={16} />
                     <input 
                         type="text" 
-                        placeholder="Search by Invoice # or Driver Name..."
+                        placeholder="Search Invoice # or Driver..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none text-sm transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none text-xs transition-all focus:border-brand-lime/30"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
-                <div>
+
+                {/* Status */}
+                <div className="w-full sm:w-auto min-w-[140px]">
                     <select 
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-sm cursor-pointer"
+                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-xs cursor-pointer focus:border-brand-lime/30"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <option value="ALL">All Statuses</option>
@@ -119,6 +151,41 @@ const InvoiceList = () => {
                         <option value="OVERDUE">Overdue</option>
                     </select>
                 </div>
+
+                {/* Date Range */}
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-main)]">
+                    <input 
+                        type="date" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
+                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                    />
+                    <div className="w-px h-4 bg-white/10"></div>
+                    <input 
+                        type="date" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
+                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                    />
+                </div>
+
+                {/* Clear Button (Icon only) */}
+                {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
+                    <button
+                        onClick={() => {
+                            setSearchQuery('');
+                            setStatusFilter('ALL');
+                            setStartDate('');
+                            setEndDate('');
+                        }}
+                        title="Clear Filters"
+                        className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"
+                    >
+                        <X size={16} />
+                    </button>
+                )}
             </div>
 
             {/* Table */}
@@ -137,11 +204,11 @@ const InvoiceList = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {loading ? (
+                            {loading && invoices.length === 0 ? (
                                 <tr><td colSpan={7} className="p-20 text-center animate-pulse text-xs font-black uppercase tracking-widest opacity-40">Loading Invoices...</td></tr>
-                            ) : filteredInvoices.length === 0 ? (
+                            ) : invoices.length === 0 ? (
                                 <tr><td colSpan={7} className="p-20 text-center text-dim text-sm font-medium">No invoices found matching your criteria.</td></tr>
-                            ) : filteredInvoices.map((inv) => (
+                            ) : invoices.map((inv) => (
                                 <tr key={inv._id} className="group hover:bg-white/[0.02] transition-all">
                                     <td className="p-6">
                                         <div className="flex flex-col">
@@ -200,6 +267,54 @@ const InvoiceList = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {!loading && invoices.length > 0 && pagination && (
+                    <div className="p-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
+                        <p className="text-[10px] font-black text-dim uppercase tracking-widest">
+                            Showing <span className="text-[var(--text-main)]">{((page - 1) * limit) + 1}</span> - <span className="text-[var(--text-main)]">{Math.min(page * limit, pagination.totalItems)}</span> of <span className="text-[var(--text-main)]">{pagination.totalItems}</span> Invoices
+                        </p>
+                        
+                        <div className="flex items-center gap-3">
+                            <select 
+                                value={limit}
+                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-1.5 text-[10px] font-bold text-[var(--text-main)] outline-none cursor-pointer"
+                            >
+                                <option value="10">10 / PAGE</option>
+                                <option value="25">25 / PAGE</option>
+                                <option value="50">50 / PAGE</option>
+                                <option value="100">100 / PAGE</option>
+                            </select>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
+                                    style={{ color: page === 1 ? 'var(--text-dim)' : '#C8E600' }}
+                                >
+                                    Prev
+                                </button>
+                                
+                                <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5">
+                                    <span className="text-[10px] font-black text-[var(--text-main)] italic">
+                                        {page} <span className="text-dim opacity-30 mx-1">/</span> {pagination.totalPages}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                                    disabled={page === pagination.totalPages}
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
+                                    style={{ color: page === pagination.totalPages ? 'var(--text-dim)' : '#C8E600' }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Payment Modal */}

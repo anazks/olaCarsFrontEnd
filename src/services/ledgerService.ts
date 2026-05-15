@@ -59,11 +59,14 @@ export interface CreateJournalPayload {
     lines: JournalLine[];
 }
 
-export const getLedgerEntries = async (filters: Record<string, any> = {}): Promise<LedgerEntry[]> => {
+export const getLedgerEntries = async (filters: Record<string, any> = {}): Promise<{ data: LedgerEntry[], pagination?: any }> => {
     const params = new URLSearchParams(filters).toString();
     const url = `/api/ledger${params ? `?${params}` : ''}`;
     const response = await api.get(url);
-    return response.data.data || response.data;
+    return {
+        data: response.data.data,
+        pagination: response.data.pagination
+    };
 };
 
 export const createManualJournal = async (payload: CreateJournalPayload): Promise<any> => {

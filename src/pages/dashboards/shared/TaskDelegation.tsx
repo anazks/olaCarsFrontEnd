@@ -138,49 +138,53 @@ const TaskDelegation = () => {
     return (
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar bg-gray-50 dark:bg-[#0A0A0A]">
             
-            {/* Professional Command Header */}
-            <div className="p-8 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#0F0F0F] sticky top-0 z-20">
-                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/10">
-                            <ClipboardList size={28} />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white uppercase">Delegation Center</h1>
-                            <p className="text-gray-500 dark:text-dim font-bold flex items-center gap-2 mt-0.5 uppercase text-[10px] tracking-widest">
-                                <Shield size={14} className="text-indigo-600" /> Operational Task Orchestration & Oversight
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="hidden sm:flex items-center gap-6 px-8 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                            <div className="text-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Pending</p>
-                                <p className="text-lg font-black text-gray-900 dark:text-white leading-none">{tasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED').length}</p>
+            {/* Command Header */}
+            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden bg-[var(--bg-card)] backdrop-blur-md sticky top-0 z-20">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 blur-[100px] rounded-full -mr-48 -mt-48" />
+                
+                <div className="max-w-[1600px] mx-auto relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shadow-2xl shadow-indigo-500/5 border border-indigo-500/20">
+                                <ClipboardList size={32} />
                             </div>
-                            <div className="w-px h-6 bg-gray-300 dark:bg-white/10" />
-                            <div className="text-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Resolved</p>
-                                <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">{tasks.filter(t => t.status === 'COMPLETED').length}</p>
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tighter text-[var(--text-main)]">Delegation Center</h1>
+                                <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
+                                    <Shield size={14} className="text-indigo-400" /> Operational Task Orchestration & Oversight
+                                </p>
                             </div>
                         </div>
 
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-3 px-6 py-4 rounded-xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest transition-all hover:bg-indigo-700 active:scale-[0.98] shadow-lg shadow-indigo-600/20"
-                        >
-                            <Plus size={18} />
-                            Deploy Directive
-                        </button>
+                        <div className="flex items-center gap-4">
+                            <div className="hidden sm:flex items-center gap-6 px-8 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)]">
+                                <div className="text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Queue</p>
+                                    <p className="text-xl font-black text-[var(--text-main)] leading-none">{tasks.filter(t => t.status !== 'COMPLETED').length}</p>
+                                </div>
+                                <div className="w-px h-8 bg-[var(--border-main)]" />
+                                <div className="text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Resolved</p>
+                                    <p className="text-xl font-black text-emerald-400 leading-none">{tasks.filter(t => t.status === 'COMPLETED').length}</p>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setIsModalOpen(true)}
+                                className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(79,70,229,0.3)] active:scale-[0.98]"
+                            >
+                                <Plus size={20} />
+                                Create Assignment
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="p-8 max-w-[1600px] mx-auto space-y-8 pb-24">
                 
-                {/* Tactical Search & Filter Bar */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm">
+                {/* Search & Intelligence Bar */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-4 rounded-[2rem] bg-[var(--bg-card)] border border-[var(--border-main)] backdrop-blur-sm">
                     <div className="relative flex-1 group">
                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
                         <input 
@@ -188,7 +192,7 @@ const TaskDelegation = () => {
                             placeholder="Search by directive, resource, or metadata..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-indigo-600/50 transition-all text-gray-900 dark:text-white"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-14 pr-6 py-4 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
                         />
                     </div>
                     
@@ -199,8 +203,8 @@ const TaskDelegation = () => {
                                 onClick={() => setFilterStatus(status)}
                                 className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${
                                     filterStatus === status 
-                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
-                                        : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-dim hover:bg-gray-50 dark:hover:bg-white/10'
+                                        ? 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20' 
+                                        : 'bg-[var(--bg-input)] border-[var(--border-main)] text-dim hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
                                 }`}
                             >
                                 {status === 'all' ? 'Unified Ledger' : status.replace('_', ' ')}
@@ -209,16 +213,16 @@ const TaskDelegation = () => {
                     </div>
                 </div>
 
-                {/* Tabular Directive Ledger */}
-                <div className="bg-white dark:bg-[#0F0F0F] border border-gray-200 dark:border-white/5 overflow-hidden rounded-xl shadow-sm">
-                    <div className="p-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                                <Activity size={20} />
+                {/* Tabular Task Ledger */}
+                <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden shadow-2xl">
+                    <div className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/10">
+                                <Activity size={24} />
                             </div>
                             <div>
-                                <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Active Directives</h2>
-                                <p className="text-[9px] font-bold text-gray-500 dark:text-dim uppercase tracking-widest mt-0.5">Real-time status of operational assignments</p>
+                                <h2 className="text-xl font-black text-[var(--text-main)]">Delegation Ledger</h2>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-dim mt-1">Real-time tracking of operational resource directives</p>
                             </div>
                         </div>
                         <button onClick={fetchInitialData} className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">
@@ -229,34 +233,36 @@ const TaskDelegation = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-50/50 dark:bg-white/[0.01]">
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-white/5 pl-8">Directive Details</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-white/5 text-center">Resource Node</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-white/5 text-center">Timeline</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-white/5 text-center">Status</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-white/5 text-right pr-8">Management</th>
+                                <tr className="bg-[var(--bg-input)]">
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-10">Directive Details</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Resource</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Timeline</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Status</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right pr-10">Management</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                            <tbody className="divide-y divide-[var(--border-main)]">
                                 {fetching ? (
                                     [1, 2, 3, 4].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="p-8"><div className="h-3 bg-gray-100 dark:bg-white/5 rounded-full w-full" /></td>
+                                            <td colSpan={5} className="p-10"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                         </tr>
                                     ))
                                 ) : filteredTasks.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-24 text-center">
-                                            <Shield size={40} className="mx-auto mb-4 text-gray-200 dark:text-white/10" />
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No directives found in ledger</p>
+                                        <td colSpan={5} className="p-32 text-center">
+                                            <div className="mx-auto w-24 h-24 rounded-[2rem] bg-[var(--bg-input)] flex items-center justify-center text-dim mb-6">
+                                                <ClipboardList size={48} className="opacity-20" />
+                                            </div>
+                                            <p className="text-sm font-black text-dim uppercase tracking-[0.2em]">No Directives Found in Ledger</p>
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredTasks.map((task) => (
-                                        <tr key={task._id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors group/row">
-                                            <td className="p-5 pl-8 max-w-sm">
+                                        <tr key={task._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
+                                            <td className="p-6 pl-10 max-w-md">
                                                 <div className="space-y-1">
-                                                    <h3 className="text-sm font-black text-gray-900 dark:text-white group-hover/row:text-indigo-600 transition-colors flex items-center gap-2">
+                                                    <h3 className="text-base font-black text-[var(--text-main)] group-hover/row:text-indigo-400 transition-colors flex items-center gap-2">
                                                         {task.title}
                                                         {task.assignedBy === userId && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" title="Authored by you" />}
                                                     </h3>
@@ -269,11 +275,19 @@ const TaskDelegation = () => {
                                                             {task.assignedByRole}
                                                         </span>
                                                     </div>
-                                                    {task.feedback && (
-                                                        <div className="mt-3 p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 italic">
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-1">Staff Observations</p>
-                                                            <p className="text-[10px] text-gray-700 dark:text-white">"{task.feedback}"</p>
-                                                        </div>
+                                                    <span className="text-[10px] font-black text-[var(--text-main)] uppercase tracking-tighter">{task.assignedToRole}</span>
+                                                    <span className="text-[8px] font-bold text-dim">{task.assignedTo?.fullName || 'Unspecified'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-6 text-center">
+                                                <div className="inline-flex flex-col gap-1">
+                                                    <div className="flex items-center justify-center gap-2 text-[var(--text-main)]">
+                                                        <Clock size={12} className="text-indigo-400" />
+                                                        <span className="text-[12px] font-black">{new Date(task.dueDate).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <span className="text-[9px] font-black uppercase text-dim tracking-widest">Expiration</span>
+                                                    {task.completedAt && (
+                                                        <span className="text-[8px] font-bold text-emerald-400 mt-1">Resolved {new Date(task.completedAt).toLocaleDateString()}</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -341,20 +355,21 @@ const TaskDelegation = () => {
 
             {/* Directive Deployment Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="w-full max-w-xl bg-white dark:bg-[#0C0C0C] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50 dark:bg-white/[0.02]">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                                    <Plus size={20} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsModalOpen(false)} />
+                    <div className="relative w-full max-w-xl rounded-[3rem] bg-[var(--bg-card)] border border-[var(--border-main)] shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-10 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                    <Plus size={28} />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">Deploy New Directive</h2>
-                                    <p className="text-[9px] font-bold text-gray-500 dark:text-dim uppercase tracking-widest mt-0.5">Establish operational resource focus</p>
+                                    <h2 className="text-2xl font-black text-[var(--text-main)]">Deploy Directive</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim">Establish operational focus for resources</p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all rounded-lg">
-                                <X size={20} />
+                            <button onClick={() => setIsModalOpen(false)} className="p-3 rounded-2xl bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-dim hover:text-[var(--text-main)] transition-all">
+                                <X size={24} />
                             </button>
                         </div>
 
@@ -365,8 +380,8 @@ const TaskDelegation = () => {
                                     type="text"
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-600/50 transition-all text-gray-900 dark:text-white"
-                                    placeholder="Brief mission title..."
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
+                                    placeholder="Operational objective title..."
                                     required
                                 />
                             </div>
@@ -376,8 +391,8 @@ const TaskDelegation = () => {
                                 <textarea
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl p-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-600/50 transition-all text-gray-900 dark:text-white min-h-[100px] resize-none"
-                                    placeholder="Provide comprehensive directive details..."
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)] min-h-[120px]"
+                                    placeholder="Comprehensive directive description..."
                                     required
                                 />
                             </div>
@@ -388,7 +403,7 @@ const TaskDelegation = () => {
                                     <select
                                         value={formData.assignedTo}
                                         onChange={(e) => handleStaffChange(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-600/50 transition-all text-gray-900 dark:text-white"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-[var(--text-main)]"
                                         required
                                     >
                                         <option value="">Select Resource</option>
@@ -411,7 +426,7 @@ const TaskDelegation = () => {
                                         type="date"
                                         value={formData.dueDate}
                                         onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-[11px] font-bold text-gray-900 dark:text-white uppercase"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-5 text-[11px] font-bold text-[var(--text-main)] uppercase"
                                         required
                                     />
                                 </div>

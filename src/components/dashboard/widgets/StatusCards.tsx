@@ -55,7 +55,7 @@ export const StatCard = ({
                         {title}
                     </p>
                     {subValue && (
-                        <span className="text-[10px] font-black bg-white/5 px-2 py-0.5 rounded-full" style={{ color: 'var(--text-main)' }}>
+                        <span className="text-[10px] font-black bg-[var(--bg-input)] px-2 py-0.5 rounded-full" style={{ color: 'var(--text-main)' }}>
                             {subValue}
                         </span>
                     )}

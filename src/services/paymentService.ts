@@ -38,9 +38,27 @@ export interface CreatePaymentPayload {
     notes?: string;
 }
 
-export const getAllPayments = async (filters?: any): Promise<PaymentTransaction[]> => {
-    const response = await api.get('/api/payment', { params: filters });
-    return response.data.data || response.data;
+export interface PaginatedPayments {
+    data: PaymentTransaction[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export const getAllPayments = async (filters?: any): Promise<PaginatedPayments> => {
+    const params = new URLSearchParams();
+    if (filters) {
+        Object.keys(filters).forEach(key => {
+            if (filters[key] !== undefined && filters[key] !== null) {
+                params.append(key, filters[key].toString());
+            }
+        });
+    }
+    const response = await api.get(`/api/payment?${params.toString()}`);
+    return response.data;
 };
 
 export const getPaymentById = async (id: string): Promise<PaymentTransaction> => {

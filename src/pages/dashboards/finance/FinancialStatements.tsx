@@ -51,14 +51,14 @@ const FinancialStatements = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3 text-white">
+                    <h1 className="text-2xl font-bold flex items-center gap-3 text-[var(--text-main)]">
                         <PieChart size={28} className="text-[#C8E600]" />
                         Financial Statements
                     </h1>
-                    <p className="text-sm mt-1 text-white/40">Consolidated and branch-level financial reporting</p>
+                    <p className="text-sm mt-1 text-dim">Consolidated and branch-level financial reporting</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all">
+                    <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--bg-input)] border border-[var(--border-main)] text-dim hover:bg-[var(--bg-card)] hover:text-[var(--text-main)] transition-all">
                         <Download size={16} /> Export PDF
                     </button>
                     <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#C8E600] text-[#0A0A0A] hover:shadow-[0_0_20px_rgba(200,230,0,0.2)] transition-all">
@@ -68,47 +68,47 @@ const FinancialStatements = () => {
             </div>
 
             {/* Filter Bar */}
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row gap-4 items-center">
+            <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Calendar size={18} className="text-white/40" />
+                    <Calendar size={18} className="text-dim" />
                     <input 
                         type="date" 
                         value={filters.startDate}
                         onChange={e => setFilters({...filters, startDate: e.target.value})}
-                        className="bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                        className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
-                    <span className="text-white/20">to</span>
+                    <span className="opacity-20">to</span>
                     <input 
                         type="date" 
                         value={filters.endDate}
                         onChange={e => setFilters({...filters, endDate: e.target.value})}
-                        className="bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                        className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>
-                <div className="h-6 w-px bg-white/10 hidden sm:block" />
+                <div className="h-6 w-px bg-[var(--border-main)] hidden sm:block" />
                 <select 
                     value={filters.branch}
                     onChange={e => setFilters({...filters, branch: e.target.value})}
-                    className="bg-transparent border-none text-sm text-white focus:ring-0 outline-none min-w-[200px]"
+                    className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none min-w-[200px]"
                 >
-                    <option value="" className="bg-[#1A1A1A]">Consolidated (All Branches)</option>
+                    <option value="" className="bg-[var(--bg-card)]">Consolidated (All Branches)</option>
                     {branches.map(b => (
-                        <option key={b._id} value={b._id} className="bg-[#1A1A1A]">{b.name} ({b.country})</option>
+                        <option key={b._id} value={b._id} className="bg-[var(--bg-card)]">{b.name} ({b.country})</option>
                     ))}
                 </select>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
+            <div className="flex gap-1 p-1 bg-[var(--bg-input)] rounded-xl w-fit">
                 <button 
                     onClick={() => setActiveTab('PL')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'PL' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-white/60 hover:text-white'}`}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'PL' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
                 >
                     <TrendingUp size={16} /> Profit & Loss
                 </button>
                 <button 
                     onClick={() => setActiveTab('BS')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'BS' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-white/60 hover:text-white'}`}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'BS' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
                 >
                     <Landmark size={16} /> Balance Sheet
                 </button>
@@ -118,13 +118,13 @@ const FinancialStatements = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Summary Card */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-                        <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                            <h3 className="font-bold text-white flex items-center gap-2">
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl overflow-hidden">
+                        <div className="p-6 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
+                            <h3 className="font-bold text-[var(--text-main)] flex items-center gap-2">
                                 {activeTab === 'PL' ? 'Income Statement (P&L)' : 'Statement of Financial Position'}
-                                <span className="text-[10px] font-normal text-white/40 uppercase tracking-widest ml-2">Standard View</span>
+                                <span className="text-[10px] font-normal text-dim uppercase tracking-widest ml-2">Standard View</span>
                             </h3>
-                            <span className="text-[10px] bg-white/10 px-2 py-1 rounded text-white/60 font-mono">CURRENCY: USD</span>
+                            <span className="text-[10px] bg-[var(--bg-input)] px-2 py-1 rounded text-dim font-mono">CURRENCY: USD</span>
                         </div>
                         
                         <div className="p-6">
@@ -149,7 +149,7 @@ const FinancialStatements = () => {
                 <div className="space-y-6">
                     <div className="bg-gradient-to-br from-[#C8E600]/20 to-transparent border border-[#C8E600]/20 rounded-2xl p-6">
                         <p className="text-[10px] font-bold text-[#C8E600] uppercase tracking-widest mb-1">Total Net Result</p>
-                        <h2 className="text-4xl font-bold text-white font-mono">
+                        <h2 className="text-4xl font-bold text-[var(--text-main)] font-mono">
                             ${reportData?.netProfit?.toLocaleString() || reportData?.equityTotal?.toLocaleString() || '0.00'}
                         </h2>
                         <div className="mt-4 flex items-center gap-2 text-emerald-500 text-xs">
@@ -158,24 +158,24 @@ const FinancialStatements = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                        <h4 className="text-sm font-bold text-white mb-4">Quick Insights</h4>
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl p-6">
+                        <h4 className="text-sm font-bold text-[var(--text-main)] mb-4">Quick Insights</h4>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-white/40">Operating Margin</span>
-                                <span className="text-xs font-bold text-white font-mono">24.2%</span>
+                                <span className="text-xs text-dim">Operating Margin</span>
+                                <span className="text-xs font-bold text-[var(--text-main)] font-mono">24.2%</span>
                             </div>
-                            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="w-full bg-[var(--bg-input)] h-1.5 rounded-full overflow-hidden">
                                 <div className="bg-[#C8E600] h-full" style={{ width: '24.2%' }} />
                             </div>
                             
                             <div className="flex justify-between items-center pt-2">
-                                <span className="text-xs text-white/40">Tax Provision</span>
+                                <span className="text-xs text-dim">Tax Provision</span>
                                 <span className="text-xs font-bold text-rose-500 font-mono">$4,250.00</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-white/40">Debt Ratio</span>
-                                <span className="text-xs font-bold text-white font-mono">0.34</span>
+                                <span className="text-xs text-dim">Debt Ratio</span>
+                                <span className="text-xs font-bold text-[var(--text-main)] font-mono">0.34</span>
                             </div>
                         </div>
                     </div>
@@ -195,14 +195,14 @@ const PLView = ({ data }: { data: any }) => (
             <div className="space-y-3">
                 {data?.income?.map((item: any, i: number) => (
                     <div key={i} className="flex justify-between items-center group cursor-default">
-                        <span className="text-sm text-white/60 group-hover:text-white transition-colors">{item.name}</span>
-                        <div className="flex-1 border-b border-dashed border-white/10 mx-4" />
-                        <span className="text-sm font-mono text-white">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">{item.name}</span>
+                        <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                        <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                 ))}
-                <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                    <span className="text-sm font-bold text-white">Total Income</span>
-                    <span className="text-sm font-mono font-bold text-white underline decoration-[#C8E600] decoration-2 underline-offset-4">
+                <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                    <span className="text-sm font-bold text-[var(--text-main)]">Total Income</span>
+                    <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4">
                         ${data?.income?.reduce((acc: number, val: any) => acc + val.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </span>
                 </div>
@@ -217,14 +217,14 @@ const PLView = ({ data }: { data: any }) => (
             <div className="space-y-3">
                 {data?.expenses?.map((item: any, i: number) => (
                     <div key={i} className="flex justify-between items-center group cursor-default">
-                        <span className="text-sm text-white/60 group-hover:text-white transition-colors">{item.name}</span>
-                        <div className="flex-1 border-b border-dashed border-white/10 mx-4" />
-                        <span className="text-sm font-mono text-white">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">{item.name}</span>
+                        <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                        <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                 ))}
-                <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                    <span className="text-sm font-bold text-white">Total Expenses</span>
-                    <span className="text-sm font-mono font-bold text-white">
+                <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                    <span className="text-sm font-bold text-[var(--text-main)]">Total Expenses</span>
+                    <span className="text-sm font-mono font-bold text-[var(--text-main)]">
                         (${data?.expenses?.reduce((acc: number, val: any) => acc + val.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2})})
                     </span>
                 </div>
@@ -232,12 +232,12 @@ const PLView = ({ data }: { data: any }) => (
         </section>
 
         {/* Net Profit */}
-        <section className="pt-6 border-t-4 border-white/10">
+        <section className="pt-6 border-t-4 border-[var(--border-main)]">
             <div className="flex justify-between items-center">
-                <h4 className="text-lg font-bold text-white uppercase tracking-wider">Net Profit / Loss</h4>
+                <h4 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wider">Net Profit / Loss</h4>
                 <div className="text-right">
                     <p className="text-2xl font-mono font-bold text-[#C8E600]">${data?.netProfit?.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                    <p className="text-[10px] text-white/40">BEFORE TAX ADJUSTMENTS</p>
+                    <p className="text-[10px] text-dim">BEFORE TAX ADJUSTMENTS</p>
                 </div>
             </div>
         </section>
@@ -255,13 +255,13 @@ const BSView = ({ data }: { data: any }) => (
                 <div className="space-y-3">
                     {data?.assets?.map((item: any, i: number) => (
                         <div key={i} className="flex justify-between items-center">
-                            <span className="text-sm text-white/60">{item.name}</span>
-                            <span className="text-sm font-mono text-white">${item.amount.toLocaleString()}</span>
+                            <span className="text-sm text-dim">{item.name}</span>
+                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
                         </div>
                     ))}
-                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                        <span className="text-sm font-bold text-white">Total Assets</span>
-                        <span className="text-sm font-mono font-bold text-white">${data?.assetsTotal?.toLocaleString()}</span>
+                    <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                        <span className="text-sm font-bold text-[var(--text-main)]">Total Assets</span>
+                        <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.assetsTotal?.toLocaleString()}</span>
                     </div>
                 </div>
             </section>
@@ -275,13 +275,13 @@ const BSView = ({ data }: { data: any }) => (
                     <div className="space-y-3">
                         {data?.liabilities?.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center">
-                                <span className="text-sm text-white/60">{item.name}</span>
-                                <span className="text-sm font-mono text-white">${item.amount.toLocaleString()}</span>
+                                <span className="text-sm text-dim">{item.name}</span>
+                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
                             </div>
                         ))}
-                        <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                            <span className="text-sm font-bold text-white">Total Liabilities</span>
-                            <span className="text-sm font-mono font-bold text-white">${data?.liabilitiesTotal?.toLocaleString()}</span>
+                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                            <span className="text-sm font-bold text-[var(--text-main)]">Total Liabilities</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.liabilitiesTotal?.toLocaleString()}</span>
                         </div>
                     </div>
                 </section>
@@ -294,13 +294,13 @@ const BSView = ({ data }: { data: any }) => (
                     <div className="space-y-3">
                         {data?.equity?.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center">
-                                <span className="text-sm text-white/60">{item.name}</span>
-                                <span className="text-sm font-mono text-white">${item.amount.toLocaleString()}</span>
+                                <span className="text-sm text-dim">{item.name}</span>
+                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
                             </div>
                         ))}
-                        <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                            <span className="text-sm font-bold text-white">Total Equity</span>
-                            <span className="text-sm font-mono font-bold text-white">${data?.equityTotal?.toLocaleString()}</span>
+                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                            <span className="text-sm font-bold text-[var(--text-main)]">Total Equity</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.equityTotal?.toLocaleString()}</span>
                         </div>
                     </div>
                 </section>
@@ -308,16 +308,16 @@ const BSView = ({ data }: { data: any }) => (
         </div>
 
         {/* Accounting Equation Check */}
-        <section className="pt-6 border-t-4 border-white/10 flex justify-center">
-            <div className="bg-white/5 px-8 py-4 rounded-2xl border border-white/10 flex items-center gap-6">
+        <section className="pt-6 border-t-4 border-[var(--border-main)] flex justify-center">
+            <div className="bg-[var(--bg-input)] px-8 py-4 rounded-2xl border border-[var(--border-main)] flex items-center gap-6">
                 <div className="text-center">
-                    <p className="text-[10px] text-white/40 uppercase">Assets</p>
-                    <p className="text-lg font-mono font-bold text-white">${data?.assetsTotal?.toLocaleString()}</p>
+                    <p className="text-[10px] text-dim uppercase">Assets</p>
+                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${data?.assetsTotal?.toLocaleString()}</p>
                 </div>
-                <div className="text-xl text-white/20">=</div>
+                <div className="text-xl opacity-20">=</div>
                 <div className="text-center">
-                    <p className="text-[10px] text-white/40 uppercase">Liabilities + Equity</p>
-                    <p className="text-lg font-mono font-bold text-white">${(data?.liabilitiesTotal + data?.equityTotal)?.toLocaleString()}</p>
+                    <p className="text-[10px] text-dim uppercase">Liabilities + Equity</p>
+                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${(data?.liabilitiesTotal + data?.equityTotal)?.toLocaleString()}</p>
                 </div>
             </div>
         </section>

@@ -7,6 +7,7 @@ import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
 import { getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -21,6 +22,9 @@ const GeneralLedger = () => {
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [showCreateModal, setShowCreateModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -42,19 +46,31 @@ const GeneralLedger = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (selectedCode !== 'ALL') filters.accountingCode = selectedCode;
+            
+            // Add pagination
+            filters.page = page;
+            filters.limit = limit;
 
-            const [ledgerData, codesData] = await Promise.all([
+            const [ledgerResponse, codesData] = await Promise.all([
                 getLedgerEntries(filters),
                 getAllAccountingCodes().catch(() => []) // Fallback to empty if codes fail
             ]);
 
-            setEntries(Array.isArray(ledgerData) ? ledgerData : []);
+            setEntries(Array.isArray(ledgerResponse.data) ? ledgerResponse.data : []);
+            if (ledgerResponse.pagination) {
+                setPagination(ledgerResponse.pagination);
+            }
             setAccountingCodes(Array.isArray(codesData) ? codesData : []);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch ledger entries');
         } finally {
             setLoading(false);
         }
+    }, [startDate, endDate, selectedCode, page, limit]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setPage(1);
     }, [startDate, endDate, selectedCode]);
 
     useEffect(() => {
@@ -83,6 +99,13 @@ const GeneralLedger = () => {
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '#' },
+                    { label: 'General Ledger', active: true }
+                ]} 
+            />
+            
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -362,6 +385,63 @@ const GeneralLedger = () => {
                         </table>
                     )}
                 </div>
+
+                {/* Pagination UI */}
+                {!loading && entries.length > 0 && pagination && (
+                    <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-topbar)' }}>
+                        <div className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span className="font-bold" style={{ color: 'var(--text-main)' }}>{((page - 1) * limit) + 1}</span> to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{Math.min(page * limit, pagination.total)}</span> of <span className="font-bold" style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <select 
+                                value={limit}
+                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                className="px-2 py-1 rounded border text-xs outline-none bg-transparent"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                <option value="10">10 / page</option>
+                                <option value="25">25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    style={{ 
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                        color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        background: 'transparent'
+                                    }}
+                                >
+                                    Previous
+                                </button>
+                                
+                                <div className="flex items-center px-4">
+                                    <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
+                                        Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                                    disabled={page === pagination.pages}
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    style={{ 
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                        color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        background: 'transparent'
+                                    }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Create Journal Modal */}

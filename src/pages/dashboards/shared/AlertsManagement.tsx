@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { 
-    AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle, 
+import {
+    AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle,
     Car, Calendar, MapPin, Building2, RefreshCw, ArrowLeft, Eye
 } from 'lucide-react';
 import type { Alert } from '../../../services/alertService';
@@ -40,8 +40,8 @@ const AlertsManagement = () => {
         setLoading(true);
         try {
             const [alertRes, branchRes] = await Promise.allSettled([
-                filterStatus === 'ACTIVE' 
-                    ? alertService.getActiveAlerts() 
+                filterStatus === 'ACTIVE'
+                    ? alertService.getActiveAlerts()
                     : alertService.getAllAlerts({ status: filterStatus !== 'all' ? filterStatus : undefined }),
                 getAllBranches({ limit: 200 })
             ]);
@@ -103,8 +103,8 @@ const AlertsManagement = () => {
 
         // Branch filter - compare by _id (works whether branchId is populated or raw ObjectId)
         if (filterBranch !== 'all') {
-            const alertBranchId = typeof (alert as any).branchId === 'object' 
-                ? (alert as any).branchId?._id?.toString() 
+            const alertBranchId = typeof (alert as any).branchId === 'object'
+                ? (alert as any).branchId?._id?.toString()
                 : (alert as any).branchId?.toString();
             if (alertBranchId !== filterBranch) return false;
         }
@@ -116,7 +116,7 @@ const AlertsManagement = () => {
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             const matchMessage = alert.message?.toLowerCase().includes(q);
-            const matchVehicle = alert.vehicleId?.basicDetails?.make?.toLowerCase().includes(q) 
+            const matchVehicle = alert.vehicleId?.basicDetails?.make?.toLowerCase().includes(q)
                 || alert.vehicleId?.basicDetails?.model?.toLowerCase().includes(q)
                 || alert.vehicleId?.basicDetails?.vin?.toLowerCase().includes(q);
             if (!matchMessage && !matchVehicle) return false;
@@ -128,8 +128,8 @@ const AlertsManagement = () => {
     // Counts for tabs
     const dateFiltered = alerts.filter(a => {
         const d = new Date(a.createdAt);
-        if (startDate) { const s = new Date(startDate); s.setHours(0,0,0,0); if (d < s) return false; }
-        if (endDate) { const e = new Date(endDate); e.setHours(23,59,59,999); if (d > e) return false; }
+        if (startDate) { const s = new Date(startDate); s.setHours(0, 0, 0, 0); if (d < s) return false; }
+        if (endDate) { const e = new Date(endDate); e.setHours(23, 59, 59, 999); if (d > e) return false; }
         return true;
     });
     const criticalCount = dateFiltered.filter(a => a.priority === 'HIGH').length;
@@ -169,11 +169,11 @@ const AlertsManagement = () => {
         .filter(Boolean);
     const allBranchOptions = [...branches, ...branchNamesFromAlerts];
     // Deduplicate by name
-    const uniqueBranches = allBranchOptions.filter((b: any, i: number, arr: any[]) => 
+    const uniqueBranches = allBranchOptions.filter((b: any, i: number, arr: any[]) =>
         b.name && arr.findIndex((x: any) => x.name === b.name) === i
     );
-    const filteredBranches = filterCountry !== 'all' 
-        ? uniqueBranches.filter((b: any) => b.country === filterCountry) 
+    const filteredBranches = filterCountry !== 'all'
+        ? uniqueBranches.filter((b: any) => b.country === filterCountry)
         : uniqueBranches;
 
     return (
@@ -209,7 +209,7 @@ const AlertsManagement = () => {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Total */}
-                <div 
+                <div
                     onClick={() => setActiveTab('ALL')}
                     className={`rounded-2xl p-5 shadow-sm border cursor-pointer transition-all hover:scale-[1.02] ${activeTab === 'ALL' ? 'ring-2 ring-lime' : ''}`}
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -224,7 +224,7 @@ const AlertsManagement = () => {
                 </div>
 
                 {/* Critical */}
-                <div 
+                <div
                     onClick={() => setActiveTab('CRITICAL')}
                     className={`rounded-2xl p-5 shadow-sm border cursor-pointer transition-all hover:scale-[1.02] ${activeTab === 'CRITICAL' ? 'ring-2 ring-[#ef4444]' : ''}`}
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -239,7 +239,7 @@ const AlertsManagement = () => {
                 </div>
 
                 {/* Major */}
-                <div 
+                <div
                     onClick={() => setActiveTab('MAJOR')}
                     className={`rounded-2xl p-5 shadow-sm border cursor-pointer transition-all hover:scale-[1.02] ${activeTab === 'MAJOR' ? 'ring-2 ring-[#f97316]' : ''}`}
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -254,7 +254,7 @@ const AlertsManagement = () => {
                 </div>
 
                 {/* Minor */}
-                <div 
+                <div
                     onClick={() => setActiveTab('MINOR')}
                     className={`rounded-2xl p-5 shadow-sm border cursor-pointer transition-all hover:scale-[1.02] ${activeTab === 'MINOR' ? 'ring-2 ring-[#4f46e5]' : ''}`}
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -406,7 +406,7 @@ const AlertsManagement = () => {
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4 flex-1">
                                         {/* Priority Badge */}
-                                        <div 
+                                        <div
                                             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                                             style={{ backgroundColor: colors.bg, color: colors.badge }}
                                         >
@@ -416,13 +416,13 @@ const AlertsManagement = () => {
                                         <div className="flex-1 min-w-0">
                                             {/* Alert Message */}
                                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <span 
+                                                <span
                                                     className="text-xs font-bold px-2 py-0.5 rounded-full"
                                                     style={{ backgroundColor: colors.bg, color: colors.badge }}
                                                 >
                                                     {getPriorityLabel(alert.priority)}
                                                 </span>
-                                                <span 
+                                                <span
                                                     className="text-xs font-bold px-2 py-0.5 rounded-full"
                                                     style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-dim)' }}
                                                 >
@@ -477,8 +477,8 @@ const AlertsManagement = () => {
                                     {/* Right side: date + resolve */}
                                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                         <span className="text-[11px] font-medium" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(alert.createdAt).toLocaleDateString('en-US', { 
-                                                month: 'short', day: 'numeric', year: 'numeric' 
+                                            {new Date(alert.createdAt).toLocaleDateString('en-US', {
+                                                month: 'short', day: 'numeric', year: 'numeric'
                                             })}
                                         </span>
                                         {alert.status === 'ACTIVE' && (
