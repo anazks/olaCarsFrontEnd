@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
@@ -178,13 +178,13 @@ const VehicleList = () => {
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                     
-                    <HasPermission permission="PURCHASE_ORDER_VIEW">
+                    <HasPermission permission="INSURANCE_VIEW">
                         <button
-                            onClick={() => navigate('../purchase-orders')}
+                            onClick={() => navigate('../insurances')}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Package size={18} className="opacity-70" /> {t('sidebar.items.purchaseOrders', 'Orders')}
+                            <Shield size={18} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
                         </button>
                     </HasPermission>
                     

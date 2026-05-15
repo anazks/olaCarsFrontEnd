@@ -6,11 +6,10 @@ import {
 } from 'recharts';
 import {
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar,
-    MapPin, Building, ChevronRight, Briefcase, CheckCircle, TrendingUp, Wallet, FilterX
+    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { format, startOfMonth } from 'date-fns';
-import { useTheme } from '../../context/ThemeContext';
 
 // Context & Services
 // import { useTheme } from '../../context/ThemeContext';
