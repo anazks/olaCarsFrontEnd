@@ -97,7 +97,6 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/country-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
@@ -122,7 +121,8 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Legal Agreements', path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/country-manager/alerts' },
-            ]
+           
+                { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' }, ]
         },
         {
             id: 'finance',
