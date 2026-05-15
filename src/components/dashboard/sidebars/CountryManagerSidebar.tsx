@@ -10,7 +10,8 @@ import {
     ChevronUp,
     Settings,
     User,
-    X
+    X,
+    ClipboardList
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -96,6 +97,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/country-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
@@ -112,6 +114,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             label: 'Operations',
             icon: <Car size={22} />,
             subItems: [
+                { label: 'Assigned Missions', path: '/admin/country-manager/my-tasks' },
                 { label: 'Insurance Management', path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
                 { label: 'Manage Vehicles', path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },

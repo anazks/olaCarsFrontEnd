@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Building2, 
     Plus, 
@@ -125,257 +125,282 @@ const ManageBankAccounts = () => {
     );
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="container-responsive py-10 space-y-10 min-h-screen" style={{ color: 'var(--text-main)' }}>
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <Building2 className="text-[#C8E600]" />
-                        Bank Accounts
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b pb-10" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 bg-lime/20 text-lime text-[10px] font-black uppercase tracking-widest rounded border border-lime/20">Finance Control</span>
+                    </div>
+                    <h1 className="text-4xl font-black flex items-center gap-4" style={{ color: 'var(--text-main)' }}>
+                        <Building2 className="text-lime" size={36} /> Bank Accounts
                     </h1>
-                    <p className="text-white/40 text-sm mt-1">Manage company bank accounts and tracking balances</p>
+                    <p className="font-medium max-w-xl" style={{ color: 'var(--text-dim)' }}>Centralized management for company liquidity, settlement accounts, and real-time balance tracking.</p>
                 </div>
                 <button 
                     onClick={() => {
                         resetForm();
                         setIsModalOpen(true);
                     }}
-                    className="flex items-center gap-2 bg-[#C8E600] text-black px-6 py-3 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(200,230,0,0.3)] transition-all"
+                    className="flex items-center justify-center gap-3 bg-lime text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-lime/20"
                 >
                     <Plus size={20} />
-                    Add Bank Account
+                    Register Account
                 </button>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Wallet size={80} />
-                    </div>
-                    <p className="text-white/40 text-xs font-bold uppercase tracking-wider">Total Bank Balance</p>
-                    <h2 className="text-3xl font-bold text-white mt-2">
-                        ${accounts.reduce((sum, acc) => sum + (acc.currentBalance || 0), 0).toLocaleString()}
-                    </h2>
-                    <div className="flex items-center gap-2 text-[#C8E600] text-xs mt-4">
-                        <ArrowUpRight size={14} />
-                        <span>Across {accounts.length} accounts</span>
+            {/* Global Liquidity Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-lime/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="absolute -top-4 -right-4 w-32 h-32 bg-lime/5 rounded-full blur-3xl group-hover:bg-lime/10 transition-all" />
+                    <div className="relative z-10 space-y-4">
+                        <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center">
+                            <Wallet className="text-lime" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>Total Liquidity</p>
+                            <h2 className="text-4xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-lime text-2xl mr-2">$</span>
+                                {accounts.reduce((sum, acc) => sum + (acc.currentBalance || 0), 0).toLocaleString()}
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-lime">
+                            <ArrowUpRight size={14} />
+                            <span>Aggregated across {accounts.length} endpoints</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <CreditCard size={80} />
+                <div className="border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-blue-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="absolute -top-4 -right-4 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all" />
+                    <div className="relative z-10 space-y-4">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="text-blue-500" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>Active Settlement</p>
+                            <h2 className="text-4xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                {accounts.filter(a => a.status === 'ACTIVE').length}
+                                <span className="text-sm font-bold text-dim ml-2">/ {accounts.length}</span>
+                            </h2>
+                        </div>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Synchronized with core ledger</p>
                     </div>
-                    <p className="text-white/40 text-xs font-bold uppercase tracking-wider">Active Accounts</p>
-                    <h2 className="text-3xl font-bold text-white mt-2">
-                        {accounts.filter(a => a.status === 'ACTIVE').length}
-                    </h2>
-                    <div className="flex items-center gap-2 text-white/40 text-xs mt-4">
-                        <CheckCircle2 size={14} />
-                        <span>System synchronized</span>
+                </div>
+
+                <div className="hidden xl:block border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-white/20" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 flex flex-col justify-center h-full space-y-2 text-center">
+                        <Building2 size={32} className="mx-auto text-dim opacity-20" />
+                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Institutional Banking</p>
+                        <p className="text-xs font-medium px-6 leading-relaxed" style={{ color: 'var(--text-dim)' }}>Register multiple accounts to separate operational expenses from investment capital.</p>
                     </div>
                 </div>
             </div>
 
-            {/* Filters & Search */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+            {/* Filtering Controls */}
+            <div className="flex flex-col md:flex-row gap-4 items-center p-2 rounded-[2rem] border" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
+                <div className="relative flex-1 w-full group">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-lime transition-colors" size={20} />
                     <input 
                         type="text" 
-                        placeholder="Search by bank name, account number..."
+                        placeholder="Search by institution name or account fragments..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-white focus:border-[#C8E600] outline-none transition-all"
+                        className="w-full bg-transparent py-5 pl-16 pr-6 text-sm font-medium outline-none transition-all placeholder:text-gray-500"
+                        style={{ color: 'var(--text-main)' }}
                     />
                 </div>
-                <div className="flex items-center gap-2">
-                    <button className="p-3 rounded-xl bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
-                        <Filter size={20} />
+                <div className="px-4 border-l h-10 flex items-center" style={{ borderColor: 'var(--border-main)' }}>
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/5" style={{ color: 'var(--text-dim)' }}>
+                        <Filter size={14} /> Filter View
                     </button>
                 </div>
             </div>
 
-            {/* Accounts Grid */}
+            {/* Accounts Workspace (Tabular Form) */}
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <Loader2 className="w-10 h-10 text-[#C8E600] animate-spin" />
-                    <p className="text-white/40 animate-pulse">Loading accounts...</p>
+                <div className="flex flex-col items-center justify-center py-32 gap-6">
+                    <div className="w-16 h-16 border-4 border-lime border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[10px] text-lime font-black uppercase tracking-[0.4em]">Querying Bank API...</p>
                 </div>
             ) : filteredAccounts.length > 0 ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {filteredAccounts.map(account => (
-                        <div key={account._id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-[#C8E600]/30 transition-all group">
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-[#C8E600]/10 flex items-center justify-center">
-                                            <Building2 className="text-[#C8E600]" size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-white text-lg">{account.bankName}</h3>
-                                            <p className="text-white/40 text-xs font-mono">{account.accountNumber}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => handleEdit(account)}
-                                            className="p-2 rounded-lg bg-white/5 text-white/40 hover:text-[#C8E600] hover:bg-[#C8E600]/10 transition-all"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(account._id)}
-                                            className="p-2 rounded-lg bg-white/5 text-white/40 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                                    <div>
-                                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Account Holder</p>
-                                        <p className="text-white/80 text-sm mt-1">{account.accountHolderName}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Branch</p>
-                                        <p className="text-white/80 text-sm mt-1">{account.branchName || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">SWIFT / IFSC</p>
-                                        <p className="text-white/80 text-sm mt-1 font-mono">{account.swiftCode || account.ifscCode || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Status</p>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${
-                                            account.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
-                                        }`}>
-                                            {account.status}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-end">
-                                    <div>
-                                        <p className="text-[10px] text-white/40 font-bold uppercase">Current Balance</p>
-                                        <p className="text-2xl font-bold text-white mt-1">
-                                            <span className="text-[#C8E600] mr-1">{account.currency}</span>
-                                            {account.currentBalance.toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] text-white/20 font-bold uppercase">Initial</p>
-                                        <p className="text-sm text-white/40 font-mono italic">${account.initialBalance.toLocaleString()}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                <div className="rounded-[2rem] border overflow-hidden transition-all shadow-2xl shadow-black/20" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Institution</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Beneficiary</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Account Details</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Balance</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-center">Status</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                {filteredAccounts.map((account) => (
+                                    <tr key={account._id} className="hover:bg-lime/5 transition-colors group">
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black border border-lime/10">
+                                                    <CreditCard size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{account.bankName}</p>
+                                                    <p className="text-[10px] font-bold" style={{ color: 'var(--text-dim)' }}>{account.branchName || 'Headquarters'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{account.accountHolderName}</p>
+                                            <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>Legal Beneficiary</p>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <p className="text-xs font-mono font-bold" style={{ color: 'var(--text-main)' }}>{account.accountNumber}</p>
+                                            <p className="text-[10px] font-bold text-lime uppercase tracking-widest">{account.swiftCode || account.ifscCode || 'DIRECT'}</p>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[10px] font-black text-lime">{account.currency}</span>
+                                                    <span className="text-lg font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString()}</span>
+                                                </div>
+                                                <p className="text-[9px] font-bold italic" style={{ color: 'var(--text-dim)' }}>Open: ${account.initialBalance.toLocaleString()}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                account.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                            }`}>
+                                                {account.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={() => handleEdit(account)}
+                                                    className="p-2 rounded-lg bg-white/5 text-dim hover:text-lime hover:bg-lime/10 transition-all border border-transparent hover:border-lime/20"
+                                                    style={{ background: 'var(--bg-input)' }}
+                                                    title="Edit Account"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(account._id)}
+                                                    className="p-2 rounded-lg bg-white/5 text-dim hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                                                    style={{ background: 'var(--bg-input)' }}
+                                                    title="Delete Account"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             ) : (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Building2 size={40} className="text-white/20" />
+                <div className="border rounded-[4rem] p-32 text-center space-y-8" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="w-24 h-24 bg-lime/10 rounded-full flex items-center justify-center mx-auto ring-8 ring-lime/5 animate-pulse">
+                        <Building2 size={48} className="text-lime" />
                     </div>
-                    <h3 className="text-xl font-bold text-white">No bank accounts found</h3>
-                    <p className="text-white/40 mt-2 max-w-sm mx-auto">Start by adding your company bank accounts to track transactions and balances</p>
+                    <div className="space-y-2">
+                        <h3 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>No accounts registered</h3>
+                        <p className="font-medium max-w-sm mx-auto" style={{ color: 'var(--text-dim)' }}>Start your financial centralization by registering your first institutional account.</p>
+                    </div>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        className="mt-8 px-8 py-3 bg-[#C8E600] text-black rounded-xl font-bold hover:scale-105 transition-all"
+                        className="bg-lime text-black px-12 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-xs hover:scale-105 transition-all shadow-2xl shadow-lime/20"
                     >
-                        Add First Account
+                        Register Now
                     </button>
                 </div>
             )}
 
-            {/* Account Modal */}
+            {/* Modal Workspace */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-[#121212] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
+                    <div className="relative border rounded-[3rem] w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-500 shadow-[0_0_80px_rgba(0,0,0,0.5)]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
-                                <h2 className="text-xl font-bold text-white">{editingAccount ? 'Edit Account' : 'Add Bank Account'}</h2>
-                                <p className="text-xs text-white/40 mt-1">Enter bank details accurately for financial records</p>
+                                <h2 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>{editingAccount ? 'Update Parameters' : 'Account Registration'}</h2>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime">Financial Endpoint Configuration</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
-                                <X size={20} className="text-white/40" />
+                            <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-white/5 rounded-2xl transition-all" style={{ color: 'var(--text-dim)' }}>
+                                <X size={24} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Bank Name</label>
+                        <form onSubmit={handleSubmit} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Institution Name</label>
                                     <input 
                                         required
                                         type="text" 
-                                        placeholder="e.g. JPMorgan Chase"
+                                        placeholder="e.g. Goldman Sachs"
                                         value={formData.bankName}
                                         onChange={e => setFormData({ ...formData, bankName: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Account Number</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Reference</label>
                                     <input 
                                         required
                                         type="text" 
-                                        placeholder="Account Number"
+                                        placeholder="Identification Number"
                                         value={formData.accountNumber}
                                         onChange={e => setFormData({ ...formData, accountNumber: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Account Holder Name</label>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Legal Beneficiary Name</label>
                                     <input 
                                         required
                                         type="text" 
-                                        placeholder="Full Legal Name"
+                                        placeholder="Corporate Entity Name"
                                         value={formData.accountHolderName}
                                         onChange={e => setFormData({ ...formData, accountHolderName: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Branch Name</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Branch Allocation</label>
                                     <input 
                                         type="text" 
-                                        placeholder="Main Branch"
+                                        placeholder="Primary Headquarters"
                                         value={formData.branchName}
                                         onChange={e => setFormData({ ...formData, branchName: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">SWIFT / BIC Code</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Routing Protocol (SWIFT/IFSC)</label>
                                     <input 
                                         type="text" 
-                                        placeholder="SWIFT Code"
-                                        value={formData.swiftCode}
+                                        placeholder="Routing Code"
+                                        value={formData.swiftCode || formData.ifscCode}
                                         onChange={e => setFormData({ ...formData, swiftCode: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all font-mono"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">IFSC Code (Optional)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="IFSC Code"
-                                        value={formData.ifscCode}
-                                        onChange={e => setFormData({ ...formData, ifscCode: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Currency</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Base Currency</label>
                                     <select 
                                         value={formData.currency}
                                         onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                                        className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-4 py-3 text-white focus:border-[#C8E600] outline-none transition-all"
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     >
                                         <option value="USD">USD - US Dollar</option>
                                         <option value="EUR">EUR - Euro</option>
@@ -384,10 +409,10 @@ const ManageBankAccounts = () => {
                                         <option value="INR">INR - Indian Rupee</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Opening Balance</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Initial Deposit</label>
                                     <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 font-bold">$</div>
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-lime font-black">$</div>
                                         <input 
                                             required
                                             type="number" 
@@ -395,29 +420,31 @@ const ManageBankAccounts = () => {
                                             placeholder="0.00"
                                             value={formData.initialBalance || ''}
                                             onChange={e => setFormData({ ...formData, initialBalance: e.target.value === '' ? 0 : Number(e.target.value) })}
-                                            className="w-full bg-[#1A1A1A] border border-white/5 rounded-xl px-8 py-3 text-white focus:border-[#C8E600] outline-none transition-all font-mono"
+                                            className="w-full border rounded-2xl px-12 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t border-white/5 flex gap-3">
+                            <div className="pt-10 flex gap-4">
                                 <button 
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 py-4 bg-white/5 text-white font-bold rounded-2xl hover:bg-white/10 transition-all"
+                                    className="flex-1 py-5 bg-white/5 text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-white/10 transition-all border"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-[2] py-4 bg-[#C8E600] text-black font-bold rounded-2xl hover:shadow-[0_0_20px_rgba(200,230,0,0.3)] transition-all flex items-center justify-center gap-2"
+                                    className="flex-[2] py-5 bg-lime text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-lime/20"
                                 >
                                     {submitting ? (
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : (
-                                        <><Save size={20} /> {editingAccount ? 'Update Account' : 'Create Account'}</>
+                                        <><Save size={20} /> {editingAccount ? 'Commit Changes' : 'Initialize Account'}</>
                                     )}
                                 </button>
                             </div>

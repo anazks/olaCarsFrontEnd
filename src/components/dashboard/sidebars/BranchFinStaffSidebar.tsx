@@ -8,7 +8,8 @@ import {
     ChevronUp,
     User,
     X,
-    Calculator
+    Calculator,
+    ClipboardList
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -101,6 +102,8 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             label: 'Operations',
             icon: <Car size={22} />,
             subItems: [
+                { label: 'Assigned Missions', path: '/admin/branch-fin-staff/my-tasks' },
+                { label: 'Accident Reports', path: '/admin/branch-fin-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-fin-staff/vehicles' },
                 { label: 'Manage Drivers', path: '/admin/branch-fin-staff/drivers' },
                 { label: 'Fleet Performance', path: '/admin/branch-fin-staff/driver-performance' },

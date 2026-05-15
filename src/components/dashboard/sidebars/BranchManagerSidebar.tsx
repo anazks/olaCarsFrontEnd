@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutGrid,
@@ -9,7 +9,8 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    ClipboardList
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -95,6 +96,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/branch-manager/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
@@ -110,12 +112,14 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             label: 'Operations',
             icon: <Car size={22} />,
             subItems: [
+                { label: 'Assigned Missions', path: '/admin/branch-manager/my-tasks' },
                 { label: 'Insurance Management', path: '/admin/branch-manager/insurances', permission: 'INSURANCE_VIEW' },
                 { label: 'Manage Vehicles', path: '/admin/branch-manager/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/branch-manager/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/branch-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/branch-manager/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/branch-manager/alerts' },
+                { label: 'Support Desk', path: '/admin/branch-manager/complaints' },
             ]
         },
         {

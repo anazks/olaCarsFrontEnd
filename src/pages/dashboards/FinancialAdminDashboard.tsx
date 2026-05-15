@@ -1,18 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { 
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, AreaChart, Area 
 } from 'recharts';
 import { 
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar, 
-    MapPin, Building, ChevronRight, Briefcase, FilterX, TrendingUp, Wallet
+    MapPin, Building, ChevronRight, Briefcase, CheckCircle,
+    TrendingUp, FilterX, Wallet
 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import { format, startOfMonth } from 'date-fns';
 
 // Context & Services
-import { useTheme } from '../../context/ThemeContext';
+// import { useTheme } from '../../context/ThemeContext';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
 

@@ -125,19 +125,12 @@ const StaffPerformanceDetails = () => {
                 </div>
             </div>
 
-            {/* Premium Profile Header */}
-            <div className="relative group overflow-hidden rounded-[2.5rem] border border-white/10 glass-dark p-8 md:p-12">
-                {/* Abstract Background Decoration */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48 transition-all duration-1000 group-hover:scale-125" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full -ml-32 -mb-32" />
-
+            {/* Profile Header */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-card p-8 md:p-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="relative z-10 flex flex-col lg:flex-row items-center lg:items-start gap-10">
-                    {/* Avatar with Ring */}
-                    <div className="relative">
-                        <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-[#C8E600] to-[#8fb200] flex items-center justify-center text-black text-5xl font-black shadow-2xl shadow-lime/20 relative z-10">
-                            {profile.fullName.split(' ')[0].charAt(0).toUpperCase()}
-                        </div>
-                        <div className="absolute inset-0 w-32 h-32 rounded-[2.5rem] border-4 border-lime/20 animate-pulse scale-110" />
+                    {/* Simplified Avatar */}
+                    <div className="w-24 h-24 rounded-2xl bg-lime flex items-center justify-center text-black text-4xl font-black shadow-sm">
+                        {profile.fullName.split(' ')[0].charAt(0).toUpperCase()}
                     </div>
 
                     <div className="flex-1 text-center lg:text-left">
@@ -184,11 +177,11 @@ const StaffPerformanceDetails = () => {
                     </div>
 
                     <div className="hidden xl:flex flex-col gap-3">
-                         <div className="p-4 rounded-3xl bg-white/5 border border-white/5 text-center">
+                         <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
                             <p className="text-[20px] font-black text-lime leading-none">{performance.successRate}%</p>
                             <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Efficiency</p>
                          </div>
-                         <div className="p-4 rounded-3xl bg-white/5 border border-white/5 text-center">
+                         <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
                             <p className="text-[20px] font-black text-blue-400 leading-none">{attendance.length}</p>
                             <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Check-ins</p>
                          </div>
@@ -231,7 +224,7 @@ const StaffPerformanceDetails = () => {
             {/* Tabbed Intelligence Section */}
             <div className="space-y-8">
                 {/* Tabs Navigation */}
-                <div className="flex flex-wrap gap-3 p-2 bg-white/5 rounded-[1.5rem] border border-white/10 w-fit">
+                <div className="flex flex-wrap gap-2 p-1 bg-black/20 rounded-xl border border-white/5 w-fit">
                     {[
                         { id: 'performance', label: 'Operational Performance', icon: Activity },
                         { id: 'financials', label: 'Payroll & Remuneration', icon: DollarSign },
@@ -240,13 +233,13 @@ const StaffPerformanceDetails = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-3 px-8 py-3.5 rounded-2xl text-[13px] font-black uppercase tracking-widest transition-all duration-300 ${
+                            className={`flex items-center gap-2.5 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
                                 activeTab === tab.id 
-                                ? 'bg-lime text-black shadow-2xl shadow-lime/30 scale-[1.02]' 
+                                ? 'bg-lime text-black shadow-lg shadow-lime/10' 
                                 : 'hover:bg-white/5 opacity-50 hover:opacity-100'
                             }`}
                         >
-                            <tab.icon size={18} />
+                            <tab.icon size={14} />
                             {tab.label}
                         </button>
                     ))}
@@ -258,7 +251,7 @@ const StaffPerformanceDetails = () => {
                         {activeTab === 'performance' && (
                             <div className="space-y-8">
                                 {/* Distribution Chart */}
-                                <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 group hover:border-lime/20 transition-all">
+                                <div className="p-6 rounded-2xl border border-white/5 bg-card shadow-sm transition-all" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                                     <div className="flex justify-between items-center mb-8">
                                         <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                             <div className="w-1.5 h-6 bg-lime rounded-full" />
@@ -300,8 +293,8 @@ const StaffPerformanceDetails = () => {
                                 </div>
 
                                 {/* Detailed Log */}
-                                <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden">
-                                    <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                                <div className="rounded-2xl border border-white/5 bg-card overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    <div className="p-6 border-b border-white/5 flex justify-between items-center">
                                         <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                                             Operation Logs
@@ -348,14 +341,14 @@ const StaffPerformanceDetails = () => {
                             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Remuneration Structure */}
-                                    <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5">
+                                    <div className="p-6 rounded-2xl border border-white/5 bg-card" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                                         <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                              <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
                                              Pay Structure
                                         </h2>
                                         {payroll.structure ? (
                                             <div className="space-y-6">
-                                                <div className="p-6 bg-lime/5 rounded-3xl border border-lime/10 relative overflow-hidden group">
+                                                <div className="p-6 bg-lime/5 rounded-2xl border border-lime/10 relative overflow-hidden group">
                                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
                                                          <DollarSign size={40} />
                                                     </div>
@@ -392,7 +385,7 @@ const StaffPerformanceDetails = () => {
                                     </div>
 
                                     {/* Disbursement Analytics */}
-                                    <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5">
+                                    <div className="p-6 rounded-2xl border border-white/5 bg-card" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                                         <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                              <div className="w-1.5 h-6 bg-purple-400 rounded-full" />
                                              Pay Trends
@@ -426,8 +419,8 @@ const StaffPerformanceDetails = () => {
                                 </div>
 
                                 {/* Pay History Ledger */}
-                                <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden">
-                                    <div className="p-8 border-b border-white/5">
+                                <div className="rounded-2xl border border-white/5 bg-card overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    <div className="p-6 border-b border-white/5">
                                          <h2 className="text-xl font-black uppercase tracking-tighter">Disbursement Ledger</h2>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -461,8 +454,8 @@ const StaffPerformanceDetails = () => {
                         )}
 
                         {activeTab === 'attendance' && (
-                            <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                            <div className="rounded-2xl border border-white/5 bg-card overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="p-6 border-b border-white/5 flex justify-between items-center">
                                     <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                         <div className="w-1.5 h-6 bg-blue-400 rounded-full" />
                                         Session Intelligence
@@ -516,8 +509,8 @@ const StaffPerformanceDetails = () => {
                     {/* Contextual Intelligence Sidebar */}
                     <div className="space-y-8">
                         {/* Organizational Hierarchy */}
-                        <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-125 transition-transform duration-700">
+                        <div className="p-6 rounded-2xl border border-white/5 bg-card relative overflow-hidden group" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-700">
                                 <Building2 size={80} />
                             </div>
                             <h2 className="text-lg font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
@@ -558,7 +551,7 @@ const StaffPerformanceDetails = () => {
                         </div>
 
                         {/* Communication Matrix */}
-                        <div className="p-8 rounded-[2rem] border border-white/10 bg-white/5 group">
+                        <div className="p-6 rounded-2xl border border-white/5 bg-card" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <h2 className="text-lg font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                 <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
                                 Connectivity
@@ -590,7 +583,7 @@ const StaffPerformanceDetails = () => {
                         </div>
 
                         {/* Quick Insights */}
-                        <div className="p-6 rounded-[2rem] bg-gradient-to-br from-lime/10 to-transparent border border-lime/10">
+                        <div className="p-6 rounded-2xl bg-lime/5 border border-lime/10">
                              <div className="flex items-center gap-3 mb-4">
                                  <Zap size={18} className="text-lime" />
                                  <p className="text-xs font-black uppercase tracking-widest text-white">AI Analyst Note</p>

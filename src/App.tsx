@@ -55,6 +55,7 @@ import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
 import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
+import AccidentReports from './pages/dashboards/shared/AccidentReports';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -79,6 +80,8 @@ import StaffPerformanceDetails from './pages/dashboards/shared/StaffPerformanceD
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
+import ComplaintsPage from './pages/dashboards/shared/ComplaintsPage';
+import MyTasks from './pages/dashboards/shared/MyTasks';
 
 // Finance Pages
 import TaxManagement from './pages/dashboards/finance/TaxManagement';
@@ -211,6 +214,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
@@ -355,6 +359,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
             </Route>
           </Route>
@@ -417,6 +422,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
@@ -468,6 +474,8 @@ function App() {
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="complaints" element={<ComplaintsPage />} />
+              <Route path="my-tasks" element={<MyTasks />} />
             </Route>
           </Route>
 
@@ -500,6 +508,8 @@ function App() {
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
@@ -542,6 +552,8 @@ function App() {
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 

@@ -5,9 +5,11 @@ import { Car, Users, ArrowRight, AlertTriangle, Clock, Calendar, MapPin, Chevron
 import { getAllVehicles } from '../../services/vehicleService';
 import { getAllDrivers } from '../../services/driverService';
 import { getActiveAlerts } from '../../services/alertService';
+import { getAllEnquiries } from '../../services/enquiryService';
 import { getUser } from '../../utils/auth';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 
 const COLORS = ['#C8E600', '#4F46E5', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -22,7 +24,8 @@ const BranchManagerDashboard = () => {
         totalVehicles: 0,
         availableVehicles: 0,
         totalDrivers: 0,
-        activeAlerts: 0
+        activeAlerts: 0,
+        totalComplaints: 0
     });
     const [vehicleStatusData, setVehicleStatusData] = useState<any[]>([]);
     const [handovers, setHandovers] = useState<any[]>([]);
@@ -44,16 +47,18 @@ const BranchManagerDashboard = () => {
                     return;
                 }
 
-                const [vehiclesRes, driversRes, alertsRes] = await Promise.allSettled([
+                const [vehiclesRes, driversRes, alertsRes, enquiriesRes] = await Promise.allSettled([
                     getAllVehicles({ limit: 1000, branch: branchId }),
                     getAllDrivers({ limit: 1000, branch: branchId }),
-                    getActiveAlerts()
+                    getActiveAlerts(),
+                    getAllEnquiries({ branchId, limit: 1 }) // Just to get total if meta is provided, or fetch all
                 ]);
 
                 let totalV = 0;
                 let availV = 0;
                 let totalD = 0;
                 let activeA = 0;
+                let totalC = 0;
                 const vDisplayCounts: Record<string, number> = { 'Available': 0, 'Rented': 0, 'Maintenance': 0, 'Pending/Other': 0 };
                 let handoverList: any[] = [];
 
@@ -118,11 +123,16 @@ const BranchManagerDashboard = () => {
                     })));
                 }
 
+                if (enquiriesRes.status === 'fulfilled') {
+                    totalC = (enquiriesRes.value.data || []).length;
+                }
+
                 setStats({
                     totalVehicles: totalV,
                     availableVehicles: availV,
                     totalDrivers: totalD,
-                    activeAlerts: activeA
+                    activeAlerts: activeA,
+                    totalComplaints: totalC
                 });
 
             } catch (error) {
@@ -177,7 +187,7 @@ const BranchManagerDashboard = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                 <StatCard
                     superTitle="Fleet Overview"
                     title="Available / Total"
@@ -206,6 +216,15 @@ const BranchManagerDashboard = () => {
                     icon={<AlertTriangle size={18} />}
                     color="rgba(239, 68, 68, 0.15)"
                 />
+                <div onClick={() => navigate('/admin/branch-manager/complaints')} className="cursor-pointer">
+                    <StatCard
+                        superTitle="Support Portal"
+                        title="Total Complaints"
+                        value={stats.totalComplaints.toString()}
+                        icon={<MessageSquare size={18} />}
+                        color="rgba(139, 92, 246, 0.15)"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

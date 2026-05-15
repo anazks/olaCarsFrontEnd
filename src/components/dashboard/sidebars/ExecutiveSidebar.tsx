@@ -97,6 +97,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Task Delegation', path: '/admin/admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {

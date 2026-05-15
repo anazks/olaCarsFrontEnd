@@ -143,139 +143,181 @@ const DashboardSettings = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Sidebar Tabs */}
-                <div className="lg:w-64 flex flex-col gap-2">
+            {/* Navigation Tabs (Top Layer) */}
+            <div className="flex items-center gap-2 p-1 rounded-2xl border backdrop-blur-md overflow-x-auto no-scrollbar" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
+                <button 
+                    onClick={() => setActiveTab('profile')}
+                    className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                    style={activeTab !== 'profile' ? { color: 'var(--text-dim)' } : {}}
+                >
+                    <User size={16} /> Profile & Security
+                </button>
+                <button 
+                    onClick={() => setActiveTab('appearance')}
+                    className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'appearance' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                    style={activeTab !== 'appearance' ? { color: 'var(--text-dim)' } : {}}
+                >
+                    <Moon size={16} /> Appearance
+                </button>
+                {(role === 'admin' || role === 'operationadmin') && (
                     <button 
-                        onClick={() => setActiveTab('profile')}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'profile' ? 'bg-lime/10 shadow-sm' : 'hover:bg-black/5'}`}
-                        style={{ 
-                            color: activeTab === 'profile' ? 'var(--brand-lime)' : 'var(--text-dim)',
-                            background: activeTab === 'profile' ? 'rgba(200,230,0,0.1)' : 'transparent'
-                        }}
+                        onClick={() => setActiveTab('operations')}
+                        className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'operations' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                        style={activeTab !== 'operations' ? { color: 'var(--text-dim)' } : {}}
                     >
-                        <User size={18} /> Profile & Security
+                        <DollarSign size={16} /> Operations
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('appearance')}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'appearance' ? 'bg-lime/10 shadow-sm' : 'hover:bg-black/5'}`}
-                        style={{ 
-                            color: activeTab === 'appearance' ? 'var(--brand-lime)' : 'var(--text-dim)',
-                            background: activeTab === 'appearance' ? 'rgba(200,230,0,0.1)' : 'transparent'
-                        }}
-                    >
-                        <Moon size={18} /> Appearance & Language
-                    </button>
-                    {(role === 'admin' || role === 'operationadmin') && (
-                        <button 
-                            onClick={() => setActiveTab('operations')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'operations' ? 'bg-lime/10 shadow-sm' : 'hover:bg-black/5'}`}
-                            style={{ 
-                                color: activeTab === 'operations' ? 'var(--brand-lime)' : 'var(--text-dim)',
-                                background: activeTab === 'operations' ? 'rgba(200,230,0,0.1)' : 'transparent'
-                            }}
-                        >
-                            <DollarSign size={18} /> Operations Settings
-                        </button>
-                    )}
+                )}
+                <button 
+                    onClick={() => setActiveTab('banking')}
+                    className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'banking' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                    style={activeTab !== 'banking' ? { color: 'var(--text-dim)' } : {}}
+                >
+                    <Building2 size={16} /> Bank Accounts
+                </button>
+            </div>
 
-                    <button 
-                        onClick={() => setActiveTab('banking')}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'banking' ? 'bg-lime/10 shadow-sm' : 'hover:bg-black/5'}`}
-                        style={{ 
-                            color: activeTab === 'banking' ? 'var(--brand-lime)' : 'var(--text-dim)',
-                            background: activeTab === 'banking' ? 'rgba(200,230,0,0.1)' : 'transparent'
-                        }}
-                    >
-                        <Building2 size={18} />
-                        {t('sidebar.items.bankAccounts', 'Bank Accounts')}
-                    </button>
-                </div>
-
-                {/* Main Content Area */}
-                <div className="flex-1">
+            {/* Main Content Area */}
+            <div className="w-full min-h-[60vh]">
                     {/* Profile Tab */}
                     {activeTab === 'profile' && (
-                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <div className="p-8 rounded-3xl border bg-card shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                    <Key size={20} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
-                                    Security Settings
-                                </h3>
+                        <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+                            {/* Security Health Overview */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-2 p-8 rounded-[2.5rem] border flex flex-col justify-between group transition-all hover:border-lime/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-start justify-between">
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                                                <Shield className="text-lime" size={24} /> Security Overview
+                                            </h3>
+                                            <p className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Manage your account authentication and encryption parameters.</p>
+                                        </div>
+                                        <div className="px-4 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-green-500">System Secure</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-8 flex items-center gap-10">
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Authentication</p>
+                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Password Only</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-white/5" style={{ background: 'var(--border-main)' }} />
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Active Sessions</p>
+                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>1 Endpoint</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 rounded-[2.5rem] border flex flex-col items-center justify-center text-center space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    <div className="w-16 h-16 rounded-3xl bg-lime/10 flex items-center justify-center border border-lime/10">
+                                        <Key className="text-lime" size={32} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Auto-Lock</p>
+                                        <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>Session expires after 24h</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-10 rounded-[3rem] border shadow-2xl shadow-black/20" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="mb-10">
+                                    <h3 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>Update Master Password</h3>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-lime mt-1">Credentials Synchronization</p>
+                                </div>
                                 
-                                <form onSubmit={handleSubmitPassword} className="space-y-6">
+                                <form onSubmit={handleSubmitPassword} className="space-y-8">
                                     {profileStatus.type && (
-                                        <div className={`p-4 rounded-xl flex items-center gap-3 text-sm ${profileStatus.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
-                                            {profileStatus.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                                        <div className={`p-5 rounded-2xl flex items-center gap-4 text-sm font-bold border ${profileStatus.type === 'success' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                                            {profileStatus.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
                                             {profileStatus.message}
                                         </div>
                                     )}
 
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Current Password</label>
-                                        <div className="relative">
+                                    <div className="space-y-2 max-w-md">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Verification of Current Credentials</label>
+                                        <div className="relative group">
                                             <input 
                                                 type={showPassword.old ? 'text' : 'password'}
                                                 name="oldPassword"
                                                 value={passwords.oldPassword}
                                                 onChange={handlePasswordChange}
-                                                className="w-full px-4 py-3.5 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-lime/20"
+                                                className="w-full px-6 py-4 rounded-2xl border outline-none transition-all focus:border-lime"
                                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                placeholder="Enter current password"
+                                                placeholder="Old password..."
                                             />
-                                            <button type="button" onClick={() => togglePasswordVisibility('old')} className="absolute right-4 top-1/2 -translate-y-1/2 text-dim">
-                                                {showPassword.old ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            <button type="button" onClick={() => togglePasswordVisibility('old')} className="absolute right-6 top-1/2 -translate-y-1/2 text-dim hover:text-lime transition-colors">
+                                                {showPassword.old ? <EyeOff size={20} /> : <Eye size={20} />}
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 border-t pt-10" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>New Password</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Proposed New Password</label>
                                             <div className="relative">
                                                 <input 
                                                     type={showPassword.new ? 'text' : 'password'}
                                                     name="newPassword"
                                                     value={passwords.newPassword}
                                                     onChange={handlePasswordChange}
-                                                    className="w-full px-4 py-3.5 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-lime/20"
+                                                    className="w-full px-6 py-4 rounded-2xl border outline-none transition-all focus:border-lime"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    placeholder="New password"
+                                                    placeholder="Complex character mix recommended"
                                                 />
-                                                <button type="button" onClick={() => togglePasswordVisibility('new')} className="absolute right-4 top-1/2 -translate-y-1/2 text-dim">
-                                                    {showPassword.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                <button type="button" onClick={() => togglePasswordVisibility('new')} className="absolute right-6 top-1/2 -translate-y-1/2 text-dim hover:text-lime transition-colors">
+                                                    {showPassword.new ? <EyeOff size={20} /> : <Eye size={20} />}
                                                 </button>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Confirm Password</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Re-confirm Identification</label>
                                             <div className="relative">
                                                 <input 
                                                     type={showPassword.confirm ? 'text' : 'password'}
                                                     name="confirmPassword"
                                                     value={passwords.confirmPassword}
                                                     onChange={handlePasswordChange}
-                                                    className="w-full px-4 py-3.5 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-lime/20"
+                                                    className="w-full px-6 py-4 rounded-2xl border outline-none transition-all focus:border-lime"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    placeholder="Confirm new password"
+                                                    placeholder="Match previous input"
                                                 />
-                                                <button type="button" onClick={() => togglePasswordVisibility('confirm')} className="absolute right-4 top-1/2 -translate-y-1/2 text-dim">
-                                                    {showPassword.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                <button type="button" onClick={() => togglePasswordVisibility('confirm')} className="absolute right-6 top-1/2 -translate-y-1/2 text-dim hover:text-lime transition-colors">
+                                                    {showPassword.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button 
-                                        type="submit" 
-                                        disabled={isSubmittingPassword}
-                                        className="px-8 py-3.5 rounded-xl font-black text-sm flex items-center gap-2 transition-all hover:shadow-lg active:scale-95 disabled:opacity-50"
-                                        style={{ background: 'var(--brand-lime)', color: '#000' }}
-                                    >
-                                        {isSubmittingPassword ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-                                        Update Password
-                                    </button>
+                                    <div className="pt-6">
+                                        <button 
+                                            type="submit" 
+                                            disabled={isSubmittingPassword}
+                                            className="px-10 py-5 rounded-[1.5rem] bg-lime text-black font-black uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-2xl shadow-lime/20"
+                                        >
+                                            {isSubmittingPassword ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+                                            Finalize Authentication Change
+                                        </button>
+                                    </div>
                                 </form>
+                            </div>
+
+                            {/* 2FA Placeholder Card */}
+                            <div className="p-8 rounded-[3rem] border border-dashed flex flex-col md:flex-row items-center justify-between gap-6" style={{ background: 'rgba(200,230,0,0.02)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-6 text-center md:text-left">
+                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5 shadow-inner">
+                                        <Shield size={24} className="text-dim opacity-50" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-black" style={{ color: 'var(--text-main)' }}>Multi-Factor Authentication (MFA)</h4>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Add an extra layer of protection using authenticator apps.</p>
+                                    </div>
+                                </div>
+                                <button disabled className="px-8 py-3.5 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-dim cursor-not-allowed">
+                                    Feature Restricted
+                                </button>
                             </div>
                         </div>
                     )}
@@ -457,7 +499,6 @@ const DashboardSettings = () => {
                         </div>
                     )}
                 </div>
-            </div>
         </div>
     );
 };
