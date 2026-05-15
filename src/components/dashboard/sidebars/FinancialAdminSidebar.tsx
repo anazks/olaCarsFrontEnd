@@ -142,12 +142,9 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: 'Vendors', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
                 { label: 'Expenses', path: '/admin/financial-admin/expenses' },
-                { label: 'Recurring Expenses', path: '/admin/financial-admin/recurring-expenses' },
                 { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
                 { label: 'Bills', path: '/admin/financial-admin/purchase-bills' },
-                { label: 'Recurring Bills', path: '/admin/financial-admin/recurring-bills' },
                 { label: 'Payments Made', path: '/admin/financial-admin/payments-made' },
-                { label: 'Vendor Credits', path: '/admin/financial-admin/vendor-credits' },
             ]
         },
         {
@@ -275,10 +272,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                                     ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                                 `}
                                 style={{
-                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
+                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid var(--sidebar-active)' : '4px solid transparent',
                                 }}
                             >
-                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
+                                <div className={`${isCurrentlyActive ? 'text-[var(--sidebar-active)]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
                                     {item.icon}
                                 </div>
                                 {!isSidebarCollapsed && (
@@ -320,7 +317,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
                                                     className={`cursor-pointer py-2 text-sm transition-colors
-                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
+                                                        ${isItActive ? 'text-[var(--sidebar-active)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
                                                     {sub.label}

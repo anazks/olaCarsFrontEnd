@@ -180,10 +180,10 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                                     ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                                 `}
                                 style={{
-                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
+                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid var(--sidebar-active)' : '4px solid transparent',
                                 }}
                             >
-                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
+                                <div className={`${isCurrentlyActive ? 'text-[var(--sidebar-active)]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
                                     {item.icon}
                                 </div>
                                 {!isSidebarCollapsed && (
@@ -224,7 +224,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
                                                     className={`cursor-pointer py-2 text-sm transition-colors
-                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
+                                                        ${isItActive ? 'text-[var(--sidebar-active)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
                                                     {sub.label}

@@ -97,17 +97,16 @@ import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
+import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
 
 // Sales Pages
 import PaymentsReceived from './pages/dashboards/finance/Sales/PaymentsReceived';
 import CreditNotes from './pages/dashboards/finance/Sales/CreditNotes';
+import CreditNoteDetail from './pages/dashboards/finance/Sales/CreditNoteDetail';
 
 // Purchases Pages
 import Expenses from './pages/dashboards/finance/Purchases/Expenses';
-import RecurringExpenses from './pages/dashboards/finance/Purchases/RecurringExpenses';
-import RecurringBills from './pages/dashboards/finance/Purchases/RecurringBills';
 import PaymentsMade from './pages/dashboards/finance/Purchases/PaymentsMade';
-import VendorCredits from './pages/dashboards/finance/Purchases/VendorCredits';
 
 
 function App() {
@@ -222,6 +221,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -372,6 +373,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -385,13 +387,11 @@ function App() {
               {/* Sales Routes */}
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
-              <Route path="recurring-expenses" element={<RecurringExpenses />} />
-              <Route path="recurring-bills" element={<RecurringBills />} />
               <Route path="payments-made" element={<PaymentsMade />} />
-              <Route path="vendor-credits" element={<VendorCredits />} />
             </Route>
           </Route>
 
@@ -448,6 +448,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -581,6 +583,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />

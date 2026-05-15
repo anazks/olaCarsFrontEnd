@@ -1,5 +1,13 @@
 import api from './api';
 
+export interface LineItem {
+    name: string;
+    description?: string;
+    qty: number;
+    unitPrice: number;
+    total: number;
+}
+
 export interface InvoicePayment {
     amount: number;
     paidAt: string;
@@ -26,6 +34,16 @@ export interface Invoice {
     payments: InvoicePayment[];
     generatedAt: string;
     pdfS3Key?: string;
+    // Manual invoice fields
+    invoiceType?: 'AUTO' | 'MANUAL';
+    lineItems?: LineItem[];
+    subtotal?: number;
+    discountType?: 'PERCENTAGE' | 'FIXED';
+    discountValue?: number;
+    discountAmount?: number;
+    taxRate?: number;
+    taxAmount?: number;
+    notes?: string;
 }
 
 export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
@@ -49,7 +67,22 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
     };
 };
 
+export const createInvoice = async (data: any): Promise<Invoice> => {
+    const response = await api.post('/api/invoices', data);
+    return response.data.data;
+};
+
 export const payInvoice = async (invoiceId: string, paymentData: any): Promise<Invoice> => {
     const response = await api.post(`/api/invoices/${invoiceId}/pay`, paymentData);
+    return response.data.data;
+};
+
+export const updateInvoice = async (invoiceId: string, updateData: any): Promise<Invoice> => {
+    const response = await api.put(`/api/invoices/${invoiceId}`, updateData);
+    return response.data.data;
+};
+
+export const getInvoiceById = async (invoiceId: string): Promise<Invoice> => {
+    const response = await api.get(`/api/invoices/${invoiceId}`);
     return response.data.data;
 };
