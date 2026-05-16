@@ -100,6 +100,8 @@ import InvoiceList from './pages/dashboards/finance/InvoiceList';
 import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
 
 // Sales Pages
+import Customers from './pages/dashboards/finance/Sales/Customers';
+import CustomerDetail from './pages/dashboards/finance/Sales/CustomerDetail';
 import PaymentsReceived from './pages/dashboards/finance/Sales/PaymentsReceived';
 import CreditNotes from './pages/dashboards/finance/Sales/CreditNotes';
 import CreditNoteDetail from './pages/dashboards/finance/Sales/CreditNoteDetail';
@@ -383,6 +385,8 @@ function App() {
               <Route path="alerts" element={<AlertsManagement />} />
 
               {/* Sales Routes */}
+              <Route path="customers" element={<Customers />} />
+              <Route path="customers/:id" element={<CustomerDetail />} />
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
