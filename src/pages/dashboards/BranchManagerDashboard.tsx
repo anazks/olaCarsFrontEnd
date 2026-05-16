@@ -12,7 +12,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, L
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 
-const COLORS = ['#C8E600', '#4F46E5', '#F59E0B', '#EF4444', '#8B5CF6'];
+const COLORS = ['var(--brand-lime)', '#4F46E5', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 const BranchManagerDashboard = () => {
     const { } = useTranslation();
@@ -158,7 +158,7 @@ const BranchManagerDashboard = () => {
     if (loading) {
         return (
             <div className="min-h-[500px] flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                <div className="w-12 h-12 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }

@@ -56,7 +56,7 @@ const createCarIcon = () => {
         html: `
             <div style="
                 width: 36px; height: 36px;
-                background: linear-gradient(135deg, #C8E600, #a3c400);
+                background: linear-gradient(135deg, var(--brand-lime), #a3c400);
                 border-radius: 50%;
                 border: 3px solid #fff;
                 box-shadow: 0 2px 12px rgba(200,230,0,0.5), 0 0 20px rgba(200,230,0,0.25);
@@ -141,8 +141,8 @@ const VehicleGpsMap = ({ vehicleId, vehicleName = 'Vehicle', isActivated = true,
         // Add accuracy circle
         L.circle([position.latitude, position.longitude], {
             radius: 150,
-            color: '#C8E600',
-            fillColor: '#C8E600',
+            color: 'var(--brand-lime)',
+            fillColor: 'var(--brand-lime)',
             fillOpacity: 0.08,
             weight: 1,
             dashArray: '5,5',
@@ -222,7 +222,7 @@ const VehicleGpsMap = ({ vehicleId, vehicleName = 'Vehicle', isActivated = true,
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e', animation: 'pulse 2s infinite' }} />
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#C8E600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--brand-lime)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live</span>
                 </div>
                 <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>

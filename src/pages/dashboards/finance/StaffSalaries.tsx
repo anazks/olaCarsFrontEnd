@@ -250,7 +250,7 @@ const StaffSalaries = () => {
     if (loading && staffList.length === 0 && !debouncedSearch) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-                <Loader2 className="animate-spin text-[#C8E600]" size={48} />
+                <Loader2 className="animate-spin text-[var(--brand-lime)]" size={48} />
             </div>
         );
     }
@@ -268,7 +268,7 @@ const StaffSalaries = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight italic uppercase">
-                        Staff <span className="text-[#C8E600]">Payrolls</span>
+                        Staff <span className="text-[var(--brand-lime)]">Payrolls</span>
                     </h1>
                     <p className="text-dim mt-1 font-medium">Manage salary structures and monthly cost allocation</p>
                 </div>
@@ -283,7 +283,7 @@ const StaffSalaries = () => {
                     <button 
                         onClick={handleBulkPayroll}
                         disabled={processing}
-                        className="px-6 py-3 rounded-2xl bg-[#C8E600] text-black font-bold text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(200,230,0,0.2)] flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                        className="px-6 py-3 rounded-2xl bg-[var(--brand-lime)] text-black font-bold text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(200,230,0,0.2)] flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
                     >
                         {processing ? <Loader2 className="animate-spin" size={18} /> : <DollarSign size={18} />} 
                         Process Full Payroll
@@ -294,11 +294,11 @@ const StaffSalaries = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-[var(--bg-card)] border border-[var(--border-main)] p-6 rounded-3xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                        <TrendingUp size={80} className="text-[#C8E600]" />
+                        <TrendingUp size={80} className="text-[var(--brand-lime)]" />
                     </div>
                     <p className="text-dim text-xs font-bold uppercase tracking-widest">Monthly Payroll Base</p>
                     <h3 className="text-3xl font-black text-[var(--text-main)] mt-2">${stats.totalPayroll.toLocaleString()}</h3>
-                    <div className="flex items-center gap-2 mt-4 text-[#C8E600] text-xs font-bold bg-[#C8E600]/10 w-fit px-2 py-1 rounded-full">
+                    <div className="flex items-center gap-2 mt-4 text-[var(--brand-lime)] text-xs font-bold bg-[var(--brand-lime)]/10 w-fit px-2 py-1 rounded-full">
                         <ArrowUpRight size={14} /> Globalized tracking
                     </div>
                 </div>
@@ -327,13 +327,13 @@ const StaffSalaries = () => {
             {/* Filters Bar */}
             <div className="bg-[var(--bg-card)] border border-[var(--border-main)] p-4 rounded-3xl flex flex-wrap gap-4 items-center">
                 <div className="relative group flex-1 min-w-[200px]">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-20 group-focus-within:text-[#C8E600] transition-colors" size={18} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-20 group-focus-within:text-[var(--brand-lime)] transition-colors" size={18} />
                     <input 
                         type="text" 
                         placeholder="Search staff..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3 text-sm text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/50 transition-all"
+                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/50 transition-all"
                     />
                 </div>
 
@@ -343,7 +343,7 @@ const StaffSalaries = () => {
                         <select 
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
-                            className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/30"
+                            className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/30"
                         >
                             <option value="ALL">All Roles</option>
                             <option value="COUNTRYMANAGER">Country Managers</option>
@@ -366,7 +366,7 @@ const StaffSalaries = () => {
                         <select 
                             value={branchFilter}
                             onChange={(e) => setBranchFilter(e.target.value)}
-                            className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/30"
+                            className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/30"
                         >
                             <option value="ALL">All Branches</option>
                             {branches.map(b => (
@@ -407,7 +407,7 @@ const StaffSalaries = () => {
                         <tbody className="divide-y divide-[var(--border-main)] relative">
                             {loading && (
                                 <div className="absolute inset-0 bg-[var(--bg-card)]/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                                    <Loader2 className="animate-spin text-[#C8E600]" size={24} />
+                                    <Loader2 className="animate-spin text-[var(--brand-lime)]" size={24} />
                                 </div>
                             )}
                             {staffList.length === 0 ? (
@@ -428,11 +428,11 @@ const StaffSalaries = () => {
                                         <tr key={staff._id} className="hover:bg-[var(--bg-input)] transition-colors group">
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] font-black text-lg">
+                                                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-lime)]/10 flex items-center justify-center text-[var(--brand-lime)] font-black text-lg">
                                                         {staff.fullName.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-[var(--text-main)] group-hover:text-[#C8E600] transition-colors">{staff.fullName}</p>
+                                                        <p className="text-sm font-bold text-[var(--text-main)] group-hover:text-[var(--brand-lime)] transition-colors">{staff.fullName}</p>
                                                         <p className="text-[11px] text-dim mt-0.5">{staff.email}</p>
                                                     </div>
                                                 </div>
@@ -452,7 +452,7 @@ const StaffSalaries = () => {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono font-black text-[#C8E600] text-sm">
+                                                    <span className="font-mono font-black text-[var(--brand-lime)] text-sm">
                                                         ${monthlyCost.toLocaleString()}
                                                     </span>
                                                     <span className="text-[9px] opacity-20 font-bold uppercase ml-1">Excl. Leaves</span>
@@ -474,7 +474,7 @@ const StaffSalaries = () => {
                                                     </button>
                                                     <button 
                                                         onClick={() => handleProcessPayroll(staff)}
-                                                        className="px-4 py-2 rounded-xl bg-[#C8E600]/10 text-[#C8E600] text-[11px] font-black uppercase tracking-wider hover:bg-[#C8E600] hover:text-black transition-all"
+                                                        className="px-4 py-2 rounded-xl bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] text-[11px] font-black uppercase tracking-wider hover:bg-[var(--brand-lime)] hover:text-black transition-all"
                                                     >
                                                         Process Payment
                                                     </button>
@@ -512,7 +512,7 @@ const StaffSalaries = () => {
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-xs font-bold transition-all disabled:opacity-30 hover:bg-[var(--bg-input)]"
-                                    style={{ color: page === 1 ? 'var(--text-dim)' : '#C8E600' }}
+                                    style={{ color: page === 1 ? 'var(--text-dim)' : 'var(--brand-lime)' }}
                                 >
                                     Previous
                                 </button>
@@ -527,7 +527,7 @@ const StaffSalaries = () => {
                                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                     disabled={page === pagination.pages}
                                     className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-xs font-bold transition-all disabled:opacity-30 hover:bg-[var(--bg-input)]"
-                                    style={{ color: page === pagination.pages ? 'var(--text-dim)' : '#C8E600' }}
+                                    style={{ color: page === pagination.pages ? 'var(--text-dim)' : 'var(--brand-lime)' }}
                                 >
                                     Next
                                 </button>
@@ -544,12 +544,12 @@ const StaffSalaries = () => {
                     <div className="relative bg-[var(--bg-card)] border border-[var(--border-main)] rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in duration-300">
                         <div className="p-6 border-b border-[var(--border-main)] flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="p-3 rounded-2xl bg-[#C8E600]/10 text-[#C8E600]">
+                                <div className="p-3 rounded-2xl bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]">
                                     <Wallet size={24} />
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase tracking-tight">
-                                        Salary <span className="text-[#C8E600]">Structure</span>
+                                        Salary <span className="text-[var(--brand-lime)]">Structure</span>
                                     </h2>
                                     <p className="text-xs text-dim font-medium">Configuring for {selectedStaff?.fullName}</p>
                                 </div>
@@ -569,7 +569,7 @@ const StaffSalaries = () => {
                                             type="number" 
                                             value={formData.baseSalary || ''}
                                             onChange={(e) => setFormData({...formData, baseSalary: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
-                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/50 transition-all"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/50 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -579,11 +579,11 @@ const StaffSalaries = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-xs font-black text-[var(--text-main)] uppercase tracking-widest flex items-center gap-2">
-                                        <Plus size={14} className="text-[#C8E600]" /> Allowances
+                                        <Plus size={14} className="text-[var(--brand-lime)]" /> Allowances
                                     </h4>
                                     <button 
                                         onClick={() => setFormData({...formData, allowances: [...(formData.allowances || []), { name: '', amount: 0 }]})}
-                                        className="text-[10px] font-black text-[#C8E600] uppercase hover:underline"
+                                        className="text-[10px] font-black text-[var(--brand-lime)] uppercase hover:underline"
                                     >
                                         + Add Item
                                     </button>
@@ -598,7 +598,7 @@ const StaffSalaries = () => {
                                                 newAllowances[idx].name = e.target.value;
                                                 setFormData({...formData, allowances: newAllowances});
                                             }}
-                                            className="flex-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/30"
+                                            className="flex-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/30"
                                         />
                                         <input 
                                             type="number"
@@ -622,12 +622,12 @@ const StaffSalaries = () => {
                             </div>
 
                             {/* Totals Preview */}
-                            <div className="mt-8 p-6 bg-[#C8E600]/5 border border-[#C8E600]/10 rounded-3xl flex justify-between items-center">
+                            <div className="mt-8 p-6 bg-[var(--brand-lime)]/5 border border-[var(--brand-lime)]/10 rounded-3xl flex justify-between items-center">
                                 <div>
                                     <p className="text-[10px] font-black text-dim uppercase tracking-widest">Calculated Net Salary</p>
                                     <p className="text-xs opacity-30 italic mt-1">(Base + Allowances + Bonuses - Deductions)</p>
                                 </div>
-                                <h3 className="text-3xl font-black text-[#C8E600] italic">
+                                <h3 className="text-3xl font-black text-[var(--brand-lime)] italic">
                                     ${((formData.baseSalary || 0) + (formData.allowances?.reduce((s, a) => s + a.amount, 0) || 0)).toLocaleString()}
                                 </h3>
                             </div>
@@ -643,7 +643,7 @@ const StaffSalaries = () => {
                             <button 
                                 onClick={handleSaveStructure}
                                 disabled={processing}
-                                className="flex-1 py-4 rounded-2xl bg-[#C8E600] text-black font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(200,230,0,0.2)] flex items-center justify-center gap-2"
+                                className="flex-1 py-4 rounded-2xl bg-[var(--brand-lime)] text-black font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(200,230,0,0.2)] flex items-center justify-center gap-2"
                             >
                                 {processing ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Save Structure</>}
                             </button>
@@ -658,12 +658,12 @@ const StaffSalaries = () => {
                     <div className="relative bg-[var(--bg-card)] border border-[var(--border-main)] rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
                         <div className="p-6 border-b border-[var(--border-main)] flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="p-3 rounded-2xl bg-[#C8E600]/10 text-[#C8E600]">
+                                <div className="p-3 rounded-2xl bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]">
                                     <Calculator size={24} />
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase tracking-tight">
-                                        Process <span className="text-[#C8E600]">Payout</span>
+                                        Process <span className="text-[var(--brand-lime)]">Payout</span>
                                     </h2>
                                     <p className="text-xs text-dim font-medium">Finalize monthly cost for {selectedStaff.fullName}</p>
                                 </div>
@@ -687,7 +687,7 @@ const StaffSalaries = () => {
                                             const deduction = (base / total) * payrollData.leaveDays;
                                             setPayrollData({...payrollData, totalDays: total, leaveDeduction: Number(deduction.toFixed(2))});
                                         }}
-                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/30"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/30"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -702,7 +702,7 @@ const StaffSalaries = () => {
                                             const deduction = (base / payrollData.totalDays) * leaves;
                                             setPayrollData({...payrollData, leaveDays: leaves, leaveDeduction: Number(deduction.toFixed(2))});
                                         }}
-                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[#C8E600]/30"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] focus:outline-none focus:border-[var(--brand-lime)]/30"
                                     />
                                 </div>
                             </div>
@@ -718,7 +718,7 @@ const StaffSalaries = () => {
                                            (getStructureForStaff(selectedStaff._id)?.allowances.reduce((s, a) => s + a.amount, 0) || 0) -
                                            (getStructureForStaff(selectedStaff._id)?.deductions.reduce((s, d) => s + d.amount, 0) || 0)).toLocaleString()}
                                     </div>
-                                    <div className="text-2xl font-black text-[#C8E600] italic">
+                                    <div className="text-2xl font-black text-[var(--brand-lime)] italic">
                                         ${((getStructureForStaff(selectedStaff._id)?.baseSalary || 0) + 
                                            (getStructureForStaff(selectedStaff._id)?.allowances.reduce((s, a) => s + a.amount, 0) || 0) -
                                            (getStructureForStaff(selectedStaff._id)?.deductions.reduce((s, d) => s + d.amount, 0) || 0) -
@@ -730,7 +730,7 @@ const StaffSalaries = () => {
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center ml-1">
                                     <label className="text-[10px] font-black text-dim uppercase tracking-widest">Calculated Leave Deduction</label>
-                                    <span className="text-[10px] text-[#C8E600] font-bold">
+                                    <span className="text-[10px] text-[var(--brand-lime)] font-bold">
                                         {payrollData.leaveDays} Days Leave
                                     </span>
                                 </div>
@@ -740,7 +740,7 @@ const StaffSalaries = () => {
                                         type="number" 
                                         value={payrollData.leaveDeduction || ''}
                                         onChange={(e) => setPayrollData({...payrollData, leaveDeduction: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
-                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-[#C8E600] focus:outline-none focus:border-[#C8E600]/50 transition-all"
+                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-[var(--brand-lime)] focus:outline-none focus:border-[var(--brand-lime)]/50 transition-all"
                                         placeholder="0.00"
                                     />
                                 </div>
@@ -758,7 +758,7 @@ const StaffSalaries = () => {
                             <button 
                                 onClick={confirmProcessPayroll}
                                 disabled={processing}
-                                className="flex-1 py-4 rounded-2xl bg-[#C8E600] text-black font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(200,230,0,0.2)] flex items-center justify-center gap-2"
+                                className="flex-1 py-4 rounded-2xl bg-[var(--brand-lime)] text-black font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(200,230,0,0.2)] flex items-center justify-center gap-2"
                             >
                                 {processing ? <Loader2 size={18} className="animate-spin" /> : <><CheckCircle2 size={18} /> Confirm Payout</>}
                             </button>

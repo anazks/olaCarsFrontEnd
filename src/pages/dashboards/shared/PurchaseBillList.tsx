@@ -102,7 +102,7 @@ const PurchaseBillList = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Receipt size={28} className="text-[#C8E600]" />
+                        <Receipt size={28} className="text-[var(--brand-lime)]" />
                         {t('management.purchaseBills.title')}
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseBills.subtitle')}</p>
@@ -188,14 +188,14 @@ const PurchaseBillList = () => {
             <div className="rounded-[32px] border bg-white/[0.02] overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
                 {loading ? (
                     <div className="py-24 flex flex-col items-center gap-4">
-                        <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-10 h-10 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                         <p className="text-sm font-bold opacity-40 uppercase tracking-widest">{t('management.purchaseBills.loading')}</p>
                     </div>
                 ) : error ? (
                     <div className="py-24 text-center space-y-4">
                         <AlertCircle size={48} className="mx-auto text-red-500 opacity-20" />
                         <p className="text-red-500 font-bold">{error}</p>
-                        <button onClick={fetchPayments} className="px-6 py-3 bg-[#C8E600] text-black rounded-2xl font-black text-xs uppercase tracking-widest">{t('management.common.tryAgain')}</button>
+                        <button onClick={fetchPayments} className="px-6 py-3 bg-[var(--brand-lime)] text-black rounded-2xl font-black text-xs uppercase tracking-widest">{t('management.common.tryAgain')}</button>
                     </div>
                 ) : payments.length === 0 ? (
                     <div className="py-24 text-center space-y-4">
@@ -223,7 +223,7 @@ const PurchaseBillList = () => {
                                             <tr key={p._id} className="hover:bg-white/[0.03] transition-all group">
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-[#C8E600]/20 transition-all">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-[var(--brand-lime)]/20 transition-all">
                                                             <Calendar size={18} className="opacity-40" />
                                                         </div>
                                                         <div>
@@ -252,7 +252,7 @@ const PurchaseBillList = () => {
                                                     <p className="text-[10px] font-bold opacity-30 mt-1 uppercase tracking-tighter">{(p as any).accountingCode?.name || 'Expense'}</p>
                                                 </td>
                                                 <td className="px-6 py-5 text-right">
-                                                    <p className="text-lg font-black text-[#C8E600] tracking-tighter">
+                                                    <p className="text-lg font-black text-[var(--brand-lime)] tracking-tighter">
                                                         ${p.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </p>
                                                     <div className="flex items-center justify-end gap-1 opacity-30 mt-0.5">

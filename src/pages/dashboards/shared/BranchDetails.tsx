@@ -71,7 +71,7 @@ const BranchDetails = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="w-12 h-12 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                <div className="w-12 h-12 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -134,12 +134,12 @@ const BranchDetails = () => {
                             <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                                 {branch.name}
                             </h1>
-                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] border border-[var(--brand-lime)]/20">
                                 {branch.code}
                             </span>
                         </div>
                         <p className="text-sm mt-1 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                            <MapPin size={14} className="text-[#C8E600]" />
+                            <MapPin size={14} className="text-[var(--brand-lime)]" />
                             {branch.city}, {branch.country}
                         </p>
                     </div>
@@ -163,7 +163,7 @@ const BranchDetails = () => {
                             style={{ color: 'var(--text-main)' }}
                         />
                     </div>
-                    <button className="p-3 rounded-2xl bg-[#C8E600] text-black font-black hover:shadow-lg hover:shadow-[#C8E600]/20 transition-all active:scale-95">
+                    <button className="p-3 rounded-2xl bg-[var(--brand-lime)] text-black font-black hover:shadow-lg hover:shadow-[var(--brand-lime)]/20 transition-all active:scale-95">
                         <Download size={20} />
                     </button>
                 </div>
@@ -172,7 +172,7 @@ const BranchDetails = () => {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                    { label: 'Drivers Onboarded', value: analytics.driverStats.onboarded, icon: Users, color: '#C8E600' },
+                    { label: 'Drivers Onboarded', value: analytics.driverStats.onboarded, icon: Users, color: 'var(--brand-lime)' },
                     { label: 'Active Drivers', value: analytics.driverStats.active, icon: TrendingUp, color: '#22c55e' },
                     { label: 'Active Vehicles', value: analytics.vehicleStats.active, icon: Car, color: '#3b82f6' },
                     { label: 'Tasks Completed', value: analytics.taskSummary.completed, icon: CheckCircle2, color: '#8b5cf6' },
@@ -204,7 +204,7 @@ const BranchDetails = () => {
                             <User className="opacity-10" size={60} />
                         </div>
                         <h2 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                            <div className="w-2 h-6 bg-[#C8E600] rounded-full" />
+                            <div className="w-2 h-6 bg-[var(--brand-lime)] rounded-full" />
                             Branch Manager
                         </h2>
                         {branch.branchManager ? (
@@ -217,11 +217,11 @@ const BranchDetails = () => {
                                 </div>
                                 <div className="space-y-3 pt-4 border-t border-[var(--border-main)]">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Mail size={14} className="text-[#C8E600]" /></div>
+                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Mail size={14} className="text-[var(--brand-lime)]" /></div>
                                         <span className="text-sm truncate">{typeof branch.branchManager === 'object' ? branch.branchManager.email : 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Phone size={14} className="text-[#C8E600]" /></div>
+                                        <div className="p-2 rounded-lg bg-[var(--bg-input)]"><Phone size={14} className="text-[var(--brand-lime)]" /></div>
                                         <span className="text-sm">{branch.phone || 'N/A'}</span>
                                     </div>
                                 </div>
@@ -279,7 +279,7 @@ const BranchDetails = () => {
                                     placeholder="Search staff..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl text-sm outline-none focus:border-[#C8E600]/50 transition-all"
+                                    className="w-full pl-12 pr-4 py-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl text-sm outline-none focus:border-[var(--brand-lime)]/50 transition-all"
                                 />
                             </div>
                         </div>
@@ -306,7 +306,7 @@ const BranchDetails = () => {
                                             <tr key={person._id} className="group hover:bg-[var(--bg-input)] transition-all">
                                                 <td className="px-4 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C8E600] to-[#8fb200] flex items-center justify-center text-black font-black">
+                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-lime)] to-[#8fb200] flex items-center justify-center text-black font-black">
                                                             {person.fullName.charAt(0)}
                                                         </div>
                                                         <div>
@@ -356,7 +356,7 @@ const BranchDetails = () => {
                                                                 const basePath = currentPath.split('/manage-branches')[0];
                                                                 navigate(`${basePath}/staff-performance/${person._id}`);
                                                             }}
-                                                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#C8E600]/10 hover:bg-[#C8E600] text-[#C8E600] hover:text-black transition-all border border-[#C8E600]/20 font-black text-[10px] uppercase tracking-wider shadow-lg shadow-[#C8E600]/5"
+                                                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--brand-lime)]/10 hover:bg-[var(--brand-lime)] text-[var(--brand-lime)] hover:text-black transition-all border border-[var(--brand-lime)]/20 font-black text-[10px] uppercase tracking-wider shadow-lg shadow-[var(--brand-lime)]/5"
                                                             title="View Performance Profile"
                                                         >
                                                             <Eye size={14} />
@@ -397,8 +397,8 @@ const BranchDetails = () => {
                             <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorOnboard" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="var(--brand-lime)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="var(--brand-lime)" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.3} />
@@ -416,12 +416,12 @@ const BranchDetails = () => {
                                 <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
                                 <RechartsTooltip
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }}
-                                    itemStyle={{ color: '#C8E600', fontWeight: 'bold' }}
+                                    itemStyle={{ color: 'var(--brand-lime)', fontWeight: 'bold' }}
                                 />
                                 <Area
                                     type="monotone"
                                     dataKey="count"
-                                    stroke="#C8E600"
+                                    stroke="var(--brand-lime)"
                                     strokeWidth={3}
                                     fillOpacity={1}
                                     fill="url(#colorOnboard)"

@@ -224,7 +224,7 @@ const ManageBranchManagers = () => {
 
     const SortIcon = ({ field }: { field: string }) => {
         if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
-        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: '#C8E600' }} /></div>;
+        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: 'var(--brand-lime)' }} /></div>;
     };
 
     const FilterLabel = ({ label }: { label: string }) => (
@@ -252,7 +252,7 @@ const ManageBranchManagers = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <UserCheck size={28} style={{ color: '#C8E600' }} />
+                        <UserCheck size={28} style={{ color: 'var(--brand-lime)' }} />
                         {t('management.branchManagers.title')}
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.branchManagers.subtitle')}</p>
@@ -267,7 +267,7 @@ const ManageBranchManagers = () => {
                     </button>
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-[#C8E600] text-[#C8E600] bg-[#C8E600]/10' : ''}`}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-[var(--brand-lime)] text-[var(--brand-lime)] bg-[var(--brand-lime)]/10' : ''}`}
                         style={{ 
                             background: showAdvancedFilters ? '' : 'var(--bg-card)', 
                             borderColor: showAdvancedFilters ? '' : 'var(--border-main)', 
@@ -280,7 +280,7 @@ const ManageBranchManagers = () => {
                         <button
                             onClick={openCreateModal}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
                             <Plus size={18} /> {t('management.branchManagers.add')}
                         </button>
@@ -395,7 +395,7 @@ const ManageBranchManagers = () => {
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : branchManagers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
@@ -408,13 +408,13 @@ const ManageBranchManagers = () => {
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                     <th className="px-6 py-4">
-                                        <button onClick={() => handleSort('fullName')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        <button onClick={() => handleSort('fullName')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[var(--brand-lime)] transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.common.table.branchInfo')} <SortIcon field="fullName" />
                                         </button>
                                     </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.branchInfo')}</th>
                                     <th className="px-6 py-4">
-                                        <button onClick={() => handleSort('email')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                        <button onClick={() => handleSort('email')} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider outline-none hover:text-[var(--brand-lime)] transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.common.table.contact')} <SortIcon field="email" />
                                         </button>
                                     </th>
@@ -434,7 +434,7 @@ const ManageBranchManagers = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold font-medium" style={{ color: 'var(--text-main)' }}>{manager.fullName}</span>
-                                                    {/* <span className="text-xs" style={{ color: '#C8E600' }}>Manager ID: {manager._id.slice(-6)}</span> */}
+                                                    {/* <span className="text-xs" style={{ color: 'var(--brand-lime)' }}>Manager ID: {manager._id.slice(-6)}</span> */}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -468,7 +468,7 @@ const ManageBranchManagers = () => {
                                                             const basePath = currentPath.split('/manage-branch-managers')[0];
                                                             navigate(`${basePath}/staff-performance/${manager._id}`);
                                                         }}
-                                                        className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                        className="p-2 rounded-lg hover:bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] transition-colors"
                                                         title="View Performance Profile"
                                                     >
                                                         <Eye size={15} />
@@ -710,7 +710,7 @@ const ManageBranchManagers = () => {
                                                         checked={formData.twoFactorEnabled}
                                                         onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
                                                     />
-                                                    <div className={`w-12 h-6 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[#C8E600]' : 'bg-gray-600'}`}></div>
+                                                    <div className={`w-12 h-6 rounded-full transition-colors ${formData.twoFactorEnabled ? 'bg-[var(--brand-lime)]' : 'bg-gray-600'}`}></div>
                                                     <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform ${formData.twoFactorEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                                 </div>
                                                 <span className="text-sm font-medium group-hover:opacity-80 transition-opacity" style={{ color: 'var(--text-main)' }}>{t('management.common.modal.twoFactorAuth')}</span>
@@ -746,7 +746,7 @@ const ManageBranchManagers = () => {
                                     type="submit"
                                     disabled={formLoading}
                                     className="flex-1 py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center disabled:opacity-60"
-                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
+                                    style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                                 >
                                     {formLoading
                                         ? <div className="w-6 h-6 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />

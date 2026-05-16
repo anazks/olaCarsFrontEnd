@@ -89,7 +89,7 @@ const BalanceSheet = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[#C8E600] to-[#98B000] text-[#0A0A0A] shadow-[0_0_20px_rgba(200,230,0,0.2)]">
+                        <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[var(--brand-lime)] to-[#98B000] text-[#0A0A0A] shadow-[0_0_20px_rgba(200,230,0,0.2)]">
                             <Landmark size={24} />
                         </div>
                         <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>Balance Sheet</h1>
@@ -106,7 +106,7 @@ const BalanceSheet = () => {
                     </button>
                     <button 
                         onClick={fetchReport}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold bg-[#C8E600] text-[#0A0A0A] hover:shadow-[0_0_25px_rgba(200,230,0,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold bg-[var(--brand-lime)] text-[#0A0A0A] hover:shadow-[0_0_25px_rgba(200,230,0,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
@@ -181,7 +181,7 @@ const BalanceSheet = () => {
                         <div className="p-8 flex justify-between items-center border-b"
                              style={{ backgroundColor: 'var(--bg-main)', opacity: '0.95', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-full bg-[var(--brand-lime)]/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <FileText size={20} />
                                 </div>
                                 <h3 className="text-xl font-bold text-[var(--text-main)]" style={{ color: 'var(--text-main)' }}>Balance Sheet Statement</h3>
@@ -195,7 +195,7 @@ const BalanceSheet = () => {
                         <div className="p-8">
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-24 space-y-4">
-                                    <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                                    <div className="w-10 h-10 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                                     <p className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>Aggregating financial ledger balances...</p>
                                 </div>
                             ) : (
@@ -203,7 +203,7 @@ const BalanceSheet = () => {
                                     
                                     {/* ASSETS */}
                                     <section>
-                                        <h4 className="text-xs font-extrabold text-[#C8E600] uppercase tracking-[0.2em] pb-3 flex items-center gap-2 mb-4 border-b"
+                                        <h4 className="text-xs font-extrabold text-[var(--brand-lime)] uppercase tracking-[0.2em] pb-3 flex items-center gap-2 mb-4 border-b"
                                             style={{ borderColor: 'var(--border-main)' }}>
                                             <TrendingUp size={14} /> ASSETS
                                         </h4>
@@ -216,7 +216,7 @@ const BalanceSheet = () => {
                                                     <div key={idx} className="flex justify-between items-center py-3 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/[0.03] group transition-all">
                                                         <span className="text-sm font-medium transition-colors flex items-center gap-3"
                                                               style={{ color: 'var(--text-muted)' }}>
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-[#C8E600]/40 group-hover:bg-[#C8E600] transition-all"></span>
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-lime)]/40 group-hover:bg-[var(--brand-lime)] transition-all"></span>
                                                             {asset.name}
                                                         </span>
                                                         <span className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
@@ -231,7 +231,7 @@ const BalanceSheet = () => {
                                         <div className="mt-4 pt-4 px-3 flex justify-between items-center border-t-2 rounded-b-xl"
                                              style={{ borderColor: 'var(--border-main)', backgroundColor: 'var(--bg-main)', opacity: 0.9 }}>
                                             <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total Assets</span>
-                                            <span className="text-xl font-mono font-black text-[#C8E600] underline decoration-double underline-offset-4">
+                                            <span className="text-xl font-mono font-black text-[var(--brand-lime)] underline decoration-double underline-offset-4">
                                                 {formatValue(reportData?.assetsTotal)}
                                             </span>
                                         </div>
@@ -320,7 +320,7 @@ const BalanceSheet = () => {
                                                 <span className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Total Liabilities & Equity</span>
                                                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mt-1" style={{ color: 'var(--text-dim)' }}>Balances perfectly with Total Assets</p>
                                             </div>
-                                            <span className="text-xl font-mono font-black underline decoration-double decoration-[#C8E600] underline-offset-4" style={{ color: 'var(--text-main)' }}>
+                                            <span className="text-xl font-mono font-black underline decoration-double decoration-[var(--brand-lime)] underline-offset-4" style={{ color: 'var(--text-main)' }}>
                                                 {formatValue((reportData?.liabilitiesTotal || 0) + (reportData?.equityTotal || 0))}
                                             </span>
                                         </div>
@@ -344,7 +344,7 @@ const BalanceSheet = () => {
                         <div className="space-y-6 relative">
                             <div className="p-4 border rounded-2xl transition-colors"
                                  style={{ backgroundColor: 'var(--bg-main)', opacity: 0.95, borderColor: 'var(--border-main)' }}>
-                                <p className="text-[10px] font-bold text-[#C8E600] uppercase tracking-wider mb-1">Total Assets</p>
+                                <p className="text-[10px] font-bold text-[var(--brand-lime)] uppercase tracking-wider mb-1">Total Assets</p>
                                 <p className="text-3xl font-mono font-extrabold" style={{ color: 'var(--text-main)' }}>
                                     {formatValue(reportData?.assetsTotal)}
                                 </p>
@@ -433,7 +433,7 @@ const BalanceSheet = () => {
                                 </div>
                                 <div className="h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-white/10">
                                     <div 
-                                        className="h-full bg-[#C8E600] rounded-full transition-all duration-1000" 
+                                        className="h-full bg-[var(--brand-lime)] rounded-full transition-all duration-1000" 
                                         style={{ width: `${metrics.equityRatio * 100}%` }} 
                                     />
                                 </div>

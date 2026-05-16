@@ -52,7 +52,7 @@ const FinancialStatements = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3 text-[var(--text-main)]">
-                        <PieChart size={28} className="text-[#C8E600]" />
+                        <PieChart size={28} className="text-[var(--brand-lime)]" />
                         Financial Statements
                     </h1>
                     <p className="text-sm mt-1 text-dim">Consolidated and branch-level financial reporting</p>
@@ -61,7 +61,7 @@ const FinancialStatements = () => {
                     <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--bg-input)] border border-[var(--border-main)] text-dim hover:bg-[var(--bg-card)] hover:text-[var(--text-main)] transition-all">
                         <Download size={16} /> Export PDF
                     </button>
-                    <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#C8E600] text-[#0A0A0A] hover:shadow-[0_0_20px_rgba(200,230,0,0.2)] transition-all">
+                    <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--brand-lime)] text-[#0A0A0A] hover:shadow-[0_0_20px_rgba(200,230,0,0.2)] transition-all">
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                 </div>
@@ -102,13 +102,13 @@ const FinancialStatements = () => {
             <div className="flex gap-1 p-1 bg-[var(--bg-input)] rounded-xl w-fit">
                 <button 
                     onClick={() => setActiveTab('PL')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'PL' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'PL' ? 'bg-[var(--brand-lime)] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
                 >
                     <TrendingUp size={16} /> Profit & Loss
                 </button>
                 <button 
                     onClick={() => setActiveTab('BS')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'BS' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'BS' ? 'bg-[var(--brand-lime)] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
                 >
                     <Landmark size={16} /> Balance Sheet
                 </button>
@@ -130,7 +130,7 @@ const FinancialStatements = () => {
                         <div className="p-6">
                             {loading ? (
                                 <div className="flex items-center justify-center py-20">
-                                    <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                                    <div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                                 </div>
                             ) : (
                                 <div className="space-y-8">
@@ -147,8 +147,8 @@ const FinancialStatements = () => {
 
                 {/* Sidebar Metrics */}
                 <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-[#C8E600]/20 to-transparent border border-[#C8E600]/20 rounded-2xl p-6">
-                        <p className="text-[10px] font-bold text-[#C8E600] uppercase tracking-widest mb-1">Total Net Result</p>
+                    <div className="bg-gradient-to-br from-[var(--brand-lime)]/20 to-transparent border border-[var(--brand-lime)]/20 rounded-2xl p-6">
+                        <p className="text-[10px] font-bold text-[var(--brand-lime)] uppercase tracking-widest mb-1">Total Net Result</p>
                         <h2 className="text-4xl font-bold text-[var(--text-main)] font-mono">
                             ${reportData?.netProfit?.toLocaleString() || reportData?.equityTotal?.toLocaleString() || '0.00'}
                         </h2>
@@ -166,7 +166,7 @@ const FinancialStatements = () => {
                                 <span className="text-xs font-bold text-[var(--text-main)] font-mono">24.2%</span>
                             </div>
                             <div className="w-full bg-[var(--bg-input)] h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-[#C8E600] h-full" style={{ width: '24.2%' }} />
+                                <div className="bg-[var(--brand-lime)] h-full" style={{ width: '24.2%' }} />
                             </div>
                             
                             <div className="flex justify-between items-center pt-2">
@@ -189,7 +189,7 @@ const PLView = ({ data }: { data: any }) => (
     <div className="space-y-8">
         {/* Income Section */}
         <section>
-            <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest mb-4 flex items-center gap-2">
+            <h4 className="text-xs font-bold text-[var(--brand-lime)] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <ChevronRight size={14} /> Income
             </h4>
             <div className="space-y-3">
@@ -202,7 +202,7 @@ const PLView = ({ data }: { data: any }) => (
                 ))}
                 <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                     <span className="text-sm font-bold text-[var(--text-main)]">Total Income</span>
-                    <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4">
+                    <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[var(--brand-lime)] decoration-2 underline-offset-4">
                         ${data?.income?.reduce((acc: number, val: any) => acc + val.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </span>
                 </div>
@@ -236,7 +236,7 @@ const PLView = ({ data }: { data: any }) => (
             <div className="flex justify-between items-center">
                 <h4 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wider">Net Profit / Loss</h4>
                 <div className="text-right">
-                    <p className="text-2xl font-mono font-bold text-[#C8E600]">${data?.netProfit?.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                    <p className="text-2xl font-mono font-bold text-[var(--brand-lime)]">${data?.netProfit?.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                     <p className="text-[10px] text-dim">BEFORE TAX ADJUSTMENTS</p>
                 </div>
             </div>
@@ -249,7 +249,7 @@ const BSView = ({ data }: { data: any }) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {/* Assets */}
             <section>
-                <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest mb-4 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-[var(--brand-lime)] uppercase tracking-widest mb-4 flex items-center gap-2">
                     <ChevronRight size={14} /> Assets
                 </h4>
                 <div className="space-y-3">

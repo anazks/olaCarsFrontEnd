@@ -208,7 +208,7 @@ const ManageInsurances = () => {
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' }}
                     >
                         {t('management.common.filters')} {showAdvancedFilters ? '↑' : '↓'}
                     </button>

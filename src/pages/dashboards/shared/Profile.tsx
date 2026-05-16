@@ -93,7 +93,7 @@ const Profile = () => {
                                 style={{ 
                                     background: 'var(--bg-input)', 
                                     borderColor: 'var(--border-main)', 
-                                    color: '#C8E600' 
+                                    color: 'var(--brand-lime)' 
                                 }}
                             >
                                 {user?.fullName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
@@ -128,7 +128,7 @@ const Profile = () => {
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
                         <div className="flex items-center gap-2 mb-6">
-                            <Key size={20} className="text-lime" style={{ color: '#C8E600' }} />
+                            <Key size={20} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
                             <h3 className="text-xl font-bold text-main" style={{ color: 'var(--text-main)' }}>Update Password</h3>
                         </div>
 
@@ -234,7 +234,7 @@ const Profile = () => {
                                     type="submit"
                                     disabled={isSubmitting}
                                     className="w-full md:w-auto px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-lime/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#b0cc00]"
-                                    style={{ background: '#C8E600', color: '#000' }}
+                                    style={{ background: 'var(--brand-lime)', color: '#000' }}
                                 >
                                     {isSubmitting ? (
                                         <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />

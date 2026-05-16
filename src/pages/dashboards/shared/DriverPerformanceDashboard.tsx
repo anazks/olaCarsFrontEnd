@@ -285,7 +285,7 @@ const DriverPerformanceDashboard = () => {
         const distanceData = Object.keys(distanceBuckets).map(k => ({
             name: k,
             Drivers: distanceBuckets[k as keyof typeof distanceBuckets],
-            fill: '#C8E600'
+            fill: 'var(--brand-lime)'
         }));
 
         return {

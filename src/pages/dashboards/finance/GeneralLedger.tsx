@@ -110,7 +110,7 @@ const GeneralLedger = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} style={{ color: '#C8E600' }} />
+                        <FileText size={28} style={{ color: 'var(--brand-lime)' }} />
                         General Ledger
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Immutable audit trail of all financial transactions</p>
@@ -127,7 +127,7 @@ const GeneralLedger = () => {
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
                             <PlusCircle size={18} /> Add Manual Entry Adjustments
                         </button>
@@ -297,7 +297,7 @@ const GeneralLedger = () => {
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : entries.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>

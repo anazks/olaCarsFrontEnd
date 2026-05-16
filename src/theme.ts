@@ -7,7 +7,7 @@
 
 export const colors = {
   /** PRIMARY BRAND COLOR — logo mark, CTAs, highlights, active states */
-  brandLime: '#C8E600',
+  brandLime: 'var(--brand-lime)',
 
   /** Logo text, headlines on light backgrounds, icon fills */
   brandBlack: '#0A0A0A',

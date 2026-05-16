@@ -178,12 +178,12 @@ const StaffPerformanceDashboard = () => {
         avgTimeArray.sort((a,b) => b.hours - a.hours);
         const topAvgTime = avgTimeArray.slice(0, 8);
 
-        const COLORS = ['#C8E600', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+        const COLORS = ['var(--brand-lime)', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
 
         return {
             distribution: Object.keys(distribution).map((k, i) => ({ name: k, value: distribution[k], color: COLORS[i % COLORS.length] })),
             output: [
-                { name: 'Drivers', value: driversOutput, fill: '#C8E600' },
+                { name: 'Drivers', value: driversOutput, fill: 'var(--brand-lime)' },
                 { name: 'Vehicles', value: vehiclesOutput, fill: '#3b82f6' }
             ].filter(x => x.value > 0),
             velocity: topAvgTime,

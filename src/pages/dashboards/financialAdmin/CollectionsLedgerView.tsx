@@ -44,9 +44,9 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 return {
                     title: 'Invoices Ledger',
                     desc: 'Consolidated master ledger of all system-wide collections invoices.',
-                    icon: <FileSpreadsheet className="text-[#C8E600]" />,
+                    icon: <FileSpreadsheet className="text-[var(--brand-lime)]" />,
                     listType: 'GENERAL',
-                    colorClass: 'text-[#C8E600]'
+                    colorClass: 'text-[var(--brand-lime)]'
                 };
         }
     }, [type]);
@@ -150,8 +150,8 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                     </h1>
                     <p className="font-medium" style={{ color: 'var(--text-dim)' }}>{meta.desc}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
-                        <p className="text-xs font-bold text-[#C8E600]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-lime)] animate-pulse" />
+                        <p className="text-xs font-bold text-[var(--brand-lime)]">
                             {type === 'GENERAL' ? (
                                 filters.startDate || filters.endDate 
                                     ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM dd, yyyy') : 'Genesis'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : 'Today'}`
@@ -291,7 +291,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                             {loading ? (
                                 <tr>
                                     <td colSpan={type === 'OVERDUE' ? 9 : 9} className="py-24 text-center">
-                                        <div className="animate-pulse font-bold text-[#C8E600] text-sm tracking-wider uppercase">Streaming live system ledgers...</div>
+                                        <div className="animate-pulse font-bold text-[var(--brand-lime)] text-sm tracking-wider uppercase">Streaming live system ledgers...</div>
                                     </td>
                                 </tr>
                             ) : (
@@ -302,7 +302,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                 <input type="checkbox" className="rounded border-gray-300" />
                                             </td>
                                             <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 15).toString().padStart(2, '0')}</td>
-                                            <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                            <td className="py-4 px-3 font-bold text-[var(--brand-lime)]">{item.invoiceNumber}</td>
                                             <td className="py-4 px-3">
                                                 <div className="font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</div>
                                                 <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
@@ -383,7 +383,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 <button 
                                     key={pageNum}
                                     onClick={() => fetchPage(pageNum)}
-                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[var(--brand-lime)] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                                 >
                                     {pageNum.toString().padStart(2, '0')}
                                 </button>

@@ -105,7 +105,7 @@ const FinancialAdminDashboard = () => {
                 className="h-screen w-full flex items-center justify-center transition-colors"
                 style={{ background: 'var(--bg-main)' }}
             >
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[var(--brand-lime)]"></div>
             </div>
         );
     }
@@ -116,7 +116,7 @@ const FinancialAdminDashboard = () => {
     const currentTotalRevenue = (revenueOverview || []).reduce((a: any, b: any) => a + (b.currentYear || 0), 0);
 
     const donutData = [
-        { name: 'Available', value: fleetStatus?.available || 0, color: '#C8E600' }, // Brand Lime
+        { name: 'Available', value: fleetStatus?.available || 0, color: 'var(--brand-lime)' }, // Brand Lime
         { name: 'Maintenance', value: fleetStatus?.maintenance || 0, color: '#E67E22' },
         { name: 'Rented', value: fleetStatus?.rented || 0, color: '#3B82F6' },
         { name: 'Retired', value: fleetStatus?.retired || 0, color: '#94A3B8' }
@@ -132,7 +132,7 @@ const FinancialAdminDashboard = () => {
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        <Briefcase className="text-[#C8E600]" /> Financial Dashboard
+                        <Briefcase className="text-[var(--brand-lime)]" /> Financial Dashboard
                     </h1>
                     <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Ecosystem Telemetry</p>
                 </div>
@@ -212,8 +212,8 @@ const FinancialAdminDashboard = () => {
                         value={(stats?.totalActiveVehicles || 0).toLocaleString()}
                         trend="+4.6%"
                         trendUp={true}
-                        icon={<Car className="text-[#C8E600]" />}
-                        iconBg="bg-[#C8E600]/10"
+                        icon={<Car className="text-[var(--brand-lime)]" />}
+                        iconBg="bg-[var(--brand-lime)]/10"
                     />
                     <DashboardStatCard
                         title="Monthly Revenue"
@@ -276,7 +276,7 @@ const FinancialAdminDashboard = () => {
                             <h3 className="text-lg font-bold">Revenue Breakdown</h3>
                             <div className="flex gap-4 text-xs font-semibold mt-1" style={{ color: 'var(--text-dim)' }}>
                                 <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{ background: isDark ? '#4B5563' : '#CBD5E1' }}></div> Prev Year</span>
-                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#C8E600]"></div> Curr Year</span>
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[var(--brand-lime)]"></div> Curr Year</span>
                             </div>
                         </div>
                     </div>
@@ -284,7 +284,7 @@ const FinancialAdminDashboard = () => {
                     <div className="grid grid-cols-3 gap-4 mb-8">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Total Ledger Income</p>
-                            <h4 className="text-2xl font-black text-[#C8E600] mt-1">${currentTotalRevenue.toLocaleString()}</h4>
+                            <h4 className="text-2xl font-black text-[var(--brand-lime)] mt-1">${currentTotalRevenue.toLocaleString()}</h4>
                         </div>
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Expected Dues</p>
@@ -301,8 +301,8 @@ const FinancialAdminDashboard = () => {
                             <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="var(--brand-lime)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="var(--brand-lime)" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -310,11 +310,11 @@ const FinancialAdminDashboard = () => {
                                 <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
-                                    itemStyle={{ color: '#C8E600' }}
+                                    itemStyle={{ color: 'var(--brand-lime)' }}
                                     labelStyle={{ color: chartColors.text }}
                                 />
                                 <Area type="monotone" dataKey="previousYear" stroke={isDark ? "#64748B" : "#94A3B8"} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
-                                <Area type="monotone" dataKey="currentYear" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#brandGrad)" dot={{ fill: '#C8E600', r: 4 }} />
+                                <Area type="monotone" dataKey="currentYear" stroke="var(--brand-lime)" strokeWidth={4} fillOpacity={1} fill="url(#brandGrad)" dot={{ fill: 'var(--brand-lime)', r: 4 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -347,7 +347,7 @@ const FinancialAdminDashboard = () => {
                             style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}
                         >
                             <div className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-dim)' }}>In Use</div>
-                            <div className="text-lg font-black text-[#C8E600]">{utilizationRate}%</div>
+                            <div className="text-lg font-black text-[var(--brand-lime)]">{utilizationRate}%</div>
                         </div>
                     </div>
 
@@ -378,22 +378,22 @@ const FinancialAdminDashboard = () => {
                     <div className="flex border-b px-6 pt-4 gap-8" style={{ borderColor: 'var(--border-main)' }}>
                         <button
                             onClick={() => setActiveTab('overview')}
-                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
-                            style={{ color: activeTab === 'overview' ? '#C8E600' : 'var(--text-dim)' }}
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview' ? 'border-[var(--brand-lime)] text-[var(--brand-lime)]' : 'border-transparent hover:text-[var(--brand-lime)]'}`}
+                            style={{ color: activeTab === 'overview' ? 'var(--brand-lime)' : 'var(--text-dim)' }}
                         >
                             Overview
                         </button>
                         <button
                             onClick={() => setActiveTab('vehicles')}
-                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'vehicles' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
-                            style={{ color: activeTab === 'vehicles' ? '#C8E600' : 'var(--text-dim)' }}
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'vehicles' ? 'border-[var(--brand-lime)] text-[var(--brand-lime)]' : 'border-transparent hover:text-[var(--brand-lime)]'}`}
+                            style={{ color: activeTab === 'vehicles' ? 'var(--brand-lime)' : 'var(--text-dim)' }}
                         >
                             Vehicles
                         </button>
                         <button
                             onClick={() => setActiveTab('collections')}
-                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collections' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
-                            style={{ color: activeTab === 'collections' ? '#C8E600' : 'var(--text-dim)' }}
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collections' ? 'border-[var(--brand-lime)] text-[var(--brand-lime)]' : 'border-transparent hover:text-[var(--brand-lime)]'}`}
+                            style={{ color: activeTab === 'collections' ? 'var(--brand-lime)' : 'var(--text-dim)' }}
                         >
                             Collections
                         </button>
@@ -405,7 +405,7 @@ const FinancialAdminDashboard = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="pb-6 md:pb-0 md:pr-6">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={24} /></div>
+                                        <div className="w-12 h-12 rounded-2xl bg-[var(--brand-lime)]/10 flex items-center justify-center text-[var(--brand-lime)] flex-shrink-0"><TrendingUp size={24} /></div>
                                         <div className="min-w-0">
                                             <div className="text-2xl sm:text-3xl font-black truncate" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
                                             <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
@@ -414,10 +414,10 @@ const FinancialAdminDashboard = () => {
                                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
                                 </div>
                                 <div className="py-6 md:py-0 md:px-6 text-center flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-4xl font-black text-[#C8E600] mb-2">{stats?.collectionCompliance || 94}%</div>
+                                    <div className="text-4xl font-black text-[var(--brand-lime)] mb-2">{stats?.collectionCompliance || 94}%</div>
                                     <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
                                     <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
-                                        <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
+                                        <div className="h-full bg-[var(--brand-lime)]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
                                     </div>
                                 </div>
                                 <div className="pt-6 md:pt-0 md:pl-6" style={{ borderColor: 'var(--border-main)' }}>
@@ -441,7 +441,7 @@ const FinancialAdminDashboard = () => {
                                 </div>
                                 <div className="py-6 md:py-0 md:px-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
                                     <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
-                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
+                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[var(--brand-lime)]">{fleetStatus?.available || 0}</span></div>
                                 </div>
                                 <div className="pt-6 md:pt-0 md:pl-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
                                     <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
@@ -537,7 +537,7 @@ const FinancialAdminDashboard = () => {
                                 <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', color: chartColors.text }} />
                                 <Line type="stepAfter" dataKey="removed" stroke="#E67E22" strokeWidth={4} dot={{ r: 3 }} name="Derailed" />
                                 <Line type="monotone" dataKey="returned" stroke="#3B82F6" strokeWidth={4} dot={{ r: 3 }} name="Returned" />
-                                <Line type="monotone" dataKey="sale" stroke="#C8E600" strokeWidth={5} dot={{ r: 4, fill: '#000', strokeWidth: 2 }} name="Deployed" />
+                                <Line type="monotone" dataKey="sale" stroke="var(--brand-lime)" strokeWidth={5} dot={{ r: 4, fill: '#000', strokeWidth: 2 }} name="Deployed" />
                             </LineChart>
                         </ResponsiveContainer>
                     ) : (

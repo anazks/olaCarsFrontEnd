@@ -16,37 +16,38 @@ export default {
       colors: {
         // ── Brand ─────────────────────────────────────────────────────────
         lime: {
-          DEFAULT: '#C8E600',
-          dark: '#a8c100',
-          light: '#d8f200',
+          DEFAULT: 'var(--brand-lime)',
+          vibrant: 'var(--brand-lime-vibrant)',
+          dark: 'var(--brand-lime-dark)',
+          light: 'var(--brand-lime-light)',
         },
         brand: {
-          black: '#0A0A0A',
+          black: 'var(--brand-black)',
         },
         // ── Surfaces ──────────────────────────────────────────────────────
         dark: {
-          bg: '#111111',
-          card: '#1C1C1C',
-          border: '#2A2A2A',
+          bg: 'var(--bg-main)',
+          card: 'var(--bg-card)',
+          border: 'var(--border-main)',
         },
         light: {
-          bg: '#F5F7FA',
-          border: '#E5E7EB',
+          bg: 'var(--bg-main)',
+          border: 'var(--border-main)',
         },
         // ── Semantic ──────────────────────────────────────────────────────
-        alert: '#E74C3C',
-        warning: '#E67E22',
-        muted: '#6B7280',
+        alert: 'var(--alert-red)',
+        warning: 'var(--warn-orange)',
+        muted: 'var(--text-muted)',
 
-        // Keep legacy aliases so existing classes still compile
+        // Keep legacy aliases
         primary: {
-          DEFAULT: '#C8E600',
-          light: '#d8f200',
-          dark: '#a8c100',
+          DEFAULT: 'var(--brand-lime)',
+          light: 'var(--brand-lime-light)',
+          dark: 'var(--brand-lime-dark)',
         },
         secondary: {
-          DEFAULT: '#1C1C1C',
-          light: '#2A2A2A',
+          DEFAULT: 'var(--bg-card)',
+          light: 'var(--border-main)',
         },
       },
 

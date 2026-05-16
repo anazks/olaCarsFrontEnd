@@ -92,7 +92,7 @@ const PurchaseOrderDetail = () => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                 <p style={{ color: 'var(--text-dim)' }}>Loading order details...</p>
             </div>
         );
@@ -133,7 +133,7 @@ const PurchaseOrderDetail = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[var(--brand-lime)]">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -146,7 +146,7 @@ const PurchaseOrderDetail = () => {
                                 {s.icon} {po.status}
                             </div>
                             {po.isBilled && (
-                                <span className="text-[10px] px-3 py-1 rounded-full bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20 font-black tracking-widest uppercase">BILLED</span>
+                                <span className="text-[10px] px-3 py-1 rounded-full bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] border border-[var(--brand-lime)]/20 font-black tracking-widest uppercase">BILLED</span>
                             )}
                             {po.isEdited && (
                                 <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold">EDITED</span>
@@ -171,7 +171,7 @@ const PurchaseOrderDetail = () => {
                                 onClick={() => openModal('APPROVE')}
                                 disabled={actionLoading}
                                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                style={{ background: '#C8E600', color: '#111' }}
+                                style={{ background: 'var(--brand-lime)', color: '#111' }}
                             >
                                 <CheckCircle size={18} /> Approve Order
                             </button>
@@ -185,7 +185,7 @@ const PurchaseOrderDetail = () => {
                             <button
                                 onClick={() => setIsBillModalOpen(true)}
                                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                style={{ background: '#C8E600', color: '#111' }}
+                                style={{ background: 'var(--brand-lime)', color: '#111' }}
                             >
                                 <Receipt size={18} /> Register Bill / Pay
                             </button>
@@ -201,7 +201,7 @@ const PurchaseOrderDetail = () => {
                     <div className="rounded-2xl border p-6 grid grid-cols-1 sm:grid-cols-2 gap-8" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <Landmark size={20} />
                                 </div>
                                 <div>
@@ -212,7 +212,7 @@ const PurchaseOrderDetail = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <User size={20} />
                                 </div>
                                 <div>
@@ -225,7 +225,7 @@ const PurchaseOrderDetail = () => {
                         </div>
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <Calendar size={20} />
                                 </div>
                                 <div>
@@ -236,7 +236,7 @@ const PurchaseOrderDetail = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <Package size={20} />
                                 </div>
                                 <div>
@@ -247,7 +247,7 @@ const PurchaseOrderDetail = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[var(--brand-lime)]">
                                     <FileText size={20} />
                                 </div>
                                 <div>
@@ -263,7 +263,7 @@ const PurchaseOrderDetail = () => {
                     {/* Items Table */}
                     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
-                            <FileText size={16} className="text-[#C8E600]" />
+                            <FileText size={16} className="text-[var(--brand-lime)]" />
                             <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Order Items</h3>
                         </div>
                         <table className="w-full text-left">
@@ -318,7 +318,7 @@ const PurchaseOrderDetail = () => {
                                 ))}
                                 <tr className="bg-white/5">
                                     <td colSpan={3} className="px-6 py-6 text-right font-bold" style={{ color: 'var(--text-dim)' }}>Total Amount</td>
-                                    <td className="px-6 py-6 text-right text-2xl font-black text-[#C8E600]">
+                                    <td className="px-6 py-6 text-right text-2xl font-black text-[var(--brand-lime)]">
                                         ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
                                 </tr>
@@ -336,7 +336,7 @@ const PurchaseOrderDetail = () => {
                                 background: po.totalAmount > 1000 ? 'rgba(245,158,11,0.05)' : 'rgba(200,230,0,0.05)',
                                 borderColor: po.totalAmount > 1000 ? 'rgba(245,158,11,0.2)' : 'rgba(200,230,0,0.2)'
                             }}>
-                            <div className="flex items-center gap-2 font-bold text-xs uppercase" style={{ color: po.totalAmount > 1000 ? '#f59e0b' : '#C8E600' }}>
+                            <div className="flex items-center gap-2 font-bold text-xs uppercase" style={{ color: po.totalAmount > 1000 ? '#f59e0b' : 'var(--brand-lime)' }}>
                                 <AlertCircle size={14} />
                                 {po.totalAmount > 1000 ? 'Admin Approval Required' : 'Approval Information'}
                             </div>
@@ -356,7 +356,7 @@ const PurchaseOrderDetail = () => {
                     {/* Approver Info (If actioned) */}
                     {po.approvedBy && (
                         <div className="rounded-2xl border p-5 space-y-3" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: '#C8E600' }}>
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: 'var(--brand-lime)' }}>
                                 <UserCheck size={14} /> Processed By
                             </div>
                             <div>
@@ -370,12 +370,12 @@ const PurchaseOrderDetail = () => {
                     {po.editHistory.length > 0 && (
                         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
-                                <History size={14} className="text-[#C8E600]" />
+                                <History size={14} className="text-[var(--brand-lime)]" />
                                 <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Edit History</h3>
                             </div>
                             <div className="p-5 space-y-6">
                                 {po.editHistory.map((entry, idx) => (
-                                    <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                    <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[var(--brand-lime)] before:rounded-full before:shadow-[0_0_8px_var(--brand-lime)]">
                                         {idx !== po.editHistory.length - 1 && (
                                             <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                         )}

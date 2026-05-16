@@ -456,7 +456,7 @@ const ManageWorkshopManagers = () => {
                                                         const basePath = currentPath.split('/manage-workshop-managers')[0];
                                                         navigate(`${basePath}/staff-performance/${manager._id}`);
                                                     }}
-                                                    className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                    className="p-2 rounded-lg hover:bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] transition-colors"
                                                     title="View Performance Profile"
                                                 >
                                                     <Eye size={18} />

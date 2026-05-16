@@ -292,7 +292,7 @@ const InvoiceList = () => {
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
-                                    style={{ color: page === 1 ? 'var(--text-dim)' : '#C8E600' }}
+                                    style={{ color: page === 1 ? 'var(--text-dim)' : 'var(--brand-lime)' }}
                                 >
                                     Prev
                                 </button>
@@ -307,7 +307,7 @@ const InvoiceList = () => {
                                     onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
                                     disabled={page === pagination.totalPages}
                                     className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
-                                    style={{ color: page === pagination.totalPages ? 'var(--text-dim)' : '#C8E600' }}
+                                    style={{ color: page === pagination.totalPages ? 'var(--text-dim)' : 'var(--brand-lime)' }}
                                 >
                                     Next
                                 </button>

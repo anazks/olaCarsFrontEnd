@@ -138,9 +138,9 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             {/* Logo Header */}
             <div className={`h-20 flex items-center border-b border-[var(--border-main)] px-6 justify-between`}>
                 <div className={`flex items-center gap-2`}>
-                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
+                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[var(--brand-lime)] overflow-hidden flex-shrink-0">
                        <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
-                           <div className="bg-[#D4F12E] w-2.5 h-2.5 rounded-full"></div>
+                           <div className="bg-[var(--brand-lime)] w-2.5 h-2.5 rounded-full"></div>
                        </div>
                     </div>
                     {!isSidebarCollapsed && (
@@ -192,10 +192,10 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                                     ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                                 `}
                                 style={{
-                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
+                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid var(--brand-lime)' : '4px solid transparent',
                                 }}
                             >
-                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
+                                <div className={`${isCurrentlyActive ? 'text-[var(--brand-lime)]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
                                     {item.icon}
                                 </div>
                                 {!isSidebarCollapsed && (
@@ -236,7 +236,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
                                                     className={`cursor-pointer py-2 text-sm transition-colors
-                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
+                                                        ${isItActive ? 'text-[var(--brand-lime)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
                                                     {sub.label}
@@ -260,7 +260,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             {/* User Profile Section */}
             <div className="mt-auto border-t border-[var(--border-main)] px-6 py-4">
                 <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}>
-                    <div className="w-10 h-10 rounded-full bg-[var(--bg-input)] overflow-hidden border-2 border-[#D4F12E] flex-shrink-0 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-[var(--bg-input)] overflow-hidden border-2 border-[var(--brand-lime)] flex-shrink-0 flex items-center justify-center">
                         {currentUser?.avatarUrl ? (
                             <img src={currentUser.avatarUrl} alt="profile" className="w-full h-full object-cover" />
                         ) : (

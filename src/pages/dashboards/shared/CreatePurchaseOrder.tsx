@@ -174,7 +174,7 @@ const CreatePurchaseOrder = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Plus size={28} style={{ color: '#C8E600' }} />
+                        <Plus size={28} style={{ color: 'var(--brand-lime)' }} />
                         Create Purchase Order
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Fill in the details to request a new purchase</p>
@@ -191,7 +191,7 @@ const CreatePurchaseOrder = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Basic Info Card */}
                 <div className="rounded-2xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-2 mb-2 text-[#C8E600]">
+                    <div className="flex items-center gap-2 mb-2 text-[var(--brand-lime)]">
                         <Info size={18} />
                         <h2 className="font-semibold uppercase tracking-wider text-xs">General Information</h2>
                     </div>
@@ -283,7 +283,7 @@ const CreatePurchaseOrder = () => {
                 {/* Items Card */}
                 <div className="rounded-2xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2 text-[#C8E600]">
+                        <div className="flex items-center gap-2 text-[var(--brand-lime)]">
                             <Calculator size={18} />
                             <h2 className="font-semibold uppercase tracking-wider text-xs">Line Items</h2>
                         </div>
@@ -291,7 +291,7 @@ const CreatePurchaseOrder = () => {
                             type="button"
                             onClick={addItem}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-lime/20"
-                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                            style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}
                         >
                             <Plus size={14} /> Add Item
                         </button>
@@ -308,7 +308,7 @@ const CreatePurchaseOrder = () => {
                                             placeholder="Item name (e.g. Brake Pads)"
                                             value={item.itemName}
                                             onChange={(e) => updateItem(index, 'itemName', e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-medium transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-medium transition-all focus:ring-2 focus:ring-[var(--brand-lime)]"
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
@@ -318,7 +318,7 @@ const CreatePurchaseOrder = () => {
                                             placeholder="Short description (optional)"
                                             value={item.description}
                                             onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-xs transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-xs transition-all focus:ring-2 focus:ring-[var(--brand-lime)]"
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
@@ -331,7 +331,7 @@ const CreatePurchaseOrder = () => {
                                         min="1"
                                         value={item.quantity}
                                         onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value))}
-                                        className="w-full px-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                        className="w-full px-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[var(--brand-lime)]"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
@@ -346,7 +346,7 @@ const CreatePurchaseOrder = () => {
                                             min="0"
                                             value={item.unitPrice}
                                             onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                                            className="w-full pl-8 pr-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            className="w-full pl-8 pr-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[var(--brand-lime)]"
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
@@ -433,7 +433,7 @@ const CreatePurchaseOrder = () => {
                             <div className="flex flex-col gap-4 w-full overflow-hidden">
                                 <div>
                                     <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Total amount estimated</p>
-                                    <p className="text-3xl font-black text-[#C8E600]">
+                                    <p className="text-3xl font-black text-[var(--brand-lime)]">
                                         ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </p>
                                     {total > 1000 && (
@@ -451,7 +451,7 @@ const CreatePurchaseOrder = () => {
                                 type="submit"
                                 disabled={loading}
                                 className="flex items-center justify-center gap-2 px-10 py-4 rounded-2xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0"
-                                style={{ background: '#C8E600', color: '#0A0A0A', minWidth: '200px' }}
+                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A', minWidth: '200px' }}
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />

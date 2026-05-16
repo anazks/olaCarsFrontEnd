@@ -215,7 +215,7 @@ const InsuranceClaimsView = () => {
                     <button
                         onClick={() => setActiveTab('policies')}
                         className={`px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${
-                            activeTab === 'policies' ? 'bg-[#D4F12E] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+                            activeTab === 'policies' ? 'bg-[var(--brand-lime)] text-black shadow-sm' : 'text-gray-400 hover:text-white'
                         }`}
                     >
                         Policies
@@ -223,7 +223,7 @@ const InsuranceClaimsView = () => {
                     <button
                         onClick={() => setActiveTab('claims')}
                         className={`px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${
-                            activeTab === 'claims' ? 'bg-[#D4F12E] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+                            activeTab === 'claims' ? 'bg-[var(--brand-lime)] text-black shadow-sm' : 'text-gray-400 hover:text-white'
                         }`}
                     >
                         Claims
@@ -246,7 +246,7 @@ const InsuranceClaimsView = () => {
                 
                 <div className="flex flex-wrap items-center gap-3">
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                        <Filter size={16} /> Filter <span className="bg-[#D4F12E] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">02</span>
+                        <Filter size={16} /> Filter <span className="bg-[var(--brand-lime)] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">02</span>
                     </button>
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                         <FileText size={16} /> Export
@@ -311,7 +311,7 @@ const InsuranceClaimsView = () => {
                                                 <button onClick={() => openInsuranceSingleView(vehicle)} className="px-3 py-1.5 rounded bg-black/5 dark:bg-white/5 font-black text-[10px] uppercase tracking-widest hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center gap-1" title="View & Edit Insurance">
                                                     <Eye size={12} /> View
                                                 </button>
-                                                <button onClick={() => openCreateModal(vehicle)} className="px-3 py-1.5 rounded bg-[#D4F12E] text-black font-black text-[10px] uppercase tracking-widest hover:bg-[#c2dd2a] transition-colors flex items-center gap-1" title="File Claim">
+                                                <button onClick={() => openCreateModal(vehicle)} className="px-3 py-1.5 rounded bg-[var(--brand-lime)] text-black font-black text-[10px] uppercase tracking-widest hover:bg-[#c2dd2a] transition-colors flex items-center gap-1" title="File Claim">
                                                     <PlusCircle size={12} /> Claim
                                                 </button>
                                             </div>
@@ -354,7 +354,7 @@ const InsuranceClaimsView = () => {
                                         <input type="checkbox" className="rounded border-gray-300" />
                                     </td>
                                     <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1).toString().padStart(2, '0')}</td>
-                                    <td className="py-4 px-3 font-bold text-[#D4F12E]">{claim.claimNumber}</td>
+                                    <td className="py-4 px-3 font-bold text-[var(--brand-lime)]">{claim.claimNumber}</td>
                                     <td className="py-4 px-3">
                                         <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
                                             claim.status === 'CLOSED' ? 'bg-gray-500/10 text-gray-500' :
@@ -402,7 +402,7 @@ const InsuranceClaimsView = () => {
                 </div>
                 <div className="flex items-center gap-1 text-sm font-bold">
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 opacity-50 cursor-not-allowed">{'<'}</button>
-                    <button className="px-2.5 py-1 rounded bg-[#D4F12E] text-black">01</button>
+                    <button className="px-2.5 py-1 rounded bg-[var(--brand-lime)] text-black">01</button>
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">02</button>
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">03</button>
                     <span className="px-1.5">...</span>
@@ -427,7 +427,7 @@ const InsuranceClaimsView = () => {
                                 required
                                 value={incidentDate}
                                 onChange={(e) => setIncidentDate(e.target.value)}
-                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                             />
                         </div>
 
@@ -437,7 +437,7 @@ const InsuranceClaimsView = () => {
                                 type="text"
                                 value={workOrderId}
                                 onChange={(e) => setWorkOrderId(e.target.value)}
-                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                 placeholder="E.g. WO-12345"
                             />
                         </div>
@@ -449,7 +449,7 @@ const InsuranceClaimsView = () => {
                                 required
                                 value={claimAmount}
                                 onChange={(e) => setClaimAmount(e.target.value)}
-                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                 placeholder="0.00"
                             />
                         </div>
@@ -461,7 +461,7 @@ const InsuranceClaimsView = () => {
                                 value={incidentDescription}
                                 onChange={(e) => setIncidentDescription(e.target.value)}
                                 rows={3}
-                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors resize-none"
+                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors resize-none"
                                 placeholder="Describe the incident..."
                             />
                         </div>
@@ -470,7 +470,7 @@ const InsuranceClaimsView = () => {
                             <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-3 rounded-xl border border-gray-700 font-bold text-sm hover:bg-white/5 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit" className="flex-1 py-3 rounded-xl bg-[#D4F12E] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-colors">
+                            <button type="submit" className="flex-1 py-3 rounded-xl bg-[var(--brand-lime)] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-colors">
                                 Submit Claim
                             </button>
                         </div>
@@ -485,7 +485,7 @@ const InsuranceClaimsView = () => {
                         <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4 flex justify-between items-center">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Current Status</p>
-                                <p className="font-bold text-sm text-[#D4F12E]">{selectedClaim.status}</p>
+                                <p className="font-bold text-sm text-[var(--brand-lime)]">{selectedClaim.status}</p>
                             </div>
                             <ChevronRight className="text-gray-600" />
                             <div className="text-right">
@@ -510,7 +510,7 @@ const InsuranceClaimsView = () => {
                                     required
                                     value={approvedAmount}
                                     onChange={(e) => setApprovedAmount(e.target.value)}
-                                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                 />
                             </div>
                         )}
@@ -523,7 +523,7 @@ const InsuranceClaimsView = () => {
                                     required
                                     value={rejectionReason}
                                     onChange={(e) => setRejectionReason(e.target.value)}
-                                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                 />
                             </div>
                         )}
@@ -537,7 +537,7 @@ const InsuranceClaimsView = () => {
                                         required
                                         value={paymentReference}
                                         onChange={(e) => setPaymentReference(e.target.value)}
-                                        className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                        className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                     />
                                 </div>
                                 <div>
@@ -547,7 +547,7 @@ const InsuranceClaimsView = () => {
                                         required
                                         value={paymentAmount}
                                         onChange={(e) => setPaymentAmount(e.target.value)}
-                                        className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                        className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                                     />
                                 </div>
                             </>
@@ -559,7 +559,7 @@ const InsuranceClaimsView = () => {
                                 type="text"
                                 value={progressNotes}
                                 onChange={(e) => setProgressNotes(e.target.value)}
-                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none transition-colors"
+                                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[var(--brand-lime)] outline-none transition-colors"
                             />
                         </div>
 
@@ -567,7 +567,7 @@ const InsuranceClaimsView = () => {
                             <button type="button" onClick={() => setIsProgressModalOpen(false)} className="flex-1 py-3 rounded-xl border border-gray-700 font-bold text-sm hover:bg-white/5 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit" className="flex-1 py-3 rounded-xl bg-[#D4F12E] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-colors flex items-center justify-center gap-2">
+                            <button type="submit" className="flex-1 py-3 rounded-xl bg-[var(--brand-lime)] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-colors flex items-center justify-center gap-2">
                                 <CheckCircle2 size={16} /> Confirm Update
                             </button>
                         </div>
@@ -591,7 +591,7 @@ const InsuranceClaimsView = () => {
                                 <button
                                     onClick={() => setInsuranceViewTab('details')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                                        insuranceViewTab === 'details' ? 'bg-[#D4F12E] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+                                        insuranceViewTab === 'details' ? 'bg-[var(--brand-lime)] text-black shadow-sm' : 'text-gray-400 hover:text-white'
                                     }`}
                                 >
                                     Policy Details
@@ -599,11 +599,11 @@ const InsuranceClaimsView = () => {
                                 <button
                                     onClick={() => setInsuranceViewTab('claims')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                                        insuranceViewTab === 'claims' ? 'bg-[#D4F12E] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+                                        insuranceViewTab === 'claims' ? 'bg-[var(--brand-lime)] text-black shadow-sm' : 'text-gray-400 hover:text-white'
                                     }`}
                                 >
                                     Related Claims
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${insuranceViewTab === 'claims' ? 'bg-black text-[#D4F12E]' : 'bg-gray-800 text-white'}`}>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${insuranceViewTab === 'claims' ? 'bg-black text-[var(--brand-lime)]' : 'bg-gray-800 text-white'}`}>
                                         {claims.filter(c => c.vehicleId === selectedInsuranceViewVehicle._id).length}
                                     </span>
                                 </button>
@@ -620,7 +620,7 @@ const InsuranceClaimsView = () => {
                                             type="text"
                                             value={editingInsurance.provider || ''}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, provider: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[#D4F12E] outline-none transition-colors"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[var(--brand-lime)] outline-none transition-colors"
                                             placeholder="E.g. AXA, Geico"
                                         />
                                     </div>
@@ -630,7 +630,7 @@ const InsuranceClaimsView = () => {
                                             type="text"
                                             value={editingInsurance.insuranceNumber || ''}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, insuranceNumber: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[#D4F12E] outline-none transition-colors"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[var(--brand-lime)] outline-none transition-colors"
                                         />
                                     </div>
                                 </div>
@@ -640,7 +640,7 @@ const InsuranceClaimsView = () => {
                                         <select
                                             value={editingInsurance.policyType || 'FLEET'}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, policyType: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[#D4F12E] outline-none transition-colors appearance-none"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[var(--brand-lime)] outline-none transition-colors appearance-none"
                                         >
                                             <option value="FLEET">Fleet Policy</option>
                                             <option value="INDIVIDUAL">Individual Policy</option>
@@ -651,7 +651,7 @@ const InsuranceClaimsView = () => {
                                         <select
                                             value={editingInsurance.coverageType || 'COMPREHENSIVE'}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, coverageType: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[#D4F12E] outline-none transition-colors appearance-none"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[var(--brand-lime)] outline-none transition-colors appearance-none"
                                         >
                                             <option value="COMPREHENSIVE">Comprehensive</option>
                                             <option value="THIRD_PARTY">Third-Party Only</option>
@@ -665,7 +665,7 @@ const InsuranceClaimsView = () => {
                                             type="date"
                                             value={editingInsurance.fromDate ? new Date(editingInsurance.fromDate).toISOString().split('T')[0] : ''}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, fromDate: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[#D4F12E] outline-none transition-colors"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:border-[var(--brand-lime)] outline-none transition-colors"
                                         />
                                     </div>
                                     <div>
@@ -674,13 +674,13 @@ const InsuranceClaimsView = () => {
                                             type="date"
                                             value={editingInsurance.toDate ? new Date(editingInsurance.toDate).toISOString().split('T')[0] : ''}
                                             onChange={(e) => setEditingInsurance({ ...editingInsurance, toDate: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-[#D4F12E] focus:border-[#D4F12E] outline-none transition-colors"
+                                            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--brand-lime)] focus:border-[var(--brand-lime)] outline-none transition-colors"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="pt-6 flex gap-3">
-                                    <button type="submit" disabled={isSavingInsurance} className="flex-1 py-3 rounded-xl bg-[#D4F12E] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-all flex items-center justify-center gap-2">
+                                    <button type="submit" disabled={isSavingInsurance} className="flex-1 py-3 rounded-xl bg-[var(--brand-lime)] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-all flex items-center justify-center gap-2">
                                         {isSavingInsurance ? (
                                             <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> Saving...</>
                                         ) : (
@@ -715,7 +715,7 @@ const InsuranceClaimsView = () => {
                                             <div key={claim._id} className="p-4 rounded-xl bg-[#1A1A1A] border border-gray-800 flex items-center justify-between group hover:border-gray-600 transition-colors">
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-1">
-                                                        <p className="font-bold text-[#D4F12E]">{claim.claimNumber}</p>
+                                                        <p className="font-bold text-[var(--brand-lime)]">{claim.claimNumber}</p>
                                                         <span className={`px-2 py-0.5 rounded text-[9px] font-black tracking-widest uppercase ${
                                                             claim.status === 'CLOSED' ? 'bg-gray-500/10 text-gray-500' :
                                                             claim.status === 'APPROVED' ? 'bg-green-500/10 text-green-500' :

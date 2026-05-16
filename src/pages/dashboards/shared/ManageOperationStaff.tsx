@@ -440,7 +440,7 @@ const ManageOperationStaff = () => {
                                                         const basePath = currentPath.split('/manage-operation-staff')[0];
                                                         navigate(`${basePath}/staff-performance/${staff._id}`);
                                                     }}
-                                                    className="p-2 rounded-lg hover:bg-[#C8E600]/10 text-[#C8E600] transition-colors"
+                                                    className="p-2 rounded-lg hover:bg-[var(--brand-lime)]/10 text-[var(--brand-lime)] transition-colors"
                                                     title="View Performance Profile"
                                                 >
                                                     <Eye size={18} />

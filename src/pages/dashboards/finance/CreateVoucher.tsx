@@ -77,7 +77,7 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                                     setIsOpen(false);
                                     setSearch('');
                                 }}
-                                className="px-4 py-3 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-white/[0.02] last:border-0"
+                                className="px-4 py-3 hover:bg-[var(--brand-lime)] group cursor-pointer transition-colors border-b border-white/[0.02] last:border-0"
                             >
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-white group-hover:text-black">{code.code}</span>
@@ -203,14 +203,14 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         }
     };
 
-    if (loading) return <div className="p-20 text-center"><div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin mx-auto" /></div>;
+    if (loading) return <div className="p-20 text-center"><div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin mx-auto" /></div>;
 
     const typeConfig = {
         PAYMENT: { icon: ArrowUpRight, color: 'text-rose-500', bg: 'bg-rose-500/10' },
         RECEIPT: { icon: ArrowDownLeft, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
         JOURNAL: { icon: FileText, color: 'text-amber-500', bg: 'bg-amber-500/10' },
         CONTRA: { icon: ArrowLeftRight, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        SALES: { icon: Receipt, color: 'text-[#C8E600]', bg: 'bg-[#C8E600]/10' },
+        SALES: { icon: Receipt, color: 'text-[var(--brand-lime)]', bg: 'bg-[var(--brand-lime)]/10' },
         PURCHASE: { icon: Receipt, color: 'text-indigo-500', bg: 'bg-indigo-500/10' }
     };
 
@@ -252,7 +252,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             {vType === 'RECEIPT' && <ArrowDownLeft size={16} className={type === vType ? 'text-emerald-500' : 'text-white/20'} />}
                             {vType === 'JOURNAL' && <FileText size={16} className={type === vType ? 'text-amber-500' : 'text-white/20'} />}
                             {vType === 'CONTRA' && <ArrowLeftRight size={16} className={type === vType ? 'text-blue-500' : 'text-white/20'} />}
-                            {vType === 'SALES' && <Receipt size={16} className={type === vType ? 'text-[#C8E600]' : 'text-white/20'} />}
+                            {vType === 'SALES' && <Receipt size={16} className={type === vType ? 'text-[var(--brand-lime)]' : 'text-white/20'} />}
                             {vType === 'PURCHASE' && <Receipt size={16} className={type === vType ? 'text-indigo-500' : 'text-white/20'} />}
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${type === vType ? 'text-white' : 'text-white/40'}`}>
                                 {vType}
@@ -271,7 +271,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             type="date"
                             value={header.date}
                             onChange={e => setHeader({ ...header, date: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none transition-all"
                         />
                     </div>
                     <div className="space-y-2">
@@ -282,7 +282,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             required
                             value={header.branch}
                             onChange={e => setHeader({ ...header, branch: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all appearance-none"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none transition-all appearance-none"
                         >
                             <option value="" className="bg-[#1A1A1A]">Select Branch</option>
                             {branches.map(b => <option key={b._id} value={b._id} className="bg-[#1A1A1A]">{b.name}</option>)}
@@ -298,7 +298,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             placeholder="Brief description..."
                             value={header.narration}
                             onChange={e => setHeader({ ...header, narration: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none transition-all"
                         />
                     </div>
                 </div>
@@ -396,7 +396,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                                             </select>
                                         </td>
                                         <td className="p-3 w-40">
-                                            <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/5 focus-within:border-[#C8E600]/50 transition-all">
+                                            <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/5 focus-within:border-[var(--brand-lime)]/50 transition-all">
                                                 <span className="text-white/20 text-xs">$</span>
                                                 <input
                                                     required
@@ -460,7 +460,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 md:flex-none px-12 py-3.5 rounded-2xl text-sm font-bold bg-[#C8E600] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(200,230,0,0.2)] hover:shadow-[0_0_40px_rgba(200,230,0,0.4)]"
+                            className="flex-1 md:flex-none px-12 py-3.5 rounded-2xl text-sm font-bold bg-[var(--brand-lime)] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(200,230,0,0.2)] hover:shadow-[0_0_40px_rgba(200,230,0,0.4)]"
                         >
                             {submitting ? 'Processing...' : <><Save size={20} /> Post Voucher</>}
                         </button>

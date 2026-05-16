@@ -214,7 +214,7 @@ const ManageSuppliers = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Users size={28} style={{ color: '#C8E600' }} />
+                        <Users size={28} style={{ color: 'var(--brand-lime)' }} />
                         {t('management.suppliers.title')}
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.suppliers.subtitle')}</p>
@@ -230,7 +230,7 @@ const ManageSuppliers = () => {
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         <Plus size={18} /> {t('management.suppliers.add')}
                     </button>
@@ -329,7 +329,7 @@ const ManageSuppliers = () => {
             <div className="rounded-2xl overflow-hidden border transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : suppliers.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
@@ -372,17 +372,17 @@ const ManageSuppliers = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-main)' }}>
-                                                        <Mail size={14} style={{ color: '#C8E600' }} />
+                                                        <Mail size={14} style={{ color: 'var(--brand-lime)' }} />
                                                         {supplier.email}
                                                     </div>
                                                     <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-dim)' }}>
-                                                        <Phone size={14} style={{ color: '#C8E600' }} />
+                                                        <Phone size={14} style={{ color: 'var(--brand-lime)' }} />
                                                         {supplier.phone}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                     <Tag size={12} />
                                                     {supplier.category}
                                                 </div>
@@ -661,7 +661,7 @@ const ManageSuppliers = () => {
                                     type="submit"
                                     disabled={formLoading}
                                     className="flex-[2] py-3 rounded-xl font-bold flex justify-center items-center shadow-lg hover:-translate-y-0.5 transition-all"
-                                    style={{ background: "#C8E600", color: "#0A0A0A" }}
+                                    style={{ background: "var(--brand-lime)", color: "#0A0A0A" }}
                                 >
                                     {formLoading ? (
                                         <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />

@@ -6,16 +6,33 @@
    GLOBAL CSS VARIABLES (mirrors src/theme.ts)
    ══════════════════════════════════════════════════════════════ */
 :root {
-  --brand-lime: #C8E600;
-  --brand-lime-dark: #a8c100;
-  --brand-lime-light: #d8f200;
+  /* Brand - Light Mode (Darker Greens) */
+  --brand-lime: #7A9900;
+  --brand-lime-vibrant: #5F7A00;
+  --brand-lime-dark: #4F6600;
+  --brand-lime-light: #A3C400;
   --brand-black: #0A0A0A;
   --white: #FFFFFF;
+
+  /* Surfaces */
+  --bg-main: #F5F7FA;
+  --bg-card: #FFFFFF;
+  --border-main: #E5E7EB;
+  --text-main: #0A0A0A;
+  --text-muted: #6B7280;
+
+  /* Semantic */
   --alert-red: #E74C3C;
   --warn-orange: #E67E22;
 }
 
 :root[data-theme='dark'] {
+  /* Brand - Dark Mode (Bright Lime) */
+  --brand-lime: #C8E600;
+  --brand-lime-vibrant: #D4F12E;
+  --brand-lime-dark: #a8c100;
+  --brand-lime-light: #d8f200;
+
   --bg-main: #111111;
   --bg-card: #1C1C1C;
   --bg-sidebar: #0A0A0A;
@@ -191,7 +208,7 @@
   /* ── Gradient text ───────────────────────────────────────── */
   .text-gradient-lime {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(90deg, #C8E600, #d8f200, #a8c100);
+    background-image: linear-gradient(90deg, var(--brand-lime), var(--brand-lime-light), var(--brand-lime-dark));
     background-size: 200% auto;
     animation: shimmer 2.5s linear infinite;
   }

@@ -155,7 +155,7 @@ const VehicleList = () => {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-[var(--bg-card)] to-transparent p-6 rounded-3xl border shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
                 <div className="flex items-center gap-4">
-                    <div className="p-3.5 rounded-2xl shadow-lg" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                    <div className="p-3.5 rounded-2xl shadow-lg" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>
                         <Car size={28} strokeWidth={2.5} />
                     </div>
                     <div>
@@ -202,7 +202,7 @@ const VehicleList = () => {
                         <button
                             onClick={() => navigate('create')}
                             className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
-                            style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 20px rgba(200, 230, 0, 0.3)' }}
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A', boxShadow: '0 4px 20px rgba(200, 230, 0, 0.3)' }}
                         >
                             <Plus size={18} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
                         </button>
@@ -222,7 +222,7 @@ const VehicleList = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                     {/* Primary Search */}
                     <div className="relative flex-1 group">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#C8E600] transition-colors" />
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--brand-lime)] transition-colors" />
                         <input
                             type="text"
                             placeholder={t('management.vehicles.searchPlaceholder', 'Search by Make, Model, VIN, or Fleet #...')}
@@ -260,7 +260,7 @@ const VehicleList = () => {
                         style={{ 
                             background: showAdvancedFilters ? 'rgba(200, 230, 0, 0.1)' : 'var(--bg-card)', 
                             border: '1px solid var(--border-main)', 
-                            color: showAdvancedFilters ? '#C8E600' : 'var(--text-main)' 
+                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-main)' 
                         }}
                     >
                         <SlidersHorizontal size={18} />
@@ -272,7 +272,7 @@ const VehicleList = () => {
                 {showAdvancedFilters && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-6 rounded-3xl animate-in slide-in-from-top-4 fade-in duration-300 shadow-xl border relative overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         {/* Decorative glow */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#C8E600] rounded-full blur-[100px] opacity-5 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--brand-lime)] rounded-full blur-[100px] opacity-5 pointer-events-none" />
                         
                         <div className="space-y-2 relative z-10">
                             <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category', 'Category')}</label>
@@ -280,7 +280,7 @@ const VehicleList = () => {
                                 <select
                                     value={filters.category}
                                     onChange={(e) => handleFilterChange('category', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[var(--brand-lime)]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allCategories', 'All Categories')}</option>
@@ -298,7 +298,7 @@ const VehicleList = () => {
                                 <select
                                     value={filters.fuelType}
                                     onChange={(e) => handleFilterChange('fuelType', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[var(--brand-lime)]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allFuelTypes', 'All Fuel Types')}</option>
@@ -316,7 +316,7 @@ const VehicleList = () => {
                                 <select
                                     value={filters.branch}
                                     onChange={(e) => handleFilterChange('branch', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[var(--brand-lime)]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allBranches', 'All Branches')}</option>
@@ -354,7 +354,7 @@ const VehicleList = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-32 opacity-80">
-                            <div className="w-12 h-12 border-4 border-[#C8E600]/20 border-t-[#C8E600] rounded-full animate-spin mb-6" />
+                            <div className="w-12 h-12 border-4 border-[var(--brand-lime)]/20 border-t-[var(--brand-lime)] rounded-full animate-spin mb-6" />
                             <p className="text-sm font-bold tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Syncing Fleet Data...</p>
                         </div>
                     ) : vehicles.length === 0 ? (
@@ -370,7 +370,7 @@ const VehicleList = () => {
                                 <button
                                     onClick={() => setFilters({ ...filters, search: '', status: '', branch: '', category: '', fuelType: '', page: 1 })}
                                     className="mt-6 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg"
-                                    style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 15px rgba(200, 230, 0, 0.2)' }}
+                                    style={{ background: 'var(--brand-lime)', color: '#0A0A0A', boxShadow: '0 4px 15px rgba(200, 230, 0, 0.2)' }}
                                 >
                                     Clear All Filters
                                 </button>
@@ -419,7 +419,7 @@ const VehicleList = () => {
                                         </td>
                                         
                                         <td className="px-6 py-5">
-                                            <div className="text-sm font-mono font-black" style={{ color: '#C8E600' }}>
+                                            <div className="text-sm font-mono font-black" style={{ color: 'var(--brand-lime)' }}>
                                                 {v.basicDetails?.fleetNumber || 'UNASSIGNED'}
                                             </div>
                                             <div className="text-xs font-semibold mt-1.5 opacity-80" style={{ color: 'var(--text-dim)' }}>
@@ -456,7 +456,7 @@ const VehicleList = () => {
                                             <div className="mt-2 flex justify-end">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
-                                                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[var(--brand-lime)] hover:text-black hover:scale-110 shadow-sm"
                                                     style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
                                                     title="View Details"
                                                 >

@@ -271,7 +271,7 @@ const ManageBranches = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Building2 size={28} style={{ color: '#C8E600' }} />
+                        <Building2 size={28} style={{ color: 'var(--brand-lime)' }} />
                         {t('management.branches.title')}
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.branches.subtitle')}</p>
@@ -288,7 +288,7 @@ const ManageBranches = () => {
                         <button
                             onClick={openCreateModal}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
                             <Plus size={18} /> {t('management.branches.add')}
                         </button>
@@ -389,7 +389,7 @@ const ManageBranches = () => {
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : branches.length === 0 ? (
                         <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
@@ -425,7 +425,7 @@ const ManageBranches = () => {
                                                     <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                         {branch.name}
                                                     </div>
-                                                    <div className="text-xs font-mono" style={{ color: '#C8E600' }}>{branch.code}</div>
+                                                    <div className="text-xs font-mono" style={{ color: 'var(--brand-lime)' }}>{branch.code}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-start gap-2 max-w-[250px]">
@@ -480,7 +480,7 @@ const ManageBranches = () => {
                                                                 navigate(`${base}/${branch._id}`);
                                                             }}
                                                             className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95"
-                                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
+                                                            style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}
                                                         >
                                                             <Eye size={15} />
                                                         </button>
@@ -1011,7 +1011,7 @@ const ManageBranches = () => {
                                         disabled={formLoading}
                                         className="flex-1 py-2.5 rounded-lg font-semibold flex justify-center items-center"
                                         style={{
-                                            background: "#C8E600",
+                                            background: "var(--brand-lime)",
                                             color: "#0A0A0A"
                                         }}
                                     >

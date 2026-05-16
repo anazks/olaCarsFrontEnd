@@ -27,7 +27,7 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
             <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5 flex-shrink-0">
                     <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                        <Shield style={{ color: '#C8E600' }} />
+                        <Shield style={{ color: 'var(--brand-lime)' }} />
                         Select Insurance Policy
                     </h2>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-all" style={{ color: 'var(--text-dim)' }}>
@@ -63,11 +63,11 @@ const InsuranceSelectorModal = ({ isOpen, onClose, onSelect, insurances, selecte
                                     className="p-5 rounded-2xl border transition-all cursor-pointer hover:-translate-y-1 relative overflow-hidden flex flex-col group"
                                     style={{ 
                                         background: selectedId === ins._id ? 'rgba(200,230,0,0.05)' : 'var(--bg-sidebar)',
-                                        borderColor: selectedId === ins._id ? '#C8E600' : 'var(--border-main)'
+                                        borderColor: selectedId === ins._id ? 'var(--brand-lime)' : 'var(--border-main)'
                                     }}
                                 >
                                     {selectedId === ins._id && (
-                                        <div className="absolute top-0 right-0 p-1.5 bg-[#C8E600] rounded-bl-xl text-black">
+                                        <div className="absolute top-0 right-0 p-1.5 bg-[var(--brand-lime)] rounded-bl-xl text-black">
                                             <Check size={14} />
                                         </div>
                                     )}

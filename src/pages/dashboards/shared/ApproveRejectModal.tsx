@@ -106,7 +106,7 @@ const ApproveRejectModal: React.FC<ApproveRejectModalProps> = ({
                         disabled={loading || (isReject && !reason.trim())}
                         className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center`}
                         style={{
-                            background: isReject ? '#ef4444' : '#C8E600',
+                            background: isReject ? '#ef4444' : 'var(--brand-lime)',
                             color: isReject ? 'white' : '#0A0A0A',
                             opacity: (loading || (isReject && !reason.trim())) ? 0.5 : 1
                         }}

@@ -115,7 +115,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-[var(--border-main)] flex justify-between items-center bg-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-[#C8E600]/10 text-[#C8E600]">
+                        <div className="p-2 rounded-lg bg-[var(--brand-lime)]/10 text-[var(--brand-lime)]">
                             <Receipt size={24} />
                         </div>
                         <div>
@@ -145,7 +145,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                                     required
                                     value={formData.accountingCode}
                                     onChange={e => setFormData({ ...formData, accountingCode: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[#C8E600]/50 transition-all font-bold"
+                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all font-bold"
                                     style={{ color: 'var(--text-main)' }}
                                 >
                                     <option value="">Select Account...</option>
@@ -165,7 +165,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                                     required
                                     value={formData.paymentMethod}
                                     onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as PaymentMethod })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[#C8E600]/50 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all"
                                     style={{ color: 'var(--text-main)' }}
                                 >
                                     <option value="BANK_TRANSFER">Bank Transfer</option>
@@ -191,7 +191,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                                     required
                                     value={formData.amount}
                                     onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                                    className="w-full pl-9 pr-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm focus:ring-2 focus:ring-[#C8E600]/50 transition-all font-bold"
+                                    className="w-full pl-9 pr-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all font-bold"
                                     style={{ color: 'var(--text-main)' }}
                                 />
                             </div>
@@ -204,7 +204,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                                 <select
                                     value={formData.taxApplied}
                                     onChange={e => setFormData({ ...formData, taxApplied: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[#C8E600]/50 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all"
                                     style={{ color: 'var(--text-main)' }}
                                 >
                                     <option value="">No Tax</option>
@@ -225,7 +225,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, isTaxInclusive: !formData.isTaxInclusive })}
-                                className={`w-12 h-6 rounded-full transition-colors relative ${formData.isTaxInclusive ? 'bg-[#C8E600]' : 'bg-white/10'}`}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${formData.isTaxInclusive ? 'bg-[var(--brand-lime)]' : 'bg-white/10'}`}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${formData.isTaxInclusive ? 'right-1' : 'left-1'}`} />
                             </button>
@@ -239,7 +239,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                                     required
                                     value={formData.status}
                                     onChange={e => setFormData({ ...formData, status: e.target.value as PaymentStatus })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[#C8E600]/50 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm appearance-none focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all"
                                     style={{ color: 'var(--text-main)' }}
                                 >
                                     <option value="COMPLETED">COMPLETED (Recommended)</option>
@@ -257,15 +257,15 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                             value={formData.notes}
                             onChange={e => setFormData({ ...formData, notes: e.target.value })}
                             placeholder="Add payment details, reference numbers, etc."
-                            className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm focus:ring-2 focus:ring-[#C8E600]/50 transition-all min-h-[100px] resize-none"
+                            className="w-full px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] outline-none text-sm focus:ring-2 focus:ring-[var(--brand-lime)]/50 transition-all min-h-[100px] resize-none"
                             style={{ color: 'var(--text-main)' }}
                         />
                     </div>
 
                     {/* Warning about Ledger */}
                     {formData.status === 'COMPLETED' && (
-                        <div className="p-4 rounded-xl bg-[#C8E600]/5 border border-[#C8E600]/20 flex items-start gap-3">
-                            <Info size={18} className="text-[#C8E600] shrink-0 mt-0.5" />
+                        <div className="p-4 rounded-xl bg-[var(--brand-lime)]/5 border border-[var(--brand-lime)]/20 flex items-start gap-3">
+                            <Info size={18} className="text-[var(--brand-lime)] shrink-0 mt-0.5" />
                             <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
                                 <strong style={{ color: 'var(--text-main)' }}>Note:</strong> Marking as COMPLETED will automatically generate a financial ledger entry. This action cannot be undone once processed.
                             </p>
@@ -288,7 +288,7 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
                         onClick={handleSubmit}
                         disabled={loading || fetchingData || !formData.accountingCode}
                         className="flex-1 py-3 rounded-xl text-sm font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         {loading ? (
                             <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />

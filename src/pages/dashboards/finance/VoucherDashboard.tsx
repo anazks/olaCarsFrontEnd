@@ -51,7 +51,7 @@ const VoucherDashboard = () => {
             case 'RECEIPT': return <ArrowDownLeft className="text-emerald-500" size={18} />;
             case 'CONTRA': return <ArrowLeftRight className="text-blue-500" size={18} />;
             case 'JOURNAL': return <FileText className="text-amber-500" size={18} />;
-            case 'SALES': return <Receipt className="text-[#C8E600]" size={18} />;
+            case 'SALES': return <Receipt className="text-[var(--brand-lime)]" size={18} />;
             case 'PURCHASE': return <Receipt className="text-indigo-500" size={18} />;
             default: return <FileText size={18} />;
         }
@@ -94,8 +94,8 @@ const VoucherDashboard = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <div className="p-2 bg-[#C8E600]/10 rounded-xl">
-                            <Receipt size={24} className="text-[#C8E600]" />
+                        <div className="p-2 bg-[var(--brand-lime)]/10 rounded-xl">
+                            <Receipt size={24} className="text-[var(--brand-lime)]" />
                         </div>
                         Voucher Management
                     </h1>
@@ -103,7 +103,7 @@ const VoucherDashboard = () => {
                 </div>
                 <button 
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 bg-[#C8E600] text-black px-5 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(200,230,0,0.3)] transition-all active:scale-95"
+                    className="flex items-center gap-2 bg-[var(--brand-lime)] text-black px-5 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(200,230,0,0.3)] transition-all active:scale-95"
                 >
                     <Plus size={20} />
                     Create Voucher
@@ -119,7 +119,7 @@ const VoucherDashboard = () => {
                         placeholder="Search by voucher #, narration or party..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none transition-all"
                     />
                 </div>
                 <div className="relative">
@@ -127,7 +127,7 @@ const VoucherDashboard = () => {
                     <select 
                         value={typeFilter}
                         onChange={e => setTypeFilter(e.target.value as any)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none appearance-none transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none appearance-none transition-all"
                     >
                         <option value="ALL">All Types</option>
                         <option value="PAYMENT">Payment</option>
@@ -142,7 +142,7 @@ const VoucherDashboard = () => {
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                     <input 
                         type="date"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:border-[var(--brand-lime)] outline-none transition-all"
                     />
                 </div>
             </div>
@@ -207,7 +207,7 @@ const VoucherDashboard = () => {
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex flex-col items-start gap-1">
-                                                <p className="text-sm font-bold text-[#C8E600] font-mono">
+                                                <p className="text-sm font-bold text-[var(--brand-lime)] font-mono">
                                                     ${voucher.totalAmount.toLocaleString()}
                                                 </p>
                                                 {getStatusBadge(voucher.status)}
@@ -236,7 +236,7 @@ const VoucherDashboard = () => {
                                             <p className="text-sm font-medium">No vouchers found</p>
                                             <button 
                                                 onClick={() => setShowCreateModal(true)}
-                                                className="text-[#C8E600] text-xs font-bold hover:underline"
+                                                className="text-[var(--brand-lime)] text-xs font-bold hover:underline"
                                             >
                                                 Create your first voucher
                                             </button>

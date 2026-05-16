@@ -168,7 +168,7 @@ const PurchaseOrderList = () => {
 
     const SortIcon = ({ field }: { field: PurchaseOrderFilters['sortBy'] }) => {
         if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
-        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: '#C8E600' }} /></div>;
+        return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: 'var(--brand-lime)' }} /></div>;
     };
 
     return (
@@ -177,7 +177,7 @@ const PurchaseOrderList = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} style={{ color: '#C8E600' }} />
+                        <FileText size={28} style={{ color: 'var(--brand-lime)' }} />
                         {t('management.purchaseOrders.title')}
                     </h1>
                     <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.subtitle')}</p>
@@ -205,7 +205,7 @@ const PurchaseOrderList = () => {
                         <button
                             onClick={() => navigate('create')}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg hover:shadow-lime/20 hover:-translate-y-0.5 active:translate-y-0"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
                             <Plus size={18} /> {t('management.purchaseOrders.createBtn')}
                         </button>
@@ -226,7 +226,7 @@ const PurchaseOrderList = () => {
                             setSearchQuery(e.target.value);
                             setCurrentPage(1);
                         }}
-                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[#C8E600]/50 font-bold"
+                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[var(--brand-lime)]/50 font-bold"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
@@ -374,7 +374,7 @@ const PurchaseOrderList = () => {
                 <div className="overflow-x-auto">
                     {loading && pos.length === 0 ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(200,230,0,0.3)]" />
+                            <div className="w-10 h-10 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(200,230,0,0.3)]" />
                         </div>
                     ) : pos.length === 0 ? (
                         <div className="text-center py-24" style={{ color: 'var(--text-dim)' }}>
@@ -389,7 +389,7 @@ const PurchaseOrderList = () => {
                             <thead>
                                 <tr className="transition-colors duration-300" style={{ background: 'rgba(255,255,255,0.01)' }}>
                                     <th className="px-6 py-5">
-                                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors" 
+                                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[var(--brand-lime)] transition-colors" 
                                             style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.poDetails')}
                                         </button>
@@ -397,7 +397,7 @@ const PurchaseOrderList = () => {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
                                     <th className="px-6 py-5">
                                         <button onClick={() => handleSort('totalAmount')} 
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[var(--brand-lime)] transition-colors"
                                             style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.totalAmount')} <SortIcon field="totalAmount" />
                                         </button>
@@ -405,7 +405,7 @@ const PurchaseOrderList = () => {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.table.sourceInfo')}</th>
                                     <th className="px-6 py-5">
                                         <button onClick={() => handleSort('purchaseOrderDate')} 
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[var(--brand-lime)] transition-colors"
                                             style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.timeline')} <SortIcon field="purchaseOrderDate" />
                                         </button>
@@ -417,7 +417,7 @@ const PurchaseOrderList = () => {
                                 {pos.map((po) => (
                                     <tr
                                         key={po._id}
-                                        className="border-t hover:bg-[#C8E600]/[0.02] transition-colors group"
+                                        className="border-t hover:bg-[var(--brand-lime)]/[0.02] transition-colors group"
                                         style={{ borderColor: 'var(--border-main)' }}
                                     >
                                         <td className="px-6 py-6 lg:min-w-[220px]">
@@ -452,7 +452,7 @@ const PurchaseOrderList = () => {
                                         <td className="px-6 py-6">
                                             <div className="space-y-1">
                                                 <div className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                    <div className="w-1 h-1 rounded-full bg-[#C8E600]" />
+                                                    <div className="w-1 h-1 rounded-full bg-[var(--brand-lime)]" />
                                                     {typeof po.supplier === 'object' ? po.supplier.name : t('management.purchaseOrders.table.unknownVendor')}
                                                 </div>
                                                 <div className="text-[10px] opacity-50 font-medium flex items-center gap-2 pl-3" style={{ color: 'var(--text-dim)' }}>
@@ -474,7 +474,7 @@ const PurchaseOrderList = () => {
                                             <div className="flex items-center justify-end">
                                                 <button
                                                     onClick={() => navigate(po._id)}
-                                                    className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[#C8E600] hover:text-black group-hover:shadow-[0_0_15px_rgba(200,230,0,0.2)]"
+                                                    className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[var(--brand-lime)] hover:text-black group-hover:shadow-[0_0_15px_rgba(200,230,0,0.2)]"
                                                     style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-dim)' }}
                                                     title={t('management.purchaseOrders.table.explore')}
                                                 >
@@ -524,7 +524,7 @@ const PurchaseOrderList = () => {
                                             <button
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
-                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${currentPage === pageNum ? 'bg-[#C8E600] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
+                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${currentPage === pageNum ? 'bg-[var(--brand-lime)] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
                                                 style={{ 
                                                     color: currentPage === pageNum ? '#000' : 'var(--text-main)' 
                                                 }}

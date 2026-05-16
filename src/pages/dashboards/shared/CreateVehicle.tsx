@@ -253,7 +253,7 @@ const CreateVehicle = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Car size={28} style={{ color: '#C8E600' }} />
+                        <Car size={28} style={{ color: 'var(--brand-lime)' }} />
                         Create New Vehicle
                     </h1>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>
@@ -271,7 +271,7 @@ const CreateVehicle = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-2xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-2 mb-2 text-[#C8E600]">
+                    <div className="flex items-center gap-2 mb-2 text-[var(--brand-lime)]">
                         <DollarSign size={18} />
                         <h2 className="font-semibold uppercase tracking-wider text-xs">Purchase Information</h2>
                     </div>
@@ -440,7 +440,7 @@ const CreateVehicle = () => {
                                         />
                                         {(nextFleetLoading || isCheckingFleet) && (
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="w-3 h-3 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-3 h-3 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>
@@ -549,7 +549,7 @@ const CreateVehicle = () => {
                         type="submit"
                         disabled={loading || !!fleetError}
                         className="flex items-center gap-2 px-10 py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         {loading ? 'Creating...' : 'Create Vehicle'}
                     </button>

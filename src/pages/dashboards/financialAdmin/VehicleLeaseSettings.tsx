@@ -127,7 +127,7 @@ const VehicleLeaseSettings = () => {
                 
                 <div className="flex flex-wrap items-center gap-3">
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                        <Filter size={16} /> Filter <span className="bg-[#D4F12E] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">02</span>
+                        <Filter size={16} /> Filter <span className="bg-[var(--brand-lime)] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">02</span>
                     </button>
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                         <FileText size={16} /> Export
@@ -210,7 +210,7 @@ const VehicleLeaseSettings = () => {
                                             disabled={isSaving || !hasChanged}
                                             className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-1 ${
                                                 hasChanged 
-                                                    ? 'bg-[#D4F12E] text-black hover:scale-[1.02] active:scale-95' 
+                                                    ? 'bg-[var(--brand-lime)] text-black hover:scale-[1.02] active:scale-95' 
                                                     : 'bg-black/5 dark:bg-white/5 text-gray-500 cursor-not-allowed'
                                             }`}
                                         >
@@ -246,7 +246,7 @@ const VehicleLeaseSettings = () => {
                 </div>
                 <div className="flex items-center gap-1 text-sm font-bold">
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 opacity-50 cursor-not-allowed">{'<'}</button>
-                    <button className="px-2.5 py-1 rounded bg-[#D4F12E] text-black">01</button>
+                    <button className="px-2.5 py-1 rounded bg-[var(--brand-lime)] text-black">01</button>
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">02</button>
                     <button className="px-2.5 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">03</button>
                     <span className="px-1.5">...</span>

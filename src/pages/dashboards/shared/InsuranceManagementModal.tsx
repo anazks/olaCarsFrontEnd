@@ -104,7 +104,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
                     <div className="flex items-center gap-3 text-lg font-bold" style={{ color: 'var(--text-main)' }}>
-                        <Shield size={24} style={{ color: '#C8E600' }} />
+                        <Shield size={24} style={{ color: 'var(--brand-lime)' }} />
                         {t('management.vehicles.vehicleDetail.insuranceManagement', 'Insurance Management')}
                     </div>
                     <button onClick={onClose} disabled={loading} className="p-2 rounded-full transition-colors opacity-70 hover:opacity-100 hover:bg-white/10" style={{ color: 'var(--text-main)' }}>
@@ -204,7 +204,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         onClick={handleSave}
                         disabled={loading}
                         className="flex items-center justify-center gap-2 min-w-[140px] px-8 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
                         {loading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveInsurance')}
                     </button>

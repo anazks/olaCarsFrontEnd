@@ -72,7 +72,7 @@ const StaffPerformanceDetails = () => {
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-12 h-12 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+            <div className="w-12 h-12 border-4 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
         </div>
     );
 
@@ -277,7 +277,7 @@ const StaffPerformanceDetails = () => {
                                             <BarChart data={[
                                                 { name: 'COMPLETED', count: performance.taskStats.completed, fill: '#22c55e' },
                                                 { name: 'PENDING', count: performance.taskStats.pending, fill: '#eab308' },
-                                                { name: 'PROCESSED', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0, fill: '#C8E600' }
+                                                { name: 'PROCESSED', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0, fill: 'var(--brand-lime)' }
                                             ]}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
                                                 <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} fontStyle="italic" tickLine={false} axisLine={false} dy={10} />
@@ -289,7 +289,7 @@ const StaffPerformanceDetails = () => {
                                                 />
                                                 <Bar dataKey="count" radius={[12, 12, 4, 4]} maxBarSize={50} animationDuration={2000}>
                                                     {[0, 1, 2].map((_, index) => (
-                                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : '#C8E600'} />
+                                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : 'var(--brand-lime)'} />
                                                     ))}
                                                 </Bar>
                                             </BarChart>

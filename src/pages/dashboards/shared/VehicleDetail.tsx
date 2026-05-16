@@ -367,14 +367,14 @@ const VehicleDetail = () => {
     // ── Loading / Error states ─────────────────────────────────────────────
     if (loading) return (
         <div className="flex items-center justify-center py-32">
-            <div className="w-10 h-10 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+            <div className="w-10 h-10 border-2 border-[var(--brand-lime)] border-t-transparent rounded-full animate-spin" />
         </div>
     );
     if (error || !vehicle) return (
         <div className="max-w-4xl mx-auto py-20 text-center space-y-4">
             <AlertTriangle size={48} className="mx-auto text-red-500 opacity-60" />
             <p className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>{error || t('management.vehicles.empty.noVehicles')}</p>
-            <button onClick={() => navigate('..')} className="px-6 py-2 rounded-xl text-sm font-medium cursor-pointer" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+            <button onClick={() => navigate('..')} className="px-6 py-2 rounded-xl text-sm font-medium cursor-pointer" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>
                 {t('management.vehicles.vehicleDetail.actions.backToList')}
             </button>
         </div>
@@ -446,16 +446,16 @@ const VehicleDetail = () => {
                             return (
                                 <div key={st} className={`flex items-center gap-1 ${i < PIPELINE.length - 1 ? 'flex-1' : ''}`}>
                                     <div
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[var(--brand-lime)]' : ''}`}
                                         style={{
                                             background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)',
-                                            color: done ? '#C8E600' : 'var(--text-dim)',
+                                            color: done ? 'var(--brand-lime)' : 'var(--text-dim)',
                                         }}
                                     >
                                         {done && i < currentIdx ? <CheckCircle size={12} /> : null}
                                         {getStatusTranslation(st).replace('Active — ', '').replace('ACTIVE — ', '')}
                                     </div>
-                                    {i < PIPELINE.length - 1 && <div className="flex-1 h-px min-w-[20px]" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
+                                    {i < PIPELINE.length - 1 && <div className="flex-1 h-px min-w-[20px]" style={{ background: done ? 'var(--brand-lime)' : 'var(--border-main)' }} />}
                                 </div>
                             );
                         })}
@@ -689,7 +689,7 @@ const VehicleDetail = () => {
                                         <button
                                             onClick={() => setIsInsuranceManagerOpen(true)}
                                             className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                            style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}
                                         >
                                             {vehicle.insuranceDetails?.plan ? t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Update Insurance') : t('management.vehicles.vehicleDetail.actions.saveInsurance', 'Add Insurance')}
                                         </button>
@@ -925,7 +925,7 @@ const VehicleDetail = () => {
                                     onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
                                     disabled={actionLoading}
                                     className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
-                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
+                                    style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                                 >
                                     {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
                                 </button>
@@ -955,7 +955,7 @@ const VehicleDetail = () => {
                                                     }
                                                 }}
                                             />
-                                            <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                            <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                 {t('common.search').split('...')[0]}
                                             </button>
                                         </div>
@@ -1090,7 +1090,7 @@ const VehicleDetail = () => {
                                                     type="button"
                                                     onClick={() => fileInputRefs.current[df.key]?.click()}
                                                     className="px-2 py-1 rounded-lg text-[9px] font-bold cursor-pointer"
-                                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                                    style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}
                                                 >
                                                     {t('common.search').split('...')[0]}
                                                 </button>
@@ -1104,7 +1104,7 @@ const VehicleDetail = () => {
                         {/* Importation details (moved from Insurance stage) */}
                         <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
+                                <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[var(--brand-lime)]" />
                                 <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
                             </div>
 
@@ -1342,7 +1342,7 @@ const VehicleDetail = () => {
                                     }}
                                     disabled={actionLoading}
                                     className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 text-black"
-                                    style={{ background: '#C8E600' }}
+                                    style={{ background: 'var(--brand-lime)' }}
                                 >
                                     {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ArrowLeft className="rotate-180" size={16} /> Submit & Proceed to Accounting</>}
                                 </button>
@@ -1368,7 +1368,7 @@ const VehicleDetail = () => {
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Wrench size={16} />} title={t('management.vehicles.vehicleDetail.repairCompleteTitle')} />
                     <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
-                    <button onClick={() => handleProgress('INSPECTION REQUIRED')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                    <button onClick={() => handleProgress('INSPECTION REQUIRED')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>
                         {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.reInspect')}</>}
                     </button>
                 </div>
@@ -1395,7 +1395,7 @@ const VehicleDetail = () => {
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                        <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>
                             {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> {t('management.vehicles.vehicleDetail.actions.saveAccounting')}</>}
                         </button>
                     </div>
@@ -1417,7 +1417,7 @@ const VehicleDetail = () => {
                             <input type="number" value={gps.mileageSyncFrequencyHrs} onChange={e => setGps(p => ({ ...p, mileageSyncFrequencyHrs: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                        <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}>
                             {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> {t('management.vehicles.vehicleDetail.actions.activateGps')}</>}
                         </button>
                     </div>
@@ -1509,11 +1509,11 @@ const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
             {(history || []).slice().reverse().map((h: any, i: number) => (
                 <div key={i} className="flex gap-3 relative">
                     {i < history.length - 1 && <div className="absolute left-1.5 top-4 bottom-[-16px] w-[1px]" style={{ background: 'var(--border-main)' }} />}
-                    <div className="w-3 h-3 rounded-full mt-1 border-2 border-brand" style={{ background: 'var(--bg-main)', borderColor: '#C8E600' }} />
+                    <div className="w-3 h-3 rounded-full mt-1 border-2 border-brand" style={{ background: 'var(--bg-main)', borderColor: 'var(--brand-lime)' }} />
                     <div className="flex-1 pb-4">
                         <div className="flex justify-between items-start">
                             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                {t('management.vehicles.vehicleDetail.history.statusUpdated')} <span style={{ color: '#C8E600' }}>{t(`management.vehicles.statusLabels.${h.status}`, h.status) as string}</span>
+                                {t('management.vehicles.vehicleDetail.history.statusUpdated')} <span style={{ color: 'var(--brand-lime)' }}>{t(`management.vehicles.statusLabels.${h.status}`, h.status) as string}</span>
                             </p>
                             <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{new Date(h.changedAt || h.timestamp).toLocaleString()}</span>
                         </div>

@@ -125,7 +125,7 @@ const TopBar = ({ toggleSidebar }: TopBarProps) => {
                     </div>
                     <div
                         className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: '#C8E600' }}
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--brand-lime)' }}
                     >
                         {getInitials(user?.fullName || user?.email?.split('@')[0] || 'Admin User')}
                     </div>

@@ -166,7 +166,7 @@ const CollectionsDashboard = () => {
     if (loading && !metrics) {
         return (
             <div className="h-screen w-full flex items-center justify-center transition-colors" style={{ background: 'var(--bg-main)' }}>
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[var(--brand-lime)]"></div>
             </div>
         );
     }
@@ -178,12 +178,12 @@ const CollectionsDashboard = () => {
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        <Library className="text-[#C8E600]" /> Collections Central
+                        <Library className="text-[var(--brand-lime)]" /> Collections Central
                     </h1>
                     <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Aggregate recovery analysis and forecasts</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
-                        <p className="text-xs font-bold text-[#C8E600]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-lime)] animate-pulse" />
+                        <p className="text-xs font-bold text-[var(--brand-lime)]">
                             {filters.startDate || filters.endDate 
                                 ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM dd, yyyy') : 'Genesis'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : 'Today'}`
                                 : 'Span: All-Time Dataset'}
@@ -258,8 +258,8 @@ const CollectionsDashboard = () => {
                     title="Collections Received" 
                     value={`$${(metrics?.totalCollected || 0).toLocaleString()}`} 
                     description="Settled payments"
-                    icon={<Wallet size={22} className="text-[#C8E600]" />}
-                    iconBg="bg-[#C8E600]/10"
+                    icon={<Wallet size={22} className="text-[var(--brand-lime)]" />}
+                    iconBg="bg-[var(--brand-lime)]/10"
                 />
                 <MetricStatCard 
                     title="Pending Recoveries" 
@@ -294,7 +294,7 @@ const CollectionsDashboard = () => {
                                 <div className="w-2.5 h-2.5 rounded-full border border-dashed border-blue-400" /> Projected
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#C8E600]" /> Realized
+                                <div className="w-2.5 h-2.5 rounded-full bg-[var(--brand-lime)]" /> Realized
                             </div>
                         </div>
                     </div>
@@ -304,8 +304,8 @@ const CollectionsDashboard = () => {
                             <AreaChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="gradCollected" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.25}/>
-                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor="var(--brand-lime)" stopOpacity={0.25}/>
+                                        <stop offset="95%" stopColor="var(--brand-lime)" stopOpacity={0}/>
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
@@ -317,7 +317,7 @@ const CollectionsDashboard = () => {
                                     labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
                                 />
                                 <Area type="monotone" dataKey="expected" stroke="#3B82F6" fill="transparent" strokeWidth={2} strokeDasharray="4 4" name="Expected" />
-                                <Area type="monotone" dataKey="collected" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#gradCollected)" name="Collected" dot={{ fill: '#C8E600', r: 4 }} />
+                                <Area type="monotone" dataKey="collected" stroke="var(--brand-lime)" strokeWidth={4} fillOpacity={1} fill="url(#gradCollected)" name="Collected" dot={{ fill: 'var(--brand-lime)', r: 4 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -334,7 +334,7 @@ const CollectionsDashboard = () => {
                             <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500">MTD Active</div>
                         </div>
                         <div className="mt-8">
-                            <div className="text-3xl font-black text-[#C8E600]">${(metrics?.mtdCollected || 0).toLocaleString()}</div>
+                            <div className="text-3xl font-black text-[var(--brand-lime)]">${(metrics?.mtdCollected || 0).toLocaleString()}</div>
                             <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Month-To-Date Collected</p>
                             <p className="text-xs opacity-40 mt-4">Consolidated total of settled receipts logged since first call of the current month cycle.</p>
                         </div>
@@ -343,8 +343,8 @@ const CollectionsDashboard = () => {
                     <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
                          style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex justify-between items-start">
-                            <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center">
-                                <DollarSign size={24} className="text-[#C8E600]" />
+                            <div className="w-12 h-12 rounded-2xl bg-[var(--brand-lime)]/10 flex items-center justify-center">
+                                <DollarSign size={24} className="text-[var(--brand-lime)]" />
                             </div>
                             <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400">Forecast 30d</div>
                         </div>
@@ -433,7 +433,7 @@ const CollectionsDashboard = () => {
                                             <div className="font-bold" style={{ color: 'var(--text-main)' }}>{entry.driverName}</div>
                                             <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
                                         </td>
-                                        <td className="py-4 px-3 font-semibold text-[#D4F12E]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 font-semibold text-[var(--brand-lime)]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
                                         <td className="py-4 px-3 text-right font-bold" style={{ color: 'var(--text-muted)' }}>${entry.totalDue.toLocaleString()}</td>
                                         <td className="py-4 pr-4 pl-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${entry.balance.toLocaleString()}</td>
                                     </tr>
@@ -515,7 +515,7 @@ const CollectionsDashboard = () => {
                                         <input type="checkbox" className="rounded border-gray-300" />
                                     </td>
                                     <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 10).toString().padStart(2, '0')}</td>
-                                    <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                    <td className="py-4 px-3 font-bold text-[var(--brand-lime)]">{item.invoiceNumber}</td>
                                     <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</td>
                                     <td className="py-4 px-3">
                                         <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
@@ -544,7 +544,7 @@ const CollectionsDashboard = () => {
                                 <tr><td colSpan={11} className="py-12 text-center text-sm font-bold opacity-50 uppercase tracking-widest">No collections invoices match chosen filter matrix. Try relaxing boundaries.</td></tr>
                             )}
                             {listLoading && (
-                                <tr><td colSpan={11} className="py-12 text-center"><div className="animate-pulse font-bold text-[#D4F12E] uppercase tracking-widest text-sm">Refreshing record arrays...</div></td></tr>
+                                <tr><td colSpan={11} className="py-12 text-center"><div className="animate-pulse font-bold text-[var(--brand-lime)] uppercase tracking-widest text-sm">Refreshing record arrays...</div></td></tr>
                             )}
                         </tbody>
                     </table>
@@ -572,7 +572,7 @@ const CollectionsDashboard = () => {
                                 <button 
                                     key={pageNum}
                                     onClick={() => loadList(pageNum)}
-                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[var(--brand-lime)] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                                 >
                                     {pageNum.toString().padStart(2, '0')}
                                 </button>
@@ -607,7 +607,7 @@ const MetricStatCard = ({ title, value, description, icon, iconBg, highlight }: 
         <div className="mt-6">
             <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : 'text-white'}`}>{value}</div>
             <p className="text-[11px] font-black tracking-wider uppercase mt-2 opacity-40">{title}</p>
-            <p className="text-[10px] font-medium text-[#C8E600] mt-1">{description}</p>
+            <p className="text-[10px] font-medium text-[var(--brand-lime)] mt-1">{description}</p>
         </div>
     </div>
 );
