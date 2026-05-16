@@ -60,6 +60,7 @@ export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Inv
     if (filters.endDate) params.append('endDate', filters.endDate);
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters.status) params.append('status', filters.status);
     
     const response = await api.get(`/api/invoices?${params.toString()}`);
     return { 

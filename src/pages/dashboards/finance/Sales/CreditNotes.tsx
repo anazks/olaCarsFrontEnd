@@ -27,6 +27,8 @@ const CreditNotes = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
 
     // Server-Side Pagination
     const [page, setPage] = useState<number>(1);
@@ -60,7 +62,7 @@ const CreditNotes = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [statusFilter, debouncedSearch, sortBy, sortOrder]);
+    }, [statusFilter, debouncedSearch, sortBy, sortOrder, startDate, endDate]);
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
@@ -82,6 +84,8 @@ const CreditNotes = () => {
             const params: any = { page, limit, sortBy, sortOrder };
             if (statusFilter !== 'ALL') params.status = statusFilter;
             if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
             
             const res = await getAllCreditNotes(params);
             if (res) {
@@ -97,7 +101,7 @@ const CreditNotes = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, statusFilter, debouncedSearch, sortBy, sortOrder]);
+    }, [page, limit, statusFilter, debouncedSearch, sortBy, sortOrder, startDate, endDate]);
 
     useEffect(() => {
         fetchCreditNotes();
@@ -122,14 +126,19 @@ const CreditNotes = () => {
         }
     }, [isCreateModalOpen, drivers.length]);
 
-    // Fetch specific driver's open invoices when chosen
+    // Specific driver's invoices for the modal
+    const [invoiceSort, setInvoiceSort] = useState<'date' | 'number'>('date');
+    const [invoiceSortOrder, setInvoiceSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [invoiceSearch, setInvoiceSearch] = useState('');
+    const [invoiceDateFilter, setInvoiceDateFilter] = useState('');
+
     useEffect(() => {
         if (selectedDriverId) {
             const loadInvoices = async () => {
                 setLoadingInvoices(true);
                 try {
-                    const res = await getPendingInvoicesByDriver(selectedDriverId);
-                    // User requested to see all invoices, not just unpaid ones
+                    // Use getInvoicesByDriver to see all (Paid/Unpaid)
+                    const res = await getInvoicesByDriver(selectedDriverId);
                     setDriverInvoices(res || []);
                 } catch (err) {
                     console.error(err);
@@ -139,11 +148,46 @@ const CreditNotes = () => {
             };
             loadInvoices();
             setSelectedInvoiceId('');
+            setInvoiceSearch('');
+            setInvoiceDateFilter('');
         } else {
             setDriverInvoices([]);
             setSelectedInvoiceId('');
         }
     }, [selectedDriverId]);
+
+    const sortedDriverInvoices = useMemo(() => {
+        if (!Array.isArray(driverInvoices)) return [];
+        
+        let filtered = [...driverInvoices];
+
+        // 1. Search Filter
+        if (invoiceSearch.trim()) {
+            const q = invoiceSearch.toLowerCase();
+            filtered = filtered.filter(i => i.invoiceNumber.toLowerCase().includes(q));
+        }
+
+        // 2. Date Filter
+        if (invoiceDateFilter) {
+            filtered = filtered.filter(i => {
+                const d = new Date(i.dueDate || i.createdAt).toISOString().split('T')[0];
+                return d === invoiceDateFilter;
+            });
+        }
+
+        // 3. Sorting
+        return filtered.sort((a, b) => {
+            if (invoiceSort === 'date') {
+                const dateA = new Date(a.dueDate || a.createdAt).getTime();
+                const dateB = new Date(b.dueDate || b.createdAt).getTime();
+                return invoiceSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            } else {
+                return invoiceSortOrder === 'desc' 
+                    ? b.invoiceNumber.localeCompare(a.invoiceNumber)
+                    : a.invoiceNumber.localeCompare(b.invoiceNumber);
+            }
+        });
+    }, [driverInvoices, invoiceSort, invoiceSortOrder, invoiceSearch, invoiceDateFilter]);
 
     const handleRowClick = (id: string) => {
         navigate(`./${id}`);
@@ -271,6 +315,28 @@ const CreditNotes = () => {
                                 <option value="CLOSED" style={{background: 'var(--bg-card)'}}>CLOSED / APPLIED</option>
                                 <option value="VOID" style={{background: 'var(--bg-card)'}}>VOID REVERSALS</option>
                             </select>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -467,16 +533,72 @@ const CreditNotes = () => {
 
                             {selectedDriverId && (
                                 <div className="space-y-1.5 p-3.5 border rounded-2xl animate-in zoom-in-95" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
+                                        <div className="flex items-center gap-1.5">
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    if (invoiceSort === 'date') setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc');
+                                                    else { setInvoiceSort('date'); setInvoiceSortOrder('desc'); }
+                                                }}
+                                                className={`text-[9px] px-2 py-0.5 rounded border transition-all ${invoiceSort === 'date' ? 'bg-brand-lime text-black border-brand-lime' : 'text-dim border-white/10'}`}
+                                            >
+                                                DATE {invoiceSort === 'date' && (invoiceSortOrder === 'asc' ? '↑' : '↓')}
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    if (invoiceSort === 'number') setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc');
+                                                    else { setInvoiceSort('number'); setInvoiceSortOrder('desc'); }
+                                                }}
+                                                className={`text-[9px] px-2 py-0.5 rounded border transition-all ${invoiceSort === 'number' ? 'bg-brand-lime text-black border-brand-lime' : 'text-dim border-white/10'}`}
+                                            >
+                                                NO. {invoiceSort === 'number' && (invoiceSortOrder === 'asc' ? '↑' : '↓')}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Modal-specific Filters */}
+                                    <div className="flex gap-2 mb-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={12} />
+                                            <input 
+                                                type="text"
+                                                placeholder="Search No..."
+                                                value={invoiceSearch}
+                                                onChange={e => setInvoiceSearch(e.target.value)}
+                                                className="w-full pl-8 pr-2 py-1.5 border rounded-lg text-[10px] font-bold outline-none"
+                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                            {invoiceSearch && (
+                                                <button onClick={() => setInvoiceSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-main"><X size={10}/></button>
+                                            )}
+                                        </div>
+                                        <div className="relative flex-1">
+                                            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={12} />
+                                            <input 
+                                                type="date"
+                                                value={invoiceDateFilter}
+                                                onChange={e => setInvoiceDateFilter(e.target.value)}
+                                                className="w-full pl-8 pr-2 py-1.5 border rounded-lg text-[10px] font-bold outline-none appearance-none"
+                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                            {invoiceDateFilter && (
+                                                <button onClick={() => setInvoiceDateFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-main"><X size={10}/></button>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment</option>
+                                        <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment ({sortedDriverInvoices.length} visible)</option>
                                         {loadingInvoices ? (
                                             <option disabled style={{background: 'var(--bg-card)'}}>Querying ledger...</option>
-                                        ) : Array.isArray(driverInvoices) && driverInvoices.length === 0 ? (
-                                            <option disabled style={{background: 'var(--bg-card)'}}>No invoices found for this operator</option>
-                                        ) : Array.isArray(driverInvoices) && driverInvoices.map(i => (
+                                        ) : sortedDriverInvoices.length === 0 ? (
+                                            <option disabled style={{background: 'var(--bg-card)'}}>No matching invoices</option>
+                                        ) : sortedDriverInvoices.map(i => (
                                             <option key={i._id} value={i._id} style={{background: 'var(--bg-card)'}}>
-                                                {i.invoiceNumber} — {i.status} (${i.balance} left)
+                                                {i.invoiceNumber} — {i.status} (${i.balance} left) — {new Date(i.dueDate).toLocaleDateString()}
                                             </option>
                                         ))}
                                     </select>

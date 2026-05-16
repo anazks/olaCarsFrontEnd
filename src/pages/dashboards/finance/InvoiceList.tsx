@@ -23,6 +23,7 @@ const InvoiceList = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     
     // Server Pagination
     const [page, setPage] = useState(1);
@@ -30,8 +31,8 @@ const InvoiceList = () => {
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
-    const [sortBy, setSortBy] = useState('weekNumber');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [sortBy, setSortBy] = useState('dueDate');
+    const [sortOrder, setSortOrder] = useState<'desc' | 'desc'>('desc');
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -40,7 +41,7 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter]);
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
@@ -64,6 +65,7 @@ const InvoiceList = () => {
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
             
             const res = await getInvoicesRegistry(filters);
             console.log('[InvoiceList] API Response:', res);
@@ -85,7 +87,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter]);
 
     useEffect(() => {
         fetchData();
@@ -177,6 +179,21 @@ const InvoiceList = () => {
                             />
                         </div>
                     </div>
+                    <div className="relative flex-shrink-0">
+                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
+                        <select
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                            className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <option value="ALL" style={{background: 'var(--bg-card)'}}>ALL STATUSES</option>
+                            <option value="PENDING" style={{background: 'var(--bg-card)'}}>PENDING</option>
+                            <option value="PARTIAL" style={{background: 'var(--bg-card)'}}>PARTIAL</option>
+                            <option value="PAID" style={{background: 'var(--bg-card)'}}>PAID</option>
+                            <option value="OVERDUE" style={{background: 'var(--bg-card)'}}>OVERDUE</option>
+                        </select>
+                    </div>
                     </div>
                 </div>
 
@@ -186,29 +203,50 @@ const InvoiceList = () => {
                         <table className="w-full border-collapse text-left text-xs select-text">
                             <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
-                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('invoiceNumber')}>
+                                    <th className="py-4 px-3 text-left w-10">Sl No.</th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('invoiceNumber')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Statement <SortIcon field="invoiceNumber" />
+                                            Invoice Number <SortIcon field="invoiceNumber" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('driver')}>
+                                    <th className="py-4 px-6 text-left w-[15%]">
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Operator <SortIcon field="driver" />
+                                            Description / Type
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
+                                    <th className="py-4 px-6 text-left w-[20%] group cursor-pointer select-none" onClick={() => handleSort('driver')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Driver Details <SortIcon field="driver" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('vehicle')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Vehicle / Fleet <SortIcon field="vehicle" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%]">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Node Location
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-right w-[15%] group cursor-pointer select-none" onClick={() => handleSort('totalAmountDue')}>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('totalAmountDue')}>
                                         <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            <DollarSign size={12}/> Amount <SortIcon field="totalAmountDue" />
+                                            Gross Billed <SortIcon field="totalAmountDue" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-right w-[15%] group cursor-pointer select-none" onClick={() => handleSort('balance')}>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('amountPaid')}>
                                         <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            <DollarSign size={12}/> Balance <SortIcon field="balance" />
+                                            Net Settled <SortIcon field="amountPaid" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('balance')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Current Balance <SortIcon field="balance" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
@@ -222,7 +260,7 @@ const InvoiceList = () => {
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Decrypting Ledger...</span>
@@ -231,7 +269,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
                                                 <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
@@ -240,7 +278,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : invoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="text-dim space-y-1 uppercase">
                                                 <FileText className="mx-auto opacity-20 mb-2" size={32} />
                                                 <p className="text-xs font-black tracking-widest">No statements recorded</p>
@@ -249,7 +287,7 @@ const InvoiceList = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    invoices.map((invoice) => (
+                                    invoices.map((invoice, index) => (
                                         <tr 
                                             key={invoice._id} 
                                             onClick={() => handleRowClick(invoice._id)}
@@ -258,10 +296,26 @@ const InvoiceList = () => {
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
+                                            <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (page - 1) * limit).toString().padStart(2, '0')}</td>
                                             <td className="py-4 px-6 font-black">
                                                 <div className="flex flex-col">
-                                                    <span className="tracking-wide font-black" style={{ color: 'var(--text-main)' }}>{invoice.invoiceNumber}</span>
-                                                    <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5">{invoice.weekLabel || 'Cycle'}</span>
+                                                    <span className="tracking-wide font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{invoice.invoiceNumber}</span>
+                                                    <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5 opacity-60">ID: {invoice._id?.slice(-8)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold truncate max-w-[150px]" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.description || (invoice.invoiceType === 'AUTO' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
+                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'AUTO' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
+                                                            {invoice.invoiceType || 'AUTO'}
+                                                        </span>
+                                                        {invoice.invoiceType === 'AUTO' && (
+                                                            <span className="text-[9px] font-black text-dim uppercase tracking-wider">{invoice.weekLabel || 'Cycle'}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
@@ -281,11 +335,34 @@ const InvoiceList = () => {
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.vehicle?.legalDocs?.registrationNumber || 'N/A'}
+                                                    </span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
+                                                        Fleet #{invoice.vehicle?.basicDetails?.fleetNumber || 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.driver?.branch?.name || 'N/A'}
+                                                    </span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
+                                                        {invoice.driver?.branch?.country || 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
                                             </td>
                                             <td className="py-4 px-6 text-right font-black text-sm">
                                                 ${invoice.totalAmountDue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-bold text-emerald-400">
+                                                ${invoice.amountPaid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="py-4 px-6 text-right font-black text-sm">
                                                 <span className={invoice.balance > 0 ? (invoice.status === 'OVERDUE' ? 'text-rose-500' : 'text-amber-400') : 'text-emerald-400'}>
