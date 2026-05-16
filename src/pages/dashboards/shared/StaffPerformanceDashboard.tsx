@@ -204,25 +204,25 @@ const StaffPerformanceDashboard = () => {
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             
             {/* Command Header */}
-            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden">
+            <div className="p-6 border-b border-[var(--border-main)] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48" />
                 
                 <div className="max-w-[1600px] mx-auto relative z-10">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-2xl bg-lime/10 flex items-center justify-center text-lime shadow-2xl shadow-lime/5 border border-lime/20">
-                                <Activity size={32} />
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center text-lime shadow-xl shadow-lime/5 border border-lime/20">
+                                <Activity size={24} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black tracking-tighter text-[var(--text-main)]">Resource Intelligence</h1>
-                                <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
-                                    <Shield size={14} className="text-lime" /> Platform Telemetry & Staff Performance
+                                <h1 className="text-xl font-black tracking-tight text-[var(--text-main)]">Resource Intelligence</h1>
+                                <p className="text-dim font-medium flex items-center gap-2 mt-0.5 uppercase text-[9px] tracking-[0.15em]">
+                                    <Shield size={12} className="text-lime" /> Platform Telemetry & Staff Performance
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-1.5 p-1.5 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)] overflow-x-auto no-scrollbar max-w-[90vw]">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-1 p-1 bg-[var(--bg-card)] rounded-xl border border-[var(--border-main)] overflow-x-auto no-scrollbar max-w-[90vw]">
                                 {(
                                     isBranchScoped 
                                         ? ['all', 'finance', 'operation'] 
@@ -233,10 +233,10 @@ const StaffPerformanceDashboard = () => {
                                     <button
                                         key={type}
                                         onClick={() => setStaffType(type as any)}
-                                        className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                                             staffType === type 
-                                                ? 'bg-lime text-black shadow-lg shadow-lime/20 scale-[1.02]' 
-                                                : 'hover:bg-[var(--bg-card)] text-dim hover:text-[var(--text-main)]'
+                                                ? 'bg-lime text-black shadow-md shadow-lime/20 scale-[1.02]' 
+                                                : 'hover:bg-[var(--bg-input)] text-dim hover:text-[var(--text-main)]'
                                         }`}
                                     >
                                         {type === 'country-manager' ? 'Region' : 
@@ -254,7 +254,7 @@ const StaffPerformanceDashboard = () => {
                                     <select
                                         value={selectedBranch}
                                         onChange={(e) => setSelectedBranch(e.target.value)}
-                                        className="appearance-none pl-12 pr-12 py-3 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[11px] font-black uppercase tracking-widest cursor-pointer group-hover:border-lime/40"
+                                        className="appearance-none pl-9 pr-9 py-2 rounded-xl border focus:outline-none focus:ring-1 focus:ring-lime/30 transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer group-hover:border-lime/40"
                                         style={{ 
                                             backgroundColor: 'var(--bg-card)', 
                                             borderColor: 'var(--border-main)', 
@@ -266,57 +266,57 @@ const StaffPerformanceDashboard = () => {
                                             <option key={b._id} value={b._id}>{b.name}</option>
                                         ))}
                                     </select>
-                                    <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-lime opacity-60" />
-                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
+                                    <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-lime opacity-60" />
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none" />
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-main)]">
-                                <Calendar size={14} className="ml-3 text-lime opacity-60" />
+                            <div className="flex items-center gap-2 bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-main)]">
+                                <Calendar size={12} className="ml-2 text-lime opacity-60" />
                                 <input 
                                     type="date" 
                                     value={dateRange.startDate}
                                     onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-[var(--text-main)] uppercase"
+                                    className="bg-transparent text-[10px] font-bold focus:outline-none p-1 text-[var(--text-main)] uppercase tracking-wider"
                                 />
-                                <div className="w-px h-4 bg-[var(--border-main)]" />
+                                <div className="w-px h-3 bg-[var(--border-main)]" />
                                 <input 
                                     type="date" 
                                     value={dateRange.endDate}
                                     onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                                    className="bg-transparent text-[11px] font-black focus:outline-none p-1 text-[var(--text-main)] uppercase"
+                                    className="bg-transparent text-[10px] font-bold focus:outline-none p-1 text-[var(--text-main)] uppercase tracking-wider"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <StatCard 
                             superTitle="Network Assets"
                             title="Tracked Staff" 
                             value={totalStaffCount} 
-                            icon={<Users size={18} />} 
+                            icon={<Users size={16} />} 
                             color="rgba(59, 130, 246, 0.15)"
                         />
                         <StatCard 
                             superTitle="Successful Cycles"
                             title="Total Onboarded" 
                             value={totalOnboardings} 
-                            icon={<CheckCircle size={18} />} 
+                            icon={<CheckCircle size={16} />} 
                             color="rgba(200, 230, 0, 0.15)"
                         />
                         <StatCard 
                             superTitle="Operational Volume"
                             title="Workflow Actions" 
                             value={totalActions} 
-                            icon={<Activity size={18} />} 
+                            icon={<Activity size={16} />} 
                             color="rgba(139, 92, 246, 0.15)"
                         />
                         <StatCard 
                             superTitle="Velocity Metrics"
                             title="Avg Processing" 
                             value={`${fleetAvgTime}h`} 
-                            icon={<Clock3 size={18} />} 
+                            icon={<Clock3 size={16} />} 
                             color="rgba(245, 158, 11, 0.15)"
                         />
                     </div>

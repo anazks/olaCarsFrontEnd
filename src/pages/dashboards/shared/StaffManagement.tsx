@@ -106,20 +106,6 @@ const StaffManagement = () => {
             permission: 'STAFF_PERFORMANCE_VIEW',
             description: 'Set, monitor, and adjust performance targets for individuals and teams.'
         },
-        {
-            icon: <ClipboardList size={24} />,
-            label: 'Task Delegation',
-            path: `${basePath}/task-delegation`,
-            permission: 'STAFF_PERFORMANCE_VIEW',
-            description: 'Assign duties, track progress, and manage workforce distribution.'
-        },
-        { 
-            icon: <User size={24} />, 
-            label: 'Individual Scope', 
-            path: `${basePath}/staff-performance/${getUserId()}`, 
-            permission: 'STAFF_PERFORMANCE_VIEW',
-            description: 'Monitor your own performance metrics, tasks, and historical data.'
-        }
     ];
 
     const ManagementCard = ({ item }: { item: any }) => (
@@ -184,7 +170,7 @@ const StaffManagement = () => {
                         </h2>
                         <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {performanceItems.map((item, idx) => (
                             <ManagementCard key={idx} item={item} />
                         ))}
