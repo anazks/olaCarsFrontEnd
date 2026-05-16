@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutGrid,
@@ -7,7 +7,8 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    ClipboardList
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -89,9 +90,13 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             label: 'Operations',
             icon: <Car size={22} />,
             subItems: [
+                { label: 'Assigned Missions', path: '/admin/branch-op-staff/my-tasks' },
+                { label: 'Task & Target Management', path: '/admin/branch-op-staff/target-management' },
+                { label: 'Accident Reports', path: '/admin/branch-op-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
                 { label: 'Manage Drivers', path: '/admin/branch-op-staff/drivers' },
                 { label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
+                { label: 'Support Desk', path: '/admin/branch-op-staff/complaints' },
             ]
         },
         {

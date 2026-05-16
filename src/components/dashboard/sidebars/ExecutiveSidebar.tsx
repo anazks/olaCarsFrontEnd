@@ -96,7 +96,6 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Staff Management', path: '/admin/admin/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Task Delegation', path: '/admin/admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
@@ -119,6 +118,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Legal Agreements', path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Manage Insurances', path: '/admin/admin/insurances' },
+                { label: 'Accident Reports', path: '/admin/admin/accident-reports', permission: 'STAFF_VIEW' }
             ]
         },
         {

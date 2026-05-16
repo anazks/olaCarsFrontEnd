@@ -134,6 +134,8 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
                 { label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
                 { label: 'Add Journal Entry', path: '/admin/financial-admin/ledger?action=create', permission: 'JOURNAL_CREATE' },
+                { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Insurance Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
             ]
         },
         {
@@ -144,7 +146,8 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Staff Management', path: '/admin/financial-admin/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/financial-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                // { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Accident Reports', path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {

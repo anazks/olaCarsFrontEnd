@@ -64,7 +64,7 @@ const CreatePurchaseOrder = () => {
     const addItem = () => {
         setFormData({
             ...formData,
-            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: 0, description: '', images: [] }]
+            items: [...formData.items, { itemName: '', quantity: 1, unitPrice: '' as any, description: '', images: [] }]
         });
     };
 
@@ -81,7 +81,11 @@ const CreatePurchaseOrder = () => {
     };
 
     const calculateTotal = () => {
-        return formData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        return formData.items.reduce((sum, item) => {
+            const q = Number(item.quantity) || 0;
+            const p = Number(item.unitPrice) || 0;
+            return sum + (q * p);
+        }, 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -102,15 +106,45 @@ const CreatePurchaseOrder = () => {
             return;
         }
 
-        const invalidItems = formData.items.some(item => !item.itemName || item.quantity <= 0 || item.unitPrice <= 0);
-        if (invalidItems) {
-            setError('Please ensure all items have a name, quantity > 0, and price > 0');
+        // Filter out completely empty items automatically
+        const validItems = formData.items.filter(item => {
+            const hasName = item.itemName && item.itemName.trim() !== '';
+            const hasPrice = item.unitPrice !== '' && Number(item.unitPrice) > 0;
+            const hasDescription = item.description && item.description.trim() !== '';
+            const changedQuantity = item.quantity !== 1 && item.quantity !== '' && item.quantity !== 0;
+            
+            // If they entered literally anything meaningful, we keep it (and validate it)
+            return hasName || hasPrice || hasDescription || changedQuantity;
+        });
+
+        if (validItems.length === 0) {
+            setError('Please add at least one valid item to the purchase order.');
+            setLoading(false);
+            return;
+        }
+
+        const invalidItems = validItems.filter(item => {
+            const q = Number(item.quantity);
+            const p = Number(item.unitPrice);
+            return !item.itemName || item.itemName.trim() === '' || isNaN(q) || q <= 0 || isNaN(p) || p < 0 || String(item.unitPrice) === '';
+        });
+        if (invalidItems.length > 0) {
+            console.error("Invalid items in PO:", invalidItems);
+            setError(`Validation failed for item "${invalidItems[0].itemName || 'Unnamed item'}". Please check name, quantity > 0, and price ≥ 0.`);
             setLoading(false);
             return;
         }
 
         try {
-            await createPurchaseOrder(formData);
+            const formattedData = {
+                ...formData,
+                items: validItems.map(item => ({
+                    ...item,
+                    quantity: Number(item.quantity) || 0,
+                    unitPrice: Number(item.unitPrice) || 0
+                }))
+            };
+            await createPurchaseOrder(formattedData);
             setSuccess(true);
             setTimeout(() => navigate('..'), 2000);
         } catch (err: any) {
@@ -266,52 +300,61 @@ const CreatePurchaseOrder = () => {
                     <div className="space-y-4">
                         {formData.items.map((item, index) => (
                             <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start p-4 rounded-xl border relative group" style={{ background: 'rgba(255,255,255,0.01)', borderColor: 'var(--border-main)' }}>
-                                <div className="md:col-span-5 space-y-1">
-                                    <input
-                                        placeholder="Item name (e.g. Brake Pads)"
-                                        value={item.itemName}
-                                        onChange={(e) => updateItem(index, 'itemName', e.target.value)}
-                                        className="w-full bg-transparent outline-none text-sm font-medium"
-                                        style={{ color: 'var(--text-main)' }}
-                                    />
-                                    <input
-                                        placeholder="Short description (optional)"
-                                        value={item.description}
-                                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                        className="w-full bg-transparent outline-none text-xs"
-                                        style={{ color: 'var(--text-dim)' }}
-                                    />
+                                <div className="md:col-span-5 space-y-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Item Name <span className="text-red-500">*</span></label>
+                                        <input
+                                            required
+                                            placeholder="Item name (e.g. Brake Pads)"
+                                            value={item.itemName}
+                                            onChange={(e) => updateItem(index, 'itemName', e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-sm font-medium transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Description</label>
+                                        <input
+                                            placeholder="Short description (optional)"
+                                            value={item.description}
+                                            onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl outline-none text-xs transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="md:col-span-2 space-y-1">
-                                    <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Quantity</label>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Quantity <span className="text-red-500">*</span></label>
                                     <input
+                                        required
                                         type="number"
                                         min="1"
                                         value={item.quantity}
-                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                        className="w-full bg-transparent outline-none text-sm"
-                                        style={{ color: 'var(--text-main)' }}
+                                        onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value))}
+                                        className="w-full px-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
-                                <div className="md:col-span-2 space-y-1">
-                                    <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Unit Price</label>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-sm opacity-50">$</span>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Unit Price <span className="text-red-500">*</span></label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm opacity-50">$</span>
                                         <input
+                                            required
                                             type="number"
                                             step="0.01"
                                             min="0"
                                             value={item.unitPrice}
-                                            onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                            className="w-full bg-transparent outline-none text-sm"
-                                            style={{ color: 'var(--text-main)' }}
+                                            onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                            className="w-full pl-8 pr-4 py-2.5 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-[#C8E600]"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
                                 </div>
                                 <div className="md:col-span-2 space-y-1">
                                     <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Subtotal</label>
                                     <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                        ${(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 </div>
                                 <div className="md:col-span-11 mt-4 space-y-3">
@@ -385,32 +428,40 @@ const CreatePurchaseOrder = () => {
                     </div>
 
                     {/* Total Footer */}
-                    <div className="flex justify-between items-center pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <div>
-                            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Total amount estimated</p>
-                            <p className="text-2xl font-black text-[#C8E600]">
-                                ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </p>
-                            {total > 1000 && (
-                                <p className="text-[10px] font-bold text-amber-500 mt-1 uppercase flex items-center gap-1">
-                                    <AlertCircle size={10} /> Requires Admin approval {"( > $1000)"}
-                                </p>
-                            )}
+                    <div className="flex flex-col gap-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+                            <div className="flex flex-col gap-4 w-full overflow-hidden">
+                                <div>
+                                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Total amount estimated</p>
+                                    <p className="text-3xl font-black text-[#C8E600]">
+                                        ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </p>
+                                    {total > 1000 && (
+                                        <p className="text-[10px] font-bold text-amber-500 mt-1 uppercase flex items-center gap-1">
+                                            <AlertCircle size={10} /> Requires Admin approval {"( > $1000)"}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="px-4 py-2.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-yellow-500 text-xs font-semibold flex items-center gap-2 shadow-sm w-fit max-w-full">
+                                    <AlertCircle size={16} className="shrink-0" />
+                                    <span className="truncate"><strong className="uppercase">Important:</strong> Please ensure all line item details (name, quantity, amount) are accurately filled before submission.</span>
+                                </div>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex items-center justify-center gap-2 px-10 py-4 rounded-2xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0"
+                                style={{ background: '#C8E600', color: '#0A0A0A', minWidth: '200px' }}
+                            >
+                                {loading ? (
+                                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Save size={20} /> Submit PO
+                                    </>
+                                )}
+                            </button>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex items-center gap-2 px-10 py-4 rounded-2xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
-                        >
-                            {loading ? (
-                                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <Save size={20} /> Submit PO
-                                </>
-                            )}
-                        </button>
                     </div>
                 </div>
 

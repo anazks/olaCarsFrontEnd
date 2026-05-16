@@ -6,21 +6,22 @@ import {
 } from 'recharts';
 import {
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar,
-    MapPin, Building, ChevronRight, Briefcase, CheckCircle, TrendingUp, Wallet, FilterX
+    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import { format, startOfMonth } from 'date-fns';
 
-// Services
+// Context & Services
+// import { useTheme } from '../../context/ThemeContext';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
 
-
+// import { useTheme } from '../../context/ThemeContext';
 
 const FinancialAdminDashboard = () => {
-    const navigate = useNavigate();
     const { theme } = useTheme();
-
+    const navigate = useNavigate();
+    
     // Computed Colors for Recharts based on active theme
     const isDark = theme === 'dark';
     const chartColors = {
@@ -128,7 +129,7 @@ const FinancialAdminDashboard = () => {
         >
 
             {/* HEADER SECTION */}
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         <Briefcase className="text-[#C8E600]" /> Financial Dashboard
@@ -256,9 +257,9 @@ const FinancialAdminDashboard = () => {
                         </button>
                     </div>
                     <div className="flex flex-col gap-3 flex-1 justify-center">
-                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" />
-                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" />
-                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" desc="General fleet notifications" />
+                        <AlertPill title="Critical" count={alerts?.CRITICAL || 0} colorClass="bg-red-600" desc="Incident response required" onClick={() => navigate('alerts')} />
+                        <AlertPill title="Major" count={alerts?.MAJOR || 0} colorClass="bg-orange-500" desc="Pending reconciliation tasks" onClick={() => navigate('alerts')} />
+                        <AlertPill title="Minor" count={alerts?.MINOR || 0} colorClass="bg-blue-600" desc="General fleet notifications" onClick={() => navigate('alerts')} />
                     </div>
                 </div>
             </div>
@@ -401,26 +402,26 @@ const FinancialAdminDashboard = () => {
                     <div className="p-8 flex-1 flex flex-col justify-center transition-all duration-300">
 
                         {activeTab === 'overview' && (
-                            <div className="grid grid-cols-3 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pr-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pb-6 md:pb-0 md:pr-6">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600]"><TrendingUp size={24} /></div>
-                                        <div>
-                                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={24} /></div>
+                                        <div className="min-w-0">
+                                            <div className="text-2xl sm:text-3xl font-black truncate" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
                                             <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
                                         </div>
                                     </div>
                                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
                                 </div>
-                                <div className="px-6 text-center flex flex-col items-center" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="py-6 md:py-0 md:px-6 text-center flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-main)' }}>
                                     <div className="text-4xl font-black text-[#C8E600] mb-2">{stats?.collectionCompliance || 94}%</div>
                                     <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
                                     <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
                                         <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
                                     </div>
                                 </div>
-                                <div className="pl-6" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-2xl font-black mb-1" style={{ color: 'var(--text-main)' }}>${(stats?.outstandingBalance || 0).toLocaleString()}</div>
+                                <div className="pt-6 md:pt-0 md:pl-6" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="text-2xl font-black mb-1 truncate" style={{ color: 'var(--text-main)' }}>${(stats?.outstandingBalance || 0).toLocaleString()}</div>
                                     <div className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Awaiting Settlement</div>
                                     <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Accumulated ledger deficit currently flagged for recovery pipeline tracking.</p>
                                 </div>
@@ -428,41 +429,41 @@ const FinancialAdminDashboard = () => {
                         )}
 
                         {activeTab === 'vehicles' && (
-                            <div className="grid grid-cols-3 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pr-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pb-6 md:pb-0 md:pr-6">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500"><Car size={24} /></div>
-                                        <div>
-                                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
+                                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0"><Car size={24} /></div>
+                                        <div className="min-w-0">
+                                            <div className="text-2xl sm:text-3xl font-black truncate" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
                                             <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Total Global Fleet</div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="px-6 flex flex-col justify-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
-                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
+                                <div className="py-6 md:py-0 md:px-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
+                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
                                 </div>
-                                <div className="pl-6 flex flex-col justify-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
-                                    <div className="flex items-center justify-between"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Decommissioned</span> <span className="text-lg font-bold" style={{ color: 'var(--text-dim)' }}>{fleetStatus?.retired || 0}</span></div>
+                                <div className="pt-6 md:pt-0 md:pl-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
+                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Decommissioned</span> <span className="text-lg font-bold" style={{ color: 'var(--text-dim)' }}>{fleetStatus?.retired || 0}</span></div>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'collections' && (
-                            <div className="grid grid-cols-2 divide-x w-full items-center animate-fadeIn" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pr-6 flex items-center gap-4">
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500"><Wallet size={32} /></div>
-                                    <div>
-                                        <div className="text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
-                                        <div className="text-4xl font-black" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="pb-6 md:pb-0 md:pr-6 flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0"><Wallet size={32} /></div>
+                                    <div className="min-w-0">
+                                        <div className="text-xs sm:text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
+                                        <div className="text-3xl sm:text-4xl font-black truncate" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
-                                <div className="pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><ShieldAlert size={32} /></div>
-                                    <div>
-                                        <div className="text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
-                                        <div className="text-4xl font-black text-red-500">${(stats?.outstandingCollections || 0).toLocaleString()}</div>
+                                <div className="pt-6 md:pt-0 md:pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0"><ShieldAlert size={32} /></div>
+                                    <div className="min-w-0">
+                                        <div className="text-xs sm:text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
+                                        <div className="text-3xl sm:text-4xl font-black text-red-500 truncate">${(stats?.outstandingCollections || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
                             </div>

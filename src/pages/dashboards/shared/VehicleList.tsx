@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
@@ -26,23 +26,40 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }
     'TRANSFER PENDING': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' },
     'TRANSFER COMPLETE': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' },
     'RETIRED': { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' },
+    'PRE-BOOKED': { bg: 'rgba(14,165,233,0.1)', text: '#0ea5e9', border: 'rgba(14,165,233,0.3)' },
 };
 
 const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
 const FUEL_TYPES = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
+const VEHICLE_STATUSES = [
+    "PENDING ENTRY",
+    "DOCUMENTS REVIEW",
+    "INSURANCE VERIFICATION",
+    "INSPECTION REQUIRED",
+    "INSPECTION FAILED",
+    "REPAIR IN PROGRESS",
+    "ACCOUNTING SETUP",
+    "GPS ACTIVATION",
+    "BRANCH MANAGER APPROVAL",
+    "ACTIVE — AVAILABLE",
+    "ACTIVE — RENTED",
+    "ACTIVE — MAINTENANCE",
+    "SUSPENDED",
+    "TRANSFER PENDING",
+    "TRANSFER COMPLETE",
+    "RETIRED",
+    "PRE-BOOKED",
+];
 
-const StatusBadge = ({ status }: { status: VehicleStatus }) => {
-    const { t } = useTranslation();
+const StatusBadge = ({ status }: { status: string }) => {
     const style = STATUS_STYLES[status] || STATUS_STYLES['PENDING ENTRY'];
     return (
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+        <div className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-300 shadow-sm hover:scale-105"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-            {t(`management.vehicles.statusLabels.${status}`)}
+            {status}
         </div>
     );
 };
-
-type FilterTab = 'ALL' | 'ONBOARDING' | 'ACTIVE' | 'SUSPENDED' | 'RETIRED';
 
 const VehicleList = () => {
     const { t } = useTranslation();
@@ -56,21 +73,22 @@ const VehicleList = () => {
         page: 1,
         limit: 10,
         search: '',
-        status: undefined as VehicleStatus | undefined,
+        status: '' as VehicleStatus | string,
         branch: '',
-        category: undefined as VehicleCategory | undefined,
-        fuelType: undefined as FuelType | undefined,
+        category: '' as VehicleCategory | string,
+        fuelType: '' as FuelType | string,
         sortBy: 'createdAt',
         sortOrder: 'desc' as 'asc' | 'desc'
     });
+    
     const [pagination, setPagination] = useState({
         total: 0,
         page: 1,
         limit: 10,
         totalPages: 0
     });
+    
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-    const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
 
     const navigate = useNavigate();
 
@@ -87,7 +105,12 @@ const VehicleList = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await getAllVehicles(filters);
+            // Clean up empty filters before sending request
+            const activeFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined)
+            );
+            
+            const response = await getAllVehicles(activeFilters);
             if (response.success) {
                 setVehicles(response.data);
                 setPagination(response.pagination);
@@ -104,358 +127,393 @@ const VehicleList = () => {
     }, [fetchMetadata]);
 
     useEffect(() => {
-        fetchVehicles();
-    }, [fetchVehicles]);
+        const debounceId = setTimeout(() => {
+            fetchVehicles();
+        }, 300);
+        return () => clearTimeout(debounceId);
+    }, [fetchVehicles, filters.search, filters.page, filters.status, filters.branch, filters.category, filters.fuelType]);
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters(prev => ({
             ...prev,
             [key]: value,
-            page: 1
+            page: 1 // Reset to first page on filter change
         }));
     };
 
     const handlePageChange = (newPage: number) => {
-        setFilters(prev => ({
-            ...prev,
-            page: newPage
-        }));
+        if (newPage >= 1 && newPage <= pagination.totalPages) {
+            setFilters(prev => ({
+                ...prev,
+                page: newPage
+            }));
+        }
     };
-
-    const handleTabChange = (tab: FilterTab) => {
-        setActiveTab(tab);
-        let statusFilter: VehicleStatus | undefined = undefined;
-        if (tab === 'SUSPENDED') statusFilter = 'SUSPENDED';
-        else if (tab === 'RETIRED') statusFilter = 'RETIRED';
-        handleFilterChange('status', statusFilter);
-    };
-
-    // Tabs for UI (metadata)
-    const tabs: { key: FilterTab; label: string }[] = [
-        { key: 'ALL', label: t('management.vehicles.tabs.all') },
-        { key: 'ONBOARDING', label: t('management.vehicles.tabs.onboarding') },
-        { key: 'ACTIVE', label: t('management.vehicles.tabs.active') },
-        { key: 'SUSPENDED', label: t('management.vehicles.tabs.suspended') },
-        { key: 'RETIRED', label: t('management.vehicles.tabs.retired') },
-    ];
 
     return (
-        <div className="container-responsive space-y-6 p-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Car size={28} style={{ color: '#C8E600' }} />
-                        {t('management.vehicles.title')}
-                    </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.subtitle')}</p>
+        <div className="container-responsive space-y-8 p-6 lg:p-8 animate-in fade-in duration-500">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-[var(--bg-card)] to-transparent p-6 rounded-3xl border shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="p-3.5 rounded-2xl shadow-lg" style={{ background: '#C8E600', color: '#0A0A0A' }}>
+                        <Car size={28} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                            {t('management.vehicles.title', 'Vehicle Fleet')}
+                        </h1>
+                        <p className="text-sm font-medium mt-1 opacity-80" style={{ color: 'var(--text-dim)' }}>
+                            {t('management.vehicles.subtitle', 'Manage and monitor all company vehicles.')}
+                        </p>
+                    </div>
                 </div>
-                <div className="flex gap-3">
+                
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     <button
-                        onClick={fetchVehicles}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
+                        onClick={() => fetchVehicles()}
+                        className="flex items-center justify-center p-3 rounded-2xl transition-all duration-300 hover:rotate-180 hover:bg-white/10 active:scale-95"
+                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        title="Refresh Data"
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {t('common.refresh')}
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
-                    <HasPermission permission="PURCHASE_ORDER_VIEW">
+                    
+                    <HasPermission permission="INSURANCE_VIEW">
                         <button
-                            onClick={() => navigate('../purchase-orders')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            onClick={() => navigate('../insurances')}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Package size={18} />{t('sidebar.items.purchaseOrders', 'Purchase Orders')}
+                            <Shield size={18} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
                         </button>
                     </HasPermission>
+                    
                     <HasPermission permission="DRIVER_VIEW">
                         <button
                             onClick={() => navigate('../drivers')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Users size={18} />{t('sidebar.items.drivers', 'Drivers')}
+                            <Users size={18} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
                         </button>
                     </HasPermission>
+                    
                     <HasPermission permission="VEHICLE_CREATE">
                         <button
                             onClick={() => navigate('create')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
+                            style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 20px rgba(200, 230, 0, 0.3)' }}
                         >
-                            <Plus size={18} />{t('management.vehicles.onboardingBtn')}
+                            <Plus size={18} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
                         </button>
                     </HasPermission>
                 </div>
             </div>
 
-            <div className="flex gap-1 p-1 rounded-xl overflow-x-auto no-scrollbar" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => handleTabChange(tab.key)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap"
-                        style={{
-                            background: activeTab === tab.key ? 'rgba(200,230,0,0.15)' : 'transparent',
-                            color: activeTab === tab.key ? '#C8E600' : 'var(--text-dim)',
-                            fontWeight: activeTab === tab.key ? 700 : 500,
-                        }}
-                    >
-                        {tab.label}
-                        {activeTab === tab.key && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{
-                                background: 'rgba(200,230,0,0.2)',
-                                color: '#C8E600',
-                            }}>
-                                {pagination.total}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
+            {/* Error Alert */}
+            {error && (
+                <div className="flex items-center gap-3 p-4 rounded-2xl text-sm font-semibold animate-in slide-in-from-top-2 shadow-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                    <AlertTriangle size={18} /> {error}
+                </div>
+            )}
 
-            {/* Search and Advanced Filters Toggle */}
-            <div className="space-y-4">
-                <div className="flex gap-3">
-                    <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            {/* Search and Filters Bar */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Primary Search */}
+                    <div className="relative flex-1 group">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#C8E600] transition-colors" />
                         <input
                             type="text"
-                            placeholder={t('management.vehicles.searchPlaceholder')}
+                            placeholder={t('management.vehicles.searchPlaceholder', 'Search by Make, Model, VIN, or Fleet #...')}
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
+                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl outline-none text-sm font-medium transition-all duration-300 focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)] placeholder:opacity-50"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         />
                     </div>
+                    
+                    {/* Status Dropdown (Primary Filter) */}
+                    <div className="sm:w-72 relative">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                            <Filter size={16} />
+                        </div>
+                        <select
+                            value={filters.status}
+                            onChange={(e) => handleFilterChange('status', e.target.value)}
+                            className="w-full pl-11 pr-10 py-3.5 rounded-2xl text-sm font-semibold outline-none appearance-none transition-all duration-300 cursor-pointer focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)]"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <option value="">All Statuses</option>
+                            {VEHICLE_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                            <ChevronDownIcon />
+                        </div>
+                    </div>
+
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: showAdvancedFilters ? '#C8E600' : 'var(--text-dim)' }}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold transition-all duration-300 hover:bg-white/5 active:scale-95 whitespace-nowrap shadow-sm"
+                        style={{ 
+                            background: showAdvancedFilters ? 'rgba(200, 230, 0, 0.1)' : 'var(--bg-card)', 
+                            border: '1px solid var(--border-main)', 
+                            color: showAdvancedFilters ? '#C8E600' : 'var(--text-main)' 
+                        }}
                     >
-                        {t('management.vehicles.advancedFilters')} {showAdvancedFilters ? '↑' : '↓'}
+                        <SlidersHorizontal size={18} />
+                        {t('management.vehicles.advancedFilters', 'More Filters')}
                     </button>
                 </div>
 
+                {/* Advanced Filters Panel */}
                 {showAdvancedFilters && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</label>
-                            <select
-                                value={filters.category}
-                                onChange={(e) => handleFilterChange('category', e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">{t('management.vehicles.filters.allCategories')}</option>
-                                {CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{t(`management.vehicles.categories.${cat}`)}</option>
-                                ))}
-                            </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-6 rounded-3xl animate-in slide-in-from-top-4 fade-in duration-300 shadow-xl border relative overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        {/* Decorative glow */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#C8E600] rounded-full blur-[100px] opacity-5 pointer-events-none" />
+                        
+                        <div className="space-y-2 relative z-10">
+                            <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category', 'Category')}</label>
+                            <div className="relative">
+                                <select
+                                    value={filters.category}
+                                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">{t('management.vehicles.filters.allCategories', 'All Categories')}</option>
+                                    {CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{t(`management.vehicles.categories.${cat}`, cat)}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('sidebar.sections.operations')}</label>
-                            <select
-                                value={filters.fuelType}
-                                onChange={(e) => handleFilterChange('fuelType', e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">{t('management.vehicles.filters.allFuelTypes')}</option>
-                                {FUEL_TYPES.map(fuel => (
-                                    <option key={fuel} value={fuel}>{t(`management.vehicles.fuelTypes.${fuel}`)}</option>
-                                ))}
-                            </select>
+                        
+                        <div className="space-y-2 relative z-10">
+                            <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.fuelType', 'Fuel Type')}</label>
+                            <div className="relative">
+                                <select
+                                    value={filters.fuelType}
+                                    onChange={(e) => handleFilterChange('fuelType', e.target.value)}
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">{t('management.vehicles.filters.allFuelTypes', 'All Fuel Types')}</option>
+                                    {FUEL_TYPES.map(fuel => (
+                                        <option key={fuel} value={fuel}>{t(`management.vehicles.fuelTypes.${fuel}`, fuel)}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.branchName')}</label>
-                            <select
-                                value={filters.branch}
-                                onChange={(e) => handleFilterChange('branch', e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg text-sm outline-none"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">{t('management.vehicles.filters.allBranches')}</option>
-                                {branches.map(branch => (
-                                    <option key={branch._id} value={branch._id}>{branch.name}</option>
-                                ))}
-                            </select>
+
+                        <div className="space-y-2 relative z-10">
+                            <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.branchName', 'Branch')}</label>
+                            <div className="relative">
+                                <select
+                                    value={filters.branch}
+                                    onChange={(e) => handleFilterChange('branch', e.target.value)}
+                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">{t('management.vehicles.filters.allBranches', 'All Branches')}</option>
+                                    {branches.map(branch => (
+                                        <option key={branch._id} value={branch._id}>{branch.name}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                            </div>
                         </div>
-                        <div className="flex items-end pb-0.5">
+
+                        <div className="flex items-end pt-1 relative z-10">
                             <button
                                 onClick={() => setFilters({
                                     ...filters,
                                     search: '',
-                                    status: undefined,
+                                    status: '',
                                     branch: '',
-                                    category: undefined,
-                                    fuelType: undefined,
+                                    category: '',
+                                    fuelType: '',
                                     page: 1
                                 })}
-                                className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
+                                className="w-full py-3.5 rounded-2xl text-sm font-bold uppercase tracking-wide transition-all duration-300 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
-                                {t('management.common.resetFilters')}
+                                {t('management.common.resetFilters', 'Clear All Filters')}
                             </button>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Error */}
-            {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
-                    <AlertTriangle size={18} /> {error}
-                </div>
-            )}
-
-            {/* Table */}
-            <div className="rounded-2xl overflow-hidden border transition-colors duration-300 shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
+            {/* Premium Data Table */}
+            <div className="rounded-3xl border shadow-xl overflow-hidden transition-all duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="overflow-x-auto custom-scrollbar">
                     {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                        <div className="flex flex-col items-center justify-center py-32 opacity-80">
+                            <div className="w-12 h-12 border-4 border-[#C8E600]/20 border-t-[#C8E600] rounded-full animate-spin mb-6" />
+                            <p className="text-sm font-bold tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>Syncing Fleet Data...</p>
                         </div>
                     ) : vehicles.length === 0 ? (
-                        <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
-                            <Car size={48} className="mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">{t('management.vehicles.empty.noVehicles')}</p>
-                            <p className="text-sm mt-1">{t('management.vehicles.empty.refine')}</p>
+                        <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+                            <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-inner" style={{ background: 'var(--bg-input)' }}>
+                                <Car size={48} style={{ color: 'var(--text-dim)' }} className="opacity-50" />
+                            </div>
+                            <h3 className="text-xl font-black mb-2" style={{ color: 'var(--text-main)' }}>No Vehicles Found</h3>
+                            <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-dim)' }}>
+                                {filters.search || filters.status || filters.branch || filters.category || filters.fuelType ? "We couldn't find any vehicles matching your current filters. Try adjusting them." : "Your fleet is currently empty. Start by adding your first vehicle."}
+                            </p>
+                            {(filters.search || filters.status || filters.branch || filters.category || filters.fuelType) && (
+                                <button
+                                    onClick={() => setFilters({ ...filters, search: '', status: '', branch: '', category: '', fuelType: '', page: 1 })}
+                                    className="mt-6 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg"
+                                    style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 15px rgba(200, 230, 0, 0.2)' }}
+                                >
+                                    Clear All Filters
+                                </button>
+                            )}
                         </div>
                     ) : (
-                        <>
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet #</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.year')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.condition')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price')}</th>
-                                        <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {vehicles.map((v) => (
-                                        <tr
-                                            key={v._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
-                                            style={{ borderColor: 'var(--border-main)' }}
-                                            onClick={() => navigate(v._id)}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.make || '—'} {v.basicDetails?.model || ''}
-                                                    {v.basicDetails?.colour && (
-                                                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ background: v.basicDetails.colour.toLowerCase() }} />
-                                                    )}
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr className="border-b" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle', 'Vehicle Details')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet & Staff</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin', 'VIN / Reg')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Specs</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status', 'Status')}</th>
+                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price', 'Value')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vehicles.map((v) => (
+                                    <tr
+                                        key={v._id}
+                                        onClick={() => navigate(v._id)}
+                                        className="group border-b last:border-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
+                                        style={{ borderColor: 'var(--border-main)' }}
+                                    >
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm" 
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                    <Car size={24} style={{ color: v.basicDetails?.colour?.toLowerCase() || 'var(--text-dim)' }} />
                                                 </div>
-                                                <div className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 uppercase tracking-wider">
-                                                        {v.basicDetails?.fuelType ? t(`management.vehicles.fuelTypes.${v.basicDetails.fuelType}`) : '—'}
-                                                    </span>
-                                                    <span>{v.basicDetails?.transmission || '—'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
-                                                    {v.basicDetails?.fleetNumber || '—'}
-                                                </div>
-                                                {v.handlingStaff && (
-                                                    <div className="text-[10px] mt-0.5 opacity-70" style={{ color: 'var(--text-main)' }}>
-                                                        {typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`}
+                                                <div>
+                                                    <div className="text-sm font-black tracking-wide" style={{ color: 'var(--text-main)' }}>
+                                                        {v.basicDetails?.make || 'Unknown'} {v.basicDetails?.model || ''}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-mono" style={{ color: 'var(--text-main)' }}>{v.basicDetails?.vin || '—'}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{v.basicDetails?.year || '—'}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.category ? t(`management.vehicles.categories.${v.basicDetails.category}`) : '—'}
+                                                    <div className="text-xs font-medium mt-1.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                                        <span className="px-2 py-0.5 rounded-md border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                            {v.basicDetails?.year || 'N/A'}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded-md border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                            {v.basicDetails?.colour || 'N/A'}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.condition || '—'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <StatusBadge status={v.status} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {v.purchaseDetails?.currency || ""} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2 text-right">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
-                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-lime/20 active:scale-95 ml-auto"
-                                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
-                                                        title={t('common.view')}
-                                                    >
-                                                        <Eye size={15} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {/* Pagination */}
-                            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                <div className="text-xs font-black tracking-widest uppercase opacity-60" style={{ color: 'var(--text-dim)' }}>
-                                    {t('management.vehicles.pagination.showing', { count: vehicles.length, total: pagination.total })}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        disabled={filters.page === 1}
-                                        onClick={() => handlePageChange(filters.page - 1)}
-                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <div className="flex items-center gap-1.5">
-                                        {[...Array(pagination.totalPages)].map((_, i) => (
-                                            <button
-                                                key={i + 1}
-                                                onClick={() => handlePageChange(i + 1)}
-                                                className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20 scale-105' : 'hover:bg-white/10 opacity-50 hover:opacity-100'}`}
-                                                style={{
-                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
-                                                    border: '1px solid var(--border-main)',
-                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button
-                                        disabled={filters.page === pagination.totalPages}
-                                        onClick={() => handlePageChange(filters.page + 1)}
-                                        className="p-2 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)' }}
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </>
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-mono font-black" style={{ color: '#C8E600' }}>
+                                                {v.basicDetails?.fleetNumber || 'UNASSIGNED'}
+                                            </div>
+                                            <div className="text-xs font-semibold mt-1.5 opacity-80" style={{ color: 'var(--text-dim)' }}>
+                                                {v.handlingStaff ? (typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`) : 'No Staff'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {v.basicDetails?.vin || 'NO VIN'}
+                                            </div>
+                                            <div className="text-xs mt-1.5 font-bold tracking-widest uppercase opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                {v.legalDocs?.registrationNumber || 'UNREGISTERED'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {v.basicDetails?.category || 'General'}
+                                            </div>
+                                            <div className="text-xs mt-1.5 flex items-center gap-1.5 font-medium" style={{ color: 'var(--text-dim)' }}>
+                                                {v.basicDetails?.fuelType || 'N/A'} <span className="opacity-50">•</span> {v.basicDetails?.transmission || 'N/A'}
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-5">
+                                            <StatusBadge status={v.status} />
+                                        </td>
+                                        
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
+                                                {v.purchaseDetails?.currency || "AED"} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
+                                            </div>
+                                            <div className="mt-2 flex justify-end">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); navigate(v._id); }}
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
+                                                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={14} strokeWidth={2.5} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
+
+                {/* Modern Pagination Footer */}
+                {!loading && vehicles.length > 0 && (
+                    <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.05)' }}>
+                        <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span style={{ color: 'var(--text-main)' }}>{vehicles.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> vehicles
+                        </div>
+                        
+                        <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-2xl border" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                disabled={filters.page === 1}
+                                onClick={() => handlePageChange(filters.page - 1)}
+                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={16} strokeWidth={3} />
+                            </button>
+                            
+                            <div className="flex items-center gap-2 px-3">
+                                <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>Page {filters.page}</span>
+                                <span className="text-sm font-bold opacity-40" style={{ color: 'var(--text-main)' }}>/ {pagination.totalPages || 1}</span>
+                            </div>
+
+                            <button
+                                disabled={filters.page === pagination.totalPages || pagination.totalPages === 0}
+                                onClick={() => handlePageChange(filters.page + 1)}
+                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={16} strokeWidth={3} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
+
+// Small utility icon for selects
+const ChevronDownIcon = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m6 9 6 6 6-6"/>
+    </svg>
+);
 
 export default VehicleList;

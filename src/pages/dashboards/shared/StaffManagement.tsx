@@ -1,21 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { 
-    Users, 
-    Shield, 
-    DollarSign, 
-    Globe, 
-    UserCheck, 
-    ShieldCheck, 
-    UserCog, 
-    Wrench, 
-    Target, 
-    ClipboardList, 
+import {
+    Users,
+    Shield,
+    DollarSign,
+    Globe,
+    UserCheck,
+    ShieldCheck,
+    UserCog,
+    Wrench,
+    Target,
+    ClipboardList,
     BarChart3,
-    ArrowRight
+    ArrowRight,
+    User
 } from 'lucide-react';
 import HasPermission from '../../../components/HasPermission';
-import { getUserRole } from '../../../utils/auth';
+import { getUserRole, getUserId } from '../../../utils/auth';
 
 const StaffManagement = () => {
     const { t } = useTranslation();
@@ -38,91 +39,78 @@ const StaffManagement = () => {
     const basePath = getBasePath();
 
     const managementItems = [
-        { 
-            icon: <Shield size={24} />, 
-            label: t('sidebar.items.operationalAdmins', 'Operational Admins'), 
-            path: `${basePath}/manage-operational-admins`, 
-            permission: 'STAFF_VIEW',
-            description: 'Manage high-level operational administrators and their access.'
-        },
-        { 
-            icon: <DollarSign size={24} />, 
-            label: t('sidebar.items.financialAdmins', 'Financial Admins'), 
-            path: `${basePath}/manage-financial-admins`, 
+
+        {
+            icon: <DollarSign size={24} />,
+            label: t('sidebar.items.financialAdmins', 'Financial Admins'),
+            path: `${basePath}/manage-financial-admins`,
             permission: 'STAFF_VIEW',
             description: 'Manage financial administrators responsible for accounting and audits.'
         },
-        { 
-            icon: <Globe size={24} />, 
-            label: t('sidebar.items.countryManagers', 'Country Managers'), 
-            path: `${basePath}/manage-country-managers`, 
+        {
+            icon: <Globe size={24} />,
+            label: t('sidebar.items.countryManagers', 'Country Managers'),
+            path: `${basePath}/manage-country-managers`,
             permission: 'STAFF_VIEW',
             description: 'Regional management and country-wide operational oversight.'
         },
-        { 
-            icon: <UserCheck size={24} />, 
-            label: t('sidebar.items.branchManagers', 'Branch Managers'), 
-            path: `${basePath}/manage-branch-managers`, 
+        {
+            icon: <UserCheck size={24} />,
+            label: t('sidebar.items.branchManagers', 'Branch Managers'),
+            path: `${basePath}/manage-branch-managers`,
             permission: 'STAFF_VIEW',
             description: 'Local branch supervisors and facility managers.'
         },
-        { 
-            icon: <ShieldCheck size={24} />, 
-            label: t('sidebar.items.financeStaff', 'Finance Staff'), 
-            path: `${basePath}/manage-finance-staff`, 
+        {
+            icon: <ShieldCheck size={24} />,
+            label: t('sidebar.items.financeStaff', 'Finance Staff'),
+            path: `${basePath}/manage-finance-staff`,
             permission: 'STAFF_VIEW',
             description: 'Branch-level accounting and financial operations staff.'
         },
-        { 
-            icon: <ShieldCheck size={24} />, 
-            label: t('sidebar.items.groundOpsStaff', 'Ground Ops Staff'), 
-            path: `${basePath}/manage-operation-staff`, 
+        {
+            icon: <ShieldCheck size={24} />,
+            label: t('sidebar.items.groundOpsStaff', 'Ground Ops Staff'),
+            path: `${basePath}/manage-operation-staff`,
             permission: 'STAFF_VIEW',
             description: 'Day-to-sync field operations and ground support team.'
         },
-        { 
-            icon: <UserCog size={24} />, 
-            label: t('sidebar.items.workshopManagers', 'Workshop Managers'), 
-            path: `${basePath}/manage-workshop-managers`, 
+        {
+            icon: <UserCog size={24} />,
+            label: t('sidebar.items.workshopManagers', 'Workshop Managers'),
+            path: `${basePath}/manage-workshop-managers`,
             permission: 'STAFF_VIEW',
             description: 'Maintenance facility supervisors and technical leads.'
         },
-        { 
-            icon: <Wrench size={24} />, 
-            label: t('sidebar.items.workshopStaff', 'Workshop Staff'), 
-            path: `${basePath}/manage-workshop-staff`, 
+        {
+            icon: <Wrench size={24} />,
+            label: t('sidebar.items.workshopStaff', 'Workshop Staff'),
+            path: `${basePath}/manage-workshop-staff`,
             permission: 'STAFF_VIEW',
             description: 'Technicians, mechanics, and workshop support personnel.'
         }
     ];
 
     const performanceItems = [
-        { 
-            icon: <BarChart3 size={24} />, 
-            label: 'Staff Performance', 
-            path: `${basePath}/staff-performance`, 
+        {
+            icon: <BarChart3 size={24} />,
+            label: 'Staff Performance',
+            path: `${basePath}/staff-performance`,
             permission: 'STAFF_PERFORMANCE_VIEW',
             description: 'Track and analyze staff productivity and efficiency metrics.'
         },
-        { 
-            icon: <Target size={24} />, 
-            label: 'Target Management', 
-            path: `${basePath}/target-management`, 
+        {
+            icon: <Target size={24} />,
+            label: 'Target Management',
+            path: `${basePath}/target-management`,
             permission: 'STAFF_PERFORMANCE_VIEW',
             description: 'Set, monitor, and adjust performance targets for individuals and teams.'
         },
-        { 
-            icon: <ClipboardList size={24} />, 
-            label: 'Task Delegation', 
-            path: `${basePath}/task-delegation`, 
-            permission: 'STAFF_PERFORMANCE_VIEW',
-            description: 'Assign duties, track progress, and manage workforce distribution.'
-        }
     ];
 
     const ManagementCard = ({ item }: { item: any }) => (
         <HasPermission permission={item.permission} mode="hide">
-            <div 
+            <div
                 onClick={() => navigate(item.path)}
                 className="group p-6 rounded-2xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between min-h-[160px]"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -182,7 +170,7 @@ const StaffManagement = () => {
                         </h2>
                         <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {performanceItems.map((item, idx) => (
                             <ManagementCard key={idx} item={item} />
                         ))}

@@ -50,10 +50,12 @@ import CollectionsDashboard from './pages/dashboards/financialAdmin/CollectionsD
 import CollectionsLedgerView from './pages/dashboards/financialAdmin/CollectionsLedgerView';
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
-import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
+// import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
+import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
+import AccidentReports from './pages/dashboards/shared/AccidentReports';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -78,6 +80,8 @@ import StaffPerformanceDetails from './pages/dashboards/shared/StaffPerformanceD
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
+import ComplaintsPage from './pages/dashboards/shared/ComplaintsPage';
+import MyTasks from './pages/dashboards/shared/MyTasks';
 
 // Finance Pages
 import TaxManagement from './pages/dashboards/finance/TaxManagement';
@@ -182,6 +186,10 @@ function App() {
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
               <Route path="drivers/:id" element={<DriverDetail />} />
@@ -205,7 +213,7 @@ function App() {
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
@@ -248,8 +256,13 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
+
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
@@ -266,14 +279,14 @@ function App() {
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
-              <Route path="insurances" element={<ManageInsurances />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
-              
+
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
               <Route path="collections/dashboard" element={<CollectionsDashboard />} />
@@ -309,13 +322,20 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
+
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
+              <Route path="insurance-claims" element={<InsuranceClaimsView />} />
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
                 <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
@@ -339,7 +359,7 @@ function App() {
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="insurances" element={<ManageInsurances />} />
             </Route>
@@ -402,7 +422,7 @@ function App() {
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
@@ -453,7 +473,9 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="alerts" element={<AlertsManagement />} />
-              <Route path="task-delegation" element={<TaskDelegation />} />
+              <Route path="complaints" element={<ComplaintsPage />} />
+              <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
             </Route>
           </Route>
 
@@ -471,8 +493,13 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
               </Route>
 
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
+              </Route>
+
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<CreateDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />
                 <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
               </Route>
@@ -481,6 +508,9 @@ function App() {
               <Route path="dashboard-settings" element={<DashboardSettings />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="target-management" element={<TargetManagement />} />
             </Route>
           </Route>
 
@@ -497,6 +527,10 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
+                <Route path="insurances" element={<ManageInsurances />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
@@ -519,6 +553,9 @@ function App() {
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="my-tasks" element={<MyTasks />} />
+              <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="target-management" element={<TargetManagement />} />
             </Route>
           </Route>
 

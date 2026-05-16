@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutGrid,
@@ -9,7 +9,8 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    ClipboardList
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -94,7 +95,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Staff Management', path: '/admin/branch-manager/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                // { label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
@@ -110,13 +111,16 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             label: 'Operations',
             icon: <Car size={22} />,
             subItems: [
+                { label: 'Assigned Missions', path: '/admin/branch-manager/my-tasks' },
                 { label: 'Insurance Management', path: '/admin/branch-manager/insurances', permission: 'INSURANCE_VIEW' },
                 { label: 'Manage Vehicles', path: '/admin/branch-manager/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/branch-manager/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/branch-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/branch-manager/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/branch-manager/alerts' },
-            ]
+                { label: 'Support Desk', path: '/admin/branch-manager/complaints' },
+
+                { label: 'Accident Reports', path: '/admin/branch-manager/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
             id: 'settings',
@@ -136,9 +140,9 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             <div className={`h-20 flex items-center border-b border-[var(--border-main)] px-6 justify-between`}>
                 <div className={`flex items-center gap-2`}>
                     <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
-                       <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
-                           <div className="bg-[#D4F12E] w-2.5 h-2.5 rounded-full"></div>
-                       </div>
+                        <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
+                            <div className="bg-[#D4F12E] w-2.5 h-2.5 rounded-full"></div>
+                        </div>
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="flex items-center border-l border-[var(--border-main)] h-7 pl-3 ml-1">
@@ -146,9 +150,9 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                         </div>
                     )}
                 </div>
-                
+
                 {toggleSidebar && (
-                    <button 
+                    <button
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
                         title="Close Sidebar"
@@ -221,7 +225,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                                 )}
 
                                 {!isSidebarCollapsed && hasSub && (
-                                    <div 
+                                    <div
                                         className={`ml-12 pl-4 relative border-l border-[var(--border-main)] flex flex-col gap-0.5 transition-all duration-300 ease-in-out overflow-hidden
                                             ${isOpen ? 'max-h-[500px] opacity-100 mt-1 mb-2 py-1' : 'max-h-0 opacity-0 mt-0 mb-0 py-0'}
                                         `}

@@ -22,7 +22,7 @@ const AdminLogin = () => {
 
     const ROLES = [
         { ui: 'admin', label: t('login.roleAdmin') },
-        { ui: 'operational-admin', label: t('login.roleOperationalAdmin') },
+        // { ui: 'operational-admin', label: t('login.roleOperationalAdmin') },
         { ui: 'financial-admin', label: t('login.roleFinancialAdmin') },
         { ui: 'country-manager', label: t('login.roleCountryManager') },
         { ui: 'branch-manager', label: t('login.roleBranchManager') },
