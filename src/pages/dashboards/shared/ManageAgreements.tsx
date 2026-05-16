@@ -4,6 +4,7 @@ import AgreementList from '../../../components/agreements/AgreementList';
 import AgreementHistory from '../../../components/agreements/AgreementHistory';
 import type { Agreement } from '../../../services/agreementService';
 import { FileText, ShieldCheck, Info } from 'lucide-react';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageAgreements = () => {
     const { t } = useTranslation();
@@ -11,10 +12,12 @@ const ManageAgreements = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Agreements', active: true }]} />
+
             {/* Header */}
             <div className="flex justify-between items-start">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <ShieldCheck size={36} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
                         {t('management.agreements.title')}
                     </h1>

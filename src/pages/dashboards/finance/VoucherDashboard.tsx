@@ -15,10 +15,12 @@ import {
     Eye,
     CheckCircle2,
     Clock,
-    XCircle
+    XCircle,
+    RefreshCw
 } from 'lucide-react';
 import { getVouchers, type Voucher, type VoucherType } from '../../../services/ledgerService';
 import CreateVoucher from './CreateVoucher';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VoucherDashboard = () => {
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -89,25 +91,34 @@ const VoucherDashboard = () => {
     );
 
     return (
-        <div className="space-y-6">
-            {/* Header section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="container-responsive space-y-6 animate-in fade-in duration-700">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Voucher Dashboard', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <div className="p-2 bg-[#C8E600]/10 rounded-xl">
-                            <Receipt size={24} className="text-[#C8E600]" />
-                        </div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Receipt size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Voucher Management
                     </h1>
-                    <p className="text-sm text-white/40 mt-1">Structured financial transaction records and audit trail</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Structured financial transaction records and audit trail</p>
                 </div>
-                <button 
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 bg-[#C8E600] text-black px-5 py-2.5 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(200,230,0,0.3)] transition-all active:scale-95"
-                >
-                    <Plus size={20} />
-                    Create Voucher
-                </button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button 
+                        onClick={fetchVouchers}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button 
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <Plus size={14} strokeWidth={3} /> Create Voucher
+                    </button>
+                </div>
             </div>
 
             {/* Filters Bar */}

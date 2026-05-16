@@ -22,16 +22,13 @@ export interface Insurance {
     policyNumber?: string;
     policyType: PolicyType;
     coverageType: CoverageType;
-    startDate?: string;
-    expiryDate?: string;
-    insuredValue: number;
     providerContact?: ProviderContact;
     status: InsuranceStatus;
     documents?: {
         policyDocumentUrl?: string;
     };
     country?: string;
-    vehicles?: string[];
+    insuredValue?: number;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -41,9 +38,31 @@ export interface CreateInsurancePayload {
     country: string;
     policyType: PolicyType;
     coverageType: CoverageType;
+    insuredValue?: number;
+}
+
+export interface VehiclePolicy {
+    _id: string;
+    vehicle: any;
+    insurance: Insurance;
+    policyNumber?: string;
     startDate?: string;
     expiryDate?: string;
-    insuredValue: number;
+    insuredValue?: number;
+    certificate?: string;
+    status: InsuranceStatus;
+    country?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface CreateVehiclePolicyPayload {
+    vehicle: string;
+    insurance: string;
+    policyNumber?: string;
+    startDate?: string;
+    expiryDate?: string;
+    insuredValue?: number;
 }
 
 export interface PaginationMetadata {
@@ -117,3 +136,37 @@ export const uploadInsuranceDocument = async (id: string, file: File): Promise<I
     });
     return response.data.data;
 };
+
+// Vehicle Policy APIs
+
+export const getAllVehiclePolicies = async (filters: any = {}): Promise<PaginatedResponse<VehiclePolicy>> => {
+    const response = await api.get('/api/vehicle-policy/', { params: filters });
+    return response.data;
+};
+
+export const getVehiclePoliciesByVehicleId = async (vehicleId: string): Promise<VehiclePolicy[]> => {
+    const response = await api.get(`/api/vehicle-policy/vehicle/${vehicleId}`);
+    return response.data.data;
+};
+
+export const createVehiclePolicy = async (formData: FormData): Promise<VehiclePolicy> => {
+    const response = await api.post('/api/vehicle-policy/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data.data;
+};
+
+export const updateVehiclePolicy = async (id: string, payload: Partial<CreateVehiclePolicyPayload>): Promise<VehiclePolicy> => {
+    const response = await api.put(`/api/vehicle-policy/${id}`, payload);
+    return response.data.data;
+};
+
+export const deleteVehiclePolicy = async (id: string): Promise<void> => {
+    await api.delete(`/api/vehicle-policy/${id}`);
+};
+
+export const getVehiclePolicyById = async (id: string): Promise<VehiclePolicy> => {
+    const response = await api.get(`/api/vehicle-policy/${id}`);
+    return response.data.data;
+};
+ 

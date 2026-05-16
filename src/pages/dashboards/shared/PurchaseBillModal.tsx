@@ -3,6 +3,7 @@ import { X, Receipt, CreditCard, ChevronDown, Info } from 'lucide-react';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import { getAllTaxes, type Tax } from '../../../services/taxService';
 import { createPayment, type CreatePaymentPayload, type PaymentMethod, type PaymentStatus } from '../../../services/paymentService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface PurchaseBillModalProps {
     isOpen: boolean;
@@ -108,6 +109,8 @@ const PurchaseBillModal: React.FC<PurchaseBillModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Dashboard', active: true }]} />
+
             <div 
                 className="w-full max-w-2xl bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
                 onClick={e => e.stopPropagation()}

@@ -7,6 +7,7 @@ import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ─── Types ────────────────────────────────────────────────────────────
 type SortKey = 'name' | 'drivingScore' | 'avgSpeed' | 'totalDistance' | 'fuelEfficiency' | 'safetyTotal' | 'outstanding' | 'weeklyRent';
@@ -342,6 +343,8 @@ const DriverPerformanceDashboard = () => {
     if (loading) {
         return (
             <div className="p-8 space-y-6 animate-pulse">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
+
                 <div className="h-10 w-72 rounded-xl" style={{ backgroundColor: 'var(--bg-input)' }} />
                 <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
                     {[1, 2, 3, 4, 5, 6].map(i => (
@@ -363,7 +366,7 @@ const DriverPerformanceDashboard = () => {
                             <BarChart3 size={28} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>
+                            <h1 className="text-xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>
                                 Fleet Performance
                             </h1>
                             <p className="text-xs font-medium opacity-60">

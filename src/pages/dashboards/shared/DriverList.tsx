@@ -6,6 +6,7 @@ import { driverService, type Driver, type DriverFilters, type PaginationMetadata
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import BulkDriverUpload from './BulkDriverUpload';
 import DataMigrationUpload from './DataMigrationUpload';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DriverList = () => {
     const { t } = useTranslation();
@@ -123,63 +124,68 @@ const DriverList = () => {
 
     return (
         <div className="p-6 container-responsive space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver List', active: true }]} />
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>{t('management.drivers.title')}</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>{t('management.drivers.subtitle')}</p>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        {t('management.drivers.title')}
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">{t('management.drivers.subtitle')}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <button
                         onClick={fetchDrivers}
-                        className="p-2.5 rounded-xl border transition-all hover:bg-lime/5 disabled:opacity-50"
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 disabled:opacity-50"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                         title={t('common.refresh')}
                         disabled={loading}
                     >
-                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
                         style={{ 
                             background: showAdvancedFilters ? '' : 'var(--bg-card)', 
                             borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)', 
                             color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
                         }}
                     >
-                        <Filter size={18} /> {t('management.common.filters')}
+                        <Filter size={14} /> {t('management.common.filters')}
                     </button>
                     <button
                         onClick={() => setShowDataMigration(true)}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 border"
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all hover:bg-white/5 active:scale-95 border"
                         style={{ 
                             borderColor: '#f59e0b', 
                             color: '#f59e0b',
                             background: 'rgba(245,158,11,0.06)'
                         }}
                     >
-                        <Database size={18} /> Data Migration
+                        <Database size={14} /> Data Migration
                     </button>
                     <button
                         onClick={() => setShowBulkUpload(true)}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 border"
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all hover:bg-white/5 active:scale-95 border"
                         style={{ 
                             borderColor: 'var(--brand-lime)', 
                             color: 'var(--brand-lime)',
                             background: 'rgba(200,230,0,0.06)'
                         }}
                     >
-                        <Upload size={18} /> {t('management.drivers.bulkUploadBtn', 'Bulk Upload')}
+                        <Upload size={14} /> {t('management.drivers.bulkUploadBtn', 'Bulk Upload')}
                     </button>
                     <button
                         onClick={() => navigate('new')}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
                         style={{ 
                             backgroundColor: 'var(--brand-lime)', 
-                            color: 'var(--brand-black)' 
+                            color: '#0A0A0A'
                         }}
                     >
-                        <Plus size={20} /> {t('management.drivers.newBtn')}
+                        <Plus size={14} strokeWidth={3} /> {t('management.drivers.newBtn')}
                     </button>
                 </div>
             </div>

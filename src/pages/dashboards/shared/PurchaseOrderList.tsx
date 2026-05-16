@@ -7,6 +7,7 @@ import { getAllSuppliers, type Supplier } from '../../../services/supplierServic
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { useNavigate } from 'react-router-dom';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
@@ -173,41 +174,43 @@ const PurchaseOrderList = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Orders', active: true }]} />
+
+            {/* Compact Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} style={{ color: '#C8E600' }} />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <FileText size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         {t('management.purchaseOrders.title')}
                     </h1>
-                    <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.subtitle')}</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">{t('management.purchaseOrders.subtitle')}</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={fetchPOs}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:bg-white/5 active:scale-95"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 active:scale-95"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
                         style={{ 
                             background: showAdvancedFilters ? '' : 'var(--bg-card)', 
-                            borderColor: showAdvancedFilters ? '' : 'var(--border-main)', 
-                            color: showAdvancedFilters ? '' : 'var(--text-main)' 
+                            borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)', 
+                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
                         }}
                     >
-                        <Filter size={16} /> {t('management.common.filters')}
+                        <Filter size={14} /> {t('management.common.filters')}
                     </button>
                     <HasPermission permission="PURCHASE_ORDER_CREATE">
                         <button
                             onClick={() => navigate('create')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg hover:shadow-lime/20 hover:-translate-y-0.5 active:translate-y-0"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} /> {t('management.purchaseOrders.createBtn')}
+                            <Plus size={14} strokeWidth={3} /> {t('management.purchaseOrders.createBtn')}
                         </button>
                     </HasPermission>
                 </div>

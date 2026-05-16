@@ -24,6 +24,7 @@ import {
 } from '../../../services/collectionService';
 import { getAllBranches } from '../../../services/branchService';
 import { useTheme } from '../../../context/ThemeContext';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CollectionsDashboard = () => {
     const { t } = useTranslation();
@@ -173,23 +174,26 @@ const CollectionsDashboard = () => {
 
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Dashboard', active: true }]} />
+
             
-            {/* HEADER SECTION WITH LOGO/DESCRIPTIVE LABELS */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        <Library className="text-[#C8E600]" /> Collections Central
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Library size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Collections Central
                     </h1>
-                    <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Aggregate recovery analysis and forecasts</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
-                        <p className="text-xs font-bold text-[#C8E600]">
-                            {filters.startDate || filters.endDate 
-                                ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM dd, yyyy') : 'Genesis'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : 'Today'}`
-                                : 'Span: All-Time Dataset'}
-                        </p>
-                    </div>
+                    <p className="text-xs font-medium text-dim mt-0.5 flex items-center gap-2">
+                        <span>Aggregate recovery analysis and forecasts</span>
+                        <span className="text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                            ({filters.startDate || filters.endDate 
+                                ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM d') : 'Start'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM d') : 'Now'}`
+                                : 'All-Time Dataset'})
+                        </span>
+                    </p>
                 </div>
+            </div>
 
                 {/* CONTROL BOARD: FILTERS */}
                 <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
@@ -243,7 +247,7 @@ const CollectionsDashboard = () => {
                         )}
                     </div>
                 </div>
-            </div>
+
 
             {/* STAT CARDS COMPACT GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">

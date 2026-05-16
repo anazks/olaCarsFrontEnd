@@ -18,6 +18,7 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -247,10 +248,12 @@ const ManageCountryManagers = () => {
 
     return (
         <div className="container-responsive space-y-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Country Managers', active: true }]} />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Globe size={28} style={{ color: '#C8E600' }} />
                         {t('management.countryManagers.title')}
                     </h1>

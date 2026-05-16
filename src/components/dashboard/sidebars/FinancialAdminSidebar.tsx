@@ -12,7 +12,10 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    Shield,
+    ShoppingCart,
+    ShoppingBag
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -123,6 +126,29 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             ]
         },
         {
+            id: 'sales',
+            label: 'Sales',
+            icon: <ShoppingCart size={22} />,
+            subItems: [
+                { label: 'Customers', path: '/admin/financial-admin/customers' },
+                { label: 'Invoices', path: '/admin/financial-admin/invoices' },
+                { label: 'Payments Received', path: '/admin/financial-admin/payments-received' },
+                { label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' },
+            ]
+        },
+        {
+            id: 'purchases',
+            label: 'Purchases',
+            icon: <ShoppingBag size={22} />,
+            subItems: [
+                { label: 'Vendors', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: 'Expenses', path: '/admin/financial-admin/expenses' },
+                { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Bills', path: '/admin/financial-admin/purchase-bills' },
+                { label: 'Payments Made', path: '/admin/financial-admin/payments-made' },
+            ]
+        },
+        {
             id: 'accounting',
             label: 'Accounting',
             icon: <Calculator size={22} />,
@@ -134,7 +160,16 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
                 { label: 'Add Journal Entry', path: '/admin/financial-admin/ledger?action=create', permission: 'JOURNAL_CREATE' },
                 { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
-                { label: 'Insurance Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
+            ]
+        },
+        {
+            id: 'insurance',
+            label: 'Insurance',
+            icon: <Shield size={22} />,
+            subItems: [
+                { label: 'All Insurance', path: '/admin/financial-admin/vehicle-policies' },
+                { label: 'Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
+                { label: 'Settings', path: '/admin/financial-admin/insurances' },
             ]
         },
         {
@@ -238,10 +273,10 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                                     ${isSidebarCollapsed ? 'justify-center px-0' : ''}
                                 `}
                                 style={{
-                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid #D4F12E' : '4px solid transparent',
+                                    borderLeft: (isCurrentlyActive || (!hasSub && isCurrentlyActive)) ? '4px solid var(--sidebar-active)' : '4px solid transparent',
                                 }}
                             >
-                                <div className={`${isCurrentlyActive ? 'text-[#D4F12E]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
+                                <div className={`${isCurrentlyActive ? 'text-[var(--sidebar-active)]' : 'text-[var(--sidebar-text)] group-hover:text-[var(--text-main)]'} transition-colors`}>
                                     {item.icon}
                                 </div>
                                 {!isSidebarCollapsed && (
@@ -283,7 +318,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
                                                     className={`cursor-pointer py-2 text-sm transition-colors
-                                                        ${isItActive ? 'text-[#D4F12E] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
+                                                        ${isItActive ? 'text-[var(--sidebar-active)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
                                                     {sub.label}

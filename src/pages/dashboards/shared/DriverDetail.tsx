@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -395,6 +396,8 @@ const DriverDetail = () => {
 
             return (
                 <div className="flex flex-wrap gap-4 mt-4 py-3 border-t border-white/5">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Detail', active: true }]} />
+
                     {reqs.map((r, i) => (
                         <div key={i} className="flex items-center gap-2">
                             {r.met ? <CheckCircle2 size={14} className="text-brand-lime" /> : <AlertCircle size={14} className="text-yellow-500" />}
@@ -566,7 +569,7 @@ const DriverDetail = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
+                            <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
                             <div className="flex flex-col">
                                 <span className="px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-wider w-fit" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
                                     {driver.status.replace(/_/g, ' ')}

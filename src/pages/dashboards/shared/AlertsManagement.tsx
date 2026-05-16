@@ -8,6 +8,7 @@ import alertService from '../../../services/alertService';
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 type SeverityTab = 'ALL' | 'CRITICAL' | 'MAJOR' | 'MINOR';
 
@@ -178,32 +179,27 @@ const AlertsManagement = () => {
 
     return (
         <div className="p-6 min-h-screen" style={{ backgroundColor: 'var(--bg-main)' }}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="p-2 rounded-xl transition-all hover:scale-105 cursor-pointer"
-                        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-                            Alerts Control Center
-                        </h1>
-                        <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>
-                            Monitor and manage system alerts across all branches
-                        </p>
-                    </div>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Alerts Management', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <AlertTriangle size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Alerts Control Center
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">Monitor and manage system alerts across all branches</p>
                 </div>
-                <button
-                    onClick={fetchData}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-lime text-black rounded-xl text-sm font-bold transition-all hover:bg-lime/90 disabled:opacity-50 cursor-pointer"
-                >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                </button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
             </div>
 
             {/* Summary Cards */}

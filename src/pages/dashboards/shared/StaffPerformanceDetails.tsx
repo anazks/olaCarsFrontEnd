@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { getIndividualStaffPerformance } from '../../../services/staffPerformanceService';
 import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StaffPerformanceDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -78,10 +79,12 @@ const StaffPerformanceDetails = () => {
 
     if (error || !data) return (
         <div className="p-12 text-center bg-red-500/5 border border-red-500/10 rounded-[2rem] max-w-2xl mx-auto mt-20">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Staff Performance Details', active: true }]} />
+
             <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mx-auto mb-6">
                  <Shield size={32} />
             </div>
-            <h2 className="text-2xl font-black text-[var(--text-main)] mb-2">Access Issue</h2>
+            <h2 className="text-lg font-black text-[var(--text-main)] mb-2">Access Issue</h2>
             <p className="text-dim font-medium mb-8">{error || 'The requested staff member profile could not be retrieved.'}</p>
             <button 
                 onClick={() => navigate(-1)} 

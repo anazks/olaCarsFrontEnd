@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import type { Driver } from '../../../services/driverService';
 import type { Vehicle } from '../../../services/vehicleService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DriverVehicleAssignment = () => {
     const { id } = useParams<{ id: string }>();
@@ -211,6 +212,8 @@ const DriverVehicleAssignment = () => {
     if (loading) {
         return (
             <div className="p-8 text-center animate-pulse flex flex-col items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Vehicle Assignment', active: true }]} />
+
                 <Car size={32} className="animate-bounce" style={{ color: 'var(--text-dim)', opacity: 0.5 }} />
                 <span className="font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Loading Assignment Data...</span>
             </div>
@@ -237,7 +240,7 @@ const DriverVehicleAssignment = () => {
                     <ChevronLeft size={22} style={{ color: 'var(--text-main)' }} />
                 </button>
                 <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold" style={{ color: 'var(--text-main)' }}>Assign Vehicle</h1>
+                    <h1 className="text-lg lg:text-xl font-bold" style={{ color: 'var(--text-main)' }}>Assign Vehicle</h1>
                     <p className="text-xs lg:text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                         Select an available vehicle to assign to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo.fullName}</span>
                     </p>

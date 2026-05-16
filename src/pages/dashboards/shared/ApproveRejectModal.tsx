@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ApproveRejectModalProps {
     isOpen: boolean;
@@ -35,6 +36,8 @@ const ApproveRejectModal: React.FC<ApproveRejectModalProps> = ({
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onClose}
         >
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Dashboard', active: true }]} />
+
             <div
                 className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}

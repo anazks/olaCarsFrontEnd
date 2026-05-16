@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ── Status Styles ──────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ const VehicleList = () => {
     };
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= pagination.totalPages) {
+        if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
             setFilters(prev => ({
                 ...prev,
                 page: newPage
@@ -150,61 +151,73 @@ const VehicleList = () => {
         }
     };
 
+    const handleSort = (field: string) => {
+        setFilters(prev => ({
+            ...prev,
+            sortBy: field,
+            sortOrder: prev.sortBy === field && prev.sortOrder === 'desc' ? 'asc' : 'desc',
+            page: 1
+        }));
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (filters.sortBy !== field) return <div className="opacity-20 transition-opacity group-hover:opacity-50"><ChevronDown size={14} /></div>;
+        return <div className={`transition-transform duration-200 ${filters.sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} className="text-lime" style={{ color: 'var(--brand-lime)' }} /></div>;
+    };
+
     return (
         <div className="container-responsive space-y-8 p-6 lg:p-8 animate-in fade-in duration-500">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-[var(--bg-card)] to-transparent p-6 rounded-3xl border shadow-sm" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="flex items-center gap-4">
-                    <div className="p-3.5 rounded-2xl shadow-lg" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        <Car size={28} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {t('management.vehicles.title', 'Vehicle Fleet')}
-                        </h1>
-                        <p className="text-sm font-medium mt-1 opacity-80" style={{ color: 'var(--text-dim)' }}>
-                            {t('management.vehicles.subtitle', 'Manage and monitor all company vehicles.')}
-                        </p>
-                    </div>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicle Fleet', active: true }]} />
+
+            {/* Compact Header Area */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Car size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        {t('management.vehicles.title', 'Vehicle Fleet')}
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">
+                        {t('management.vehicles.subtitle', 'Manage and monitor all company vehicles.')}
+                    </p>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={() => fetchVehicles()}
-                        className="flex items-center justify-center p-3 rounded-2xl transition-all duration-300 hover:rotate-180 hover:bg-white/10 active:scale-95"
+                        className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         title="Refresh Data"
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     
                     <HasPermission permission="INSURANCE_VIEW">
                         <button
                             onClick={() => navigate('../insurances')}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Shield size={18} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
+                            <Shield size={14} className="opacity-70" /> {t('sidebar.items.insuranceManagement', 'Insurance')}
                         </button>
                     </HasPermission>
                     
                     <HasPermission permission="DRIVER_VIEW">
                         <button
                             onClick={() => navigate('../drivers')}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <Users size={18} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
+                            <Users size={14} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
                         </button>
                     </HasPermission>
                     
                     <HasPermission permission="VEHICLE_CREATE">
                         <button
                             onClick={() => navigate('create')}
-                            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
-                            style={{ background: '#C8E600', color: '#0A0A0A', boxShadow: '0 4px 20px rgba(200, 230, 0, 0.3)' }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
-                            <Plus size={18} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
+                            <Plus size={14} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
                         </button>
                     </HasPermission>
                 </div>
@@ -379,13 +392,35 @@ const VehicleList = () => {
                     ) : (
                         <table className="w-full text-left border-collapse whitespace-nowrap">
                             <thead>
-                                <tr className="border-b" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle', 'Vehicle Details')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet & Staff</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin', 'VIN / Reg')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Specs</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status', 'Status')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price', 'Value')}</th>
+                                <tr className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.make')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.vehicles.table.vehicle', 'Vehicle Details')} <SortIcon field="basicDetails.make" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.fleetNumber')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Fleet & Staff <SortIcon field="basicDetails.fleetNumber" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.vin')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.vehicles.table.vin', 'VIN / Reg')} <SortIcon field="basicDetails.vin" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4">
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Specs
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('common.status', 'Status')} <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>
+                                        {t('management.vehicles.table.price', 'Value')}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -393,8 +428,10 @@ const VehicleList = () => {
                                     <tr
                                         key={v._id}
                                         onClick={() => navigate(v._id)}
-                                        className="group border-b last:border-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
-                                        style={{ borderColor: 'var(--border-main)' }}
+                                        className="transition-colors cursor-pointer group"
+                                        style={{ borderBottom: '1px solid var(--border-main)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                     >
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
@@ -472,34 +509,43 @@ const VehicleList = () => {
                 </div>
 
                 {/* Modern Pagination Footer */}
-                {!loading && vehicles.length > 0 && (
-                    <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.05)' }}>
-                        <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span style={{ color: 'var(--text-main)' }}>{vehicles.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> vehicles
-                        </div>
-                        
-                        <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-2xl border" style={{ borderColor: 'var(--border-main)' }}>
+                {!loading && vehicles.length > 0 && pagination && (
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                            Showing {vehicles.length} of {pagination.total} vehicles
+                        </p>
+                        <div className="flex items-center gap-2">
                             <button
-                                disabled={filters.page === 1}
                                 onClick={() => handlePageChange(filters.page - 1)}
-                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                style={{ color: 'var(--text-main)' }}
+                                disabled={filters.page === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <ChevronLeft size={16} strokeWidth={3} />
+                                <ChevronLeft size={18} />
                             </button>
-                            
-                            <div className="flex items-center gap-2 px-3">
-                                <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>Page {filters.page}</span>
-                                <span className="text-sm font-bold opacity-40" style={{ color: 'var(--text-main)' }}>/ {pagination.totalPages || 1}</span>
+                            <div className="flex items-center gap-1">
+                                {[...Array(pagination.totalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${filters.page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                        style={{ 
+                                            background: filters.page === i + 1 ? 'var(--brand-lime)' : 'transparent',
+                                            color: filters.page === i + 1 ? '#000' : 'var(--text-main)',
+                                            border: filters.page === i + 1 ? 'none' : '1px solid var(--border-main)'
+                                        }}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
                             </div>
-
                             <button
-                                disabled={filters.page === pagination.totalPages || pagination.totalPages === 0}
                                 onClick={() => handlePageChange(filters.page + 1)}
-                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                style={{ color: 'var(--text-main)' }}
+                                disabled={filters.page === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <ChevronRight size={16} strokeWidth={3} />
+                                <ChevronRight size={18} />
                             </button>
                         </div>
                     </div>

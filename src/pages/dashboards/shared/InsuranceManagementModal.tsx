@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Shield, CheckCircle, X } from 'lucide-react';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
-import { uploadVehicleDocuments, progressVehicle } from '../../../services/vehicleService';
+import { uploadVehicleDocuments, progressVehicle, getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
-import type { Insurance } from '../../../services/insuranceService';
+import { createVehiclePolicy, type Insurance, type VehiclePolicy } from '../../../services/insuranceService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const inputStyle = { background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' };
 const inputClass = 'w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all text-sm';
@@ -22,6 +23,7 @@ interface InsuranceManagementModalProps {
     onClose: () => void;
     vehicle: Vehicle;
     eligibleInsurances: Insurance[];
+    currentPolicies: VehiclePolicy[];
     onSuccess: () => void;
 }
 
@@ -29,33 +31,28 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
     const { t } = useTranslation();
 
     // Manage state locally
-    const [insuranceId, setInsuranceId] = useState<string | undefined>(vehicle.insuranceDetails?.plan);
-    const [insuranceNumber, setInsuranceNumber] = useState(vehicle.insuranceDetails?.insuranceNumber || '');
-    const [fromDate, setFromDate] = useState(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
-    const [toDate, setToDate] = useState(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
+    const [insuranceId, setInsuranceId] = useState<string>('');
+    const [insuranceNumber, setInsuranceNumber] = useState<string>('');
+    const [fromDate, setFromDate] = useState<string>('');
+    const [toDate, setToDate] = useState<string>('');
     const [insuranceCertificate, setInsuranceCertificate] = useState<File | null>(null);
-    const [policyType, setPolicyType] = useState(vehicle.insuranceDetails?.policyType || '');
-    const [coverageType, setCoverageType] = useState(vehicle.insuranceDetails?.coverageType || '');
-    const [supplier, setSupplier] = useState(vehicle.insuranceDetails?.supplier || null);
+    const [insuredValue, setInsuredValue] = useState(0);
 
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Update internal state if the vehicle data fundamentally changes while open
     React.useEffect(() => {
         if (isOpen) {
-            setInsuranceId(vehicle.insuranceDetails?.plan);
-            setInsuranceNumber(vehicle.insuranceDetails?.insuranceNumber || '');
-            setFromDate(vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toISOString().split('T')[0] : '');
-            setToDate(vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toISOString().split('T')[0] : '');
-            setPolicyType(vehicle.insuranceDetails?.policyType || '');
-            setCoverageType(vehicle.insuranceDetails?.coverageType || '');
-            setSupplier(vehicle.insuranceDetails?.supplier || null);
+            setInsuranceId('');
+            setInsuranceNumber('');
+            setFromDate('');
+            setToDate('');
+            setInsuredValue(0);
             setInsuranceCertificate(null);
             setError(null);
         }
-    }, [isOpen, vehicle.insuranceDetails]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -63,36 +60,28 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
         setLoading(true);
         setError(null);
         try {
-            // Priority file upload
+            const formData = new FormData();
+            formData.append('vehicle', vehicle._id);
+            formData.append('insurance', insuranceId || '');
+            formData.append('policyNumber', insuranceNumber);
+            formData.append('startDate', fromDate);
+            formData.append('expiryDate', toDate);
+            formData.append('insuredValue', insuredValue.toString());
+            // Need a country for policy. Use a default if needed or get from user context.
+            // But we can just use the vehicle branch country, for simplicity we use 'Global' here.
+            formData.append('country', 'Global');
+
             if (insuranceCertificate) {
-                const formData = new FormData();
-                formData.append('insuranceCertificate', insuranceCertificate);
-                await uploadVehicleDocuments(vehicle._id, formData);
+                formData.append('certificate', insuranceCertificate);
             }
 
-            const payload = {
-                targetStatus: vehicle.status,
-                updateData: {
-                    insurance: insuranceId,
-                    insuranceDetails: {
-                        plan: insuranceId,
-                        insuranceNumber,
-                        fromDate,
-                        toDate,
-                        policyType,
-                        coverageType,
-                        supplier
-                    }
-                }
-            };
-            console.log('[DEBUG] InsuranceManagementModal - Saving Payload:', JSON.stringify(payload, null, 2));
+            console.log('[DEBUG] InsuranceManagementModal - Saving Vehicle Policy:', Array.from(formData.entries()));
 
-            // Progress vehicle to update schema details
-            await progressVehicle(vehicle._id, payload);
+            await createVehiclePolicy(formData);
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to update insurance details');
+            setError(err.response?.data?.message || 'Failed to link insurance policy');
         } finally {
             setLoading(false);
         }
@@ -100,6 +89,8 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all" style={{ background: 'rgba(0,0,0,0.8)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'to Full Url', active: true }]} />
+
             <div className="w-full max-w-3xl rounded-3xl border flex flex-col max-h-[90vh] shadow-2xl" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -162,6 +153,19 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                 />
                             </div>
 
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                    Insured Value ($)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={insuredValue}
+                                    onChange={e => setInsuredValue(Number(e.target.value))}
+                                    className={inputClass}
+                                    style={inputStyle}
+                                />
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.validFrom')}</label>
@@ -193,20 +197,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                     Insurance Certificate
                                 </label>
                                 <div className="p-6 rounded-2xl border border-dashed flex flex-col items-center justify-center gap-4 text-center min-h-[268px]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                    {vehicle.insuranceDetails?.certificate && !insuranceCertificate ? (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <CheckCircle className="text-green-500" size={32} />
-                                            <p className="text-sm font-bold mt-2" style={{ color: 'var(--text-main)' }}>Certificate Logged</p>
-                                            <a
-                                                href={toFullUrl(vehicle.insuranceDetails.certificate)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-xs text-lime font-bold hover:underline"
-                                            >
-                                                View Current File
-                                            </a>
-                                        </div>
-                                    ) : insuranceCertificate ? (
+                                    {insuranceCertificate ? (
                                         <div className="flex flex-col items-center gap-2">
                                             <Shield className="text-lime" size={32} />
                                             <p className="text-sm font-bold mt-2" style={{ color: 'var(--text-main)' }}>Ready to Upload</p>
@@ -228,7 +219,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                                         }}
                                     />
                                     <label htmlFor="modalInsuranceCertificate" className="px-5 py-2.5 rounded-xl text-lime text-xs font-bold cursor-pointer transition-all mt-2" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                                        {(vehicle.insuranceDetails?.certificate || insuranceCertificate) ? 'Upload Different File' : 'Select Certificate File'}
+                                        {insuranceCertificate ? 'Upload Different File' : 'Select Certificate File'}
                                     </label>
                                 </div>
                             </div>
@@ -262,14 +253,9 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         selectedId={insuranceId}
                         onSelect={(ins) => {
                             setInsuranceId(ins._id);
-                            setPolicyType(ins.policyType || '');
-                            setCoverageType(ins.coverageType || '');
-                            setSupplier({
-                                _id: typeof ins.supplier === 'object' ? (ins.supplier as any)._id : ins.supplier,
-                                name: typeof ins.supplier === 'object' ? (ins.supplier as any).name : (ins.provider || ''),
-                                email: (typeof ins.supplier === 'object' ? (ins.supplier as any).email : '') || ins.providerContact?.email || '',
-                                phone: (typeof ins.supplier === 'object' ? (ins.supplier as any).phone : '') || ins.providerContact?.phone || ''
-                            });
+                            if (ins.insuredValue !== undefined) {
+                                setInsuredValue(ins.insuredValue);
+                            }
                             setIsSelectorOpen(false);
                         }}
                     />

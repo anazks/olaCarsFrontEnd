@@ -8,6 +8,7 @@ import type { Branch } from '../../../services/branchService';
 import { getAllBranches } from '../../../services/branchService';
 import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
 import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CreatePurchaseOrder = () => {
     const navigate = useNavigate();
@@ -159,10 +160,12 @@ const CreatePurchaseOrder = () => {
     if (success) {
         return (
             <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Create Purchase Order', active: true }]} />
+
                 <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                     <Check size={40} />
                 </div>
-                <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>PO Created Successfully!</h1>
+                <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>PO Created Successfully!</h1>
                 <p style={{ color: 'var(--text-dim)' }}>Redirecting you to the list...</p>
             </div>
         );
@@ -173,7 +176,7 @@ const CreatePurchaseOrder = () => {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Plus size={28} style={{ color: '#C8E600' }} />
                         Create Purchase Order
                     </h1>

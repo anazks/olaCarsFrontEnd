@@ -3,6 +3,7 @@ import { getAllEnquiries, updateEnquiryStatus, deleteEnquiry } from '../../../se
 import { MessageSquare, Clock, CheckCircle, XCircle, Search, Filter, Trash2, Reply, User, Phone, Mail, MapPin, ShieldAlert, Info, ChevronRight, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUser } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ComplaintsPage = () => {
     const user = getUser();
@@ -82,39 +83,40 @@ const ComplaintsPage = () => {
 
     return (
         <div className="container-responsive py-8 space-y-8 min-h-screen" style={{ color: 'var(--text-main)' }}>
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b pb-8" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-lime/20 text-lime text-[10px] font-black uppercase tracking-widest rounded border border-lime/20">Operations Support</span>
-                    </div>
-                    <h1 className="text-4xl font-black flex items-center gap-4" style={{ color: 'var(--text-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Complaints Page', active: true }]} />
+
+            {/* Compact Header Area */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         {activeTab === 'COMPLAINT' ? (
-                            <><ShieldAlert className="text-lime" size={32} /> Help Desk: Complaints</>
+                            <><ShieldAlert className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} size={20} /> Help Desk: Complaints</>
                         ) : (
-                            <><MessageSquare className="text-lime" size={32} /> Support: General Enquiries</>
+                            <><MessageSquare className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} size={20} /> Support: General Enquiries</>
                         )}
                     </h1>
-                    <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Processing {filteredEnquiries.length} {activeTab.toLowerCase()}s for {user?.branchName || 'your branch'}.</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">
+                        Processing {filteredEnquiries.length} {activeTab.toLowerCase()}s for {user?.branchName || 'your branch'}.
+                    </p>
                 </div>
 
                 {/* Tab Switcher */}
-                <div className="flex p-1 rounded-xl border backdrop-blur-md" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
+                <div className="flex p-1 rounded-xl border bg-white/[0.02] backdrop-blur-md border-white/5" style={{ borderColor: 'var(--border-main)' }}>
                     <button
                         onClick={() => setActiveTab('COMPLAINT')}
-                        className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                            activeTab === 'COMPLAINT' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:text-lime'
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            activeTab === 'COMPLAINT' ? 'bg-brand-lime text-black shadow-md' : 'hover:text-brand-lime text-dim'
                         }`}
-                        style={activeTab !== 'COMPLAINT' ? { color: 'var(--text-dim)' } : {}}
+                        style={activeTab === 'COMPLAINT' ? { backgroundColor: 'var(--brand-lime)' } : {}}
                     >
                         Complaints
                     </button>
                     <button
                         onClick={() => setActiveTab('ENQUIRY')}
-                        className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                            activeTab === 'ENQUIRY' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:text-lime'
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            activeTab === 'ENQUIRY' ? 'bg-brand-lime text-black shadow-md' : 'hover:text-brand-lime text-dim'
                         }`}
-                        style={activeTab !== 'ENQUIRY' ? { color: 'var(--text-dim)' } : {}}
+                        style={activeTab === 'ENQUIRY' ? { backgroundColor: 'var(--brand-lime)' } : {}}
                     >
                         Queries
                     </button>

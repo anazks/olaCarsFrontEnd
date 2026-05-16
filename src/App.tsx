@@ -43,6 +43,10 @@ import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import Reports from './pages/dashboards/shared/Reports';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
+import VehiclePolicyList from './pages/dashboards/shared/VehiclePolicyList';
+import VehiclePolicyDetail from './pages/dashboards/shared/VehiclePolicyDetail';
+import InsuranceClaimDetail from './pages/dashboards/financialAdmin/InsuranceClaimDetail';
+import CreateInsuranceClaim from './pages/dashboards/financialAdmin/CreateInsuranceClaim';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
@@ -93,6 +97,18 @@ import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
+import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
+
+// Sales Pages
+import Customers from './pages/dashboards/finance/Sales/Customers';
+import CustomerDetail from './pages/dashboards/finance/Sales/CustomerDetail';
+import PaymentsReceived from './pages/dashboards/finance/Sales/PaymentsReceived';
+import CreditNotes from './pages/dashboards/finance/Sales/CreditNotes';
+import CreditNoteDetail from './pages/dashboards/finance/Sales/CreditNoteDetail';
+
+// Purchases Pages
+import Expenses from './pages/dashboards/finance/Purchases/Expenses';
+import PaymentsMade from './pages/dashboards/finance/Purchases/PaymentsMade';
 
 
 function App() {
@@ -207,6 +223,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -327,10 +345,14 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
                 <Route path="insurances" element={<ManageInsurances />} />
+                <Route path="vehicle-policies" element={<VehiclePolicyList />} />
+                <Route path="vehicle-policies/:id" element={<VehiclePolicyDetail />} />
               </Route>
 
               <Route path="vehicle-lease-settings" element={<VehicleLeaseSettings />} />
               <Route path="insurance-claims" element={<InsuranceClaimsView />} />
+              <Route path="insurance-claims/new" element={<CreateInsuranceClaim />} />
+              <Route path="insurance-claims/:id" element={<InsuranceClaimDetail />} />
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
@@ -352,6 +374,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -360,6 +383,17 @@ function App() {
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="alerts" element={<AlertsManagement />} />
+
+              {/* Sales Routes */}
+              <Route path="customers" element={<Customers />} />
+              <Route path="customers/:id" element={<CustomerDetail />} />
+              <Route path="payments-received" element={<PaymentsReceived />} />
+              <Route path="credit-notes" element={<CreditNotes />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+
+              {/* Purchases Routes */}
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="payments-made" element={<PaymentsMade />} />
             </Route>
           </Route>
 
@@ -416,6 +450,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
@@ -548,6 +584,8 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
