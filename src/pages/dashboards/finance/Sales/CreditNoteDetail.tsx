@@ -242,7 +242,7 @@ const CreditNoteDetail = () => {
             <div className="container-responsive py-10 text-center space-y-6">
                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-8 max-w-md mx-auto shadow">
                     <AlertCircle className="text-rose-500 mx-auto mb-4" size={48} />
-                    <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">Load Error</h3>
+                    <h3 className="text-lg font-black uppercase tracking-wider mb-2" style={{ color: 'var(--text-main)' }}>Load Error</h3>
                     <p className="text-sm text-dim mb-6">{error || "Credit Note details unavailable."}</p>
                     <button onClick={() => navigate('..')} className="px-6 py-2.5 bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10">
                         Go Back
@@ -336,8 +336,8 @@ const CreditNoteDetail = () => {
                             <div className="flex items-center gap-3">
                                 <FileCheck className="text-blue-400" size={18} />
                                 <div>
-                                    <p className="text-xs font-black text-white uppercase">Applied directly to invoice</p>
-                                    <p className="text-[10px] text-[#A3A3A3] mt-0.5">Dynamic offset finalized against {note.invoiceId.invoiceNumber}</p>
+                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Applied directly to invoice</p>
+                                    <p className="text-[10px] text-dim mt-0.5">Dynamic offset finalized against {note.invoiceId.invoiceNumber}</p>
                                 </div>
                             </div>
                             <span className="text-[9px] font-black text-blue-400 border border-blue-500/30 bg-blue-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Applied</span>
@@ -349,8 +349,8 @@ const CreditNoteDetail = () => {
                             <div className="flex items-center gap-3">
                                 <AlertCircle className="text-amber-400" size={18} />
                                 <div>
-                                    <p className="text-xs font-black text-white uppercase">Linked intended target</p>
-                                    <p className="text-[10px] text-[#A3A3A3] mt-0.5">Ready to be applied to {note.invoiceId.invoiceNumber}. Click "Apply to Invoice" above to post.</p>
+                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Linked intended target</p>
+                                    <p className="text-[10px] text-dim mt-0.5">Ready to be applied to {note.invoiceId.invoiceNumber}. Click "Apply to Invoice" above to post.</p>
                                 </div>
                             </div>
                             <span className="text-[9px] font-black text-amber-400 border border-amber-500/30 bg-amber-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Draft Link</span>
@@ -459,7 +459,7 @@ const CreditNoteDetail = () => {
                                         <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.createdAt).toLocaleDateString()}</td>
                                         <td className="py-4 px-4 font-black uppercase tracking-wider text-indigo-400">Credit Issuance</td>
                                         <td className="py-4 px-4 italic font-medium text-dim">Initial creation of ledger note draft.</td>
-                                        <td className="py-4 pl-4 text-right font-black text-white">${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="py-4 pl-4 text-right font-black" style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                     {note.status === 'CLOSED' && (
                                         <tr className="hover:bg-white/[0.02] transition-colors">
@@ -652,7 +652,7 @@ const CreditNoteDetail = () => {
                     <div className="w-full max-w-md border shadow-2xl overflow-hidden rounded-3xl bg-[#0C0D0E] text-left animate-in zoom-in-95 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-6 border-b bg-black/20 flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                             <div>
-                                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                                <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                     <FileCheck size={18} className="text-brand-lime"/> Apply to Invoice
                                 </h2>
                                 <p className="text-[10px] text-brand-lime font-black uppercase tracking-widest mt-0.5">
@@ -668,15 +668,19 @@ const CreditNoteDetail = () => {
                                 {loadingApplyInvoices ? (
                                     <div className="flex items-center justify-center py-6"><RefreshCw className="animate-spin text-brand-lime" size={18}/></div>
                                 ) : applyInvoices.length === 0 ? (
-                                    <div className="text-center py-5 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl"><AlertCircle className="text-rose-500 mx-auto mb-2" size={18}/><p className="text-xs font-black text-white uppercase">No Eligible Invoices</p><p className="text-[9px] text-[#A3A3A3] mt-0.5">Operator balance registry records no active unpaid items.</p></div>
+                                    <div className="text-center py-5 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                                        <AlertCircle className="text-rose-500 mx-auto mb-2" size={18}/>
+                                        <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>No Eligible Invoices</p>
+                                        <p className="text-[9px] text-dim mt-0.5">Operator balance registry records no active unpaid items.</p>
+                                    </div>
                                 ) : (
                                     <div className="relative">
                                         <select 
                                             required 
                                             value={applyInvoiceId} 
                                             onChange={e => setApplyInvoiceId(e.target.value)} 
-                                            className="w-full pl-4 pr-8 py-3 border rounded-xl text-xs font-black text-white outline-none cursor-pointer appearance-none focus:border-brand-lime" 
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                            className="w-full pl-4 pr-8 py-3 border rounded-xl text-xs font-black outline-none cursor-pointer appearance-none focus:border-brand-lime" 
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         >
                                             <option value="" style={{background: 'var(--bg-card)'}}>-- Select Target Invoice --</option>
                                             {applyInvoices.map((inv: any) => (
@@ -694,9 +698,9 @@ const CreditNoteDetail = () => {
                             
                             {applyInvoiceId && applyInvoices.length > 0 && (
                                 <div className="p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 shadow-inner space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-[#A3A3A3]">
+                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-dim">
                                         <span>Will Apply:</span>
-                                        <span className="text-white">${Math.min(note.amount, (applyInvoices.find(i => i._id === applyInvoiceId)?.balance || 0)).toLocaleString()}</span>
+                                        <span style={{ color: 'var(--text-main)' }}>${Math.min(note.amount, (applyInvoices.find(i => i._id === applyInvoiceId)?.balance || 0)).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-[#A3A3A3]">
                                         <span>Post Balance:</span>

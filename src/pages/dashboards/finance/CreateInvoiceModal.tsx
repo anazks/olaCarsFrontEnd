@@ -217,14 +217,11 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                         </div>
 
                         {/* Line Items */}
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Line Items</h3>
-                                <button type="button" onClick={addItem}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all hover:bg-brand-lime hover:text-black active:scale-95 cursor-pointer"
-                                    style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}>
-                                    <Plus size={12} /> Add Item
-                                </button>
+                                <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                    <FileText size={12} /> Line Items & Services
+                                </h3>
                             </div>
 
                             <div className="border rounded-2xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
@@ -239,14 +236,14 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
                                 <div className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                     {lineItems.map((item, idx) => (
-                                        <div key={idx} className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
+                                        <div key={idx} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-white/[0.01] transition-colors">
                                             <div className="col-span-4">
                                                 <input
                                                     type="text"
                                                     placeholder="Item name *"
                                                     value={item.name}
                                                     onChange={e => updateItem(idx, 'name', e.target.value)}
-                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:border-brand-lime transition-colors"
+                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:border-brand-lime transition-all"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                             </div>
@@ -256,7 +253,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                                     placeholder="Optional description"
                                                     value={item.description}
                                                     onChange={e => updateItem(idx, 'description', e.target.value)}
-                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-medium outline-none focus:border-brand-lime transition-colors"
+                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-medium outline-none focus:border-brand-lime transition-all"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                             </div>
@@ -268,13 +265,13 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                                     placeholder="1"
                                                     value={item.qty}
                                                     onChange={e => updateItem(idx, 'qty', e.target.value)}
-                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-bold text-center outline-none focus:border-brand-lime transition-colors"
+                                                    className="w-full px-3 py-2 border rounded-xl text-xs font-bold text-center outline-none focus:border-brand-lime transition-all"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                             </div>
                                             <div className="col-span-2">
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-black" style={{ color: 'var(--text-dim)' }}>$</span>
+                                                <div className="relative group">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-black transition-colors group-focus-within:text-brand-lime" style={{ color: 'var(--text-dim)' }}>$</span>
                                                     <input
                                                         type="number"
                                                         min="0"
@@ -282,7 +279,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                                         placeholder="0.00"
                                                         value={item.unitPrice}
                                                         onChange={e => updateItem(idx, 'unitPrice', e.target.value)}
-                                                        className="w-full pl-6 pr-2 py-2 border rounded-xl text-xs font-bold text-right outline-none focus:border-brand-lime transition-colors"
+                                                        className="w-full pl-6 pr-2 py-2 border rounded-xl text-xs font-bold text-right outline-none focus:border-brand-lime transition-all"
                                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                     />
                                                 </div>
@@ -290,14 +287,29 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                             <div className="col-span-1 flex justify-end">
                                                 {lineItems.length > 1 && (
                                                     <button type="button" onClick={() => removeItem(idx)}
-                                                        className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer">
-                                                        <Trash2 size={13} />
+                                                        className="p-2 rounded-xl hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 transition-all cursor-pointer group"
+                                                        title="Delete Row">
+                                                        <Trash2 size={14} className="group-hover:scale-110" />
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                            
+                            {/* Zoho Style Add Row Button below table */}
+                            <div className="flex justify-start">
+                                <button 
+                                    type="button" 
+                                    onClick={addItem}
+                                    className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:bg-brand-lime/5 rounded-xl transition-all active:scale-95 group cursor-pointer"
+                                >
+                                    <div className="w-5 h-5 rounded-full border border-brand-lime/30 flex items-center justify-center group-hover:border-brand-lime transition-colors">
+                                        <Plus size={10} strokeWidth={3} />
+                                    </div>
+                                    Add New Row
+                                </button>
                             </div>
                         </div>
 
@@ -381,36 +393,43 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
                             {/* Right: Totals Summary */}
                             <div className="flex flex-col justify-start">
-                                <div className="border rounded-2xl overflow-hidden shadow-inner" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                    <div className="px-5 py-3.5 border-b" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>
-                                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Invoice Summary</p>
+                                <div className="border rounded-2xl overflow-hidden shadow-inner flex flex-col h-full" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                    <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>
+                                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Summary</p>
+                                        <DollarSign size={12} className="text-brand-lime" />
                                     </div>
-                                    <div className="px-5 py-4 space-y-3 text-xs">
+                                    <div className="px-5 py-5 space-y-4 text-xs flex-1">
                                         <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                            <span>Subtotal</span>
+                                            <span>Sub Total</span>
                                             <span style={{ color: 'var(--text-main)' }}>${fmt(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="flex justify-between font-semibold text-rose-400">
-                                                <span>Discount {discountType === 'PERCENTAGE' ? `(${discountValue}%)` : '(Fixed)'}</span>
+                                                <div className="flex flex-col">
+                                                    <span>Discount</span>
+                                                    <span className="text-[9px] opacity-60">{discountType === 'PERCENTAGE' ? `${discountValue}%` : 'Fixed Amount'}</span>
+                                                </div>
                                                 <span>− ${fmt(discountAmount)}</span>
                                             </div>
                                         )}
                                         {taxAmount > 0 && (
                                             <div className="flex justify-between font-semibold text-blue-400">
-                                                <span>Tax ({taxRate}%)</span>
+                                                <div className="flex flex-col">
+                                                    <span>Tax</span>
+                                                    <span className="text-[9px] opacity-60">{taxRate}% GST/VAT</span>
+                                                </div>
                                                 <span>+ ${fmt(taxAmount)}</span>
                                             </div>
                                         )}
-                                        <div className="pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="pt-4 border-t mt-2" style={{ borderColor: 'var(--border-main)' }}>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Grand Total</span>
-                                                <span className="text-2xl font-black font-mono" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
+                                                <span className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Total (USD)</span>
+                                                <span className="text-2xl font-black font-mono tracking-tighter" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
                                             </div>
                                         </div>
-                                        <p className="text-[9px] font-semibold italic pt-1" style={{ color: 'var(--text-dim)' }}>
-                                            Status will be set to PENDING on creation.
-                                        </p>
+                                    </div>
+                                    <div className="px-5 py-3 bg-white/5 border-t text-[9px] font-bold italic" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                        * This invoice will be generated in PENDING status.
                                     </div>
                                 </div>
                             </div>
@@ -419,28 +438,29 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                 </form>
 
                 {/* Sticky Footer */}
-                <div className="px-8 py-5 border-t flex items-center justify-between gap-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
-                    <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                        Total Due: <span className="font-black text-sm" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
+                <div className="px-8 py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Amount Due</span>
+                        <span className="text-xl font-black" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2.5 border rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all cursor-pointer"
-                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            className="flex-1 sm:flex-none px-6 py-2.5 border rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            Cancel
+                            Save as Draft
                         </button>
                         <button
                             type="submit"
                             form=""
                             onClick={handleSubmit}
                             disabled={submitting || grandTotal <= 0 || !selectedDriver || !dueDate}
-                            className="flex items-center gap-2 px-7 py-2.5 bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-2.5 bg-brand-lime text-black font-black text-[11px] uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
                         >
-                            <FileText size={13} />
-                            {submitting ? 'Creating...' : 'Create Invoice'}
+                            <FileText size={14} strokeWidth={2.5} />
+                            {submitting ? 'Processing...' : 'Save and Send'}
                         </button>
                     </div>
                 </div>

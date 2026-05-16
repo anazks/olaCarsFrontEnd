@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
     Plus, Search, Filter, X, FileText, RefreshCw, 
     AlertCircle, User, DollarSign, CheckCircle2,
-    Eye, ChevronLeft, ChevronRight, Calendar
+    Eye, ChevronLeft, ChevronRight, Calendar,
+    ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import { 
@@ -12,7 +13,7 @@ import {
     type CreditNote 
 } from '../../../../services/creditNoteService';
 import { getAllDrivers } from '../../../../services/driverService';
-import { getInvoicesByDriver } from '../../../../services/invoiceService';
+import { getInvoicesByDriver, getPendingInvoicesByDriver } from '../../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
 const CreditNotes = () => {
@@ -31,6 +32,10 @@ const CreditNotes = () => {
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+
+    // Sorting
+    const [sortBy, setSortBy] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     
     // Creation State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -55,23 +60,35 @@ const CreditNotes = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [statusFilter, debouncedSearch]);
+    }, [statusFilter, debouncedSearch, sortBy, sortOrder]);
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <ArrowUpDown size={10} className="opacity-20 group-hover:opacity-100 transition-opacity" />;
+        return sortOrder === 'asc' ? <ArrowUp size={10} className="text-brand-lime" /> : <ArrowDown size={10} className="text-brand-lime" />;
+    };
 
     const fetchCreditNotes = useCallback(async () => {
         setLoading(true);
         try {
-            const params: any = { page, limit };
+            const params: any = { page, limit, sortBy, sortOrder };
             if (statusFilter !== 'ALL') params.status = statusFilter;
-            // Wait, does the current API support string searching on backend? If so we can add it.
-            // But we'll respect existing param pattern.
+            if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+            
             const res = await getAllCreditNotes(params);
-            if (res && res.success) {
-                setCreditNotes(res.data || []);
+            if (res) {
+                const dataArray = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+                setCreditNotes(dataArray);
                 if (res.pagination) {
-                    setPagination({
-                        total: res.pagination.total || 0,
-                        pages: res.pagination.pages || 1
-                    });
+                    setPagination(res.pagination);
                 }
             }
         } catch (e) {
@@ -80,7 +97,7 @@ const CreditNotes = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, statusFilter]);
+    }, [page, limit, statusFilter, debouncedSearch, sortBy, sortOrder]);
 
     useEffect(() => {
         fetchCreditNotes();
@@ -111,9 +128,9 @@ const CreditNotes = () => {
             const loadInvoices = async () => {
                 setLoadingInvoices(true);
                 try {
-                    const res = await getInvoicesByDriver(selectedDriverId);
-                    const activePool = (res || []).filter((i: any) => i.status !== 'PAID' && i.balance > 0);
-                    setDriverInvoices(activePool);
+                    const res = await getPendingInvoicesByDriver(selectedDriverId);
+                    // User requested to see all invoices, not just unpaid ones
+                    setDriverInvoices(res || []);
                 } catch (err) {
                     console.error(err);
                 } finally {
@@ -185,29 +202,18 @@ const CreditNotes = () => {
         return driverInvoices.find(i => i._id === selectedInvoiceId) || null;
     }, [driverInvoices, selectedInvoiceId]);
 
-    const filteredNotes = useMemo(() => {
-        if (!debouncedSearch) return creditNotes;
-        const q = debouncedSearch.toLowerCase();
-        return creditNotes.filter(note => {
-            const num = (note.creditNoteNumber || '').toLowerCase();
-            const fullName = (note.driverId?.personalInfo?.fullName || '').toLowerCase();
-            const reasonText = (note.reason || '').toLowerCase();
-            return num.includes(q) || fullName.includes(q) || reasonText.includes(q);
-        });
-    }, [creditNotes, debouncedSearch]);
+    const displayedNotes = creditNotes;
 
     return (
-        <div className="container-responsive flex flex-col h-[calc(100vh-110px)] overflow-hidden pb-4">
-            <div className="flex-shrink-0 mb-4">
-                <Breadcrumbs 
-                    items={[
-                        { label: 'Sales', path: '#' },
-                        { label: 'Credit Notes', active: true }
-                    ]} 
-                />
-            </div>
+        <div className="container-responsive space-y-6 pb-12">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Sales', path: '#' },
+                    { label: 'Credit Notes', active: true }
+                ]} 
+            />
 
-            <div className="flex-1 flex flex-col overflow-hidden space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 
                 {/* Compact Header Toolbar */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 border-b border-white/5 pb-4">
@@ -218,20 +224,22 @@ const CreditNotes = () => {
                         </h1>
                         <p className="text-xs font-medium text-dim mt-0.5">Execute accounting reversals, lease adjustments, and reconcile active accounts.</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-lime border border-brand-lime/10 hover:bg-brand-lime/90 text-black font-black text-[10px] uppercase tracking-widest rounded-xl select-none shadow-xl hover:scale-[1.02] cursor-pointer active:scale-95 transition-all"
-                        >
-                            <Plus size={14} strokeWidth={3} /> Issue Credit
-                        </button>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <button 
                             onClick={() => fetchCreditNotes()} 
-                            disabled={loading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-lg select-none cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                            className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            title="Refresh Data"
                         >
-                            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-                            Sync
+                            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        </button>
+                        <button 
+                            onClick={() => setIsCreateModalOpen(true)} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <Plus size={14} strokeWidth={3} />
+                            Issue Credit
                         </button>
                     </div>
                 </div>
@@ -268,33 +276,52 @@ const CreditNotes = () => {
                 </div>
 
                 {/* Registry Data Grid Wrapper */}
-                <div className="flex-1 min-h-0 flex flex-col border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex-1 overflow-auto custom-scrollbar">
+                <div className="border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full border-collapse text-left text-xs select-text">
-                            <thead className="sticky top-0 z-10 select-none shadow-sm" style={{ background: 'var(--bg-input)' }}>
-                                <tr className="text-[10px] font-black uppercase tracking-widest border-b border-white/5" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
-                                    <th className="py-4 px-6 w-[15%]">Note Reference</th>
-                                    <th className="py-4 px-6 w-[25%]">Operator / Driver</th>
-                                    <th className="py-4 px-6 w-[15%]"><div className="flex items-center gap-1"><Calendar size={12}/> Note Date</div></th>
-                                    <th className="py-4 px-6 w-[20%]">Allocated Reason</th>
-                                    <th className="py-4 px-6 text-right w-[15%]"><div className="flex items-center justify-end gap-1"><DollarSign size={12}/> Credit Amount</div></th>
-                                    <th className="py-4 px-6 text-center w-[10%]">State</th>
-                                    <th className="py-4 px-6 text-center w-[5%]">Action</th>
+                            <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('creditNoteNumber')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            CN Number <SortIcon field="creditNoteNumber" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('driverId')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Operator <SortIcon field="driverId" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('creditNoteDate')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <Calendar size={12}/> Issued <SortIcon field="creditNoteDate" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[15%] group cursor-pointer select-none" onClick={() => handleSort('amount')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <DollarSign size={12}/> Amount <SortIcon field="amount" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Status <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center">
+                                        <td colSpan={6} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Querying Credit Ledger...</span>
                                             </div>
                                         </td>
                                     </tr>
-                                ) : filteredNotes.length === 0 ? (
+                                ) : displayedNotes.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-20 text-center">
+                                        <td colSpan={6} className="py-20 text-center">
                                             <div className="text-dim space-y-1 uppercase">
                                                 <FileText className="mx-auto opacity-20 mb-2" size={32} />
                                                 <p className="text-xs font-black tracking-widest">No credit notes recorded</p>
@@ -303,15 +330,18 @@ const CreditNotes = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredNotes.map((note) => (
+                                    displayedNotes.map((note) => (
                                         <tr 
                                             key={note._id} 
                                             onClick={() => handleRowClick(note._id)}
-                                            className="hover:bg-white/[0.02] transition-colors cursor-pointer active:bg-white/[0.04]"
+                                            className="transition-colors cursor-pointer group"
+                                            style={{ borderBottom: '1px solid var(--border-main)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             <td className="py-4 px-6 font-black">
                                                 <div className="flex flex-col">
-                                                    <span className="tracking-wide text-white font-black uppercase">{note.creditNoteNumber || 'CN-DRAFT'}</span>
+                                                    <span className="tracking-wide font-black uppercase" style={{ color: 'var(--text-main)' }}>{note.creditNoteNumber || 'CN-DRAFT'}</span>
                                                     {note.invoiceId?.invoiceNumber && (
                                                         <span className="text-[9px] font-black text-indigo-400 uppercase tracking-wider mt-0.5 border border-indigo-500/30 bg-indigo-500/5 inline-block px-1.5 py-0.5 rounded self-start">Linked: {note.invoiceId.invoiceNumber}</span>
                                                     )}
@@ -331,9 +361,6 @@ const CreditNotes = () => {
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}
                                             </td>
-                                            <td className="py-4 px-6 truncate max-w-[180px] font-semibold text-dim">
-                                                {note.reason || 'Administrative Correction'}
-                                            </td>
                                             <td className="py-4 px-6 text-right font-black text-sm text-indigo-400">
                                                 ${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
@@ -341,15 +368,13 @@ const CreditNotes = () => {
                                                 <StatusBadge status={note.status} />
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
-                                                <div className="flex justify-center">
-                                                    <button 
-                                                        onClick={() => handleRowClick(note._id)}
-                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
-                                                        title="Open Reversal Document"
-                                                    >
-                                                        <Eye size={14} strokeWidth={2.5} />
-                                                    </button>
-                                                </div>
+                                                <button 
+                                                    onClick={() => handleRowClick(note._id)}
+                                                    className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
+                                                    title="Open Reversal Document"
+                                                >
+                                                    <Eye size={14} strokeWidth={2.5} />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))
@@ -358,35 +383,51 @@ const CreditNotes = () => {
                         </table>
                     </div>
 
-                    {/* Pagination Footer */}
-                    {!loading && filteredNotes.length > 0 && pagination && (
-                        <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t flex-shrink-0 shadow-2xl select-none" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.05)' }}>
-                            <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
-                                Showing <span style={{ color: 'var(--text-main)' }}>{filteredNotes.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> records
-                            </div>
-                            
-                            <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-2xl border shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
+                    {/* Modern Numbered Pagination */}
+                    {!loading && displayedNotes.length > 0 && pagination && pagination.pages >= 1 && (
+                        <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                Page {page} of {pagination.pages}
+                            </p>
+                            <div className="flex items-center gap-2">
                                 <button
-                                    disabled={page === 1}
                                     onClick={() => handlePageChange(page - 1)}
-                                    className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                    style={{ color: 'var(--text-main)' }}
+                                    disabled={page === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <ChevronLeft size={16} strokeWidth={3} />
+                                    <ChevronLeft size={18} />
                                 </button>
-                                
-                                <div className="flex items-center gap-2 px-3">
-                                    <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>Page {page}</span>
-                                    <span className="text-sm font-bold opacity-40" style={{ color: 'var(--text-main)' }}>/ {pagination.pages || 1}</span>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                        let pageNum: number;
+                                        if (pagination.pages <= 5) pageNum = i + 1;
+                                        else if (page <= 3) pageNum = i + 1;
+                                        else if (page >= pagination.pages - 2) pageNum = pagination.pages - 4 + i;
+                                        else pageNum = page - 2 + i;
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
+                                                    color: page === pageNum ? '#000' : 'var(--text-main)',
+                                                    border: page === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-
                                 <button
-                                    disabled={page === pagination.pages || pagination.pages === 0}
                                     onClick={() => handlePageChange(page + 1)}
-                                    className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                    style={{ color: 'var(--text-main)' }}
+                                    disabled={page === pagination.pages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <ChevronRight size={16} strokeWidth={3} />
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
                         </div>
@@ -394,23 +435,28 @@ const CreditNotes = () => {
                 </div>
             </div>
 
-            {/* ================= ISSUE CREDIT NOTE SLIDE-OVER ================= */}
+            {/* ================= ISSUE CREDIT NOTE MODAL ================= */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-end bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="absolute inset-0" onClick={() => { setIsCreateModalOpen(false); resetForm(); }}></div>
-                    <div className="relative w-full max-w-md h-full border-l flex flex-col text-left animate-in slide-in-from-right duration-300 shadow-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative w-full max-w-md border shadow-2xl overflow-hidden rounded-3xl animate-in zoom-in-95 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         
-                        <div className="flex items-center justify-between p-6 border-b bg-black/20 flex-shrink-0" style={{ borderColor: 'var(--border-main)' }}>
-                            <div><h2 className="text-lg font-black text-white flex items-center gap-2"><FileText size={20} className="text-brand-lime" /> Issue Credit Note</h2><p className="text-xs text-dim">Manual ledger adjustment.</p></div>
-                            <button onClick={() => { setIsCreateModalOpen(false); resetForm(); }} className="p-2 text-dim hover:text-white rounded-xl transition-all"><X size={18} /></button>
+                        <div className="flex items-center justify-between p-6 border-b bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                            <div>
+                                <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                    <FileText size={20} className="text-brand-lime" /> Issue Credit Note
+                                </h2>
+                                <p className="text-xs text-dim">Manual ledger adjustment.</p>
+                            </div>
+                            <button onClick={() => { setIsCreateModalOpen(false); resetForm(); }} className="p-2 text-dim hover:text-main rounded-xl transition-all"><X size={18} /></button>
                         </div>
 
-                        <form onSubmit={handleCreateCreditNote} className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+                        <form onSubmit={handleCreateCreditNote} className="max-h-[70vh] overflow-y-auto p-6 space-y-5 custom-scrollbar">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>1. Target Operator *</label>
                                 <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                                    <select required value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold text-white appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                    <select required value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                         <option value="" style={{background: 'var(--bg-card)'}}>Choose Profile</option>
                                         {loadingDrivers ? (
                                             <option disabled style={{background: 'var(--bg-card)'}}>Loading drivers...</option>
@@ -422,16 +468,22 @@ const CreditNotes = () => {
                             {selectedDriverId && (
                                 <div className="space-y-1.5 p-3.5 border rounded-2xl animate-in zoom-in-95" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
-                                    <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold text-white appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                         <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment</option>
                                         {loadingInvoices ? (
                                             <option disabled style={{background: 'var(--bg-card)'}}>Querying ledger...</option>
-                                        ) : driverInvoices.map(i => <option key={i._id} value={i._id} style={{background: 'var(--bg-card)'}}>{i.invoiceNumber} (Unpaid ${i.balance})</option>)}
+                                        ) : Array.isArray(driverInvoices) && driverInvoices.length === 0 ? (
+                                            <option disabled style={{background: 'var(--bg-card)'}}>No invoices found for this operator</option>
+                                        ) : Array.isArray(driverInvoices) && driverInvoices.map(i => (
+                                            <option key={i._id} value={i._id} style={{background: 'var(--bg-card)'}}>
+                                                {i.invoiceNumber} — {i.status} (${i.balance} left)
+                                            </option>
+                                        ))}
                                     </select>
                                     {selectedInvoiceData && (
                                         <div className="mt-3 p-3 bg-brand-lime/10 border border-brand-lime/20 rounded-xl text-xs flex flex-col gap-1 shadow-inner animate-in slide-in-from-top-1">
-                                            <div className="flex justify-between text-[#A3A3A3]"><span>Gross:</span><span className="text-white font-black">${selectedInvoiceData.totalAmountDue}</span></div>
-                                            <div className="flex justify-between font-bold"><span className="text-brand-lime">Outstanding Balance:</span><span className="text-white text-sm font-black">${selectedInvoiceData.balance}</span></div>
+                                            <div className="flex justify-between text-dim"><span>Gross:</span><span className="font-black" style={{ color: 'var(--text-main)' }}>${selectedInvoiceData.totalAmountDue}</span></div>
+                                            <div className="flex justify-between font-bold"><span className="text-brand-lime">Outstanding Balance:</span><span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>${selectedInvoiceData.balance}</span></div>
                                         </div>
                                     )}
                                 </div>
@@ -440,17 +492,17 @@ const CreditNotes = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>3. Amount *</label>
-                                    <div className="relative"><DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} /><input required type="number" step="0.01" min="0.01" max={selectedInvoiceData ? selectedInvoiceData.balance : undefined} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-xs font-bold text-white outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}/></div>
+                                    <div className="relative"><DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} /><input required type="number" step="0.01" min="0.01" max={selectedInvoiceData ? selectedInvoiceData.balance : undefined} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-xs font-bold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>4. Date *</label>
-                                    <input required type="date" value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold text-white outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', colorScheme: 'dark' }}/>
+                                    <input required type="date" value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
+                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>5. Reason *</label>
-                                <select required value={reason} onChange={e => setReason(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold text-white appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                <select required value={reason} onChange={e => setReason(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                     <option value="" style={{background: 'var(--bg-card)'}}>Choose Category</option>
                                     <option value="Overcharge Reversal" style={{background: 'var(--bg-card)'}}>Overcharge Reversal</option>
                                     <option value="Vehicle Downtime Adjustment" style={{background: 'var(--bg-card)'}}>Vehicle Downtime Adjustment</option>
@@ -460,10 +512,10 @@ const CreditNotes = () => {
                                 </select>
                             </div>
 
-                            <div className="space-y-1.5"><label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>6. Notes</label><textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border rounded-xl text-xs text-white resize-none outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}/></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>6. Notes</label><textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border rounded-xl text-xs resize-none outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
                         </form>
 
-                        <div className="p-6 border-t bg-black/20 flex gap-3 flex-shrink-0" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="p-6 border-t flex gap-3" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>
                             <button type="button" onClick={() => { setIsCreateModalOpen(false); resetForm(); }} className="flex-1 py-3 border font-black text-[10px] uppercase rounded-xl hover:bg-white/5 transition-all cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>Cancel</button>
                             <button onClick={handleCreateCreditNote} disabled={submitting} className="flex-1 py-3 bg-brand-lime text-black rounded-xl text-[10px] font-black uppercase hover:scale-[1.03] shadow flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer">{submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}{submitting ? 'Posting...' : 'Post Credit'}</button>
                         </div>

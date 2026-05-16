@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
@@ -143,12 +143,26 @@ const VehicleList = () => {
     };
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= pagination.totalPages) {
+        if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
             setFilters(prev => ({
                 ...prev,
                 page: newPage
             }));
         }
+    };
+
+    const handleSort = (field: string) => {
+        setFilters(prev => ({
+            ...prev,
+            sortBy: field,
+            sortOrder: prev.sortBy === field && prev.sortOrder === 'desc' ? 'asc' : 'desc',
+            page: 1
+        }));
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (filters.sortBy !== field) return <div className="opacity-20 transition-opacity group-hover:opacity-50"><ChevronDown size={14} /></div>;
+        return <div className={`transition-transform duration-200 ${filters.sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} className="text-lime" style={{ color: 'var(--brand-lime)' }} /></div>;
     };
 
     return (
@@ -378,13 +392,35 @@ const VehicleList = () => {
                     ) : (
                         <table className="w-full text-left border-collapse whitespace-nowrap">
                             <thead>
-                                <tr className="border-b" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vehicle', 'Vehicle Details')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Fleet & Staff</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.vin', 'VIN / Reg')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Specs</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('common.status', 'Status')}</th>
-                                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-right" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.price', 'Value')}</th>
+                                <tr className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.make')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.vehicles.table.vehicle', 'Vehicle Details')} <SortIcon field="basicDetails.make" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.fleetNumber')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Fleet & Staff <SortIcon field="basicDetails.fleetNumber" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.vin')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.vehicles.table.vin', 'VIN / Reg')} <SortIcon field="basicDetails.vin" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4">
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Specs
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('common.status', 'Status')} <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>
+                                        {t('management.vehicles.table.price', 'Value')}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -392,8 +428,10 @@ const VehicleList = () => {
                                     <tr
                                         key={v._id}
                                         onClick={() => navigate(v._id)}
-                                        className="group border-b last:border-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
-                                        style={{ borderColor: 'var(--border-main)' }}
+                                        className="transition-colors cursor-pointer group"
+                                        style={{ borderBottom: '1px solid var(--border-main)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                     >
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
@@ -471,34 +509,43 @@ const VehicleList = () => {
                 </div>
 
                 {/* Modern Pagination Footer */}
-                {!loading && vehicles.length > 0 && (
-                    <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.05)' }}>
-                        <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
-                            Showing <span style={{ color: 'var(--text-main)' }}>{vehicles.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> vehicles
-                        </div>
-                        
-                        <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-2xl border" style={{ borderColor: 'var(--border-main)' }}>
+                {!loading && vehicles.length > 0 && pagination && (
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                            Showing {vehicles.length} of {pagination.total} vehicles
+                        </p>
+                        <div className="flex items-center gap-2">
                             <button
-                                disabled={filters.page === 1}
                                 onClick={() => handlePageChange(filters.page - 1)}
-                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                style={{ color: 'var(--text-main)' }}
+                                disabled={filters.page === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <ChevronLeft size={16} strokeWidth={3} />
+                                <ChevronLeft size={18} />
                             </button>
-                            
-                            <div className="flex items-center gap-2 px-3">
-                                <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>Page {filters.page}</span>
-                                <span className="text-sm font-bold opacity-40" style={{ color: 'var(--text-main)' }}>/ {pagination.totalPages || 1}</span>
+                            <div className="flex items-center gap-1">
+                                {[...Array(pagination.totalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${filters.page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                        style={{ 
+                                            background: filters.page === i + 1 ? 'var(--brand-lime)' : 'transparent',
+                                            color: filters.page === i + 1 ? '#000' : 'var(--text-main)',
+                                            border: filters.page === i + 1 ? 'none' : '1px solid var(--border-main)'
+                                        }}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
                             </div>
-
                             <button
-                                disabled={filters.page === pagination.totalPages || pagination.totalPages === 0}
                                 onClick={() => handlePageChange(filters.page + 1)}
-                                className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                style={{ color: 'var(--text-main)' }}
+                                disabled={filters.page === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <ChevronRight size={16} strokeWidth={3} />
+                                <ChevronRight size={18} />
                             </button>
                         </div>
                     </div>

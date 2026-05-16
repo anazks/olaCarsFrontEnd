@@ -2,28 +2,36 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     FileText, RefreshCw, Filter, Search, CheckCircle2, 
-    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, DollarSign, Calendar
+    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, DollarSign, Calendar, Plus,
+    ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
-import { getInvoices } from '../../../services/invoiceService';
+import { getInvoices, getInvoicesRegistry } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import CreateInvoiceModal from './CreateInvoiceModal';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     
     // Server Pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+
+    // Sorting
+    const [sortBy, setSortBy] = useState('weekNumber');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -32,25 +40,44 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [statusFilter, debouncedSearch]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate]);
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <ArrowUpDown size={10} className="opacity-20 group-hover:opacity-100 transition-opacity" />;
+        return sortOrder === 'asc' ? <ArrowUp size={10} className="text-brand-lime" /> : <ArrowDown size={10} className="text-brand-lime" />;
+    };
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const filters: any = { page, limit };
-            if (statusFilter !== 'ALL') filters.status = statusFilter;
-            if (debouncedSearch) filters.search = debouncedSearch;
+            const filters: any = { page, limit, sortBy, sortOrder };
+            if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
             
-            const response = await getInvoices(filters);
-            if (response && response.data) {
-                setInvoices(response.data || []);
-                if (response.pagination) {
-                    setPagination({
-                        total: response.pagination.totalItems || 0,
-                        pages: response.pagination.totalPages || 1
-                    });
-                }
+            const res = await getInvoicesRegistry(filters);
+            console.log('[InvoiceList] API Response:', res);
+            if (res) {
+                // Direct extraction from Invoice model response
+                const data = res.data || res;
+                const dataArray = Array.isArray(data) ? data : [];
+                setInvoices(dataArray);
+                
+                const pag = res.pagination || {};
+                setPagination({
+                    total: pag.totalItems || dataArray.length,
+                    pages: pag.totalPages || 1
+                });
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load');
@@ -58,7 +85,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, debouncedSearch, page, limit]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate]);
 
     useEffect(() => {
         fetchData();
@@ -75,17 +102,15 @@ const InvoiceList = () => {
     };
 
     return (
-        <div className="container-responsive flex flex-col h-[calc(100vh-110px)] overflow-hidden pb-4">
-            <div className="flex-shrink-0 mb-4">
-                <Breadcrumbs 
-                    items={[
-                        { label: 'Sales', path: '#' },
-                        { label: 'Invoices', active: true }
-                    ]} 
-                />
-            </div>
+        <div className="container-responsive space-y-6 pb-12">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Sales', path: '#' },
+                    { label: 'Invoices', active: true }
+                ]} 
+            />
 
-            <div className="flex-1 flex flex-col overflow-hidden space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 
                 {/* Uniform Compact Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 border-b border-white/5 pb-4">
@@ -96,14 +121,24 @@ const InvoiceList = () => {
                         </h1>
                         <p className="text-xs font-medium text-dim mt-0.5">Manage vehicle rental leases and record operator payments.</p>
                     </div>
-                    <button 
-                        onClick={() => fetchData()} 
-                        disabled={loading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-lg select-none cursor-pointer active:scale-95 transition-all disabled:opacity-50"
-                    >
-                        <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-                        Sync Ledger
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button 
+                            onClick={() => fetchData()} 
+                            className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            title="Refresh Data"
+                        >
+                            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        </button>
+                        <button 
+                            onClick={() => setShowCreateModal(true)} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <Plus size={14} strokeWidth={3} />
+                            New Invoice
+                        </button>
+                    </div>
                 </div>
 
                 {/* Unified Search and Filters (Uniform Capsule Design) */}
@@ -120,37 +155,68 @@ const InvoiceList = () => {
                         />
                     </div>
                     <div className="flex gap-3 flex-shrink-0">
-                        <div className="relative select-none">
-                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" size={14} style={{ color: 'var(--text-dim)' }} />
-                            <select
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
-                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="ALL" style={{background: 'var(--bg-card)'}}>ALL STATEMENTS</option>
-                                <option value="PENDING" style={{background: 'var(--bg-card)'}}>PENDING</option>
-                                <option value="PARTIAL" style={{background: 'var(--bg-card)'}}>PARTIALLY PAID</option>
-                                <option value="PAID" style={{background: 'var(--bg-card)'}}>SETTLED / PAID</option>
-                                <option value="OVERDUE" style={{background: 'var(--bg-card)'}}>OVERDUE</option>
-                            </select>
+                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
+                            />
                         </div>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
                     </div>
                 </div>
 
-                {/* Unified Grid Canvas with Fixed Scrolling */}
-                <div className="flex-1 min-h-0 flex flex-col border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex-1 overflow-auto custom-scrollbar">
+                {/* Unified Grid Canvas */}
+                <div className="border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full border-collapse text-left text-xs select-text">
-                            <thead className="sticky top-0 z-10 select-none shadow-sm" style={{ background: 'var(--bg-input)' }}>
-                                <tr className="text-[10px] font-black uppercase tracking-widest border-b border-white/5" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
-                                    <th className="py-4 px-6 w-[15%]">Invoice Ref</th>
-                                    <th className="py-4 px-6 w-[25%]">Operator / Driver</th>
-                                    <th className="py-4 px-6 w-[15%]"><div className="flex items-center gap-1"><Calendar size={12}/> Due Date</div></th>
-                                    <th className="py-4 px-6 text-right w-[15%]"><div className="flex items-center justify-end gap-1"><DollarSign size={12}/> Total Amount</div></th>
-                                    <th className="py-4 px-6 text-right w-[15%]"><div className="flex items-center justify-end gap-1"><DollarSign size={12}/> Balance</div></th>
-                                    <th className="py-4 px-6 text-center w-[10%]">Status</th>
-                                    <th className="py-4 px-6 text-center w-[5%]">Actions</th>
+                            <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('invoiceNumber')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Statement <SortIcon field="invoiceNumber" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('driver')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Operator <SortIcon field="driver" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[15%] group cursor-pointer select-none" onClick={() => handleSort('totalAmountDue')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <DollarSign size={12}/> Amount <SortIcon field="totalAmountDue" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[15%] group cursor-pointer select-none" onClick={() => handleSort('balance')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <DollarSign size={12}/> Balance <SortIcon field="balance" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Status <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
@@ -168,7 +234,7 @@ const InvoiceList = () => {
                                         <td colSpan={7} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
-                                                <p className="text-xs font-black text-white uppercase">{error}</p>
+                                                <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -187,22 +253,31 @@ const InvoiceList = () => {
                                         <tr 
                                             key={invoice._id} 
                                             onClick={() => handleRowClick(invoice._id)}
-                                            className="hover:bg-white/[0.02] transition-colors cursor-pointer active:bg-white/[0.04]"
+                                            className="transition-colors cursor-pointer group"
+                                            style={{ borderBottom: '1px solid var(--border-main)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             <td className="py-4 px-6 font-black">
                                                 <div className="flex flex-col">
-                                                    <span className="tracking-wide text-white font-black">{invoice.invoiceNumber}</span>
+                                                    <span className="tracking-wide font-black" style={{ color: 'var(--text-main)' }}>{invoice.invoiceNumber}</span>
                                                     <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5">{invoice.weekLabel || 'Cycle'}</span>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0 shadow-inner">
-                                                        <span className="text-brand-lime text-[10px] font-black">{(typeof invoice.driver === 'object' ? (invoice.driver.personalInfo?.fullName || 'OP').slice(0,2) : 'OP').toUpperCase()}</span>
+                                                        <span className="text-brand-lime text-[10px] font-black">
+                                                            {(invoice.driver?.personalInfo?.fullName || 'OP').slice(0, 2).toUpperCase()}
+                                                        </span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black leading-snug tracking-tight">{typeof invoice.driver === 'object' ? invoice.driver.personalInfo?.fullName : 'System Pool'}</span>
-                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">{typeof invoice.driver === 'object' ? invoice.driver.driverId : 'N/A'}</span>
+                                                        <span className="font-black leading-snug tracking-tight">
+                                                            {invoice.driver?.personalInfo?.fullName || 'System Pool'}
+                                                        </span>
+                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">
+                                                            {invoice.driver?.driverId || 'N/A'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -238,41 +313,67 @@ const InvoiceList = () => {
                         </table>
                     </div>
 
-                    {/* Uniform Capsule Pagination Footer */}
-                    {!loading && invoices.length > 0 && pagination && (
-                        <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t flex-shrink-0 shadow-2xl select-none" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.05)' }}>
-                            <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'var(--text-dim)' }}>
-                                Showing <span style={{ color: 'var(--text-main)' }}>{invoices.length}</span> of <span style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
-                            </div>
-                            
-                            <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-2xl border shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
+                    {/* Modern Numbered Pagination */}
+                    {!loading && invoices.length > 0 && pagination && pagination.pages >= 1 && (
+                        <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                Showing {invoices.length} of {pagination.total} statements
+                            </p>
+                            <div className="flex items-center gap-2">
                                 <button
-                                    disabled={page === 1}
-                                    onClick={() => handlePageChange(page - 1)}
-                                    className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                    style={{ color: 'var(--text-main)' }}
+                                    onClick={() => setPage(page - 1)}
+                                    disabled={page === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <ChevronLeft size={16} strokeWidth={3} />
+                                    <ChevronLeft size={18} />
                                 </button>
-                                
-                                <div className="flex items-center gap-2 px-3">
-                                    <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>Page {page}</span>
-                                    <span className="text-sm font-bold opacity-40" style={{ color: 'var(--text-main)' }}>/ {pagination.pages || 1}</span>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                        let pageNum: number;
+                                        if (pagination.pages <= 5) pageNum = i + 1;
+                                        else if (page <= 3) pageNum = i + 1;
+                                        else if (page >= pagination.pages - 2) pageNum = pagination.pages - 4 + i;
+                                        else pageNum = page - 2 + i;
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setPage(pageNum)}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
+                                                    color: page === pageNum ? '#000' : 'var(--text-main)',
+                                                    border: page === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-
                                 <button
-                                    disabled={page === pagination.pages || pagination.pages === 0}
-                                    onClick={() => handlePageChange(page + 1)}
-                                    className="p-2.5 rounded-xl transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-card)] active:scale-95"
-                                    style={{ color: 'var(--text-main)' }}
+                                    onClick={() => setPage(page + 1)}
+                                    disabled={page === pagination.pages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <ChevronRight size={16} strokeWidth={3} />
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            {showCreateModal && (
+                <CreateInvoiceModal 
+                    onClose={() => setShowCreateModal(false)}
+                    onSuccess={() => {
+                        setShowCreateModal(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

@@ -48,7 +48,29 @@ export interface Invoice {
 
 export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
     const response = await api.get(`/api/invoices?driver=${driverId}&limit=100`);
-    return response.data.data.data || response.data.data || response.data;
+    return response.data.data || [];
+};
+
+export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any}> => {
+    const params = new URLSearchParams();
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.search) params.append('search', filters.search);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+    
+    const response = await api.get(`/api/invoices?${params.toString()}`);
+    return { 
+        data: response.data.data || [], 
+        pagination: response.data.pagination 
+    };
+};
+
+export const getPendingInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
+    const response = await api.get(`/api/invoices/driver/${driverId}/pending`);
+    return response.data.data || [];
 };
 
 export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any}> => {
@@ -62,8 +84,8 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
     
     const response = await api.get(`/api/invoices?${params.toString()}`);
     return { 
-        data: response.data.data.data || [], 
-        pagination: response.data.data.pagination 
+        data: response.data.data || [], 
+        pagination: response.data.pagination 
     };
 };
 
@@ -86,3 +108,4 @@ export const getInvoiceById = async (invoiceId: string): Promise<Invoice> => {
     const response = await api.get(`/api/invoices/${invoiceId}`);
     return response.data.data;
 };
+
