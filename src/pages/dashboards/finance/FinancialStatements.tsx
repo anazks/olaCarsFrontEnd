@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Landmark, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const FinancialStatements = () => {
     const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
@@ -48,21 +49,28 @@ const FinancialStatements = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Financial Statements', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3 text-[var(--text-main)]">
-                        <PieChart size={28} className="text-[#C8E600]" />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <PieChart size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Financial Statements
                     </h1>
-                    <p className="text-sm mt-1 text-dim">Consolidated and branch-level financial reporting</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Consolidated and branch-level financial reporting</p>
                 </div>
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--bg-input)] border border-[var(--border-main)] text-dim hover:bg-[var(--bg-card)] hover:text-[var(--text-main)] transition-all">
-                        <Download size={16} /> Export PDF
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border hover:bg-white/5 cursor-pointer"
+                            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                        <Download size={14} /> Export PDF
                     </button>
-                    <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#C8E600] text-[#0A0A0A] hover:shadow-[0_0_20px_rgba(200,230,0,0.2)] transition-all">
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                    <button 
+                        onClick={fetchReport}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                 </div>
             </div>

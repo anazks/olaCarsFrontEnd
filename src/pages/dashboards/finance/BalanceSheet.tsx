@@ -5,6 +5,7 @@ import type { BalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const BalanceSheet = () => {
     const [loading, setLoading] = useState(true);
@@ -85,30 +86,31 @@ const BalanceSheet = () => {
 
     return (
         <div className="container-responsive space-y-6 pb-12 animate-in fade-in duration-700">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Balance Sheet', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[#C8E600] to-[#98B000] text-[#0A0A0A] shadow-[0_0_20px_rgba(200,230,0,0.2)]">
-                            <Landmark size={24} />
-                        </div>
-                        <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>Balance Sheet</h1>
-                    </div>
-                    <p className="text-sm max-w-md" style={{ color: 'var(--text-muted)' }}>
-                        Comprehensive statement of financial position. Consolidated view across {filters.country || 'all countries'} {filters.branch && `and branch ${branches.find(b => b._id === filters.branch)?.name}`}.
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Landmark size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Balance Sheet
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">
+                        Comprehensive statement of financial position across {filters.country || 'all countries'}.
                     </p>
                 </div>
                 
-                <div className="flex gap-3 w-full md:w-auto">
-                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm"
-                            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}>
-                        <Download size={18} /> Export
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all shadow-sm hover:bg-white/5"
+                            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}>
+                        <Download size={14} /> Export
                     </button>
                     <button 
                         onClick={fetchReport}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold bg-[#C8E600] text-[#0A0A0A] hover:shadow-[0_0_25px_rgba(200,230,0,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] hover:scale-105 active:scale-95 transition-all"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                 </div>
             </div>

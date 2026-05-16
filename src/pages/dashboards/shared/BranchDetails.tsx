@@ -27,6 +27,7 @@ import {
     Tooltip as RechartsTooltip
 } from 'recharts';
 import { getBranchExtendedDetails } from '../../../services/branchService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const BranchDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -79,6 +80,8 @@ const BranchDetails = () => {
     if (error || !data) {
         return (
             <div className="p-8 text-center bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Branch Details', active: true }]} />
+
                 <p className="text-red-500 font-bold">{error || 'Branch not found'}</p>
                 <button
                     onClick={() => navigate(-1)}
@@ -131,7 +134,7 @@ const BranchDetails = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                            <h1 className="text-xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                                 {branch.name}
                             </h1>
                             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">

@@ -98,23 +98,24 @@ const PurchaseBillList = () => {
                 ]} 
             />
             
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-black flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Receipt size={28} className="text-[#C8E600]" />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Receipt size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         {t('management.purchaseBills.title')}
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseBills.subtitle')}</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">{t('management.purchaseBills.subtitle')}</p>
                 </div>
-                <button
-                    onClick={fetchPayments}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:bg-white/5 border border-[var(--border-main)]"
-                    style={{ color: 'var(--text-dim)' }}
-                >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                    {t('management.common.refresh')}
-                </button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={fetchPayments}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
             </div>
 
             {/* Filters Bar */}

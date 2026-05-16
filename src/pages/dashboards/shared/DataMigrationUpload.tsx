@@ -8,6 +8,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedRow {
     fullName: string; email: string; phone: string;
@@ -223,6 +224,8 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Data Migration Upload', active: true }]} />
+
             <div className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)' }}>

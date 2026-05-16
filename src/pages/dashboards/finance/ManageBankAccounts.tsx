@@ -12,7 +12,8 @@ import {
     CreditCard,
     ArrowUpRight,
     Loader2,
-    Filter
+    Filter,
+    RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
@@ -22,6 +23,7 @@ import {
     deleteBankAccount
 } from '../../../services/bankAccountService';
 import type { BankAccount } from '../../../services/bankAccountService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageBankAccounts = () => {
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -126,27 +128,37 @@ const ManageBankAccounts = () => {
 
     return (
         <div className="container-responsive py-10 space-y-10 min-h-screen" style={{ color: 'var(--text-main)' }}>
-            {/* Header Area */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b pb-10" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-lime/20 text-lime text-[10px] font-black uppercase tracking-widest rounded border border-lime/20">Finance Control</span>
-                    </div>
-                    <h1 className="text-4xl font-black flex items-center gap-4" style={{ color: 'var(--text-main)' }}>
-                        <Building2 className="text-lime" size={36} /> Bank Accounts
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Bank Accounts', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Building2 size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        Bank Accounts
                     </h1>
-                    <p className="font-medium max-w-xl" style={{ color: 'var(--text-dim)' }}>Centralized management for company liquidity, settlement accounts, and real-time balance tracking.</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Centralized management for company liquidity and settlement accounts.</p>
                 </div>
-                <button 
-                    onClick={() => {
-                        resetForm();
-                        setIsModalOpen(true);
-                    }}
-                    className="flex items-center justify-center gap-3 bg-lime text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-lime/20"
-                >
-                    <Plus size={20} />
-                    Register Account
-                </button>
+                
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button 
+                        onClick={fetchAccounts}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button 
+                        onClick={() => {
+                            resetForm();
+                            setIsModalOpen(true);
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <Plus size={14} strokeWidth={3} /> Register Account
+                    </button>
+                </div>
             </div>
 
             {/* Global Liquidity Metrics */}
@@ -326,7 +338,7 @@ const ManageBankAccounts = () => {
                     <div className="relative border rounded-[3rem] w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-500 shadow-[0_0_80px_rgba(0,0,0,0.5)]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
-                                <h2 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>{editingAccount ? 'Update Parameters' : 'Account Registration'}</h2>
+                                <h2 className="text-lg font-black" style={{ color: 'var(--text-main)' }}>{editingAccount ? 'Update Parameters' : 'Account Registration'}</h2>
                                 <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime">Financial Endpoint Configuration</p>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-white/5 rounded-2xl transition-all" style={{ color: 'var(--text-dim)' }}>

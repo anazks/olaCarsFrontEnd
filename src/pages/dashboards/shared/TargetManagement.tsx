@@ -9,6 +9,7 @@ import { delegateTask, getTasks, updateTaskStatus as updateTaskStatusService } f
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser, ROLE_LEVELS } from '../../../utils/auth';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const TargetManagement = () => {
     const userRole = (getUserRole() || '').toLowerCase().replace(/[\s-_]/g, '');
@@ -277,39 +278,29 @@ const TargetManagement = () => {
 
     return (
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Target Management', active: true }]} />
 
-            {/* Command Header */}
-            <div className="p-8 border-b border-[var(--border-main)] relative overflow-hidden bg-[var(--bg-card)] backdrop-blur-md">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48" />
+            
+            {/* Compact Header & Controls */}
+            <div className="p-6 md:p-8 max-w-[1600px] mx-auto pb-0 space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                    <div>
+                        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                            <TargetIcon size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                            Target Management
+                        </h1>
+                        <p className="text-xs font-medium text-dim mt-0.5">Strategic benchmarking and workforce performance objectives.</p>
+                    </div>
 
-                <div className="max-w-[1600px] mx-auto relative z-10">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-2xl bg-lime/10 flex items-center justify-center text-lime shadow-2xl shadow-lime/5 border border-lime/20">
-                                <TargetIcon size={32} />
-                            </div>
-                            <div>
-                                <h1 className="text-1xl font-black tracking-tighter text-[var(--text-main)]">Target & Task Management</h1>
-                                <p className="text-dim font-medium flex items-center gap-2 mt-1 uppercase text-[10px] tracking-[0.2em]">
-                                    <Shield size={14} className="text-lime" /> Performance Control & Delegation
-                                </p>
-                            </div>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)]">
+                        <div className="text-right">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Active</p>
+                            <p className="text-sm font-black text-[var(--text-main)] leading-none">{existingTargets.length}</p>
                         </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {[
-                                { label: `Total ${activeTab === 'TARGETS' ? 'Targets' : 'Tasks'}`, value: kpis.total, color: 'text-[var(--text-main)]', icon: <Activity size={14} /> },
-                                { label: 'Completed', value: kpis.completed, color: 'text-lime', icon: <CheckCircle2 size={14} /> },
-                                { label: 'Pending', value: kpis.pending, color: 'text-orange-400', icon: <Clock size={14} /> },
-                                { label: 'Success Rate', value: `${kpis.rate}%`, color: 'text-blue-400', icon: <TrendingUp size={14} /> }
-                            ].map((stat, i) => (
-                                <div key={i} className="px-4 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)] min-w-[120px]">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5 mb-1">
-                                        {stat.icon} {stat.label}
-                                    </p>
-                                    <p className={`text-xl font-black ${stat.color} leading-none`}>{stat.value}</p>
-                                </div>
-                            ))}
+                        <div className="w-px h-6 bg-[var(--border-main)] mx-2" />
+                        <div className="text-right">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Volume</p>
+                            <p className="text-sm font-black text-[var(--text-main)] leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
                         </div>
                     </div>
                 </div>

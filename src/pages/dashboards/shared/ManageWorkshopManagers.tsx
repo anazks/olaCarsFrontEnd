@@ -19,6 +19,7 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -249,11 +250,13 @@ const ManageWorkshopManagers = () => {
 
     return (
         <div className="p-4 sm:p-6 transition-colors duration-300" style={{ background: 'var(--bg-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Workshop Managers', active: true }]} />
+
             <style>{phoneInputStyles}</style>
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold flex items-center gap-3 transition-colors" style={{ color: 'var(--text-main)' }}>
                         <UserCog size={28} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
                         {t('management.workshopManager.title', { defaultValue: 'Workshop Managers' })}
                     </h1>
@@ -554,7 +557,7 @@ const ManageWorkshopManagers = () => {
                     >
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h2 className="text-2xl font-black transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>
+                                <h2 className="text-lg font-black transition-colors uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>
                                     {modalMode === 'create' ? t('management.workshopManager.modalTitleCreate', { defaultValue: 'Add Workshop Manager' }) : t('management.workshopManager.modalTitleEdit', { defaultValue: 'Edit Workshop Manager' })}
                                 </h2>
                                 <p className="text-sm" style={{ color: 'var(--text-dim)' }}>

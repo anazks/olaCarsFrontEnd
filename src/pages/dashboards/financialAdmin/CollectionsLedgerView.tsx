@@ -12,6 +12,7 @@ import {
 } from '../../../services/collectionService';
 import { getAllBranches } from '../../../services/branchService';
 import { useTheme } from '../../../context/ThemeContext';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface CollectionsLedgerViewProps {
     type: 'OVERDUE' | 'UPCOMING' | 'GENERAL';
@@ -141,81 +142,84 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
 
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
+
             
             {/* HEADER & DESCRIPTION */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        {meta.icon} {meta.title}
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <span className={meta.colorClass}>{meta.icon}</span>
+                        {meta.title}
                     </h1>
-                    <p className="font-medium" style={{ color: 'var(--text-dim)' }}>{meta.desc}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
-                        <p className="text-xs font-bold text-[#C8E600]">
-                            {type === 'GENERAL' ? (
+                    <p className="text-xs font-medium text-dim mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span>{meta.desc}</span>
+                        <span className="text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                            ({type === 'GENERAL' ? (
                                 filters.startDate || filters.endDate 
-                                    ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM dd, yyyy') : 'Genesis'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM dd, yyyy') : 'Today'}`
-                                    : 'Span: All-Time Dataset'
+                                    ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM d') : 'Start'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM d') : 'Now'}`
+                                    : 'All-Time Dataset'
                             ) : (
-                                type === 'OVERDUE' ? 'Span: Historical Aging Lifetime' : 'Span: Future Inflow Projections'
+                                type === 'OVERDUE' ? 'Historical Aging' : 'Future Projections'
+                            )})
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            {/* REUSABLE FILTER WRAPPER */}
+            <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors mb-8"
+                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                
+                {/* Country */}
+                <div className="relative">
+                    <select value={filters.country} 
+                            onChange={(e) => updateFilter('country', e.target.value)}
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
+                            style={{ color: 'var(--text-main)' }}>
+                        <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
+                        {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
+                    </select>
+                    <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                </div>
+
+                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                {/* Branch */}
+                <div className="relative">
+                    <select value={filters.branch} 
+                            onChange={(e) => updateFilter('branch', e.target.value)}
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
+                            style={{ color: 'var(--text-main)' }}>
+                        <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
+                        {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
+                    </select>
+                    <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                </div>
+
+                {/* Hide specific dates boundary for specialty list defaults unless desired */}
+                {type === 'GENERAL' && (
+                    <>
+                        <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+                        <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
+                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                            <Calendar size={15} className="opacity-60" />
+                            <input type="date" value={filters.startDate} 
+                                   onChange={(e) => updateFilter('startDate', e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none"
+                                   style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                            <span className="text-xs opacity-50">-</span>
+                            <input type="date" value={filters.endDate} 
+                                   onChange={(e) => updateFilter('endDate', e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none"
+                                   style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                            {(filters.startDate || filters.endDate) && (
+                                <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="text-red-500 ml-1"><FilterX size={14}/></button>
                             )}
-                        </p>
-                    </div>
-                </div>
-
-                {/* REUSABLE FILTER WRAPPER */}
-                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
-                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    
-                    {/* Country */}
-                    <div className="relative">
-                        <select value={filters.country} 
-                                onChange={(e) => updateFilter('country', e.target.value)}
-                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
-                                style={{ color: 'var(--text-main)' }}>
-                            <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
-                            {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
-                        </select>
-                        <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-                    </div>
-
-                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
-
-                    {/* Branch */}
-                    <div className="relative">
-                        <select value={filters.branch} 
-                                onChange={(e) => updateFilter('branch', e.target.value)}
-                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
-                                style={{ color: 'var(--text-main)' }}>
-                            <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
-                            {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
-                        </select>
-                        <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-                    </div>
-
-                    {/* Hide specific dates boundary for specialty list defaults unless desired */}
-                    {type === 'GENERAL' && (
-                        <>
-                            <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
-                            <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
-                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                <Calendar size={15} className="opacity-60" />
-                                <input type="date" value={filters.startDate} 
-                                       onChange={(e) => updateFilter('startDate', e.target.value)}
-                                       className="bg-transparent text-xs font-bold border-none outline-none"
-                                       style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
-                                <span className="text-xs opacity-50">-</span>
-                                <input type="date" value={filters.endDate} 
-                                       onChange={(e) => updateFilter('endDate', e.target.value)}
-                                       className="bg-transparent text-xs font-bold border-none outline-none"
-                                       style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
-                                {(filters.startDate || filters.endDate) && (
-                                    <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="text-red-500 ml-1"><FilterX size={14}/></button>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* MAIN DATA TABLE WRAPPER */}

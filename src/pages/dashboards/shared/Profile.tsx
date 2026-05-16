@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Shield, Key, Eye, EyeOff, Save, CheckCircle2 } from 'lucide-react';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { changePassword } from '../../../services/authService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const Profile = () => {
     const user = getUser();
@@ -74,9 +75,11 @@ const Profile = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Profile', active: true }]} />
+
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold mb-2 text-main" style={{ color: 'var(--text-main)' }}>Profile Settings</h1>
+                <h1 className="text-xl font-bold mb-2 text-main" style={{ color: 'var(--text-main)' }}>Profile Settings</h1>
                 <p className="text-sm text-dim" style={{ color: 'var(--text-dim)' }}>Manage your personal information and security settings.</p>
             </div>
 

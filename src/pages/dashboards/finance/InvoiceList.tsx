@@ -1,390 +1,537 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, Filter, Search, Download, DollarSign, User, Calendar, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
-import { getInvoices, payInvoice } from '../../../services/invoiceService';
+import { useNavigate } from 'react-router-dom';
+import { 
+    FileText, RefreshCw, Filter, Search, CheckCircle2, 
+    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, DollarSign, Calendar, Plus,
+    ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
+} from 'lucide-react';
+import { getInvoices, getInvoicesRegistry, deleteInvoice, deleteAllInvoices, triggerWeeklyGeneration } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import CreateInvoiceModal from './CreateInvoiceModal';
+import InvoiceSettingsModal from './InvoiceSettingsModal';
 
 const InvoiceList = () => {
+    const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    
+    // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     
-    // Pagination
+    // Server Pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
-    const [pagination, setPagination] = useState({ totalItems: 0, totalPages: 1 });
-    
-    // Payment Modal State
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-    const [paymentAmount, setPaymentAmount] = useState<number>(0);
-    const [paymentMethod, setPaymentMethod] = useState('Cash');
-    const [paymentNote, setPaymentNote] = useState('');
-    const [processingPayment, setProcessingPayment] = useState(false);
+    const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+
+    // Sorting
+    const [sortBy, setSortBy] = useState('dueDate');
+    const [sortOrder, setSortOrder] = useState<'desc' | 'desc'>('desc');
 
     useEffect(() => {
-        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
-        return () => clearTimeout(timer);
+        const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
+        return () => clearTimeout(t);
     }, [searchQuery]);
 
-    // Reset to page 1 on filter changes
     useEffect(() => {
         setPage(1);
-    }, [statusFilter, debouncedSearch, startDate, endDate]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter]);
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <ArrowUpDown size={10} className="opacity-20 group-hover:opacity-100 transition-opacity" />;
+        return sortOrder === 'asc' ? <ArrowUp size={10} className="text-brand-lime" /> : <ArrowDown size={10} className="text-brand-lime" />;
+    };
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const filters: any = {
-                page,
-                limit
-            };
-            if (statusFilter !== 'ALL') filters.status = statusFilter;
-            if (debouncedSearch) filters.search = debouncedSearch;
+            const filters: any = { page, limit, sortBy, sortOrder };
+            if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
             
-            const response = await getInvoices(filters);
-            setInvoices(response.data || []);
-            if (response.pagination) {
-                setPagination(response.pagination);
+            const res = await getInvoicesRegistry(filters);
+            console.log('[InvoiceList] API Response:', res);
+            if (res) {
+                // Direct extraction from Invoice model response
+                const data = res.data || res;
+                const dataArray = Array.isArray(data) ? data : [];
+                setInvoices(dataArray);
+                
+                const pag = res.pagination || {};
+                setPagination({
+                    total: pag.totalItems || dataArray.length,
+                    pages: pag.totalPages || 1
+                });
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to fetch invoices');
-            toast.error('Error loading invoices');
+            setError(err.response?.data?.message || 'Failed to load');
+            toast.error('Error syncing invoices');
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, debouncedSearch, page, limit, startDate, endDate]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    const handleRecordPayment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedInvoice) return;
+    const handleRowClick = (id: string) => {
+        navigate(`./${id}`);
+    };
 
-        if (paymentAmount <= 0) {
-            toast.error('Please enter a valid payment amount');
-            return;
-        }
-
-        setProcessingPayment(true);
-        try {
-            await payInvoice(selectedInvoice._id, {
-                amount: paymentAmount,
-                paymentMethod,
-                note: paymentNote
-            });
-            toast.success('Payment recorded successfully');
-            setSelectedInvoice(null);
-            fetchData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to record payment');
-        } finally {
-            setProcessingPayment(false);
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= pagination.pages) {
+            setPage(newPage);
         }
     };
 
-    // Filtering is now handled on the server
+    const handleDeleteInvoice = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this invoice?')) return;
+        try {
+            await deleteInvoice(id);
+            toast.success('Invoice deleted successfully');
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete invoice');
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (!window.confirm('CRITICAL: Are you sure you want to delete ALL invoices? This action cannot be undone.')) return;
+        try {
+            await deleteAllInvoices();
+            toast.success('All invoices deleted successfully');
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete all invoices');
+        }
+    };
+
+    const handleGenerateWeekly = async () => {
+        if (!window.confirm('Are you sure you want to trigger weekly invoice generation for all active drivers now?')) return;
+        setGenerating(true);
+        try {
+            const result = await triggerWeeklyGeneration();
+            toast.success(`Generation complete: ${result.generatedCount} invoices created, ${result.skippedCount} skipped.`);
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to generate weekly invoices');
+        } finally {
+            setGenerating(false);
+        }
+    };
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className="container-responsive space-y-6 pb-12">
             <Breadcrumbs 
                 items={[
-                    { label: 'Finance', path: '#' },
-                    { label: 'Rent Invoices', active: true }
+                    { label: 'Sales', path: '#' },
+                    { label: 'Invoices', active: true }
                 ]} 
             />
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} className="text-brand-lime" />
-                        Invoices Management
-                    </h1>
-                    <p className="text-sm font-medium opacity-60" style={{ color: 'var(--text-dim)' }}>Monitor rent invoices and record manual payments</p>
-                </div>
-                <button
-                    onClick={fetchData}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-dim hover:text-white transition-all"
-                >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                </button>
-            </div>
+            <div className="space-y-6 animate-in fade-in duration-500">
+                
+                {/* Uniform Compact Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 border-b border-white/5 pb-4">
+                    <div>
+                        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                            <FileText size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                            Invoice Registry
+                        </h1>
+                        <p className="text-xs font-medium text-dim mt-0.5">Manage vehicle rental leases and record operator payments.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button 
+                            onClick={() => setShowSettingsModal(true)} 
+                            className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            title="Automation Settings"
+                        >
+                            <Settings size={14} />
+                        </button>
 
-            {/* Filters Bar */}
-            <div className="flex flex-wrap items-center gap-4 p-4 rounded-3xl border bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
-                {/* Search */}
-                <div className="flex-1 min-w-[280px] relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={16} />
-                    <input 
-                        type="text" 
-                        placeholder="Search Invoice # or Driver..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none text-xs transition-all focus:border-brand-lime/30"
-                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    />
-                </div>
+                        {/* 
+                        <button 
+                            onClick={handleGenerateWeekly} 
+                            disabled={generating}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white disabled:opacity-50"
+                            title="Generate Weekly Invoices Now"
+                        >
+                            <Settings className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+                            <span>{generating ? 'Generating...' : 'Generate Now'}</span>
+                        </button>
 
-                {/* Status */}
-                <div className="w-full sm:w-auto min-w-[140px]">
-                    <select 
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-xs cursor-pointer focus:border-brand-lime/30"
-                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="PARTIAL">Partial</option>
-                        <option value="PAID">Paid</option>
-                        <option value="OVERDUE">Overdue</option>
-                    </select>
-                </div>
+                        <button 
+                            onClick={() => setShowSettingsModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500 hover:text-white"
+                            title="Automation Settings"
+                        >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>Date Setup</span>
+                        </button>
+                        */}
 
-                {/* Date Range */}
-                <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-main)]">
-                    <input 
-                        type="date" 
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
-                    />
-                    <div className="w-px h-4 bg-white/10"></div>
-                    <input 
-                        type="date" 
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
-                    />
+                        <button 
+                            onClick={handleDeleteAll} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white"
+                            title="Delete All Invoices"
+                        >
+                            <Trash2 size={14} strokeWidth={3} />
+                            Delete All
+                        </button>
+                        <button 
+                            onClick={() => setShowCreateModal(true)} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <Plus size={14} strokeWidth={3} />
+                            New Invoice
+                        </button>
+                    </div>
                 </div>
 
-                {/* Clear Button (Icon only) */}
-                {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
-                    <button
-                        onClick={() => {
-                            setSearchQuery('');
-                            setStatusFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
-                        }}
-                        title="Clear Filters"
-                        className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"
-                    >
-                        <X size={16} />
-                    </button>
-                )}
-            </div>
+                {/* Unified Search and Filters (Uniform Capsule Design) */}
+                <div className="flex flex-col md:flex-row gap-3 flex-shrink-0 select-none">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2" size={16} style={{ color: 'var(--text-dim)' }} />
+                        <input
+                            type="text"
+                            placeholder="Search by Invoice No., Operator full name, or custom identifiers..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 rounded-2xl text-xs font-semibold border outline-none transition-all"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    <div className="flex gap-3 flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
+                    <div className="relative flex-shrink-0">
+                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
+                        <select
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                            className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <option value="ALL" style={{background: 'var(--bg-card)'}}>ALL STATUSES</option>
+                            <option value="PENDING" style={{background: 'var(--bg-card)'}}>PENDING</option>
+                            <option value="PARTIAL" style={{background: 'var(--bg-card)'}}>PARTIAL</option>
+                            <option value="PAID" style={{background: 'var(--bg-card)'}}>PAID</option>
+                            <option value="OVERDUE" style={{background: 'var(--bg-card)'}}>OVERDUE</option>
+                        </select>
+                    </div>
+                    </div>
+                </div>
 
-            {/* Table */}
-            <div className="rounded-[2rem] border overflow-hidden bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-black/20 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">
-                                <th className="p-6">Invoice Details</th>
-                                <th className="p-6">Driver</th>
-                                <th className="p-6">Due Date</th>
-                                <th className="p-6">Amount</th>
-                                <th className="p-6">Balance</th>
-                                <th className="p-6">Status</th>
-                                <th className="p-6 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {loading && invoices.length === 0 ? (
-                                <tr><td colSpan={7} className="p-20 text-center animate-pulse text-xs font-black uppercase tracking-widest opacity-40">Loading Invoices...</td></tr>
-                            ) : invoices.length === 0 ? (
-                                <tr><td colSpan={7} className="p-20 text-center text-dim text-sm font-medium">No invoices found matching your criteria.</td></tr>
-                            ) : invoices.map((inv) => (
-                                <tr key={inv._id} className="group hover:bg-white/[0.02] transition-all">
-                                    <td className="p-6">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</span>
-                                            <span className="text-[10px] font-bold text-dim uppercase tracking-wider">{inv.weekLabel}</span>
+                {/* Unified Grid Canvas */}
+                <div className="border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full border-collapse text-left text-xs select-text">
+                            <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="py-4 px-3 text-left w-10">Sl No.</th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('invoiceNumber')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Invoice Number <SortIcon field="invoiceNumber" />
                                         </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-full bg-brand-lime/10 flex items-center justify-center text-brand-lime">
-                                                <User size={14} />
-                                            </div>
-                                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {(inv.driver as any)?.personalInfo?.fullName || 'Unknown Driver'}
-                                            </span>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[15%]">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Description / Type
                                         </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <div className="flex items-center gap-2 text-xs font-medium text-dim">
-                                            <Calendar size={14} />
-                                            {new Date(inv.dueDate).toLocaleDateString()}
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[20%] group cursor-pointer select-none" onClick={() => handleSort('driver')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Driver Details <SortIcon field="driver" />
                                         </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</span>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className={`text-sm font-black ${inv.balance > 0 ? 'text-orange-400' : 'text-brand-lime'}`}>
-                                            ${inv.balance.toLocaleString()}
-                                        </span>
-                                    </td>
-                                    <td className="p-6">
-                                        <StatusBadge status={inv.status} />
-                                    </td>
-                                    <td className="p-6 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {inv.status !== 'PAID' && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setSelectedInvoice(inv);
-                                                        setPaymentAmount(inv.balance);
-                                                    }}
-                                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime text-black text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-brand-lime/20 transition-all"
-                                                >
-                                                    <DollarSign size={14} />
-                                                    Pay
-                                                </button>
-                                            )}
-                                            <button className="p-2 rounded-xl bg-white/5 border border-white/10 text-dim hover:text-white transition-all">
-                                                <Download size={16} />
-                                            </button>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('vehicle')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Vehicle / Fleet <SortIcon field="vehicle" />
                                         </div>
-                                    </td>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%]">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Node Location
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('totalAmountDue')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Gross Billed <SortIcon field="totalAmountDue" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('amountPaid')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Net Settled <SortIcon field="amountPaid" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('balance')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Current Balance <SortIcon field="balance" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Status <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={11} className="py-20 text-center">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <RefreshCw className="animate-spin text-brand-lime" size={28} />
+                                                <span className="text-xs font-black tracking-widest text-dim uppercase">Decrypting Ledger...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : error ? (
+                                    <tr>
+                                        <td colSpan={11} className="py-20 text-center">
+                                            <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
+                                                <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
+                                                <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : invoices.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={11} className="py-20 text-center">
+                                            <div className="text-dim space-y-1 uppercase">
+                                                <FileText className="mx-auto opacity-20 mb-2" size={32} />
+                                                <p className="text-xs font-black tracking-widest">No statements recorded</p>
+                                                <p className="text-[10px] tracking-wider font-bold lowercase opacity-60">Try adjusting search queries or dynamic filters</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    invoices.map((invoice, index) => (
+                                        <tr 
+                                            key={invoice._id} 
+                                            onClick={() => handleRowClick(invoice._id)}
+                                            className="transition-colors cursor-pointer group"
+                                            style={{ borderBottom: '1px solid var(--border-main)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (page - 1) * limit).toString().padStart(2, '0')}</td>
+                                            <td className="py-4 px-6 font-black">
+                                                <div className="flex flex-col">
+                                                    <span className="tracking-wide font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{invoice.invoiceNumber}</span>
+                                                    <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5 opacity-60">ID: {invoice._id?.slice(-8)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold truncate max-w-[150px]" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.description || (invoice.invoiceType === 'AUTO' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
+                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'AUTO' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
+                                                            {invoice.invoiceType || 'AUTO'}
+                                                        </span>
+                                                        {invoice.invoiceType === 'AUTO' && (
+                                                            <span className="text-[9px] font-black text-dim uppercase tracking-wider">{invoice.weekLabel || 'Cycle'}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0 shadow-inner">
+                                                        <span className="text-brand-lime text-[10px] font-black">
+                                                            {(invoice.driver?.personalInfo?.fullName || 'OP').slice(0, 2).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black leading-snug tracking-tight">
+                                                            {invoice.driver?.personalInfo?.fullName || 'System Pool'}
+                                                        </span>
+                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">
+                                                            {invoice.driver?.driverId || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.vehicle?.legalDocs?.registrationNumber || 'N/A'}
+                                                    </span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
+                                                        Fleet #{invoice.vehicle?.basicDetails?.fleetNumber || 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {invoice.driver?.branch?.name || 'N/A'}
+                                                    </span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
+                                                        {invoice.driver?.branch?.country || 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6 font-bold text-dim">
+                                                {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-black text-sm">
+                                                ${invoice.totalAmountDue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-bold text-emerald-400">
+                                                ${invoice.amountPaid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-black text-sm">
+                                                <span className={invoice.balance > 0 ? (invoice.status === 'OVERDUE' ? 'text-rose-500' : 'text-amber-400') : 'text-emerald-400'}>
+                                                    ${invoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-6 text-center">
+                                                <StatusBadge status={invoice.status} />
+                                            </td>
+                                            <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
+                                                <div className="flex justify-center gap-2">
+                                                    <button 
+                                                        onClick={() => handleRowClick(invoice._id)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
+                                                        title="Inspect Invoice Document"
+                                                    >
+                                                        <Eye size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteInvoice(invoice._id)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-rose-500 hover:border-rose-500/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
+                                                        title="Delete Invoice"
+                                                    >
+                                                        <Trash2 size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                {/* Pagination Controls */}
-                {!loading && invoices.length > 0 && pagination && (
-                    <div className="p-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
-                        <p className="text-[10px] font-black text-dim uppercase tracking-widest">
-                            Showing <span className="text-[var(--text-main)]">{((page - 1) * limit) + 1}</span> - <span className="text-[var(--text-main)]">{Math.min(page * limit, pagination.totalItems)}</span> of <span className="text-[var(--text-main)]">{pagination.totalItems}</span> Invoices
-                        </p>
-                        
-                        <div className="flex items-center gap-3">
-                            <select 
-                                value={limit}
-                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                                className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-1.5 text-[10px] font-bold text-[var(--text-main)] outline-none cursor-pointer"
-                            >
-                                <option value="10">10 / PAGE</option>
-                                <option value="25">25 / PAGE</option>
-                                <option value="50">50 / PAGE</option>
-                                <option value="100">100 / PAGE</option>
-                            </select>
-
+                    {/* Modern Numbered Pagination */}
+                    {!loading && invoices.length > 0 && pagination && pagination.pages >= 1 && (
+                        <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                Showing {invoices.length} of {pagination.total} statements
+                            </p>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
-                                    style={{ color: page === 1 ? 'var(--text-dim)' : '#C8E600' }}
+                                    onClick={() => setPage(page - 1)}
+                                    disabled={page === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    Prev
+                                    <ChevronLeft size={18} />
                                 </button>
-                                
-                                <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5">
-                                    <span className="text-[10px] font-black text-[var(--text-main)] italic">
-                                        {page} <span className="text-dim opacity-30 mx-1">/</span> {pagination.totalPages}
-                                    </span>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                        let pageNum: number;
+                                        if (pagination.pages <= 5) pageNum = i + 1;
+                                        else if (page <= 3) pageNum = i + 1;
+                                        else if (page >= pagination.pages - 2) pageNum = pagination.pages - 4 + i;
+                                        else pageNum = page - 2 + i;
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setPage(pageNum)}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
+                                                    color: page === pageNum ? '#000' : 'var(--text-main)',
+                                                    border: page === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-
                                 <button
-                                    onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-                                    disabled={page === pagination.totalPages}
-                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-30 hover:bg-white/5"
-                                    style={{ color: page === pagination.totalPages ? 'var(--text-dim)' : '#C8E600' }}
+                                    onClick={() => setPage(page + 1)}
+                                    disabled={page === pagination.pages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    Next
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
-            {/* Payment Modal */}
-            {selectedInvoice && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Record Payment</h2>
-                            <p className="text-xs font-bold text-dim uppercase tracking-widest mt-1">Invoice: {selectedInvoice.invoiceNumber}</p>
-                        </div>
-                        <form onSubmit={handleRecordPayment} className="p-8 space-y-6">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Amount (USD)</label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-lime" size={18} />
-                                    <input 
-                                        type="number"
-                                        required
-                                        max={selectedInvoice.balance}
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                        className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime transition-all"
-                                    />
-                                </div>
-                                <p className="text-[10px] font-bold text-dim mt-1">Remaining Balance: ${selectedInvoice.balance}</p>
-                            </div>
+            {showCreateModal && (
+                <CreateInvoiceModal 
+                    onClose={() => setShowCreateModal(false)}
+                    onSuccess={() => {
+                        setShowCreateModal(false);
+                        fetchData();
+                    }}
+                />
+            )}
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Method</label>
-                                <select 
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime appearance-none cursor-pointer"
-                                >
-                                    <option value="Cash">Cash</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Card">Credit/Debit Card</option>
-                                    <option value="Mobile Money">Mobile Money</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Notes / Reference</label>
-                                <textarea 
-                                    value={paymentNote}
-                                    onChange={(e) => setPaymentNote(e.target.value)}
-                                    placeholder="Any additional details..."
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white text-sm outline-none focus:border-brand-lime h-24 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setSelectedInvoice(null)}
-                                    className="flex-1 py-3 rounded-2xl bg-white/5 text-dim font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit"
-                                    disabled={processingPayment}
-                                    className="flex-1 py-3 rounded-2xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:shadow-brand-lime/20 transition-all disabled:opacity-50"
-                                >
-                                    {processingPayment ? 'Processing...' : 'Confirm Payment'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            {showSettingsModal && (
+                <InvoiceSettingsModal 
+                    onClose={() => setShowSettingsModal(false)}
+                />
             )}
         </div>
     );
@@ -392,14 +539,10 @@ const InvoiceList = () => {
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
-        case 'PAID':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-[9px] font-black uppercase border border-green-500/20"><CheckCircle2 size={10} /> Paid</span>;
-        case 'PARTIAL':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-[9px] font-black uppercase border border-yellow-500/20"><Clock size={10} /> Partial</span>;
-        case 'OVERDUE':
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[9px] font-black uppercase border border-red-500/20"><AlertCircle size={10} /> Overdue</span>;
-        default:
-            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-dim text-[9px] font-black uppercase border border-white/10">Pending</span>;
+        case 'PAID': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none"><CheckCircle2 size={10} strokeWidth={3}/> Paid</span>;
+        case 'PARTIAL': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-yellow-500/10 text-yellow-500 border-yellow-500/20 select-none"><Clock size={10} strokeWidth={3}/> Partial</span>;
+        case 'OVERDUE': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none"><AlertCircle size={10} strokeWidth={3}/> Overdue</span>;
+        default: return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-white/5 text-[#A3A3A3] border-white/10 select-none">Pending</span>;
     }
 };
 

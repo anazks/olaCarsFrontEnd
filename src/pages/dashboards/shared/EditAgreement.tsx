@@ -7,6 +7,7 @@ import {
 import agreementService from '../../../services/agreementService';
 import AgreementEditor from '../../../components/agreements/AgreementEditor';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const EditAgreement = () => {
     const { id } = useParams<{ id: string }>();
@@ -84,6 +85,8 @@ const EditAgreement = () => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Edit Agreement', active: true }]} />
+
                 <div className="w-12 h-12 border-4 border-lime border-t-transparent rounded-full animate-spin" />
                 <p className="text-dim animate-pulse">Loading Agreement...</p>
             </div>
@@ -103,7 +106,7 @@ const EditAgreement = () => {
                         <ArrowLeft size={24} />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                        <h1 className="text-xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                             {isEdit ? 'Edit Agreement' : 'Create New Agreement'}
                         </h1>
                         <p className="text-dim">

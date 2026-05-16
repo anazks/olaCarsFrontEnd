@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import toast from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ── Shared UI Constants ──────────────────────────────────────────────────────
 
@@ -238,10 +239,12 @@ const CreateVehicle = () => {
     if (success) {
         return (
             <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Form Field', active: true }]} />
+
                 <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                     <Check size={40} />
                 </div>
-                <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>Vehicle Created!</h1>
+                <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Vehicle Created!</h1>
                 <p style={{ color: 'var(--text-dim)' }}>Redirecting...</p>
             </div>
         );
@@ -252,7 +255,7 @@ const CreateVehicle = () => {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                    <h1 className="text-lg font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <Car size={28} style={{ color: '#C8E600' }} />
                         Create New Vehicle
                     </h1>

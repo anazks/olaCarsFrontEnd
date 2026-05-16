@@ -106,30 +106,30 @@ const GeneralLedger = () => {
                 ]} 
             />
             
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <FileText size={28} style={{ color: '#C8E600' }} />
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <FileText size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         General Ledger
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Immutable audit trail of all financial transactions</p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Immutable audit trail of all financial transactions</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={fetchData}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-white/5"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-muted)' }}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canCreateEntry && (
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
-                            style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
-                            <PlusCircle size={18} /> Add Manual Entry Adjustments
+                            <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
                         </button>
                     )}
                 </div>

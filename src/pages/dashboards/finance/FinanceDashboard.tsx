@@ -8,6 +8,7 @@ import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
 import { getUser } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const FinanceDashboard = () => {
     const [recentEntries, setRecentEntries] = useState<LedgerEntry[]>([]);
@@ -131,32 +132,31 @@ const FinanceDashboard = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Finance Dashboard', active: true }]} />
+
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <div className="p-2.5 rounded-xl" style={{ background: 'var(--brand-lime)', color: '#000' }}>
-                            <BarChart3 size={24} />
-                        </div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <BarChart3 size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Finance Command Center
                     </h1>
-                    <p className="text-sm mt-1 font-medium" style={{ color: 'var(--text-dim)' }}>
-                        Institutional oversight of corporate liquidity and fiscal operations.
-                    </p>
+                    <p className="text-xs font-medium text-dim mt-0.5">Institutional oversight of corporate liquidity and fiscal operations.</p>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <button
-                        onClick={() => navigate('../vouchers')} // Vouchers often used to generate invoices/payments
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-lime text-black text-[11px] font-black uppercase tracking-widest shadow-xl shadow-lime/20 hover:scale-105 transition-all"
-                    >
-                        <Receipt size={16} /> Generate Invoice
-                    </button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={fetchDashboardData}
-                        className="p-3 rounded-xl border border-white/5 transition-all hover:bg-white/5"
-                        style={{ background: 'var(--bg-card)', color: 'var(--text-dim)' }}
+                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={() => navigate('../vouchers')}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <Receipt size={14} /> Generate Invoice
                     </button>
                 </div>
             </div>

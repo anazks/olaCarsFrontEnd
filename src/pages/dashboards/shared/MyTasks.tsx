@@ -7,6 +7,7 @@ import {
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import { getUser } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const MyTasks = () => {
     const user = getUser();
@@ -82,6 +83,8 @@ const MyTasks = () => {
 
     return (
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar bg-gray-50 dark:bg-[#0A0A0A]">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'My Tasks', active: true }]} />
+
             
             {/* Professional Header */}
             <div className="p-8 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-black/40 backdrop-blur-md sticky top-0 z-20">
@@ -91,7 +94,7 @@ const MyTasks = () => {
                             <Shield size={28} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white uppercase">Assigned Missions</h1>
+                            <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white uppercase">Assigned Missions</h1>
                             <p className="text-gray-500 dark:text-dim font-bold flex items-center gap-2 mt-0.5 uppercase text-[10px] tracking-widest">
                                 <Activity size={14} className="text-indigo-600" /> Operational Directive Management
                             </p>
