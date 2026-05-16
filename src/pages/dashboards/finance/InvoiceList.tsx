@@ -410,6 +410,33 @@ const InvoiceList = () => {
                                 </button>
                             </div>
                         </form>
+                        
+                        {/* Payment History */}
+                        {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
+                            <div className="px-8 pb-8 space-y-4">
+                                <div className="pt-6 border-t border-white/5">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-dim mb-4">Payment History</h3>
+                                    <div className="space-y-2">
+                                        {selectedInvoice.payments.map((p: any, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+                                                        <DollarSign size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-xs text-white">${p.amount.toLocaleString()}</p>
+                                                        <p className="text-[9px] text-dim uppercase tracking-wider">{p.paymentMethod} • {new Date(p.paidAt).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                {p.transactionId && (
+                                                    <span className="text-[8px] font-mono text-dim opacity-40">Ref: {p.transactionId.slice(-8)}</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
