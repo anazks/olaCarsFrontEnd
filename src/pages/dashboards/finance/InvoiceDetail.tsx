@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     DollarSign, Calendar, CheckCircle2, Clock, AlertCircle, X, 
-    Printer, ArrowLeft, Edit3, FileSpreadsheet, Eye, Sun, Moon
+    Printer, ArrowLeft, Edit3, FileSpreadsheet, Eye, Sun, Moon, Trash2
 } from 'lucide-react';
-import { getInvoiceById, payInvoice, updateInvoice } from '../../../services/invoiceService';
+import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice } from '../../../services/invoiceService';
 import { createCreditNote, getAllCreditNotes, applyCreditNote } from '../../../services/creditNoteService';
 import type { Invoice } from '../../../services/invoiceService';
 import { useTheme } from '../../../context/ThemeContext';
@@ -199,6 +199,17 @@ const InvoiceDetail = () => {
 
     const convertToWords = (num: number) => `${num.toLocaleString('en-US')} USD`;
 
+    const handleDeleteInvoice = async () => {
+        if (!window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) return;
+        try {
+            await deleteInvoice(id!);
+            toast.success('Invoice deleted successfully');
+            navigate('../invoices');
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete invoice');
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
@@ -285,6 +296,13 @@ const InvoiceDetail = () => {
                         
                         <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white/5 border border-white/10 font-black text-[10px] uppercase rounded-xl active:scale-95 hover:bg-white/10 cursor-pointer" style={{ color: 'var(--text-main)' }}>
                             <Printer size={12}/> Print
+                        </button>
+
+                        <button 
+                            onClick={handleDeleteInvoice}
+                            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-black text-[10px] uppercase rounded-xl active:scale-95 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                        >
+                            <Trash2 size={12}/> Delete
                         </button>
                     </div>
                 </div>

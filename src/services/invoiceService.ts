@@ -110,3 +110,25 @@ export const getInvoiceById = async (invoiceId: string): Promise<Invoice> => {
     return response.data.data;
 };
 
+export const deleteInvoice = async (invoiceId: string): Promise<void> => {
+    await api.delete(`/api/invoices/${invoiceId}`);
+};
+
+export const deleteAllInvoices = async (): Promise<void> => {
+    await api.delete('/api/invoices/all');
+};
+
+export const triggerWeeklyGeneration = async (): Promise<{generatedCount: number, skippedCount: number}> => {
+    const response = await api.post('/api/invoices/generate-weekly');
+    return response.data.data;
+};
+
+export const getGenerationSettings = async (): Promise<{generationDay: number}> => {
+    const response = await api.get('/api/invoices/settings/generation');
+    return response.data.data;
+};
+
+export const updateGenerationSettings = async (generationDay: number): Promise<void> => {
+    await api.post('/api/invoices/settings/generation', { generationDay });
+};
+

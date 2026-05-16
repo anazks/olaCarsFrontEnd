@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { 
     FileText, RefreshCw, Filter, Search, CheckCircle2, 
     Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, DollarSign, Calendar, Plus,
-    ArrowUpDown, ArrowUp, ArrowDown
+    ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
-import { getInvoices, getInvoicesRegistry } from '../../../services/invoiceService';
+import { getInvoices, getInvoicesRegistry, deleteInvoice, deleteAllInvoices, triggerWeeklyGeneration } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import CreateInvoiceModal from './CreateInvoiceModal';
+import InvoiceSettingsModal from './InvoiceSettingsModal';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
@@ -17,6 +18,8 @@ const InvoiceList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [generating, setGenerating] = useState(false);
     
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -103,6 +106,42 @@ const InvoiceList = () => {
         }
     };
 
+    const handleDeleteInvoice = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this invoice?')) return;
+        try {
+            await deleteInvoice(id);
+            toast.success('Invoice deleted successfully');
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete invoice');
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (!window.confirm('CRITICAL: Are you sure you want to delete ALL invoices? This action cannot be undone.')) return;
+        try {
+            await deleteAllInvoices();
+            toast.success('All invoices deleted successfully');
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete all invoices');
+        }
+    };
+
+    const handleGenerateWeekly = async () => {
+        if (!window.confirm('Are you sure you want to trigger weekly invoice generation for all active drivers now?')) return;
+        setGenerating(true);
+        try {
+            const result = await triggerWeeklyGeneration();
+            toast.success(`Generation complete: ${result.generatedCount} invoices created, ${result.skippedCount} skipped.`);
+            fetchData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to generate weekly invoices');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     return (
         <div className="container-responsive space-y-6 pb-12">
             <Breadcrumbs 
@@ -125,12 +164,31 @@ const InvoiceList = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <button 
-                            onClick={() => fetchData()} 
+                            onClick={() => setShowSettingsModal(true)} 
                             className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            title="Refresh Data"
+                            title="Automation Settings"
                         >
-                            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                            <Settings size={14} />
+                        </button>
+
+                        <button 
+                            onClick={handleGenerateWeekly} 
+                            disabled={generating}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white disabled:opacity-50"
+                            title="Generate Weekly Invoices Now"
+                        >
+                            {generating ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} strokeWidth={3} />}
+                            {generating ? 'Generating...' : 'Generate Now'}
+                        </button>
+
+                        <button 
+                            onClick={handleDeleteAll} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white"
+                            title="Delete All Invoices"
+                        >
+                            <Trash2 size={14} strokeWidth={3} />
+                            Delete All
                         </button>
                         <button 
                             onClick={() => setShowCreateModal(true)} 
@@ -373,13 +431,20 @@ const InvoiceList = () => {
                                                 <StatusBadge status={invoice.status} />
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
-                                                <div className="flex justify-center">
+                                                <div className="flex justify-center gap-2">
                                                     <button 
                                                         onClick={() => handleRowClick(invoice._id)}
                                                         className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
                                                         title="Inspect Invoice Document"
                                                     >
                                                         <Eye size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteInvoice(invoice._id)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-rose-500 hover:border-rose-500/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
+                                                        title="Delete Invoice"
+                                                    >
+                                                        <Trash2 size={14} strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -449,6 +514,12 @@ const InvoiceList = () => {
                         setShowCreateModal(false);
                         fetchData();
                     }}
+                />
+            )}
+
+            {showSettingsModal && (
+                <InvoiceSettingsModal 
+                    onClose={() => setShowSettingsModal(false)}
                 />
             )}
         </div>
