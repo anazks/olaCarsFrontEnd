@@ -11,10 +11,12 @@ export interface InvoicePayment {
 export interface Invoice {
     _id: string;
     invoiceNumber: string;
+    invoiceType: 'RENTAL' | 'WORKSHOP';
     driver: string | any;
     vehicle: string | any;
-    weekNumber: number;
-    weekLabel: string;
+    serviceBill?: string | any;
+    weekNumber?: number;
+    weekLabel?: string;
     dueDate: string;
     baseAmount: number;
     carryOverAmount: number;
@@ -36,6 +38,7 @@ export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> 
 export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any}> => {
     const params = new URLSearchParams();
     if (filters.status && filters.status !== 'ALL') params.append('status', filters.status);
+    if (filters.invoiceType && filters.invoiceType !== 'ALL') params.append('invoiceType', filters.invoiceType);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.search) params.append('search', filters.search);

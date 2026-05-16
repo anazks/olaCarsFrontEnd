@@ -12,6 +12,7 @@ const InvoiceList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     
@@ -35,7 +36,7 @@ const InvoiceList = () => {
     // Reset to page 1 on filter changes
     useEffect(() => {
         setPage(1);
-    }, [statusFilter, debouncedSearch, startDate, endDate]);
+    }, [statusFilter, invoiceTypeFilter, debouncedSearch, startDate, endDate]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -46,6 +47,7 @@ const InvoiceList = () => {
                 limit
             };
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (invoiceTypeFilter !== 'ALL') filters.invoiceType = invoiceTypeFilter;
             if (debouncedSearch) filters.search = debouncedSearch;
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
@@ -61,7 +63,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, debouncedSearch, page, limit, startDate, endDate]);
+    }, [statusFilter, invoiceTypeFilter, debouncedSearch, page, limit, startDate, endDate]);
 
     useEffect(() => {
         fetchData();
@@ -152,6 +154,20 @@ const InvoiceList = () => {
                     </select>
                 </div>
 
+                {/* Invoice Type */}
+                <div className="w-full sm:w-auto min-w-[140px]">
+                    <select 
+                        value={invoiceTypeFilter}
+                        onChange={(e) => setInvoiceTypeFilter(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border outline-none text-xs cursor-pointer focus:border-brand-lime/30"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <option value="ALL">All Types</option>
+                        <option value="RENTAL">Rental Only</option>
+                        <option value="WORKSHOP">Workshop Only</option>
+                    </select>
+                </div>
+
                 {/* Date Range */}
                 <div className="flex items-center gap-2 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-main)]">
                     <input 
@@ -177,6 +193,7 @@ const InvoiceList = () => {
                         onClick={() => {
                             setSearchQuery('');
                             setStatusFilter('ALL');
+                            setInvoiceTypeFilter('ALL');
                             setStartDate('');
                             setEndDate('');
                         }}
@@ -195,6 +212,7 @@ const InvoiceList = () => {
                         <thead>
                             <tr className="bg-black/20 text-[10px] font-black uppercase tracking-widest text-dim border-b border-white/5">
                                 <th className="p-6">Invoice Details</th>
+                                <th className="p-6">Type</th>
                                 <th className="p-6">Driver</th>
                                 <th className="p-6">Due Date</th>
                                 <th className="p-6">Amount</th>
@@ -213,8 +231,17 @@ const InvoiceList = () => {
                                     <td className="p-6">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</span>
-                                            <span className="text-[10px] font-bold text-dim uppercase tracking-wider">{inv.weekLabel}</span>
+                                            <span className="text-[10px] font-bold text-dim uppercase tracking-wider">{inv.invoiceType === 'WORKSHOP' ? 'Workshop Bill' : inv.weekLabel}</span>
                                         </div>
+                                    </td>
+                                    <td className="p-6">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
+                                            inv.invoiceType === 'WORKSHOP' 
+                                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' 
+                                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                        }`}>
+                                            {inv.invoiceType}
+                                        </span>
                                     </td>
                                     <td className="p-6">
                                         <div className="flex items-center gap-2">
