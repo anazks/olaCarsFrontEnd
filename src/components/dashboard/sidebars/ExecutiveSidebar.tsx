@@ -118,6 +118,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
+                { label: 'Manage Insurances', path: '/admin/admin/insurances' },
             ]
         },
         {

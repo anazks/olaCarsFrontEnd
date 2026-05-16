@@ -228,8 +228,8 @@ const VehicleDetail = () => {
         if (!id) return;
         try {
             const data = await alertService.getActiveAlerts();
-            const filtered = data.filter((a: any) => 
-                (typeof a.vehicleId === 'object' && a.vehicleId?._id === id) || 
+            const filtered = data.filter((a: any) =>
+                (typeof a.vehicleId === 'object' && a.vehicleId?._id === id) ||
                 (typeof a.vehicleId === 'string' && a.vehicleId === id)
             );
             setVehicleAlerts(filtered);
@@ -401,12 +401,12 @@ const VehicleDetail = () => {
 
             {/* Alert Banner */}
             {vehicleAlerts.length > 0 && (
-                <div 
+                <div
                     className="p-4 rounded-2xl flex items-start gap-4 border animate-in fade-in slide-in-from-top-4 duration-300"
-                    style={{ 
-                        background: 'rgba(239, 68, 68, 0.05)', 
+                    style={{
+                        background: 'rgba(239, 68, 68, 0.05)',
                         borderColor: 'rgba(239, 68, 68, 0.2)',
-                        color: 'var(--text-main)' 
+                        color: 'var(--text-main)'
                     }}
                 >
                     <div className="p-2 rounded-xl bg-red-500/10 text-red-500 mt-0.5">
@@ -418,7 +418,7 @@ const VehicleDetail = () => {
                             {vehicleAlerts.map(alert => (
                                 <div key={alert._id} className="flex items-center justify-between gap-4">
                                     <p className="text-xs opacity-90">{alert.message}</p>
-                                    <button 
+                                    <button
                                         onClick={async () => {
                                             await alertService.resolveAlert(alert._id);
                                             setVehicleAlerts(prev => prev.filter(a => a._id !== alert._id));
@@ -470,7 +470,7 @@ const VehicleDetail = () => {
                         <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.vehicleOverview')} />
                         <HasPermission permission="VEHICLE_EDIT">
                             {!isEditingOverview ? (
-                                <button 
+                                <button
                                     onClick={() => {
                                         setEditBasicDetails({ ...vehicle.basicDetails });
                                         setIsEditingOverview(true);
@@ -481,14 +481,14 @@ const VehicleDetail = () => {
                                 </button>
                             ) : (
                                 <div className="flex gap-2">
-                                    <button 
+                                    <button
                                         onClick={handleEditOverview}
                                         disabled={actionLoading}
                                         className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         <Save size={16} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setIsEditingOverview(false)}
                                         className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
                                     >
@@ -619,69 +619,69 @@ const VehicleDetail = () => {
                         <SectionHeader icon={<Shield size={16} />} title={t('management.vehicles.vehicleDetail.insurancePolicy')} />
                         <div className="flex-1 flex flex-col">
                             <div className="space-y-4 flex-1">
-                            <div className="flex justify-between items-start">
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.provider')}
-                                    value={vehicle.insuranceDetails?.provider || (typeof vehicle.insuranceDetails?.supplier === 'object' ? vehicle.insuranceDetails?.supplier?.name : '') || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        const supplierName = typeof plan?.supplier === 'object' ? (plan?.supplier as any)?.name : '';
-                                        return plan?.provider || supplierName || (vehicle.insurancePolicy as any)?.providerName || '—';
-                                    })()}
-                                />
-                                <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
-                                    {vehicle.insuranceDetails?.insuranceNumber ? t('management.vehicles.statusLabels.ACTIVE') : 'MISSING'}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehicle.insuranceDetails?.insuranceNumber || '—'} />
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.type')}
-                                    value={vehicle.insuranceDetails?.policyType || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        return plan?.policyType || '—';
-                                    })()}
-                                />
-                                <InfoRow
-                                    label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
-                                    value={vehicle.insuranceDetails?.coverageType || (() => {
-                                        const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
-                                        return plan?.coverageType || '—';
-                                    })()}
-                                />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toLocaleDateString() : '—'} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toLocaleDateString() : '—'} />
-                            </div>
-
-                            {/* Supplier Contact Info */}
-                            {vehicle.insuranceDetails?.supplier && (
-                                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                    <p className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Supplier Contact Info</p>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Name</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.name || '—'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Email</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.email || '—'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span style={{ color: 'var(--text-dim)' }}>Phone</span>
-                                            <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.phone || '—'}</span>
-                                        </div>
+                                <div className="flex justify-between items-start">
+                                    <InfoRow
+                                        label={t('management.vehicles.vehicleDetail.labels.provider')}
+                                        value={vehicle.insuranceDetails?.provider || (typeof vehicle.insuranceDetails?.supplier === 'object' ? vehicle.insuranceDetails?.supplier?.name : '') || (() => {
+                                            const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                            const supplierName = typeof plan?.supplier === 'object' ? (plan?.supplier as any)?.name : '';
+                                            return plan?.provider || supplierName || (vehicle.insurancePolicy as any)?.providerName || '—';
+                                        })()}
+                                    />
+                                    <div className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: vehicle.insuranceDetails?.insuranceNumber ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: vehicle.insuranceDetails?.insuranceNumber ? '#22c55e' : '#ef4444' }}>
+                                        {vehicle.insuranceDetails?.insuranceNumber ? t('management.vehicles.statusLabels.ACTIVE') : 'MISSING'}
                                     </div>
                                 </div>
-                            )}
-                            {vehicle.insuranceDetails?.certificate && (
-                                <a
-                                    href={toFullUrl(vehicle.insuranceDetails.certificate)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
-                                >
-                                    <FileText size={10} /> View Insurance Certificate
-                                </a>
-                            )}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InfoRow label={t('management.vehicles.vehicleDetail.labels.policyNumber')} value={vehicle.insuranceDetails?.insuranceNumber || '—'} />
+                                    <InfoRow
+                                        label={t('management.vehicles.vehicleDetail.labels.type')}
+                                        value={vehicle.insuranceDetails?.policyType || (() => {
+                                            const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                            return plan?.policyType || '—';
+                                        })()}
+                                    />
+                                    <InfoRow
+                                        label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
+                                        value={vehicle.insuranceDetails?.coverageType || (() => {
+                                            const plan = eligibleInsurances.find(i => i._id === vehicle.insuranceDetails?.plan);
+                                            return plan?.coverageType || '—';
+                                        })()}
+                                    />
+                                    <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehicle.insuranceDetails?.fromDate ? new Date(vehicle.insuranceDetails.fromDate).toLocaleDateString() : '—'} />
+                                    <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehicle.insuranceDetails?.toDate ? new Date(vehicle.insuranceDetails.toDate).toLocaleDateString() : '—'} />
+                                </div>
+
+                                {/* Supplier Contact Info */}
+                                {vehicle.insuranceDetails?.supplier && (
+                                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                        <p className="text-[10px] uppercase font-bold tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Supplier Contact Info</p>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span style={{ color: 'var(--text-dim)' }}>Name</span>
+                                                <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.name || '—'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span style={{ color: 'var(--text-dim)' }}>Email</span>
+                                                <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.email || '—'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span style={{ color: 'var(--text-dim)' }}>Phone</span>
+                                                <span className="font-medium" style={{ color: 'var(--text-main)' }}>{vehicle.insuranceDetails.supplier.phone || '—'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {vehicle.insuranceDetails?.certificate && (
+                                    <a
+                                        href={toFullUrl(vehicle.insuranceDetails.certificate)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
+                                    >
+                                        <FileText size={10} /> View Insurance Certificate
+                                    </a>
+                                )}
                             </div>
                             {((vehicle.status as string).startsWith('ACTIVE') || (vehicle.status as string) === 'GPS ACTIVATION' || (vehicle.status as string) === 'BRANCH MANAGER APPROVAL') && (
                                 <div className="mt-5">
@@ -706,13 +706,13 @@ const VehicleDetail = () => {
                         <SectionHeader icon={<Wrench size={16} />} title="Maintenance Tracking" />
                         <div className="space-y-4 flex-1">
                             <div className="grid grid-cols-2 gap-4">
-                                <InfoRow 
-                                    label="Last Service Odometer" 
-                                    value={((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0).toLocaleString() + ' KM'} 
+                                <InfoRow
+                                    label="Last Service Odometer"
+                                    value={((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0).toLocaleString() + ' KM'}
                                 />
-                                <InfoRow 
-                                    label="Maintenance Threshold" 
-                                    value={((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000).toLocaleString() + ' KM'} 
+                                <InfoRow
+                                    label="Maintenance Threshold"
+                                    value={((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000).toLocaleString() + ' KM'}
                                 />
                             </div>
 
@@ -724,9 +724,9 @@ const VehicleDetail = () => {
                                     </span>
                                 </div>
                                 <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className="h-full bg-lime transition-all duration-1000"
-                                        style={{ 
+                                        style={{
                                             width: `${Math.min(100, Math.max(0, ((vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)) / ((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000) * 100))}%`,
                                             backgroundColor: ((vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)) >= ((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000) ? 'var(--status-failed)' : 'var(--brand-lime)'
                                         }}
@@ -741,15 +741,15 @@ const VehicleDetail = () => {
                                     </label>
                                     <div className="flex gap-2">
                                         <div className="relative flex-1">
-                                            <input 
-                                                type="number" 
-                                                value={maintThreshold} 
+                                            <input
+                                                type="number"
+                                                value={maintThreshold}
                                                 onChange={e => setMaintThreshold(parseInt(e.target.value) || 0)}
                                                 className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 outline-none text-xs focus:border-lime transition-colors"
                                             />
                                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-dim">KM</span>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={handleThresholdUpdate}
                                             disabled={isUpdatingThreshold}
                                             className="px-4 py-2 rounded-xl bg-lime text-black font-bold text-xs disabled:opacity-50 transition-all active:scale-95"
@@ -1012,7 +1012,7 @@ const VehicleDetail = () => {
                             <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
                             <HasPermission permission="VEHICLE_EDIT">
                                 {!isEditingDocs ? (
-                                    <button 
+                                    <button
                                         onClick={() => setIsEditingDocs(true)}
                                         className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer"
                                         title="Manage Documents"
@@ -1021,7 +1021,7 @@ const VehicleDetail = () => {
                                     </button>
                                 ) : (
                                     <div className="flex gap-2">
-                                        <button 
+                                        <button
                                             onClick={handleUpload}
                                             disabled={uploadLoading}
                                             className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
@@ -1029,7 +1029,7 @@ const VehicleDetail = () => {
                                         >
                                             <Save size={16} />
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { setIsEditingDocs(false); setUploadFiles({}); }}
                                             className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
                                             title="Cancel"
@@ -1073,9 +1073,9 @@ const VehicleDetail = () => {
 
                                         {isEditingDocs && (
                                             <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                                                <input 
-                                                    type="file" 
-                                                    ref={el => { fileInputRefs.current[df.key] = el; }} 
+                                                <input
+                                                    type="file"
+                                                    ref={el => { fileInputRefs.current[df.key] = el; }}
                                                     className="hidden"
                                                     onChange={e => {
                                                         if (e.target.files?.[0]) {
@@ -1086,10 +1086,10 @@ const VehicleDetail = () => {
                                                 <span className="text-[9px] text-dim truncate max-w-[80px]">
                                                     {(uploadFiles[df.key] as File)?.name || 'No file chosen'}
                                                 </span>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => fileInputRefs.current[df.key]?.click()} 
-                                                    className="px-2 py-1 rounded-lg text-[9px] font-bold cursor-pointer" 
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRefs.current[df.key]?.click()}
+                                                    className="px-2 py-1 rounded-lg text-[9px] font-bold cursor-pointer"
                                                     style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
                                                 >
                                                     {t('common.search').split('...')[0]}
@@ -1520,8 +1520,8 @@ const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
                         <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
                             {t('management.vehicles.vehicleDetail.history.updatedBy')}: {
                                 (h.changedBy && typeof h.changedBy === 'object')
-                                ? `${h.changedBy.fullName || h.changedBy.name || h.changedBy.email || 'User'} (${h.changedByRole || h.changedBy.role || 'N/A'})`
-                                : `${h.changedByRole || 'No Role'} (${h.changedBy || 'No ID'})`
+                                    ? `${h.changedBy.fullName || h.changedBy.name || h.changedBy.email || 'User'} (${h.changedByRole || h.changedBy.role || 'N/A'})`
+                                    : `${h.changedByRole || 'No Role'} (${h.changedBy || 'No ID'})`
                             }
                         </p>
                         {h.notes && <p className="text-[10px] mt-2 p-2 rounded bg-opacity-30 italic" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-dim)' }}>"{h.notes}"</p>}

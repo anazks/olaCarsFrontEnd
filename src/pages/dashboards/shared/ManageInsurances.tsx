@@ -76,6 +76,7 @@ const ManageInsurances = () => {
             setLoading(true);
             const response = await getAllInsurances(filters);
             if (response.success) {
+                console.log('FULL INSURANCE DATA:', response.data);
                 setInsurances(response.data);
                 setPagination(response.pagination);
             }
@@ -110,8 +111,13 @@ const ManageInsurances = () => {
     const getFullUrl = (path: string | undefined) => {
         if (!path) return '';
         if (path.startsWith('http')) return path;
-        const baseUrl = 'https://ola-cars-uploads-2026.s3.ap-south-1.amazonaws.com';
-        return `${baseUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
+        const envBase = (import.meta.env.VITE_S3_BASE_URL || '').replace(/^\"|\"$/g, '').replace(/\/$/, '');
+        if (envBase) {
+            return `${envBase}/${path.startsWith('/') ? path.slice(1) : path}`;
+        }
+        // Fallback to default base URL
+        const defaultBase = 'https://ola-cars-uploads-2026.s3.ap-south-1.amazonaws.com';
+        return `${defaultBase}/${path.startsWith('/') ? path.slice(1) : path}`;
     };
 
     const handleOpenCreateModal = () => {
@@ -137,12 +143,12 @@ const ManageInsurances = () => {
             fd.append('country', formData.country);
             fd.append('policyType', formData.policyType);
             fd.append('coverageType', formData.coverageType);
-            
+
             if (formData.startDate) fd.append('startDate', new Date(formData.startDate).toISOString());
             if (formData.expiryDate) fd.append('expiryDate', new Date(formData.expiryDate).toISOString());
-            
+
             fd.append('insuredValue', formData.insuredValue.toString());
-            
+
             if (policyFile) {
                 fd.append('policyDocument', policyFile);
             }
@@ -319,13 +325,12 @@ const ManageInsurances = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                                ins.status === 'ACTIVE' ? '' : 'opacity-50'
-                                            }`} style={{
-                                                background: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                                                color: ins.status === 'ACTIVE' ? '#22c55e' : '#ef4444',
-                                                borderColor: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'
-                                            }}>
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${ins.status === 'ACTIVE' ? '' : 'opacity-50'
+                                                }`} style={{
+                                                    background: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                                                    color: ins.status === 'ACTIVE' ? '#22c55e' : '#ef4444',
+                                                    borderColor: ins.status === 'ACTIVE' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'
+                                                }}>
                                                 {t(`management.insurances.statusLabels.${ins.status || 'UNKNOWN'}`)}
                                             </span>
                                         </td>
@@ -339,7 +344,10 @@ const ManageInsurances = () => {
                                             {ins.documents?.policyDocumentUrl ? (
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => setSelectedImage(getFullUrl(ins.documents?.policyDocumentUrl))}
+                                                        onClick={() => {
+                                                            console.log('VIEWING INSURANCE DATA:', ins);
+                                                            setSelectedImage(getFullUrl(ins.documents?.policyDocumentUrl));
+                                                        }}
                                                         className="p-2 rounded-xl transition-all hover:bg-lime/20 text-lime"
                                                         style={{ background: 'rgba(200,230,0,0.1)' }}
                                                         title={t('management.common.view', { defaultValue: 'View' })}
@@ -347,10 +355,7 @@ const ManageInsurances = () => {
                                                         <Eye size={16} />
                                                     </button>
                                                     <a
-                                                        href={getFullUrl(ins.documents?.policyDocumentUrl)}
-                                                        download
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
+                                                        href={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/^\"|\"$/g, '')}/api/files/download?url=${encodeURIComponent(getFullUrl(ins.documents?.policyDocumentUrl))}&filename=Policy_${ins.policyNumber || ins._id}.pdf`}
                                                         className="p-2 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500"
                                                         style={{ background: 'rgba(59,130,246,0.1)' }}
                                                         title={t('management.common.download', { defaultValue: 'Download' })}
@@ -436,19 +441,19 @@ const ManageInsurances = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyInfo')}</h3>
-                                    
+
                                     <div className="space-y-1.5">
                                         <label className="text-xs text-dim uppercase">Supplier *</label>
                                         <select
                                             required
                                             disabled={supplierLoading}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm disabled:opacity-50"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm text-[var(--text-main)] disabled:opacity-50"
                                             value={formData.supplier}
-                                            onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                                            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
                                         >
                                             <option value="">{supplierLoading ? 'Loading Suppliers...' : 'Select Insurance Supplier'}</option>
                                             {suppliers.map(s => (
-                                                <option key={s._id} value={s._id}>{s.name}</option>
+                                                <option key={s._id} value={s._id} className="bg-[var(--bg-card)] text-[var(--text-main)]">{s.name}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -458,9 +463,9 @@ const ManageInsurances = () => {
                                             required
                                             type="text"
                                             placeholder="e.g. Global, UAE, India"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-[var(--text-main)]"
                                             value={formData.country}
-                                            onChange={(e) => setFormData({...formData, country: e.target.value})}
+                                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                                         />
                                     </div>
 
@@ -468,23 +473,23 @@ const ManageInsurances = () => {
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyType')}</label>
                                             <select
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm text-[var(--text-main)]"
                                                 value={formData.policyType}
-                                                onChange={(e) => setFormData({...formData, policyType: e.target.value as PolicyType})}
+                                                onChange={(e) => setFormData({ ...formData, policyType: e.target.value as PolicyType })}
                                             >
-                                                <option value="INDIVIDUAL">{t('management.insurances.types.INDIVIDUAL')}</option>
-                                                <option value="FLEET">{t('management.insurances.types.FLEET')}</option>
+                                                <option value="INDIVIDUAL" className="bg-[var(--bg-card)] text-[var(--text-main)]">{t('management.insurances.types.INDIVIDUAL')}</option>
+                                                <option value="FLEET" className="bg-[var(--bg-card)] text-[var(--text-main)]">{t('management.insurances.types.FLEET')}</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.coverage')}</label>
                                             <select
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm text-[var(--text-main)]"
                                                 value={formData.coverageType}
-                                                onChange={(e) => setFormData({...formData, coverageType: e.target.value as CoverageType})}
+                                                onChange={(e) => setFormData({ ...formData, coverageType: e.target.value as CoverageType })}
                                             >
-                                                <option value="COMPREHENSIVE">{t('management.insurances.coverage.COMPREHENSIVE')}</option>
-                                                <option value="THIRD_PARTY">{t('management.insurances.coverage.THIRD_PARTY')}</option>
+                                                <option value="COMPREHENSIVE" className="bg-[var(--bg-card)] text-[var(--text-main)]">{t('management.insurances.coverage.COMPREHENSIVE')}</option>
+                                                <option value="THIRD_PARTY" className="bg-[var(--bg-card)] text-[var(--text-main)]">{t('management.insurances.coverage.THIRD_PARTY')}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -497,9 +502,9 @@ const ManageInsurances = () => {
                                         <input
                                             required
                                             type="number"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-[var(--text-main)]"
                                             value={formData.insuredValue}
-                                            onChange={(e) => setFormData({...formData, insuredValue: Number(e.target.value)})}
+                                            onChange={(e) => setFormData({ ...formData, insuredValue: Number(e.target.value) })}
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -507,57 +512,57 @@ const ManageInsurances = () => {
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.startDate')} (Opt)</label>
                                             <input
                                                 type="date"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm text-[var(--text-main)]"
                                                 value={formData.startDate}
-                                                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.expiryDate')} (Opt)</label>
                                             <input
                                                 type="date"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm text-[var(--text-main)]"
                                                 value={formData.expiryDate}
-                                                onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                                                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                                             />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                                <div className="bg-white/5 p-4 rounded-2xl space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
-                                    <div className="flex items-center gap-4">
-                                        <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-lime/40 hover:bg-lime/5 transition-all cursor-pointer group">
-                                            <input 
-                                                type="file" 
-                                                className="hidden" 
-                                                onChange={(e) => setPolicyFile(e.target.files?.[0] || null)}
-                                            />
-                                            {policyFile ? (
-                                                <div className="flex flex-col items-center gap-2">
-                                                     <Check className="text-lime" size={24} />
-                                                     <span className="text-xs font-medium">{policyFile.name}</span>
-                                                     <span className="text-[10px] text-dim">{t('management.insurances.form.clickToChange')}</span>
-                                                 </div>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-2">
-                                                     <Upload className="text-dim group-hover:text-lime transition-colors" size={24} />
-                                                     <span className="text-xs font-medium">{t('management.insurances.form.uploadDoc')}</span>
-                                                     <span className="text-[10px] text-dim">{t('management.insurances.form.docTypes')}</span>
-                                                 </div>
-                                            )}
-                                        </label>
-                                    </div>
+                            <div className="bg-white/5 p-4 rounded-2xl space-y-4">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[var(--border-main)] rounded-2xl p-6 hover:border-lime/40 hover:bg-lime/5 transition-all cursor-pointer group">
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            onChange={(e) => setPolicyFile(e.target.files?.[0] || null)}
+                                        />
+                                        {policyFile ? (
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Check className="text-lime" size={24} />
+                                                <span className="text-xs font-medium">{policyFile.name}</span>
+                                                <span className="text-[10px] text-dim">{t('management.insurances.form.clickToChange')}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Upload className="text-dim group-hover:text-lime transition-colors" size={24} />
+                                                <span className="text-xs font-medium">{t('management.insurances.form.uploadDoc')}</span>
+                                                <span className="text-[10px] text-dim">{t('management.insurances.form.docTypes')}</span>
+                                            </div>
+                                        )}
+                                    </label>
                                 </div>
+                            </div>
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                     className="px-6 py-3 rounded-xl font-bold hover:bg-white/5 transition-all text-dim hover:text-white"
-                                 >
-                                     {t('management.common.modal.cancel')}
-                                 </button>
+                                    className="px-6 py-3 rounded-xl font-bold hover:bg-white/5 transition-all text-dim hover:text-white"
+                                >
+                                    {t('management.common.modal.cancel')}
+                                </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -565,35 +570,36 @@ const ManageInsurances = () => {
                                 >
                                     {loading ? (
                                         <div className="animate-spin border-2 border-black border-t-transparent rounded-full w-4 h-4" />
-                                     ) : (
-                                         <Check size={20} />
-                                     )}
-                                     {t('management.insurances.createButton')}
-                                 </button>
+                                    ) : (
+                                        <Check size={20} />
+                                    )}
+                                    {t('management.insurances.createButton')}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
             {/* ImageViewer Modal */}
-            {selectedImage && (
-                <div 
+            {selectedImage && selectedImage !== '' && (
+                <div
                     className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 animate-in fade-in duration-300"
                     onClick={() => setSelectedImage(null)}
                 >
-                    <button 
+                    <button
                         className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-10"
                         onClick={() => setSelectedImage(null)}
                     >
                         <X size={24} />
                     </button>
-                    <div 
+                    <div
                         className="relative max-w-5xl max-h-[90vh] w-full flex items-center justify-center animate-in zoom-in-95 duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <img 
-                            src={selectedImage} 
-                            alt="Insurance Document" 
+                        <img
+                            src={selectedImage}
+                            alt="Insurance Document"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10"
                         />
                     </div>

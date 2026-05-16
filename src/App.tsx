@@ -210,6 +210,7 @@ function App() {
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+              <Route path="insurances" element={<ManageInsurances />} />
             </Route>
           </Route>
 
@@ -265,6 +266,7 @@ function App() {
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
+              <Route path="insurances" element={<ManageInsurances />} />
             </Route>
           </Route>
 
@@ -339,6 +341,7 @@ function App() {
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="task-delegation" element={<TaskDelegation />} />
               <Route path="alerts" element={<AlertsManagement />} />
+              <Route path="insurances" element={<ManageInsurances />} />
             </Route>
           </Route>
 

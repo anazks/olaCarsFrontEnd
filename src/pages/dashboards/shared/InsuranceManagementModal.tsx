@@ -189,48 +189,7 @@ export default function InsuranceManagementModal({ isOpen, onClose, vehicle, eli
                         {/* Form Right Side */}
                         <div className="space-y-5">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                    Insurance Certificate
-                                </label>
-                                <div className="p-6 rounded-2xl border border-dashed flex flex-col items-center justify-center gap-4 text-center min-h-[268px]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                    {vehicle.insuranceDetails?.certificate && !insuranceCertificate ? (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <CheckCircle className="text-green-500" size={32} />
-                                            <p className="text-sm font-bold mt-2" style={{ color: 'var(--text-main)' }}>Certificate Logged</p>
-                                            <a
-                                                href={toFullUrl(vehicle.insuranceDetails.certificate)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-xs text-lime font-bold hover:underline"
-                                            >
-                                                View Current File
-                                            </a>
-                                        </div>
-                                    ) : insuranceCertificate ? (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <Shield className="text-lime" size={32} />
-                                            <p className="text-sm font-bold mt-2" style={{ color: 'var(--text-main)' }}>Ready to Upload</p>
-                                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{insuranceCertificate.name}</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <Shield className="opacity-20 flex-shrink-0" size={40} style={{ color: 'var(--text-dim)' }} />
-                                            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>No certificate uploaded yet</p>
-                                        </>
-                                    )}
-                                    <input
-                                        type="file"
-                                        id="modalInsuranceCertificate"
-                                        className="hidden"
-                                        onChange={e => {
-                                            const file = e.target.files?.[0];
-                                            if (file) setInsuranceCertificate(file);
-                                        }}
-                                    />
-                                    <label htmlFor="modalInsuranceCertificate" className="px-5 py-2.5 rounded-xl text-lime text-xs font-bold cursor-pointer transition-all mt-2" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                                        {(vehicle.insuranceDetails?.certificate || insuranceCertificate) ? 'Upload Different File' : 'Select Certificate File'}
-                                    </label>
-                                </div>
+
                             </div>
                         </div>
                     </div>

@@ -116,6 +116,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/operational-admin/reports', permission: 'REPORTS_VIEW' },
+                { label: 'Manage Insurances', path: '/admin/operational-admin/insurances' },
                 { label: 'Alerts Management', path: '/admin/operational-admin/alerts' },
             ]
         },
