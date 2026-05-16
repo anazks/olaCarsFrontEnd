@@ -14,7 +14,8 @@ import {
     RefreshCw,
     AlertTriangle,
     Settings,
-    Building2
+    Building2,
+    Mail
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';
@@ -22,6 +23,7 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import { changePassword } from '../../../services/authService';
 import systemSettingsService from '../../../services/systemSettingsService';
 import ManageBankAccounts from '../finance/ManageBankAccounts';
+import EmailSettings from './EmailSettings';
 
 const DashboardSettings = () => {
     const { t, i18n } = useTranslation();
@@ -30,7 +32,7 @@ const DashboardSettings = () => {
     const role = getUserRole();
     
     // State for Tabs
-    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'banking'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'banking' | 'emails'>('profile');
 
     // Profile State
     const [passwords, setPasswords] = useState({
@@ -175,6 +177,15 @@ const DashboardSettings = () => {
                 >
                     <Building2 size={16} /> Bank Accounts
                 </button>
+                {role === 'admin' && (
+                    <button 
+                        onClick={() => setActiveTab('emails')}
+                        className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'emails' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                        style={activeTab !== 'emails' ? { color: 'var(--text-dim)' } : {}}
+                    >
+                        <Mail size={16} /> Email Config
+                    </button>
+                )}
             </div>
 
             {/* Main Content Area */}
@@ -496,6 +507,12 @@ const DashboardSettings = () => {
                     {activeTab === 'banking' && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <ManageBankAccounts />
+                        </div>
+                    )}
+
+                    {activeTab === 'emails' && role === 'admin' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <EmailSettings />
                         </div>
                     )}
                 </div>

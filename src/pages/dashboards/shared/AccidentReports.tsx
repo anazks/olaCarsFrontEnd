@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
     ShieldAlert, Search, MapPin, Calendar, Car, Phone, Mail, 
     CheckCircle2, XCircle, Clock, Eye, AlertTriangle, RefreshCw,
-    ChevronRight, Filter, Download, MoreHorizontal, FileText, Camera, Users
+    ChevronRight, Filter, Download, MoreHorizontal, FileText, Camera, Users, ArrowLeft
 } from 'lucide-react';
 import { 
     getAllAccidentReports, 
@@ -24,6 +24,7 @@ const AccidentReports = () => {
     const [reviewNotes, setReviewNotes] = useState('');
     const [updating, setUpdating] = useState(false);
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [viewMode, setViewMode] = useState<'LIST' | 'DETAILS'>('LIST');
 
     const isBranchManager = ['branchmanager', 'operationstaff', 'financestaff'].includes(userRole.toLowerCase());
 
@@ -98,6 +99,200 @@ const AccidentReports = () => {
         );
     };
 
+    const handleViewDetails = (report: AccidentReport) => {
+        setSelectedReport(report);
+        setViewMode('DETAILS');
+    };
+
+    const handleBackToList = () => {
+        setSelectedReport(null);
+        setViewMode('LIST');
+    };
+
+    if (viewMode === 'DETAILS' && selectedReport) {
+        return (
+            <div className="flex-1 w-full h-screen overflow-y-auto custom-scrollbar bg-[#F8F9FA] dark:bg-[#050505]">
+                <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-8 pb-32">
+                    {/* Header Controls */}
+                    <div className="flex items-center justify-between gap-4 sticky top-0 bg-[#F8F9FA]/80 dark:bg-[#050505]/80 backdrop-blur-md py-4 z-50">
+                        <button 
+                            onClick={handleBackToList}
+                            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/10 transition-all shadow-sm group"
+                        >
+                            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back to Intelligence
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 rounded bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20">Case ID: {selectedReport._id.slice(-8)}</span>
+                            <StatusBadge status={selectedReport.status} />
+                        </div>
+                    </div>
+
+                    {/* Main Detail Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        
+                        {/* Left Side: Information */}
+                        <div className="lg:col-span-7 space-y-8">
+                            {/* Incident Info Card */}
+                            <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-5">
+                                    <ShieldAlert size={120} strokeWidth={1} />
+                                </div>
+                                <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-8 leading-none italic">
+                                    Incident <span className="text-red-500">Log</span>
+                                </h2>
+
+                                <div className="space-y-10">
+                                    <div>
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4 flex items-center gap-2">
+                                            <MapPin size={14} className="text-red-500" /> Location & Timeline
+                                        </h3>
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-1">Occurrence</p>
+                                                <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">{selectedReport.accidentLocation}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-1">Time Captured</p>
+                                                <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">{new Date(selectedReport.accidentDate).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4 flex items-center gap-2">
+                                            <FileText size={14} className="text-red-500" /> Description of Event
+                                        </h3>
+                                        <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-white/[0.02] p-8 rounded-3xl border border-gray-100 dark:border-white/5 font-medium italic">
+                                            "{selectedReport.description}"
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Personnel Card */}
+                            <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-6 flex items-center gap-2">
+                                    <Users size={14} className="text-red-500" /> Personnel Involved
+                                </h3>
+                                <div className="flex items-center gap-8 p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-orange-600 text-white flex items-center justify-center font-black text-3xl shadow-xl">
+                                        {(selectedReport.driver?.personalInfo?.fullName || selectedReport.driverName || 'D')[0]}
+                                    </div>
+                                    <div className="space-y-4 flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xl font-black text-gray-900 dark:text-white">{selectedReport.driver?.personalInfo?.fullName || selectedReport.driverName}</p>
+                                                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Operator @ {typeof selectedReport.branch === 'object' ? selectedReport.branch.name : 'Branch'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Vehicle</p>
+                                                <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{selectedReport.vehicleNumber}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200/50 dark:border-white/5">
+                                            <div className="flex items-center gap-2">
+                                                <Phone size={14} className="text-gray-400" />
+                                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedReport.driver?.personalInfo?.phone || selectedReport.alternativeMobile}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Mail size={14} className="text-gray-400" />
+                                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{selectedReport.driver?.personalInfo?.email || selectedReport.driverEmail}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Media & Controls */}
+                        <div className="lg:col-span-5 space-y-8">
+                            {/* Evidence Gallery */}
+                            <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-6 flex items-center gap-2">
+                                    <Camera size={14} className="text-red-500" /> Evidence Logs ({selectedReport.images?.length || 0})
+                                </h3>
+                                {selectedReport.images && selectedReport.images.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {selectedReport.images.map((img, idx) => (
+                                            <a 
+                                                key={idx} 
+                                                href={img} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="group relative block aspect-[16/9] rounded-3xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl transition-all duration-500"
+                                            >
+                                                <img src={img} alt={`Scene ${idx+1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
+                                                    <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                                        <Eye size={18} /> View High-Res Plate {idx+1}
+                                                    </span>
+                                                </div>
+                                            </a>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-20 text-center rounded-3xl border-2 border-dashed border-gray-200 dark:border-white/10 opacity-30">
+                                        <Camera size={48} strokeWidth={1} className="mx-auto mb-4" />
+                                        <p className="text-xs font-black uppercase tracking-widest text-gray-400">No media evidence provided</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Resolution Controls */}
+                            <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-6 flex items-center gap-2">
+                                    <ShieldAlert size={14} className="text-red-500" /> Case Resolution
+                                </h3>
+
+                                {selectedReport.status !== 'CLOSED' && selectedReport.status !== 'RESOLVED' ? (
+                                    <div className="space-y-6">
+                                        <textarea 
+                                            value={reviewNotes}
+                                            onChange={(e) => setReviewNotes(e.target.value)}
+                                            placeholder="Document final resolution, insurance claims or disciplinary actions..."
+                                            className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-3xl px-8 py-6 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all text-gray-900 dark:text-white resize-none min-h-[180px] shadow-inner"
+                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <button 
+                                                onClick={() => handleUpdateStatus('UNDER_REVIEW')}
+                                                disabled={updating || selectedReport.status === 'UNDER_REVIEW'}
+                                                className="py-5 bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20 disabled:opacity-50"
+                                            >
+                                                {selectedReport.status === 'UNDER_REVIEW' ? 'Currently In Review' : 'Initiate Review'}
+                                            </button>
+                                            <button 
+                                                onClick={() => handleUpdateStatus('RESOLVED')}
+                                                disabled={updating}
+                                                className="py-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:shadow-xl hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
+                                            >
+                                                Finalize Case
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 rounded-3xl bg-emerald-500/[0.03] border border-emerald-500/10 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-5">
+                                            <CheckCircle2 size={64} />
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
+                                            <CheckCircle2 size={16}/> Resolution Log Entry
+                                        </p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-400 italic leading-relaxed font-medium">
+                                            "{selectedReport.reviewNotes || "This incident has been resolved and closed successfully."}"
+                                        </p>
+                                        <p className="text-[9px] font-black text-gray-400 mt-6 uppercase tracking-widest border-t border-emerald-500/10 pt-4">
+                                            Resolved on {new Date(selectedReport.resolvedAt || '').toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 w-full overflow-hidden flex flex-col bg-[#F8F9FA] dark:bg-[#050505]">
             {/* Premium Header */}
@@ -148,278 +343,114 @@ const AccidentReports = () => {
                 </div>
             </header>
 
-            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row relative">
-                
-                {/* Main Content Area */}
-                <main className={`flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar transition-all duration-500 ${selectedReport ? 'lg:mr-[500px]' : ''}`}>
-                    <div className="max-w-[1400px] mx-auto space-y-6">
-                        
-                        {/* Summary Cards */}
-                        {!selectedReport && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                {[
-                                    { label: 'Total Incidents', value: reports.length, icon: FileText, color: 'text-blue-500' },
-                                    { label: 'New Reports', value: reports.filter(r => r.status === 'SUBMITTED').length, icon: AlertTriangle, color: 'text-amber-500' },
-                                    { label: 'Under Review', value: reports.filter(r => r.status === 'UNDER_REVIEW').length, icon: Clock, color: 'text-indigo-500' },
-                                    { label: 'Resolved Today', value: reports.filter(r => r.status === 'RESOLVED').length, icon: CheckCircle2, color: 'text-emerald-500' },
-                                ].map((stat, i) => (
-                                    <div key={i} className="bg-white dark:bg-[#0F0F0F] border border-gray-200 dark:border-white/5 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className={`p-3 rounded-2xl bg-gray-50 dark:bg-white/5 ${stat.color}`}>
-                                                <stat.icon size={20} />
-                                            </div>
-                                            <span className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</span>
-                                        </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{stat.label}</p>
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar bg-gray-50 dark:bg-[#050505]">
+                <div className="max-w-[1600px] mx-auto space-y-8">
+                    
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: 'Total Incidents', value: reports.length, icon: FileText, color: 'text-blue-500' },
+                            { label: 'New Reports', value: reports.filter(r => r.status === 'SUBMITTED').length, icon: AlertTriangle, color: 'text-amber-500' },
+                            { label: 'Under Review', value: reports.filter(r => r.status === 'UNDER_REVIEW').length, icon: Clock, color: 'text-indigo-500' },
+                            { label: 'Resolved Today', value: reports.filter(r => r.status === 'RESOLVED').length, icon: CheckCircle2, color: 'text-emerald-500' },
+                        ].map((stat, i) => (
+                            <div key={i} className="bg-white dark:bg-[#0F0F0F] border border-gray-200 dark:border-white/5 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className={`p-3 rounded-2xl bg-gray-50 dark:bg-white/5 ${stat.color}`}>
+                                        <stat.icon size={20} />
                                     </div>
-                                ))}
+                                    <span className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</span>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{stat.label}</p>
                             </div>
-                        )}
+                        ))}
+                    </div>
 
-                        {/* List View */}
-                        <div className="bg-white dark:bg-[#0F0F0F] border border-gray-200 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse min-w-[800px]">
-                                    <thead>
-                                        <tr className="bg-gray-50/50 dark:bg-white/[0.01]">
-                                            <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Incident & Asset</th>
-                                            <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Location Info</th>
-                                            <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Status</th>
-                                            <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5 text-right">Review</th>
+                    {/* Table View */}
+                    <div className="bg-white dark:bg-[#0F0F0F] border border-gray-200 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[1000px]">
+                                <thead>
+                                    <tr className="bg-gray-50/50 dark:bg-white/[0.01]">
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Incident & Asset</th>
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Location Info</th>
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5 text-center">Images</th>
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5">Status</th>
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-white/5 text-right">Review Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                    {loading ? (
+                                        [1, 2, 3, 4, 5].map(i => (
+                                            <tr key={i} className="animate-pulse">
+                                                <td colSpan={5} className="px-8 py-8"><div className="h-4 bg-gray-100 dark:bg-white/5 rounded-full w-full" /></td>
+                                            </tr>
+                                        ))
+                                    ) : filteredReports.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-32 text-center">
+                                                <div className="flex flex-col items-center gap-4 opacity-30">
+                                                    <ShieldAlert size={64} strokeWidth={1} />
+                                                    <p className="text-sm font-black uppercase tracking-[0.3em]">No incidents recorded</p>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                                        {loading ? (
-                                            [1, 2, 3, 4, 5].map(i => (
-                                                <tr key={i} className="animate-pulse">
-                                                    <td colSpan={4} className="px-8 py-8"><div className="h-4 bg-gray-100 dark:bg-white/5 rounded-full w-full" /></td>
-                                                </tr>
-                                            ))
-                                        ) : filteredReports.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={4} className="p-32 text-center">
-                                                    <div className="flex flex-col items-center gap-4 opacity-30">
-                                                        <ShieldAlert size={64} strokeWidth={1} />
-                                                        <p className="text-sm font-black uppercase tracking-[0.3em]">No incidents recorded</p>
+                                    ) : (
+                                        filteredReports.map((r) => (
+                                            <tr 
+                                                key={r._id} 
+                                                className="group hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-all relative"
+                                            >
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110 ${r.status === 'SUBMITTED' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
+                                                            <Car size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight mb-0.5">{r.vehicleNumber}</p>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                {r.driver?.personalInfo?.fullName || r.driverName || 'Unknown Driver'}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-start gap-2">
+                                                        <MapPin size={14} className="text-red-500 mt-0.5 shrink-0" />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{r.accidentLocation}</p>
+                                                            <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tighter flex items-center gap-1.5">
+                                                                <Clock size={10}/> {new Date(r.accidentDate).toLocaleDateString()} at {new Date(r.accidentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${r.images?.length > 0 ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}>
+                                                            {r.images?.length || 0} Photos
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <StatusBadge status={r.status} />
+                                                </td>
+                                                <td className="px-8 py-6 text-right">
+                                                    <button 
+                                                        onClick={() => handleViewDetails(r)}
+                                                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-gray-500/20"
+                                                    >
+                                                        <Eye size={14} /> Review Report
+                                                    </button>
+                                                </td>
                                             </tr>
-                                        ) : (
-                                            filteredReports.map((r) => (
-                                                <tr 
-                                                    key={r._id} 
-                                                    onClick={() => setSelectedReport(r)}
-                                                    className={`group hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-all cursor-pointer relative ${selectedReport?._id === r._id ? 'bg-red-500/[0.03] dark:bg-red-500/[0.05]' : ''}`}
-                                                >
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-5">
-                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110 ${r.status === 'SUBMITTED' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
-                                                                <Car size={20} />
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2 mb-0.5">
-                                                                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{r.vehicleNumber}</p>
-                                                                    {r.images?.length > 0 && <span className="text-[8px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded font-black uppercase">{r.images.length} Evidence</span>}
-                                                                </div>
-                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                                    {r.driver?.personalInfo?.fullName || r.driverName || 'Unknown Driver'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-start gap-2">
-                                                            <MapPin size={14} className="text-red-500 mt-0.5 shrink-0" />
-                                                            <div>
-                                                                <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{r.accidentLocation}</p>
-                                                                <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tighter flex items-center gap-1.5">
-                                                                    <Clock size={10}/> {new Date(r.accidentDate).toLocaleDateString()} at {new Date(r.accidentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <StatusBadge status={r.status} />
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right">
-                                                        <button className="p-3 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-400 group-hover:text-red-500 group-hover:bg-red-500/10 transition-all border border-transparent group-hover:border-red-500/20">
-                                                            <ChevronRight size={18} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </main>
-
-                {/* Glassmorphism Side Details Panel */}
-                <div className={`fixed inset-y-0 right-0 w-full lg:w-[500px] bg-white dark:bg-[#0A0A0A] border-l border-gray-200 dark:border-white/10 shadow-2xl transform transition-transform duration-500 ease-out z-40 overflow-y-auto custom-scrollbar ${selectedReport ? 'translate-x-0' : 'translate-x-full'}`}>
-                    {selectedReport && (
-                        <div className="p-8 md:p-10 space-y-10">
-                            {/* Panel Header */}
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-[0.2em] border border-red-500/20">Incident Case</span>
-                                        <StatusBadge status={selectedReport.status} />
-                                    </div>
-                                    <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">{selectedReport.vehicleNumber}</h2>
-                                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Case ID: {selectedReport._id}</p>
-                                </div>
-                                <button 
-                                    onClick={() => setSelectedReport(null)} 
-                                    className="p-3 bg-gray-100 dark:bg-white/5 rounded-2xl text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
-                                >
-                                    <XCircle size={24} />
-                                </button>
-                            </div>
-
-                            {/* Section: Participants */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 flex items-center gap-2">
-                                    <Users size={12} /> Personnel & Asset
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4 p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                                    <div className="col-span-2 flex items-center gap-4 mb-2 pb-4 border-b border-gray-200/50 dark:border-white/5">
-                                        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center font-black text-lg shadow-inner">
-                                            {(selectedReport.driver?.personalInfo?.fullName || selectedReport.driverName || 'D')[0]}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-gray-900 dark:text-white">{selectedReport.driver?.personalInfo?.fullName || selectedReport.driverName}</p>
-                                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Driver</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5"><Mail size={10}/> Email</p>
-                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{selectedReport.driver?.personalInfo?.email || selectedReport.driverEmail || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5"><Phone size={10}/> Primary Contact</p>
-                                        <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedReport.driver?.personalInfo?.phone || selectedReport.alternativeMobile}</p>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200/50 dark:border-white/5 mt-2 col-span-2">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5"><MapPin size={10}/> Operating Branch</p>
-                                        <p className="text-xs font-black text-red-500 uppercase">{typeof selectedReport.branch === 'object' ? selectedReport.branch.name : 'Central Hub'}</p>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* Section: Evidence */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 flex items-center gap-2">
-                                    <Camera size={12} /> Evidence Gallery
-                                </h3>
-                                {selectedReport.images && selectedReport.images.length > 0 ? (
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {selectedReport.images.map((img, idx) => (
-                                            <a 
-                                                key={idx} 
-                                                href={img} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
-                                                className="aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 group relative block shadow-sm hover:shadow-xl transition-all"
-                                            >
-                                                <img src={img} alt={`Scene ${idx+1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-125" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                                        <Eye size={12} /> View Evidence {idx+1}
-                                                    </span>
-                                                </div>
-                                            </a>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="p-8 text-center rounded-3xl border border-dashed border-gray-200 dark:border-white/10 opacity-40">
-                                        <Camera size={24} className="mx-auto mb-2" />
-                                        <p className="text-[9px] font-black uppercase tracking-widest">No visual evidence provided</p>
-                                    </div>
-                                )}
-                            </section>
-
-                            {/* Section: Description */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 flex items-center gap-2">
-                                    <FileText size={12} /> Incident Report
-                                </h3>
-                                <div className="p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200/50 dark:border-white/5">
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Time of Incident</p>
-                                            <p className="text-xs font-bold text-gray-900 dark:text-white">{new Date(selectedReport.accidentDate).toLocaleString()}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Location</p>
-                                            <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-end gap-1"><MapPin size={12} className="text-red-500"/> {selectedReport.accidentLocation}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium italic">
-                                        "{selectedReport.description}"
-                                    </p>
-                                </div>
-                            </section>
-
-                            {/* Section: Actions */}
-                            <section className="pt-10 border-t border-gray-200 dark:border-white/10 space-y-6 pb-20">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Resolution Controls</h3>
-                                    {selectedReport.resolvedAt && (
-                                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded-full">
-                                            <CheckCircle2 size={12}/> Closed {new Date(selectedReport.resolvedAt).toLocaleDateString()}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {selectedReport.status !== 'CLOSED' && selectedReport.status !== 'RESOLVED' ? (
-                                    <div className="space-y-4">
-                                        <textarea 
-                                            value={reviewNotes}
-                                            onChange={(e) => setReviewNotes(e.target.value)}
-                                            placeholder="Enter investigation notes or resolution steps..."
-                                            className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all text-gray-900 dark:text-white resize-none min-h-[140px]"
-                                        />
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <button 
-                                                onClick={() => handleUpdateStatus('UNDER_REVIEW')}
-                                                disabled={updating || selectedReport.status === 'UNDER_REVIEW'}
-                                                className="py-4 bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white font-black text-[11px] uppercase tracking-widest rounded-2xl hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 transition-all border border-transparent hover:border-red-500/20"
-                                            >
-                                                {selectedReport.status === 'UNDER_REVIEW' ? 'In Review' : 'Start Review'}
-                                            </button>
-                                            <button 
-                                                onClick={() => handleUpdateStatus('RESOLVED')}
-                                                disabled={updating}
-                                                className="py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-50 transition-all"
-                                            >
-                                                Mark Resolved
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-6 rounded-3xl bg-emerald-500/[0.03] border border-emerald-500/10">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-3 flex items-center gap-1.5">
-                                            <CheckCircle2 size={14}/> Final Resolution Notes
-                                        </p>
-                                        <p className="text-sm text-gray-700 dark:text-gray-400 italic leading-relaxed font-medium">
-                                            {selectedReport.reviewNotes || "No notes were provided for this resolution."}
-                                        </p>
-                                    </div>
-                                )}
-                            </section>
-                        </div>
-                    )}
                 </div>
-
-                {/* Mobile Backdrop */}
-                {selectedReport && (
-                    <div 
-                        onClick={() => setSelectedReport(null)}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
-                    />
-                )}
             </div>
         </div>
     );
