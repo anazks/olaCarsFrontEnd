@@ -139,7 +139,19 @@ const CreditNotes = () => {
                 try {
                     // Use getInvoicesByDriver to see all (Paid/Unpaid)
                     const res = await getInvoicesByDriver(selectedDriverId);
-                    setDriverInvoices(res || []);
+                    const invoices = res || [];
+                    setDriverInvoices(invoices);
+                    
+                    // Auto-select the first invoice if available
+                    if (invoices.length > 0) {
+                        // Sort by date desc to get the most recent one (or adjust logic as needed)
+                        const sorted = [...invoices].sort((a, b) => {
+                            const dateA = new Date(a.dueDate || a.createdAt).getTime();
+                            const dateB = new Date(b.dueDate || b.createdAt).getTime();
+                            return dateB - dateA;
+                        });
+                        setSelectedInvoiceId(sorted[0]._id);
+                    }
                 } catch (err) {
                     console.error(err);
                 } finally {
@@ -147,7 +159,6 @@ const CreditNotes = () => {
                 }
             };
             loadInvoices();
-            setSelectedInvoiceId('');
             setInvoiceSearch('');
             setInvoiceDateFilter('');
         } else {
@@ -533,6 +544,7 @@ const CreditNotes = () => {
 
                             {selectedDriverId && (
                                 <div className="space-y-1.5 p-3.5 border rounded-2xl animate-in zoom-in-95" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                    {/* 
                                     <div className="flex items-center justify-between mb-1.5">
                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
                                         <div className="flex items-center gap-1.5">
@@ -559,7 +571,6 @@ const CreditNotes = () => {
                                         </div>
                                     </div>
 
-                                    {/* Modal-specific Filters */}
                                     <div className="flex gap-2 mb-2">
                                         <div className="relative flex-1">
                                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={12} />
@@ -588,6 +599,11 @@ const CreditNotes = () => {
                                                 <button onClick={() => setInvoiceDateFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-main"><X size={10}/></button>
                                             )}
                                         </div>
+                                    </div>
+                                    */}
+
+                                    <div className="mb-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
                                     </div>
 
                                     <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>

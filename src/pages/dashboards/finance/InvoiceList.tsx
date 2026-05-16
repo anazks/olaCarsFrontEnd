@@ -172,15 +172,26 @@ const InvoiceList = () => {
                             <Settings size={14} />
                         </button>
 
+                        {/* 
                         <button 
                             onClick={handleGenerateWeekly} 
                             disabled={generating}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white disabled:opacity-50"
                             title="Generate Weekly Invoices Now"
                         >
-                            {generating ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} strokeWidth={3} />}
-                            {generating ? 'Generating...' : 'Generate Now'}
+                            <Settings className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+                            <span>{generating ? 'Generating...' : 'Generate Now'}</span>
                         </button>
+
+                        <button 
+                            onClick={() => setShowSettingsModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500 hover:text-white"
+                            title="Automation Settings"
+                        >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>Date Setup</span>
+                        </button>
+                        */}
 
                         <button 
                             onClick={handleDeleteAll} 
