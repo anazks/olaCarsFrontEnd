@@ -110,9 +110,9 @@ const CreatePurchaseOrder = () => {
         // Filter out completely empty items automatically
         const validItems = formData.items.filter(item => {
             const hasName = item.itemName && item.itemName.trim() !== '';
-            const hasPrice = item.unitPrice !== '' && Number(item.unitPrice) > 0;
+            const hasPrice = (item.unitPrice as any) !== '' && Number(item.unitPrice) > 0;
             const hasDescription = item.description && item.description.trim() !== '';
-            const changedQuantity = item.quantity !== 1 && item.quantity !== '' && item.quantity !== 0;
+            const changedQuantity = item.quantity !== 1 && (item.quantity as any) !== '' && item.quantity !== 0;
             
             // If they entered literally anything meaningful, we keep it (and validate it)
             return hasName || hasPrice || hasDescription || changedQuantity;

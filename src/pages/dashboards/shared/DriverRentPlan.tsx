@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, CreditCard, Calendar, Tag, FileText, Download, CheckCircle2, AlertCircle, Zap, TrendingUp } from 'lucide-react';
+import { ChevronLeft, FileText, Download, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
 import { getDriverById } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getInvoicesByDriver } from '../../../services/invoiceService';
@@ -139,7 +139,7 @@ const DriverRentPlan = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            {rentTracking.map((item, i) => {
+                            {rentTracking.map((item) => {
                                 const periodNum = item.weekNumber;
                                 const invoice = invoices.find(inv => inv.weekNumber === periodNum);
                                 
@@ -151,7 +151,6 @@ const DriverRentPlan = () => {
                                         invoice={invoice}
                                         baseAmount={item.amount}
                                         onDownload={() => invoice && handleDownloadInvoice(invoice)}
-                                        frequency={frequency}
                                     />
                                 );
                             })}
@@ -173,7 +172,7 @@ const SummaryCard = ({ label, value, icon, color }: any) => (
     </div>
 );
 
-const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload, frequency }: any) => {
+const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload }: any) => {
     const status = invoice?.status || 'PENDING';
     const totalDue = invoice?.totalAmountDue || baseAmount;
     const paid = invoice?.amountPaid || 0;

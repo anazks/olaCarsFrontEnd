@@ -63,6 +63,7 @@ export interface BasicDetails {
     fuelType: FuelType;
     transmission: Transmission;
     weeklyRent?: number;
+    monthlyRent?: number;
     engineCapacity?: number;
     colour?: string;
     seats?: number;
@@ -71,6 +72,7 @@ export interface BasicDetails {
     odometer?: number;
     gpsSerialNumber?: string;
     leaseDurationWeeks?: number;
+    leaseDurationMonths?: number;
     fleetNumber?: string;
     condition?: VehicleCondition;
 }
