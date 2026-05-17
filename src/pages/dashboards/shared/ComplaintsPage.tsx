@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllEnquiries, updateEnquiryStatus, deleteEnquiry } from '../../../services/enquiryService';
-import { MessageSquare, Clock, CheckCircle, XCircle, Search, Filter, Trash2, Reply, User, Phone, Mail, MapPin, ShieldAlert, Info, ChevronRight, HelpCircle } from 'lucide-react';
+import { MessageSquare, Clock, Search, Filter, Trash2, Reply, ShieldAlert, Info, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUser } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';

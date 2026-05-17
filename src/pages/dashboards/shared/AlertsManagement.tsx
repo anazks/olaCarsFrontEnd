@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import {
     AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle,
-    Car, Calendar, MapPin, Building2, RefreshCw, ArrowLeft, Eye
+    Car, Calendar, MapPin, Building2, RefreshCw, Eye
 } from 'lucide-react';
 import type { Alert } from '../../../services/alertService';
 import alertService from '../../../services/alertService';
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 type SeverityTab = 'ALL' | 'CRITICAL' | 'MAJOR' | 'MINOR';
 
 const AlertsManagement = () => {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
