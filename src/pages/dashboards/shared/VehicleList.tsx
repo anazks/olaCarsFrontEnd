@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Package, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';

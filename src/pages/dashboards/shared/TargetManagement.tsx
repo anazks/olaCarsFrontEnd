@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
     Target as TargetIcon, MapPin, Users,
-    Plus, User, ArrowRight, TrendingUp, Shield, Activity, Search, Building2, CheckCircle2, Clock, AlertCircle,
+    User, ArrowRight, TrendingUp, Shield, Activity, Search, Building2, CheckCircle2, Clock, AlertCircle,
     ChevronDown, ChevronUp, FileText, BarChart3
 } from 'lucide-react';
 import { assignTarget, getTargets, updateTargetStatus } from '../../../services/targetService';
@@ -62,14 +62,6 @@ const TargetManagement = () => {
         branchId: '',
         role: ''
     });
-
-    // Staff filtering states
-    const [staffFilters, setStaffFilters] = useState({
-        role: '',
-        branchId: '',
-        country: ''
-    });
-
     const fetchInitialData = async () => {
         setFetching(true);
         try {
@@ -162,7 +154,7 @@ const TargetManagement = () => {
             await assignTarget(targetFormData as any);
             fetchInitialData();
             setTargetFormData(prev => ({ ...prev, targetValue: 0, notes: '' }));
-            setTargetFilters({ country: '', branchId: '' });
+            setTargetFilters({ country: '', branchId: '', role: '' });
             setIsTargetAssignmentOpen(false);
         } catch (error) {
             console.error('Error assigning target:', error);
@@ -178,7 +170,7 @@ const TargetManagement = () => {
             await delegateTask(taskFormData as any);
             fetchInitialData();
             setTaskFormData(prev => ({ ...prev, title: '', description: '', notes: '' }));
-            setTaskFilters({ country: '', branchId: '' });
+            setTaskFilters({ country: '', branchId: '', role: '' });
             setIsTaskAssignmentOpen(false);
         } catch (error) {
             console.error('Error delegating task:', error);
@@ -266,16 +258,6 @@ const TargetManagement = () => {
             setIsDelegatedListOpen(delegatedByMe.length > 0);
         }
     }, [fetching, activeTab]);
-
-    const kpis = useMemo(() => {
-        const source = activeTab === 'TARGETS' ? existingTargets : existingTasks;
-        const total = source.length;
-        const completed = source.filter(t => t.status === 'COMPLETED').length;
-        const pending = total - completed;
-        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        return { total, completed, pending, rate };
-    }, [existingTargets, existingTasks, activeTab]);
-
     return (
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Target Management', active: true }]} />
@@ -354,7 +336,7 @@ const TargetManagement = () => {
                                                 onChange={(e) => {
                                                     const newType = e.target.value as any;
                                                     setTaskFormData({ ...taskFormData, targetType: newType, targetId: '' });
-                                                    setTaskFilters({ country: '', branchId: '' });
+                                                    setTaskFilters({ country: '', branchId: '', role: '' });
                                                 }}
                                                 className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
                                             >
@@ -555,7 +537,7 @@ const TargetManagement = () => {
                                                 onChange={(e) => {
                                                     const newType = e.target.value as any;
                                                     setTargetFormData({ ...targetFormData, targetType: newType, targetId: '' });
-                                                    setTargetFilters({ country: '', branchId: '' });
+                                                    setTargetFilters({ country: '', branchId: '', role: '' });
                                                 }}
                                                 className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                             >

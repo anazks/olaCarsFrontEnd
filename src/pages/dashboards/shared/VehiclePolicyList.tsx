@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VehiclePolicyList = () => {
-    const { t } = useTranslation();
+    useTranslation();
     const navigate = useNavigate();
     const [policies, setPolicies] = useState<VehiclePolicy[]>([]);
     const [loading, setLoading] = useState(true);

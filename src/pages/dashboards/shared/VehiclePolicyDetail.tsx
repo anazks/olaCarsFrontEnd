@@ -6,7 +6,6 @@ import {
     Car, 
     User, 
     FileText, 
-    Download, 
     Eye,
     PlusCircle
 } from 'lucide-react';
@@ -222,15 +221,15 @@ const VehiclePolicyDetail = () => {
                         {driver ? (
                             <div className="space-y-3 mt-4">
                                 <div className="flex items-center gap-4">
-                                    {driver.profileImage ? (
-                                        <img src={getFullUrl(driver.profileImage)} alt={driver.name} className="w-12 h-12 rounded-full object-cover border border-white/20" />
+                                    {driver.personalInfo.photograph ? (
+                                        <img src={getFullUrl(driver.personalInfo.photograph)} alt={driver.personalInfo.fullName} className="w-12 h-12 rounded-full object-cover border border-white/20" />
                                     ) : (
                                         <div className="w-12 h-12 rounded-full bg-[#1A1A1A] border border-gray-800 flex items-center justify-center">
                                             <User size={24} className="text-gray-500" />
                                         </div>
                                     )}
                                     <div>
-                                        <p className="font-bold text-lg">{driver.name}</p>
+                                        <p className="font-bold text-lg">{driver.personalInfo.fullName}</p>
                                         <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase bg-green-500/10 text-green-500 border border-green-500/30">
                                             ACTIVE RENTAL
                                         </span>
@@ -238,8 +237,8 @@ const VehiclePolicyDetail = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 mt-4">Contact Info</p>
-                                    <p className="font-medium text-sm">{driver.email}</p>
-                                    <p className="font-medium text-sm">{driver.phone}</p>
+                                    <p className="font-medium text-sm">{driver.personalInfo.email}</p>
+                                    <p className="font-medium text-sm">{driver.personalInfo.phone}</p>
                                 </div>
                             </div>
                         ) : (
