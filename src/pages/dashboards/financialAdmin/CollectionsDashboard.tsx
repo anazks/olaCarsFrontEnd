@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
     ResponsiveContainer, AreaChart, Area, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -7,7 +6,7 @@ import {
 } from 'recharts';
 import {
     Library, DollarSign, ShieldAlert, Calendar,
-    MapPin, Building, ChevronLeft, ChevronRight, Search, Filter,
+    MapPin, Building, Search, Filter,
     TrendingUp, Wallet, FileText, Clock, FilterX
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
@@ -27,7 +26,6 @@ import { useTheme } from '../../../context/ThemeContext';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CollectionsDashboard = () => {
-    const { t } = useTranslation();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 

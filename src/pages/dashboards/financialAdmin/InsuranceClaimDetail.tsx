@@ -4,8 +4,6 @@ import {
     ShieldAlert, 
     ArrowLeft, 
     Clock, 
-    CheckCircle2, 
-    XCircle, 
     FileText, 
     CreditCard,
     Car

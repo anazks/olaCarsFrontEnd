@@ -269,10 +269,10 @@ const PaymentsReceived = () => {
                         </tbody>
                     </table>
                 </div>
-                {!loading && payments.length > 0 && pagination && pagination.totalPages >= 1 && (
+                {!loading && payments.length > 0 && pagination && pagination.pages >= 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing {payments.length} of {pagination.totalItems} payments
+                            Showing {payments.length} of {pagination.total} payments
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -284,7 +284,7 @@ const PaymentsReceived = () => {
                                 <ChevronLeft size={18} />
                             </button>
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: pagination.totalPages }, (_, i) => (
+                                {Array.from({ length: pagination.pages }, (_, i) => (
                                     <button
                                         key={i + 1}
                                         onClick={() => setPage(i + 1)}
@@ -301,7 +301,7 @@ const PaymentsReceived = () => {
                             </div>
                             <button
                                 onClick={() => setPage(page + 1)}
-                                disabled={page === pagination.totalPages}
+                                disabled={page === pagination.pages}
                                 className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >

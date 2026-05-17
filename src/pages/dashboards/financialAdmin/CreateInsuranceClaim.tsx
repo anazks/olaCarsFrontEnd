@@ -40,7 +40,7 @@ const CreateInsuranceClaim = () => {
             if (v) setSelectedVehicle(v);
             else if (preselectedVehicleId && !vehicles.length) {
                 // Fetch specific vehicle if preselected and not in list
-                getVehicleById(vehicleId).then(setVehicle).catch(console.error);
+                getVehicleById(vehicleId).then(setSelectedVehicle).catch(console.error);
             }
         } else {
             setSelectedVehicle(null);

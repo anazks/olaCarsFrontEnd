@@ -10,8 +10,7 @@ import {
     ChevronUp,
     Settings,
     User,
-    X,
-    ClipboardList
+    X
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

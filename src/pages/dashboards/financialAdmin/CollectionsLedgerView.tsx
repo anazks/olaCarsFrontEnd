@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-     Calendar, MapPin, Building, ChevronLeft, ChevronRight, 
+     Calendar, MapPin, Building, 
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { Car, Search, Save, CheckCircle2, AlertCircle, Filter, FileText } from 'lucide-react';
+import { Car, Search, Save, CheckCircle2, Filter, FileText } from 'lucide-react';
 import { getAllVehicles, updateVehicleLeaseSettings } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import toast from 'react-hot-toast';
