@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, Filter, Search, Download, DollarSign, User, Calendar, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
+import { FileText, RefreshCw, Search, Download, DollarSign, User, Calendar, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
 import { getInvoices, payInvoice } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
@@ -8,7 +8,6 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 const InvoiceList = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -40,7 +39,6 @@ const InvoiceList = () => {
 
     const fetchData = useCallback(async () => {
         setLoading(true);
-        setError(null);
         try {
             const filters: any = {
                 page,
@@ -58,7 +56,6 @@ const InvoiceList = () => {
                 setPagination(response.pagination);
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to fetch invoices');
             toast.error('Error loading invoices');
         } finally {
             setLoading(false);

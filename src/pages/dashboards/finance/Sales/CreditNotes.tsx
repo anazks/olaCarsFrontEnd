@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Plus, Search, Filter, X, FileText, RefreshCw, 
-    AlertCircle, User, DollarSign, CheckCircle2,
+    User, DollarSign, CheckCircle2,
     Eye, ChevronLeft, ChevronRight, Calendar,
     ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
@@ -13,7 +13,7 @@ import {
     type CreditNote 
 } from '../../../../services/creditNoteService';
 import { getAllDrivers } from '../../../../services/driverService';
-import { getInvoicesByDriver, getPendingInvoicesByDriver } from '../../../../services/invoiceService';
+import { getInvoicesByDriver } from '../../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
 const CreditNotes = () => {
@@ -32,7 +32,7 @@ const CreditNotes = () => {
 
     // Server-Side Pagination
     const [page, setPage] = useState<number>(1);
-    const [limit, setLimit] = useState<number>(25);
+    const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
@@ -127,8 +127,8 @@ const CreditNotes = () => {
     }, [isCreateModalOpen, drivers.length]);
 
     // Specific driver's invoices for the modal
-    const [invoiceSort, setInvoiceSort] = useState<'date' | 'number'>('date');
-    const [invoiceSortOrder, setInvoiceSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [invoiceSort] = useState<'date' | 'number'>('date');
+    const [invoiceSortOrder] = useState<'asc' | 'desc'>('desc');
     const [invoiceSearch, setInvoiceSearch] = useState('');
     const [invoiceDateFilter, setInvoiceDateFilter] = useState('');
 
@@ -146,8 +146,8 @@ const CreditNotes = () => {
                     if (invoices.length > 0) {
                         // Sort by date desc to get the most recent one (or adjust logic as needed)
                         const sorted = [...invoices].sort((a, b) => {
-                            const dateA = new Date(a.dueDate || a.createdAt).getTime();
-                            const dateB = new Date(b.dueDate || b.createdAt).getTime();
+                            const dateA = new Date(a.dueDate || a.generatedAt).getTime();
+                            const dateB = new Date(b.dueDate || b.generatedAt).getTime();
                             return dateB - dateA;
                         });
                         setSelectedInvoiceId(sorted[0]._id);
@@ -181,7 +181,7 @@ const CreditNotes = () => {
         // 2. Date Filter
         if (invoiceDateFilter) {
             filtered = filtered.filter(i => {
-                const d = new Date(i.dueDate || i.createdAt).toISOString().split('T')[0];
+                const d = new Date(i.dueDate || i.generatedAt).toISOString().split('T')[0];
                 return d === invoiceDateFilter;
             });
         }
@@ -189,8 +189,8 @@ const CreditNotes = () => {
         // 3. Sorting
         return filtered.sort((a, b) => {
             if (invoiceSort === 'date') {
-                const dateA = new Date(a.dueDate || a.createdAt).getTime();
-                const dateB = new Date(b.dueDate || b.createdAt).getTime();
+                const dateA = new Date(a.dueDate || a.generatedAt).getTime();
+                const dateB = new Date(b.dueDate || b.generatedAt).getTime();
                 return invoiceSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             } else {
                 return invoiceSortOrder === 'desc' 

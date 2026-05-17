@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-    DollarSign, Search, Filter, RefreshCw, User, Calendar, CreditCard, FileCheck, X, Receipt,
+    DollarSign, Search, Filter, RefreshCw, Calendar, X,
     ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
@@ -42,7 +42,7 @@ const PaymentsReceived = () => {
 
     // Pagination
     const [page, setPage] = useState<number>(1);
-    const [limit, setLimit] = useState<number>(25);
+    const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
@@ -104,11 +104,6 @@ const PaymentsReceived = () => {
         fetchPayments();
     }, [fetchPayments]);
 
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= pagination.pages) {
-            setPage(newPage);
-        }
-    };
 
     return (
         <div className="container-responsive space-y-6 pb-12">

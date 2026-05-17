@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
-    Calendar, ArrowUpDown, ArrowUp, ArrowDown, User, Plus, DollarSign, FileText
+    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText
 } from 'lucide-react';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import toast from 'react-hot-toast';
 
 const Customers = () => {
     const navigate = useNavigate();

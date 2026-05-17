@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
     AlertTriangle, 
     CheckCircle2, 
@@ -13,8 +12,6 @@ import {
     Calendar,
     Building2,
     RefreshCw,
-    RotateCcw,
-    Search,
     Filter
 } from 'lucide-react';
 
@@ -23,22 +20,11 @@ import {
     PieChart, 
     Pie, 
     Cell, 
-    Tooltip as RechartsTooltip, 
-    Legend 
+    Tooltip as RechartsTooltip
 } from 'recharts';
 import { getOperationDashboardStats } from '../../services/operationAdminService';
 import { getAllBranches } from '../../services/branchService';
 import type { Branch } from '../../services/branchService';
-
-const COLORS = {
-    critical: '#EF4444',
-    major: '#F59E0B',
-    minor: '#3B82F6',
-    active: '#148F85',
-    maintenance: '#F59E0B',
-    available: '#3B82F6',
-    suspended: '#6B7280',
-};
 
 const StatCard = ({ title, value, icon, color, trend }: any) => (
     <div 
@@ -66,7 +52,6 @@ const StatCard = ({ title, value, icon, color, trend }: any) => (
 );
 
 const OperationalAdminDashboard = () => {
-    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -112,13 +97,7 @@ const OperationalAdminDashboard = () => {
         }
     };
 
-    const handleReset = () => {
-        setBranchId('');
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        setStartDate(d.toISOString().split('T')[0]);
-        setEndDate(new Date().toISOString().split('T')[0]);
-    };
+
 
     useEffect(() => {
         fetchBranches();

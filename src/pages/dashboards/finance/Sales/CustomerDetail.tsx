@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
-    ChevronLeft, RefreshCw, Calendar, ShieldCheck, Clock, FileSpreadsheet,
-    Download, CheckCircle2, AlertCircle, Trash2, ArrowUpRight, ArrowDownLeft,
-    ArrowLeft, Plus, Edit2, Zap, ArrowUpDown, ChevronRight, Briefcase
+    RefreshCw, Calendar, ShieldCheck, FileSpreadsheet,
+    Download, CheckCircle2, AlertCircle,
+    ArrowLeft, Edit2, Zap, Briefcase
 } from 'lucide-react';
 import { driverService, type Driver } from '../../../../services/driverService';
 import { getInvoicesByDriver, type Invoice } from '../../../../services/invoiceService';

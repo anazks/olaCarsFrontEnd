@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    DollarSign, Clock, AlertCircle, X, Printer, ArrowLeft, 
+    DollarSign, AlertCircle, X, Printer, ArrowLeft, 
     Edit3, FileSpreadsheet, FileCheck, Undo2, Filter, 
     RefreshCw, CheckCircle2, Sun, Moon, User, Link
 } from 'lucide-react';
-import { getCreditNoteById, voidCreditNote, updateCreditNote, applyCreditNote, refundCreditNote } from '../../../../services/creditNoteService';
+import { getCreditNoteById, voidCreditNote, updateCreditNote, applyCreditNote } from '../../../../services/creditNoteService';
 import { getInvoicesByDriver } from '../../../../services/invoiceService';
 import { getAllDrivers } from '../../../../services/driverService';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -29,7 +29,6 @@ const CreditNoteDetail = () => {
     const [submittingEdit, setSubmittingEdit] = useState(false);
     // Edit – driver & invoice pickers
     const [editDriverId, setEditDriverId] = useState<string>('');
-    const [editDriverSearch, setEditDriverSearch] = useState<string>('');
     const [editDriverList, setEditDriverList] = useState<any[]>([]);
     const [loadingDriverList, setLoadingDriverList] = useState(false);
     const [editInvoiceId, setEditInvoiceId] = useState<string>('');
@@ -42,7 +41,6 @@ const CreditNoteDetail = () => {
     const [applyInvoices, setApplyInvoices] = useState<any[]>([]);
     const [loadingApplyInvoices, setLoadingApplyInvoices] = useState(false);
     const [submittingApply, setSubmittingApply] = useState(false);
-    const [submittingRefund, setSubmittingRefund] = useState(false);
 
     const { theme, toggleTheme } = useTheme();
 
@@ -209,23 +207,7 @@ const CreditNoteDetail = () => {
         }
     };
 
-    // --- Refund Handler ---
-    const handleRefundCreditNote = async () => {
-        if (!id) return;
-        if (!window.confirm("Issue a direct cash payout refund for this credit balance? Note status will be closed permanently.")) return;
-        setSubmittingRefund(true);
-        try {
-            const res = await refundCreditNote(id);
-            if (res.success) {
-                toast.success("Credit note fully refunded & payout recorded!");
-                await fetchNote();
-            }
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed refunding credit note.");
-        } finally {
-            setSubmittingRefund(false);
-        }
-    };
+
 
     const convertToWords = (num: number) => `${num.toLocaleString('en-US')} USD`;
 

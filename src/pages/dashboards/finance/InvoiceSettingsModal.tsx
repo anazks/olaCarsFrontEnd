@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Calendar, Save, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Settings, Calendar, Save, AlertCircle } from 'lucide-react';
 import { getGenerationSettings, updateGenerationSettings } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
