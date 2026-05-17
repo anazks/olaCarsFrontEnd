@@ -319,6 +319,9 @@ export const assignVehicleToDriver = async (
     leaseDetails: {
         durationMonths: number;
         monthlyRent: number;
+        durationWeeks?: number;
+        weeklyRent?: number;
+        frequency?: 'MONTHLY' | 'WEEKLY';
         depositAmount?: number;
         notes?: string;
     }

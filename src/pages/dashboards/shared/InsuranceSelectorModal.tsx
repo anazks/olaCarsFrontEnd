@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, X, Check, Search, Calendar, DollarSign, FileText } from 'lucide-react';
+import { Shield, X, Check, Search, FileText } from 'lucide-react';
 import type { Insurance } from '../../../services/insuranceService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 

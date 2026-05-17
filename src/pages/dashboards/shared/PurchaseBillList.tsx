@@ -7,7 +7,6 @@ import {
 import {
     Receipt,
     Search,
-    Filter,
     RefreshCw,
     CheckCircle2,
     Clock,
@@ -217,7 +216,7 @@ const PurchaseBillList = () => {
                                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">{t('management.common.table.status')}</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y" style={{ dividerColor: 'var(--border-main)' }}>
+                                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                     {payments.map(p => {
                                         const sc = statusConfig[p.status] || statusConfig.PENDING;
                                         return (
@@ -229,7 +228,7 @@ const PurchaseBillList = () => {
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
-                                                                {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A'}
+                                                                {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A'}
                                                             </p>
                                                             <p className="text-[10px] uppercase font-black opacity-30 tracking-widest mt-0.5">{p.paymentMethod.replace('_', ' ')}</p>
                                                         </div>

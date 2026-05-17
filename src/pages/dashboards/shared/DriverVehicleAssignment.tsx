@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Car, Search, CheckCircle2, ShieldCheck, Route as RouteIcon, Tag, Upload, FileText } from 'lucide-react';
+import { ChevronLeft, Car, Search, CheckCircle2, ShieldCheck, Route as RouteIcon, Tag, Upload, FileText, AlertCircle } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument } from '../../../services/driverService';
 import { getAvailableVehicles, assignVehicleToDriver } from '../../../services/vehicleService';
 import agreementService from '../../../services/agreementService';

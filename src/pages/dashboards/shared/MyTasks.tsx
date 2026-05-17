@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-    ClipboardList, CheckCircle, Search, 
+    CheckCircle, Search, 
     Activity, Clock, Shield,
     CheckCircle2, RefreshCw, X, MessageSquare, AlertCircle
 } from 'lucide-react';

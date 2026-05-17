@@ -1,22 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, CheckCircle, X } from 'lucide-react';
+import { Shield, X } from 'lucide-react';
 import InsuranceSelectorModal from './InsuranceSelectorModal';
-import { uploadVehicleDocuments, progressVehicle, getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import { createVehiclePolicy, type Insurance, type VehiclePolicy } from '../../../services/insuranceService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const inputStyle = { background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' };
 const inputClass = 'w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all text-sm';
-
-const toFullUrl = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    const baseUrl = (import.meta.env.VITE_S3_BASE_URL || '').replace(/^"|"$/g, '').replace(/\/$/, '');
-    path = path.replace(/^\//, '');
-    return `${baseUrl}/${path}`;
-};
 
 interface InsuranceManagementModalProps {
     isOpen: boolean;
