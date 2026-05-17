@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Clock3, MapPin, TrendingUp, Calendar, BarChart3,
-    ArrowUpRight, Activity, Shield, ChevronDown, Users, CheckCircle, Award, Search
+    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search
 } from 'lucide-react';
 import { 
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 

@@ -5,7 +5,7 @@ import {
     approveRejectPurchaseOrder,
 } from '../../../services/purchaseOrderService';
 import systemSettingsService from '../../../services/systemSettingsService';
-import type { PurchaseOrder } from '../../../services/purchaseOrderService';
+import type { PurchaseOrder, POStatus } from '../../../services/purchaseOrderService';
 import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
@@ -123,13 +123,15 @@ const PurchaseOrderDetail = () => {
 
     const canPay = po.status === 'APPROVED' && !po.isBilled;
 
-    const statusColors = {
+    const statusColors: Record<POStatus, { bg: string; text: string; icon: React.ReactNode }> = {
+        REQUESTED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
+        MANAGER_APPROVED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         WAITING: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         APPROVED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
         REJECTED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: <XCircle size={16} /> }
     };
 
-    const s = statusColors[po.status];
+    const s = statusColors[po.status] || statusColors.WAITING;
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-20">

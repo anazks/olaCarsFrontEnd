@@ -19,7 +19,7 @@ export interface InvoicePayment {
 export interface Invoice {
     _id: string;
     invoiceNumber: string;
-    invoiceType: 'RENTAL' | 'WORKSHOP';
+    invoiceType: 'RENTAL' | 'WORKSHOP' | 'MANUAL';
     driver: string | any;
     vehicle: string | any;
     serviceBill?: string | any;
@@ -37,7 +37,6 @@ export interface Invoice {
     generatedAt: string;
     pdfS3Key?: string;
     // Manual invoice fields
-    invoiceType?: 'AUTO' | 'MANUAL';
     lineItems?: LineItem[];
     subtotal?: number;
     discountType?: 'PERCENTAGE' | 'FIXED';

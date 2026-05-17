@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     Users,
-    Shield,
     DollarSign,
     Globe,
     UserCheck,
@@ -10,13 +9,11 @@ import {
     UserCog,
     Wrench,
     Target,
-    ClipboardList,
     BarChart3,
-    ArrowRight,
-    User
+    ArrowRight
 } from 'lucide-react';
 import HasPermission from '../../../components/HasPermission';
-import { getUserRole, getUserId } from '../../../utils/auth';
+import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StaffManagement = () => {
