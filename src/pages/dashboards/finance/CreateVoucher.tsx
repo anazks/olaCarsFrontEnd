@@ -22,7 +22,7 @@ import type { AccountingCode } from '../../../services/accountingService';
 import { getAllBranches } from '../../../services/branchService';
 import { createVoucher } from '../../../services/ledgerService';
 import type { VoucherType, JournalLine } from '../../../services/ledgerService';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+
 
 const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
     codes: AccountingCode[],

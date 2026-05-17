@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     DollarSign, Calendar, CheckCircle2, Clock, AlertCircle, X, 
-    Printer, ArrowLeft, Edit3, FileSpreadsheet, Eye, Sun, Moon, Trash2
+    Printer, ArrowLeft, Edit3, FileSpreadsheet, Eye, Trash2
 } from 'lucide-react';
 import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice } from '../../../services/invoiceService';
 import { createCreditNote, getAllCreditNotes, applyCreditNote } from '../../../services/creditNoteService';
 import type { Invoice } from '../../../services/invoiceService';
-import { useTheme } from '../../../context/ThemeContext';
+
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -42,9 +42,6 @@ const InvoiceDetail = () => {
 
     // Linked Credit Notes
     const [linkedCreditNotes, setLinkedCreditNotes] = useState<any[]>([]);
-    const [loadingCreditNotes, setLoadingCreditNotes] = useState(false);
-
-    const { theme, toggleTheme } = useTheme();
 
     const fetchInvoice = useCallback(async () => {
         if (!id) return;
@@ -62,7 +59,6 @@ const InvoiceDetail = () => {
 
     const fetchLinkedCreditNotes = useCallback(async () => {
         if (!id) return;
-        setLoadingCreditNotes(true);
         try {
             const res = await getAllCreditNotes({ invoiceId: id });
             if (res.success) {
@@ -70,8 +66,6 @@ const InvoiceDetail = () => {
             }
         } catch (e) {
             console.error("Error loading linked credit notes:", e);
-        } finally {
-            setLoadingCreditNotes(false);
         }
     }, [id]);
 
@@ -391,13 +385,13 @@ const InvoiceDetail = () => {
                                         <span>Subtotal</span>
                                         <span style={{ color: 'var(--text-main)' }}>${(invoice.subtotal || invoice.totalAmountDue)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    {invoice.discountAmount > 0 && (
+                                    {(invoice.discountAmount || 0) > 0 && (
                                         <div className="flex justify-between font-semibold text-rose-400">
                                             <span>Discount {invoice.discountType === 'PERCENTAGE' ? `(${invoice.discountValue}%)` : ''}</span>
                                             <span>− ${invoice.discountAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
-                                    {invoice.taxAmount > 0 && (
+                                    {(invoice.taxAmount || 0) > 0 && (
                                         <div className="flex justify-between font-semibold text-blue-400">
                                             <span>Tax ({invoice.taxRate}%)</span>
                                             <span>+ ${invoice.taxAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>

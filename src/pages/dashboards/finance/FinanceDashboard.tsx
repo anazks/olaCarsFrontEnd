@@ -3,7 +3,7 @@ import { Activity, ArrowUpRight, ArrowDownRight, RefreshCw, BarChart3, AlertTria
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
 import { getUser } from '../../../utils/auth';
@@ -408,8 +408,8 @@ const FinanceDashboard = () => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
                                     const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
-                                    const amount = (entry.amount !== undefined) ? entry.amount : ((entry.credit || 0) > 0 ? entry.credit : (entry.debit || 0));
-                                    const isDebit = (entry.amount !== undefined) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
+                                    const amount = (entry.amount !== undefined && entry.amount !== null) ? entry.amount : ((entry.credit || 0) > 0 ? (entry.credit || 0) : (entry.debit || 0));
+                                    const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
                                     return (
                                         <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors group">
