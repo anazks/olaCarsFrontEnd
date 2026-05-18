@@ -64,6 +64,7 @@ import AccidentReports from './pages/dashboards/shared/AccidentReports';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
+import WorkshopPurchaseRequestList from './pages/dashboards/shared/WorkshopPurchaseRequestList';
 import CreatePurchaseOrder from './pages/dashboards/shared/CreatePurchaseOrder';
 import PurchaseOrderDetail from './pages/dashboards/shared/PurchaseOrderDetail';
 import BillList from './pages/dashboards/finance/Bills/BillList';
@@ -196,6 +197,7 @@ function App() {
               {/* Purchase Orders */}
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
+                <Route path="workshop-purchase-requests" element={<WorkshopPurchaseRequestList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
                 <Route path="bills" element={<BillList />} />
@@ -359,6 +361,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
+                <Route path="workshop-purchase-requests" element={<WorkshopPurchaseRequestList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
                 <Route path="bills" element={<BillList />} />

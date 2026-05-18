@@ -142,6 +142,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Vendors', path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
                 { label: 'Expenses', path: '/admin/admin/expenses' },
                 { label: 'Purchase Orders', path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Workshop Purchase Requests', path: '/admin/admin/workshop-purchase-requests', permission: 'PURCHASE_ORDER_VIEW' },
                 { label: 'Bills', path: '/admin/admin/bills' },
                 { label: 'Payments Made', path: '/admin/admin/payments-made' },
             ]

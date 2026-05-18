@@ -144,6 +144,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Vendors', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
                 { label: 'Expenses', path: '/admin/financial-admin/expenses' },
                 { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Workshop Purchase Requests', path: '/admin/financial-admin/workshop-purchase-requests', permission: 'PURCHASE_ORDER_VIEW' },
                 { label: 'Bills', path: '/admin/financial-admin/bills' },
                 { label: 'Payments Made', path: '/admin/financial-admin/payments-made' },
             ]
