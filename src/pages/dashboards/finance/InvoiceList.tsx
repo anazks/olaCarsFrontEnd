@@ -288,19 +288,9 @@ const InvoiceList = () => {
                                             Driver Details <SortIcon field="driver" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('vehicle')}>
-                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Vehicle / Fleet <SortIcon field="vehicle" />
-                                        </div>
-                                    </th>
-                                    <th className="py-4 px-6 text-left w-[12%]">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Node Location
-                                        </div>
-                                    </th>
-                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
-                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
+                                    <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Status <SortIcon field="status" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-right w-[10%] group cursor-pointer select-none" onClick={() => handleSort('totalAmountDue')}>
@@ -318,9 +308,19 @@ const InvoiceList = () => {
                                             Current Balance <SortIcon field="balance" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
-                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Status <SortIcon field="status" />
+                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('vehicle')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Vehicle / Fleet <SortIcon field="vehicle" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%]">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Node Location
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
@@ -404,6 +404,20 @@ const InvoiceList = () => {
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td className="py-4 px-6 text-center">
+                                                <StatusBadge status={invoice.status} />
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-black text-sm">
+                                                ${invoice.totalAmountDue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-bold text-emerald-400">
+                                                ${invoice.amountPaid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-4 px-6 text-right font-black text-sm">
+                                                <span className={invoice.balance > 0 ? (invoice.status === 'OVERDUE' ? 'text-rose-500' : 'text-amber-400') : 'text-emerald-400'}>
+                                                    ${invoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold" style={{ color: 'var(--text-main)' }}>
@@ -426,20 +440,6 @@ const InvoiceList = () => {
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
-                                            </td>
-                                            <td className="py-4 px-6 text-right font-black text-sm">
-                                                ${invoice.totalAmountDue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="py-4 px-6 text-right font-bold text-emerald-400">
-                                                ${invoice.amountPaid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="py-4 px-6 text-right font-black text-sm">
-                                                <span className={invoice.balance > 0 ? (invoice.status === 'OVERDUE' ? 'text-rose-500' : 'text-amber-400') : 'text-emerald-400'}>
-                                                    ${invoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 px-6 text-center">
-                                                <StatusBadge status={invoice.status} />
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
                                                 <div className="flex justify-center gap-2">
