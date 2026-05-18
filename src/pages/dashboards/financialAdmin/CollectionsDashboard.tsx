@@ -351,7 +351,7 @@ const CollectionsDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="h-[280px] w-full">
+                    <div className="h-[210px] w-full">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <AreaChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
@@ -406,24 +406,6 @@ const CollectionsDashboard = () => {
                             <p className="text-xs mt-4" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>Calculated future billing inflows pending execution between today and the coming 30 days.</p>
                         </div>
                     </div>
-
-                    <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
-                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex justify-between items-start">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                                <TrendingUp size={24} className="text-indigo-500" />
-                            </div>
-                            <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-400">Efficiency</div>
-                        </div>
-                        <div className="mt-8">
-                            <div className="text-3xl font-black text-indigo-500">{efficiencyIndex.toFixed(1)}%</div>
-                            <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: 'var(--text-muted)' }}>Collection Efficiency Index</p>
-                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 mt-3 overflow-hidden">
-                                <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, efficiencyIndex)}%` }}></div>
-                            </div>
-                            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>Ratio of settled receipts against net total billing expected.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -474,6 +456,16 @@ const CollectionsDashboard = () => {
                             <div className="text-xs font-bold uppercase tracking-wider text-emerald-500">Target Efficiency Goal</div>
                             <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>Maintain a system collection efficiency index of 95%+ monthly to ensure optimal branch liquidity.</p>
                         </div>
+                        <div className="p-3.5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="flex justify-between items-center">
+                                <div className="text-xs font-bold uppercase tracking-wider text-indigo-500">Collection Efficiency Index</div>
+                                <span className="text-xs font-black text-indigo-500">{efficiencyIndex.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+                                <div className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, efficiencyIndex)}%` }}></div>
+                            </div>
+                            <p className="text-[10px] mt-1.5 opacity-70" style={{ color: 'var(--text-muted)' }}>Ratio of settled receipts against net total billing expected.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -510,7 +502,7 @@ const CollectionsDashboard = () => {
                                         <td className="py-4 px-3">
                                             <div 
                                                 className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/drivers/${entry.driverId}`)}
+                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
                                             >
                                                 {entry.driverName}
                                             </div>
@@ -572,7 +564,7 @@ const CollectionsDashboard = () => {
                                         <td className="py-4 px-3">
                                             <div 
                                                 className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/drivers/${entry.driverId}`)}
+                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
                                             >
                                                 {entry.driverName}
                                             </div>
@@ -682,7 +674,7 @@ const CollectionsDashboard = () => {
                                      </td>
                                      <td 
                                          className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                         onClick={() => item.driverId && navigate(`${getRoutePrefix()}/drivers/${item.driverId}`)}
+                                         onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
                                      >
                                          {item.driverName}
                                      </td>
