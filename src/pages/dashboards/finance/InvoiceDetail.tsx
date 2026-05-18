@@ -34,7 +34,6 @@ const InvoiceDetail = () => {
     const [paymentNote, setPaymentNote] = useState<string>('');
     const [processingPayment, setProcessingPayment] = useState(false);
     const [driverPrepayment, setDriverPrepayment] = useState<number>(0);
-    const [loadingPrepayment, setLoadingPrepayment] = useState<boolean>(false);
     const [usePrepayment, setUsePrepayment] = useState<boolean>(false);
 
     // Issue Credit Note Modal State
@@ -84,13 +83,12 @@ const InvoiceDetail = () => {
             const driverId = typeof invoice.driver === 'object' ? invoice.driver._id : invoice.driver;
             if (!driverId) return;
             
-            setLoadingPrepayment(true);
             try {
-                const [invoicesData, paymentsData] = await Promise.all([
+                const [, paymentsData] = await Promise.all([
                     getInvoicesByDriver(driverId),
                     api.get('/api/payments-received', { params: { driverId, limit: 100 } })
                 ]);
-
+ 
                 // Calculate Prepayment Credit (Extra Advance)
                 const paymentsList = paymentsData?.data?.data || paymentsData?.data || [];
                 const totalReceived = paymentsList.reduce((sum: number, p: any) => p.status === 'VOID' ? sum : sum + (p.amountReceived || 0), 0);
@@ -103,8 +101,6 @@ const InvoiceDetail = () => {
                 setDriverPrepayment(prepayment);
             } catch (err) {
                 console.error("Error fetching driver prepayment balance:", err);
-            } finally {
-                setLoadingPrepayment(false);
             }
         };
 

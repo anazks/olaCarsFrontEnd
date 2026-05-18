@@ -7,7 +7,8 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    Library
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

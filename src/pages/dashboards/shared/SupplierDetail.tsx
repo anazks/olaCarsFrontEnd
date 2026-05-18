@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     Users, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
-    ChevronLeft, RefreshCw, Calendar, ShieldCheck, Clock, FileSpreadsheet,
-    Download, CheckCircle2, AlertCircle, Trash2, ArrowUpRight, ArrowDownLeft,
-    ArrowLeft, Plus, Edit2, Zap, ArrowUpDown, ChevronRight, Briefcase, Tag, ShoppingBag, Coins
+    RefreshCw, FileSpreadsheet,
+    Download, CheckCircle2, AlertCircle, 
+    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins
 } from 'lucide-react';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { getSupplierById, type Supplier } from '../../../services/supplierService';
@@ -119,7 +119,6 @@ const SupplierDetail = () => {
     }
 
     // Financial Analytics Aggregation
-    const totalPoAmount = purchaseOrders.reduce((sum, po) => sum + (po.totalAmount || 0), 0);
     const totalBilledAmount = bills.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
     const totalPaidAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const totalAppliedToBills = payments.reduce((sum, p) => {

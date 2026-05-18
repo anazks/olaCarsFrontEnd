@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    CreditCard, Plus, Search, Filter, RefreshCw, Calendar, 
-    ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User, Tag, Landmark, FolderOpen,
+    CreditCard, Plus, Search, Filter, RefreshCw, 
+    ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User, Tag, Landmark,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as expenseService from '../../../../services/expenseService';
@@ -10,7 +10,6 @@ import type { Expense } from '../../../../services/expenseService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateExpenseModal from './CreateExpenseModal';
-import toast from 'react-hot-toast';
 
 const Expenses = () => {
     const navigate = useNavigate();

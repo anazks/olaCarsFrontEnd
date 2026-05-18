@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { RefreshCw, FileText, AlertTriangle, Clock, CheckCircle, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { RefreshCw, FileText, AlertTriangle, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { getWorkshopProcurementRequests, type ProcurementRequest, type PaginationMetadata } from '../../../services/workshopProcurementService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -37,7 +36,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
 };
 
 const WorkshopPurchaseRequestList = () => {
-    const { t } = useTranslation();
     
     // Data State
     const [requests, setRequests] = useState<ProcurementRequest[]>([]);

@@ -21,7 +21,6 @@ const BillList = () => {
     const navigate = useNavigate();
     const [bills, setBills] = useState<Bill[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -35,7 +34,7 @@ const BillList = () => {
             const res = await billService.getAllBills();
             setBills(res.data);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch bills');
+            console.error('Failed to fetch bills:', err);
         } finally {
             setLoading(false);
         }

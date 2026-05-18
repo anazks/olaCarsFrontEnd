@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, Calendar, Landmark, Tag, FolderOpen, 
-    ShoppingBag, User, FileText, Printer, CheckCircle, 
+    ArrowLeft, Calendar, FolderOpen, 
+    ShoppingBag, User, FileText, Printer, 
     AlertCircle, RefreshCw
 } from 'lucide-react';
 import * as expenseService from '../../../../services/expenseService';

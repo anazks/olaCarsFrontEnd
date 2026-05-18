@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Landmark, Calendar, FileText, ShoppingBag, FolderOpen, Coins, HelpCircle } from 'lucide-react';
+import { X, Landmark, Calendar, ShoppingBag, FolderOpen, Coins, HelpCircle } from 'lucide-react';
 import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';

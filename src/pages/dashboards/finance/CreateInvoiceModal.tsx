@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent, CheckCircle2 } from 'lucide-react';
+import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent } from 'lucide-react';
 import { createInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';

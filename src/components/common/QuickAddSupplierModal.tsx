@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, Landmark } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Modal from '../Modal';
 import { createSupplier, type Supplier } from '../../services/supplierService';
 import toast from 'react-hot-toast';

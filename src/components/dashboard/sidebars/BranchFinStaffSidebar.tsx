@@ -8,7 +8,8 @@ import {
     ChevronUp,
     User,
     X,
-    Calculator
+    Calculator,
+    Library
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';

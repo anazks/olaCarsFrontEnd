@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText, Search, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText } from 'lucide-react';
 import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose } from '../../../services/purchaseOrderService';
 import { createPurchaseOrder } from '../../../services/purchaseOrderService';
 import type { Supplier } from '../../../services/supplierService';
@@ -261,7 +261,7 @@ const CreatePurchaseOrder = () => {
                                 </label>
                                 <SearchableSelect
                                     options={branches.map(b => ({ value: b._id, label: `${b.name} - ${b.city}` }))}
-                                    value={formData.branch}
+                                    value={formData.branch || ''}
                                     onChange={(val) => setFormData(prev => ({ ...prev, branch: val }))}
                                     placeholder="Select Branch"
                                     required

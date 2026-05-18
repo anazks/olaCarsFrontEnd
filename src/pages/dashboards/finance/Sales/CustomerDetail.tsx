@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
-    RefreshCw, Calendar, ShieldCheck, FileSpreadsheet,
+    RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Edit2, Zap, Briefcase
 } from 'lucide-react';
@@ -203,7 +203,6 @@ const CustomerDetail = () => {
                     <OverviewTab 
                         driver={driver} 
                         prepaymentBalance={prepaymentBalance}
-                        outstandingBalance={outstandingBalance}
                         totalPaymentsReceived={totalPaymentsReceived}
                         totalApplied={totalApplied}
                         totalInvoiced={totalInvoiced}
@@ -225,14 +224,12 @@ const CustomerDetail = () => {
 const OverviewTab = ({ 
     driver, 
     prepaymentBalance, 
-    outstandingBalance, 
     totalPaymentsReceived, 
     totalApplied,
     totalInvoiced
 }: { 
     driver: Driver;
     prepaymentBalance: number;
-    outstandingBalance: number;
     totalPaymentsReceived: number;
     totalApplied: number;
     totalInvoiced: number;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, CreditCard, Landmark, Calendar, AlertCircle } from 'lucide-react';
+import { X, CreditCard, Calendar, AlertCircle } from 'lucide-react';
 import * as billService from '../../../../services/billService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
 import type { Bill } from '../../../../services/billService';

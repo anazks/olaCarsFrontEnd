@@ -1,4 +1,4 @@
-import { X, Calendar, FolderOpen, User, ShoppingBag, Landmark, Tag, FileText, Printer, CheckCircle } from 'lucide-react';
+import { X, FolderOpen, User, ShoppingBag, Landmark, Tag, FileText, Printer, CheckCircle } from 'lucide-react';
 import type { Expense } from '../../../../services/expenseService';
 
 interface Props {
