@@ -40,6 +40,7 @@ import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff
 import ManageWorkshopManagers from './pages/dashboards/shared/ManageWorkshopManagers';
 import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
+import SupplierDetail from './pages/dashboards/shared/SupplierDetail';
 import Reports from './pages/dashboards/shared/Reports';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
@@ -65,7 +66,9 @@ import AccidentReports from './pages/dashboards/shared/AccidentReports';
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
 import CreatePurchaseOrder from './pages/dashboards/shared/CreatePurchaseOrder';
 import PurchaseOrderDetail from './pages/dashboards/shared/PurchaseOrderDetail';
-import PurchaseBillList from './pages/dashboards/shared/PurchaseBillList';
+import BillList from './pages/dashboards/finance/Bills/BillList';
+import BillDetail from './pages/dashboards/finance/Bills/BillDetail';
+
 
 // Vehicle Pages
 import VehicleList from './pages/dashboards/shared/VehicleList';
@@ -108,6 +111,7 @@ import CreditNoteDetail from './pages/dashboards/finance/Sales/CreditNoteDetail'
 
 // Purchases Pages
 import Expenses from './pages/dashboards/finance/Purchases/Expenses';
+import ExpenseDetail from './pages/dashboards/finance/Purchases/ExpenseDetail';
 import PaymentsMade from './pages/dashboards/finance/Purchases/PaymentsMade';
 
 
@@ -184,6 +188,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route path="po-threshold" element={<POThresholdPage />} />
@@ -193,7 +198,8 @@ function App() {
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               {/* Vehicles */}
@@ -205,6 +211,11 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
                 <Route path="insurances" element={<ManageInsurances />} />
+                <Route path="vehicle-policies" element={<VehiclePolicyList />} />
+                <Route path="vehicle-policies/:id" element={<VehiclePolicyDetail />} />
+                <Route path="insurance-claims" element={<InsuranceClaimsView />} />
+                <Route path="insurance-claims/new" element={<CreateInsuranceClaim />} />
+                <Route path="insurance-claims/:id" element={<InsuranceClaimDetail />} />
               </Route>
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
@@ -236,6 +247,18 @@ function App() {
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+
+              {/* Sales Routes */}
+              <Route path="customers" element={<Customers />} />
+              <Route path="customers/:id" element={<CustomerDetail />} />
+              <Route path="payments-received" element={<PaymentsReceived />} />
+              <Route path="credit-notes" element={<CreditNotes />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+
+              {/* Purchases Routes */}
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="expenses/:id" element={<ExpenseDetail />} />
+              <Route path="payments-made" element={<PaymentsMade />} />
             </Route>
           </Route>
 
@@ -260,12 +283,15 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
@@ -328,13 +354,15 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
@@ -393,6 +421,7 @@ function App() {
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
+              <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
             </Route>
           </Route>
@@ -414,12 +443,14 @@ function App() {
               </Route>
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
@@ -474,13 +505,15 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
@@ -555,7 +588,8 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>

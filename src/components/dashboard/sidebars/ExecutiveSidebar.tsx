@@ -11,7 +11,10 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    ShoppingCart,
+    ShoppingBag,
+    Shield
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -121,13 +124,50 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Accident Reports', path: '/admin/admin/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
+            id: 'sales',
+            label: 'Sales',
+            icon: <ShoppingCart size={22} />,
+            subItems: [
+                { label: 'Customers', path: '/admin/admin/customers' },
+                { label: 'Invoices', path: '/admin/admin/invoices' },
+                { label: 'Payments Received', path: '/admin/admin/payments-received' },
+                { label: 'Credit Notes', path: '/admin/admin/credit-notes' },
+            ]
+        },
+        {
+            id: 'purchases',
+            label: 'Purchases',
+            icon: <ShoppingBag size={22} />,
+            subItems: [
+                { label: 'Vendors', path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: 'Expenses', path: '/admin/admin/expenses' },
+                { label: 'Purchase Orders', path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Bills', path: '/admin/admin/bills' },
+                { label: 'Payments Made', path: '/admin/admin/payments-made' },
+            ]
+        },
+        {
             id: 'finance',
-            label: 'Finance',
+            label: 'Accounts',
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'General Ledger', path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Finance Dashboard', path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
+                { label: 'Financial Statements', path: '/admin/admin/financial-statements', permission: 'REPORTS_VIEW' },
                 { label: 'Staff Payrolls', path: '/admin/admin/staff-salaries', permission: 'REPORTS_VIEW' },
+                { label: 'Chart of Accounts', path: '/admin/admin/chart-of-accounts' },
+                { label: 'Taxes', path: '/admin/admin/taxes' },
+            ]
+        },
+        {
+            id: 'insurance',
+            label: 'Insurance',
+            icon: <Shield size={22} />,
+            subItems: [
+                { label: 'All Insurance', path: '/admin/admin/vehicle-policies' },
+                { label: 'Claims', path: '/admin/admin/insurance-claims' },
+                { label: 'Settings', path: '/admin/admin/insurances' },
             ]
         },
         {

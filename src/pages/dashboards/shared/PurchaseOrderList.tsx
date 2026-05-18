@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown } from 'lucide-react';
-import { getAllPurchaseOrders } from '../../../services/purchaseOrderService';
+import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown, Trash2 } from 'lucide-react';
+import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../../services/purchaseOrderService';
+import { getDecodedToken } from '../../../utils/auth';
 import type { PurchaseOrder, POStatus, PaginationMetadata, PurchaseOrderFilters } from '../../../services/purchaseOrderService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
@@ -41,6 +42,12 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
             text: '#ef4444',
             border: 'rgba(239, 68, 68, 0.3)',
             icon: <XCircle size={12} />
+        },
+        DISPOSED: {
+            bg: 'rgba(100, 116, 139, 0.1)',
+            text: '#64748b',
+            border: 'rgba(100, 116, 139, 0.3)',
+            icon: <Trash2 size={12} />
         }
     };
 
@@ -92,7 +99,15 @@ const PurchaseOrderList = () => {
     const [sortBy, setSortBy] = useState<PurchaseOrderFilters['sortBy']>('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+    const [currentUserId, setCurrentUserId] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const decoded = getDecodedToken();
+        if (decoded) {
+            setCurrentUserId(decoded.id || '');
+        }
+    }, []);
 
     // Fetch initial metadata (suppliers & branches)
     useEffect(() => {
@@ -165,6 +180,16 @@ const PurchaseOrderList = () => {
             setSortOrder('desc');
         }
         setCurrentPage(1);
+    };
+
+    const handleQuickApprove = async (poId: string) => {
+        if (!window.confirm('Are you sure you want to approve this order?')) return;
+        try {
+            await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
+            fetchPOs();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Approval failed');
+        }
     };
 
     const SortIcon = ({ field }: { field: PurchaseOrderFilters['sortBy'] }) => {
@@ -252,6 +277,7 @@ const PurchaseOrderList = () => {
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>
                                 <option value="APPROVED">{t('management.common.status.approved')}</option>
                                 <option value="REJECTED">{t('management.common.status.rejected')}</option>
+                                <option value="DISPOSED">Disposed</option>
                             </select>
                         </div>
 
@@ -475,6 +501,21 @@ const PurchaseOrderList = () => {
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="flex items-center justify-end">
+                                                {po.status === 'WAITING' && po.createdBy !== currentUserId && (
+                                                    <HasPermission permission="PURCHASE_ORDER_APPROVE">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleQuickApprove(po._id);
+                                                            }}
+                                                            className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[#C8E600] hover:text-black mr-2"
+                                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
+                                                            title="Quick Approve"
+                                                        >
+                                                            <CheckCircle size={18} />
+                                                        </button>
+                                                    </HasPermission>
+                                                )}
                                                 <button
                                                     onClick={() => navigate(po._id)}
                                                     className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[#C8E600] hover:text-black group-hover:shadow-[0_0_15px_rgba(200,230,0,0.2)]"
