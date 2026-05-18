@@ -4,10 +4,11 @@ import {
     DollarSign, Calendar, CheckCircle2, Clock, AlertCircle, X, 
     Printer, ArrowLeft, Edit3, FileSpreadsheet, Eye, Sun, Moon, Trash2
 } from 'lucide-react';
-import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice } from '../../../services/invoiceService';
+import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { createCreditNote, getAllCreditNotes, applyCreditNote } from '../../../services/creditNoteService';
 import type { Invoice } from '../../../services/invoiceService';
 import { useTheme } from '../../../context/ThemeContext';
+import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -32,6 +33,9 @@ const InvoiceDetail = () => {
     const [paymentMethod, setPaymentMethod] = useState<string>('CASH');
     const [paymentNote, setPaymentNote] = useState<string>('');
     const [processingPayment, setProcessingPayment] = useState(false);
+    const [driverPrepayment, setDriverPrepayment] = useState<number>(0);
+    const [loadingPrepayment, setLoadingPrepayment] = useState<boolean>(false);
+    const [usePrepayment, setUsePrepayment] = useState<boolean>(false);
 
     // Issue Credit Note Modal State
     const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = useState(false);
@@ -80,6 +84,39 @@ const InvoiceDetail = () => {
         fetchLinkedCreditNotes();
     }, [fetchInvoice, fetchLinkedCreditNotes]);
 
+    useEffect(() => {
+        const fetchDriverPrepayment = async () => {
+            if (!paymentModalOpen || !invoice) return;
+            const driverId = typeof invoice.driver === 'object' ? invoice.driver._id : invoice.driver;
+            if (!driverId) return;
+            
+            setLoadingPrepayment(true);
+            try {
+                const [invoicesData, paymentsData] = await Promise.all([
+                    getInvoicesByDriver(driverId),
+                    api.get('/api/payments-received', { params: { driverId, limit: 100 } })
+                ]);
+
+                // Calculate Prepayment Credit (Extra Advance)
+                const paymentsList = paymentsData?.data?.data || paymentsData?.data || [];
+                const totalReceived = paymentsList.reduce((sum: number, p: any) => p.status === 'VOID' ? sum : sum + (p.amountReceived || 0), 0);
+                const totalApplied = paymentsList.reduce((sum: number, p: any) => {
+                    if (p.status === 'VOID') return sum;
+                    const applied = p.invoices?.reduce((invSum: number, inv: any) => invSum + (inv.amountApplied || 0), 0) || 0;
+                    return sum + applied;
+                }, 0);
+                const prepayment = Math.max(0, totalReceived - totalApplied);
+                setDriverPrepayment(prepayment);
+            } catch (err) {
+                console.error("Error fetching driver prepayment balance:", err);
+            } finally {
+                setLoadingPrepayment(false);
+            }
+        };
+
+        fetchDriverPrepayment();
+    }, [paymentModalOpen, invoice]);
+
     // --- Edit Handlers ---
     const triggerEditModal = () => {
         if (!invoice) return;
@@ -115,6 +152,8 @@ const InvoiceDetail = () => {
         setPaymentAmount(invoice.balance);
         setPaymentNote('');
         setPaymentMethod('CASH');
+        setUsePrepayment(false);
+        setDriverPrepayment(0);
         setPaymentModalOpen(true);
     };
 
@@ -644,19 +683,74 @@ const InvoiceDetail = () => {
                             <button onClick={() => setPaymentModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16}/></button>
                         </div>
                         <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
+                            {driverPrepayment > 0 && (
+                                <div className="p-4 rounded-2xl border flex flex-col gap-2.5 animate-in fade-in duration-300 mb-2" style={{ background: 'rgba(200, 230, 0, 0.03)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="text-brand-lime shrink-0" size={16} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Driver Prepayment Credit Available</span>
+                                    </div>
+                                    <p className="text-[11px] font-semibold text-white/90">
+                                        This operator has an unused prepayment credit balance of <strong className="text-brand-lime font-mono">${driverPrepayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> securely stored in their ledger account.
+                                    </p>
+                                    
+                                    <label className="flex items-center gap-2 mt-1 p-2.5 rounded-xl bg-black/25 hover:bg-black/40 border border-brand-lime/10 cursor-pointer transition-all select-none">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={usePrepayment} 
+                                            onChange={(e) => {
+                                                setUsePrepayment(e.target.checked);
+                                                if (e.target.checked) {
+                                                    setPaymentMethod('PREPAYMENT_CREDIT');
+                                                    setPaymentAmount(Math.min(invoice.balance, driverPrepayment));
+                                                } else {
+                                                    setPaymentMethod('CASH');
+                                                    setPaymentAmount(invoice.balance);
+                                                }
+                                            }}
+                                            className="rounded text-brand-lime focus:ring-brand-lime accent-brand-lime cursor-pointer"
+                                        />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-brand-lime">Apply Prepayment Credit towards this Invoice</span>
+                                    </label>
+                                </div>
+                            )}
+
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Rendered Settlement ($)</label>
-                                <div className="relative"><DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#737373]" size={15}/><input type="number" step="0.01" required max={invoice.balance} value={paymentAmount} onChange={e => setPaymentAmount(Number(e.target.value))} className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-bold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
-                                <p className="text-[9px] font-bold text-amber-400 mt-1">Available Balance Cap: ${invoice.balance?.toLocaleString()}</p>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#737373]" size={15}/>
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        required 
+                                        max={usePrepayment ? Math.min(invoice.balance, driverPrepayment) : invoice.balance} 
+                                        value={paymentAmount} 
+                                        onChange={e => setPaymentAmount(Number(e.target.value))} 
+                                        className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-bold outline-none" 
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <p className="text-[9px] font-bold text-amber-400 mt-1">
+                                    {usePrepayment 
+                                        ? `Available Prepayment Cap: $${Math.min(invoice.balance, driverPrepayment).toLocaleString()}` 
+                                        : `Available Balance Cap: $${invoice.balance?.toLocaleString()}`
+                                    }
+                                </p>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Gateway / Method</label>
-                                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                    <option value="CASH">PHYSICAL CASH / HAND</option>
-                                    <option value="BANK_TRANSFER">WIRE / BANK DEPOSIT</option>
-                                    <option value="CREDIT_NOTE">EXTERNAL OVERRIDE</option>
-                                    <option value="CARD">POS TERMINAL SWIPE</option>
-                                </select>
+                                {usePrepayment ? (
+                                    <div className="w-full px-4 py-2.5 border rounded-xl font-black text-brand-lime bg-brand-lime/5 border-brand-lime/20 flex items-center justify-between select-none">
+                                        <span>PREPAYMENT CREDIT ALLOCATION</span>
+                                        <CheckCircle2 size={14} className="text-brand-lime" />
+                                    </div>
+                                ) : (
+                                    <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                        <option value="CASH">PHYSICAL CASH / HAND</option>
+                                        <option value="BANK_TRANSFER">WIRE / BANK DEPOSIT</option>
+                                        <option value="CREDIT_NOTE">EXTERNAL OVERRIDE</option>
+                                        <option value="CARD">POS TERMINAL SWIPE</option>
+                                    </select>
+                                )}
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Ledger Narrative Note</label>

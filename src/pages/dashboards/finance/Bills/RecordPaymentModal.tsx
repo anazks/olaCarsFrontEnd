@@ -3,6 +3,8 @@ import { X, CreditCard, Landmark, Calendar, AlertCircle } from 'lucide-react';
 import * as billService from '../../../../services/billService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
 import type { Bill } from '../../../../services/billService';
+import { SearchableSelect } from '../../../../components/common/SearchableSelect';
+import { QuickAddAccountModal } from '../../../../components/common/QuickAddAccountModal';
 
 interface RecordPaymentModalProps {
     isOpen: boolean;
@@ -15,6 +17,8 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, bill }: RecordPaymentM
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
+
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
 
     const [paymentData, setPaymentData] = useState({
         totalAmount: bill.balanceDue,
@@ -146,21 +150,18 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, bill }: RecordPaymentM
 
                     <div className="space-y-1.5">
                         <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Deposit To (Account)</label>
-                        <div className="relative">
-                            <Landmark size={14} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" style={{ color: 'var(--text-main)' }} />
-                            <select
-                                required
-                                value={paymentData.accountingCode}
-                                onChange={(e) => setPaymentData({ ...paymentData, accountingCode: e.target.value })}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl outline-none text-xs transition-all focus:ring-2 focus:ring-[#C8E600]"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">Select Account</option>
-                                {accountingCodes.map(code => (
-                                    <option key={code._id} value={code._id}>{code.code} - {code.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <SearchableSelect
+                            options={accountingCodes.map(code => ({
+                                value: code._id,
+                                label: `${code.code} - ${code.name}`
+                            }))}
+                            value={paymentData.accountingCode}
+                            onChange={(val) => setPaymentData({ ...paymentData, accountingCode: val })}
+                            placeholder="Select Account"
+                            onAddNew={() => setIsAddAccountOpen(true)}
+                            addNewText="Add New Account"
+                            required
+                        />
                     </div>
 
                     <div className="space-y-1.5">
@@ -194,6 +195,21 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, bill }: RecordPaymentM
                     </div>
                 </form>
             </div>
+
+            <QuickAddAccountModal
+                isOpen={isAddAccountOpen}
+                onClose={() => setIsAddAccountOpen(false)}
+                defaultCategory="ASSET"
+                onSuccess={async (newAcc) => {
+                    try {
+                        const codes = await getAllAccountingCodes();
+                        setAccountingCodes(codes.filter(c => c.category === 'ASSET' || c.category === 'EQUITY'));
+                        setPaymentData(prev => ({ ...prev, accountingCode: newAcc._id }));
+                    } catch (err) {
+                        console.error('Failed to reload accounts', err);
+                    }
+                }}
+            />
         </div>
     );
 };

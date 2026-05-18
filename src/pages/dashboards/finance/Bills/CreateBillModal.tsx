@@ -5,6 +5,9 @@ import { getAllSuppliers, type Supplier } from '../../../../services/supplierSer
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
 import toast from 'react-hot-toast';
+import { SearchableSelect } from '../../../../components/common/SearchableSelect';
+import { QuickAddSupplierModal } from '../../../../components/common/QuickAddSupplierModal';
+import { QuickAddAccountModal } from '../../../../components/common/QuickAddAccountModal';
 
 interface LineItem {
     itemName: string;
@@ -39,6 +42,11 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
     ]);
 
     const [submitting, setSubmitting] = useState(false);
+    
+    // Quick Add Modal States
+    const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+    const [activeLineItemIndex, setActiveLineItemIndex] = useState<number | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -161,18 +169,15 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <Landmark size={11} /> Supplier <span className="text-rose-400">*</span>
                                 </label>
-                                <select 
-                                    required 
-                                    value={selectedSupplier} 
-                                    onChange={e => setSelectedSupplier(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-sm font-semibold outline-none focus:border-brand-lime cursor-pointer"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Supplier</option>
-                                    {suppliers.map(s => (
-                                        <option key={s._id} value={s._id} style={{ background: 'var(--bg-card)' }}>{s.name}</option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={suppliers.map(s => ({ value: s._id, label: s.name }))}
+                                    value={selectedSupplier}
+                                    onChange={setSelectedSupplier}
+                                    placeholder="Select Supplier"
+                                    onAddNew={() => setIsAddSupplierOpen(true)}
+                                    addNewText="Add New Supplier"
+                                    required
+                                />
                             </div>
 
                             {/* Branch Selector */}
@@ -180,18 +185,13 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <FolderOpen size={11} /> Branch <span className="text-rose-400">*</span>
                                 </label>
-                                <select 
-                                    required 
-                                    value={selectedBranch} 
-                                    onChange={e => setSelectedBranch(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-sm font-semibold outline-none focus:border-brand-lime cursor-pointer"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Branch</option>
-                                    {branches.map(b => (
-                                        <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name} ({b.code})</option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))}
+                                    value={selectedBranch}
+                                    onChange={setSelectedBranch}
+                                    placeholder="Select Branch"
+                                    required
+                                />
                             </div>
 
                             {/* Bill Number */}
@@ -241,7 +241,7 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <FileText size={12} /> Bill Line Items & Debit Accounts
                             </h3>
 
-                            <div className="border rounded-2xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="border rounded-2xl" style={{ borderColor: 'var(--border-main)' }}>
                                 {/* Table Header */}
                                 <div className="grid grid-cols-12 gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest" style={{ background: 'var(--bg-input)', color: 'var(--text-dim)' }}>
                                     <div className="col-span-3">Item Name</div>
@@ -269,20 +269,21 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
                                             {/* Debit Account Selector */}
                                             <div className="col-span-3">
-                                                <select
-                                                    required
+                                                <SearchableSelect
+                                                    options={accountingCodes.map(code => ({
+                                                        value: code._id,
+                                                        label: `${code.code} - ${code.name} (${code.category})`
+                                                    }))}
                                                     value={item.accountId}
-                                                    onChange={e => updateItem(idx, 'accountId', e.target.value)}
-                                                    className="w-full px-2 py-2 border rounded-xl text-[11px] font-semibold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                >
-                                                    <option value="">Select Account</option>
-                                                    {accountingCodes.map(code => (
-                                                        <option key={code._id} value={code._id} style={{ background: 'var(--bg-card)' }}>
-                                                            {code.code} - {code.name} ({code.category})
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    onChange={val => updateItem(idx, 'accountId', val)}
+                                                    placeholder="Select Account"
+                                                    onAddNew={() => {
+                                                        setActiveLineItemIndex(idx);
+                                                        setIsAddAccountOpen(true);
+                                                    }}
+                                                    addNewText="Add New Account"
+                                                    required
+                                                />
                                             </div>
 
                                             {/* Quantity */}
@@ -422,6 +423,41 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     </div>
                 </div>
             </div>
+
+            {/* Quick Add Modals */}
+            <QuickAddSupplierModal
+                isOpen={isAddSupplierOpen}
+                onClose={() => setIsAddSupplierOpen(false)}
+                onSuccess={async (newSup) => {
+                    try {
+                        const supplierRes = await getAllSuppliers({ limit: 200 });
+                        setSuppliers(supplierRes.data || []);
+                        setSelectedSupplier(newSup._id);
+                    } catch (err) {
+                        console.error('Failed to reload suppliers', err);
+                    }
+                }}
+            />
+
+            <QuickAddAccountModal
+                isOpen={isAddAccountOpen}
+                onClose={() => {
+                    setIsAddAccountOpen(false);
+                    setActiveLineItemIndex(null);
+                }}
+                defaultCategory="EXPENSE"
+                onSuccess={async (newAcc) => {
+                    try {
+                        const codesRes = await getAllAccountingCodes();
+                        setAccountingCodes(codesRes || []);
+                        if (activeLineItemIndex !== null) {
+                            updateItem(activeLineItemIndex, 'accountId', newAcc._id);
+                        }
+                    } catch (err) {
+                        console.error('Failed to reload accounts', err);
+                    }
+                }}
+            />
         </div>
     );
 };

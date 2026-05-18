@@ -259,6 +259,13 @@ function App() {
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -323,6 +330,13 @@ function App() {
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -488,6 +502,13 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -543,6 +564,13 @@ function App() {
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -578,6 +606,13 @@ function App() {
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="target-management" element={<TargetManagement />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -626,6 +661,13 @@ function App() {
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="target-management" element={<TargetManagement />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 

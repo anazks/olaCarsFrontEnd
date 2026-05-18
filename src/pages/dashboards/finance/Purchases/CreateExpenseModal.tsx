@@ -6,6 +6,10 @@ import { driverService, type Driver } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
 import toast from 'react-hot-toast';
+import { SearchableSelect } from '../../../../components/common/SearchableSelect';
+import { QuickAddSupplierModal } from '../../../../components/common/QuickAddSupplierModal';
+import { QuickAddAccountModal } from '../../../../components/common/QuickAddAccountModal';
+import { QuickAddDriverModal } from '../../../../components/common/QuickAddDriverModal';
 
 interface Props {
     isOpen: boolean;
@@ -30,6 +34,12 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const [expenseNumber, setExpenseNumber] = useState<string>('');
 
     const [submitting, setSubmitting] = useState(false);
+
+    // Quick Add Modal States
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+    const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+    const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
+    const [accountTarget, setAccountTarget] = useState<'EXPENSE' | 'PAID_THROUGH'>('EXPENSE');
 
     const fetchData = useCallback(async () => {
         try {
@@ -139,20 +149,21 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <Tag size={11} className="text-brand-lime" /> Expense Account (DEBIT) <span className="text-rose-400">*</span>
                                 </label>
-                                <select 
-                                    required 
-                                    value={expenseAccount} 
-                                    onChange={e => setExpenseAccount(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Expense Account</option>
-                                    {accountingCodes.map(code => (
-                                        <option key={code._id} value={code._id} style={{ background: 'var(--bg-card)' }}>
-                                            {code.code} - {code.name} ({code.category})
-                                        </option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={accountingCodes.map(code => ({
+                                        value: code._id,
+                                        label: `${code.code} - ${code.name} (${code.category})`
+                                    }))}
+                                    value={expenseAccount}
+                                    onChange={setExpenseAccount}
+                                    placeholder="Select Expense Account"
+                                    onAddNew={() => {
+                                        setAccountTarget('EXPENSE');
+                                        setIsAddAccountOpen(true);
+                                    }}
+                                    addNewText="Add New Account"
+                                    required
+                                />
                             </div>
 
                             {/* Paid Through (Credit) */}
@@ -160,20 +171,21 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <Landmark size={11} className="text-[#C8E600]" /> Paid Through (CREDIT) <span className="text-rose-400">*</span>
                                 </label>
-                                <select 
-                                    required 
-                                    value={paidThroughAccount} 
-                                    onChange={e => setPaidThroughAccount(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Cash/Bank Account</option>
-                                    {accountingCodes.map(code => (
-                                        <option key={code._id} value={code._id} style={{ background: 'var(--bg-card)' }}>
-                                            {code.code} - {code.name} ({code.category})
-                                        </option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={accountingCodes.map(code => ({
+                                        value: code._id,
+                                        label: `${code.code} - ${code.name} (${code.category})`
+                                    }))}
+                                    value={paidThroughAccount}
+                                    onChange={setPaidThroughAccount}
+                                    placeholder="Select Cash/Bank Account"
+                                    onAddNew={() => {
+                                        setAccountTarget('PAID_THROUGH');
+                                        setIsAddAccountOpen(true);
+                                    }}
+                                    addNewText="Add New Account"
+                                    required
+                                />
                             </div>
 
                             {/* Amount */}
@@ -216,17 +228,15 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <ShoppingBag size={11} /> Vendor / Supplier (Optional)
                                 </label>
-                                <select 
-                                    value={selectedSupplier} 
-                                    onChange={e => setSelectedSupplier(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Vendor</option>
-                                    {suppliers.map(s => (
-                                        <option key={s._id} value={s._id} style={{ background: 'var(--bg-card)' }}>{s.name}</option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={suppliers.map(s => ({ value: s._id, label: s.name }))}
+                                    value={selectedSupplier}
+                                    onChange={setSelectedSupplier}
+                                    placeholder="Select Vendor"
+                                    onAddNew={() => setIsAddSupplierOpen(true)}
+                                    addNewText="Add New Vendor"
+                                    disabled={submitting}
+                                />
                             </div>
 
                             {/* Customer / Driver (Optional) */}
@@ -234,19 +244,18 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <User size={11} /> Customer / Driver (Optional)
                                 </label>
-                                <select 
-                                    value={selectedCustomer} 
-                                    onChange={e => setSelectedCustomer(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Customer</option>
-                                    {drivers.map(d => (
-                                        <option key={d._id} value={d._id} style={{ background: 'var(--bg-card)' }}>
-                                            {d.personalInfo?.fullName} ({d.driverId || 'Driver'})
-                                        </option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={drivers.map(d => ({
+                                        value: d._id,
+                                        label: `${d.personalInfo?.fullName} (${d.driverId || 'Driver'})`
+                                    }))}
+                                    value={selectedCustomer}
+                                    onChange={setSelectedCustomer}
+                                    placeholder="Select Customer / Driver"
+                                    onAddNew={() => setIsAddDriverOpen(true)}
+                                    addNewText="Add New Customer"
+                                    disabled={submitting}
+                                />
                             </div>
 
                             {/* Branch */}
@@ -254,18 +263,14 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                     <FolderOpen size={11} /> Branch <span className="text-rose-400">*</span>
                                 </label>
-                                <select 
-                                    required 
-                                    value={selectedBranch} 
-                                    onChange={e => setSelectedBranch(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none focus:border-brand-lime cursor-pointer appearance-none"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select Branch</option>
-                                    {branches.map(b => (
-                                        <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name} ({b.code})</option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    options={branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))}
+                                    value={selectedBranch}
+                                    onChange={setSelectedBranch}
+                                    placeholder="Select Branch"
+                                    required
+                                    disabled={submitting}
+                                />
                             </div>
 
                             {/* Expense Number */}
@@ -351,6 +356,55 @@ const CreateExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     </div>
                 </div>
             </div>
+
+            {/* Quick Add Modals */}
+            <QuickAddSupplierModal
+                isOpen={isAddSupplierOpen}
+                onClose={() => setIsAddSupplierOpen(false)}
+                onSuccess={async (newSup) => {
+                    try {
+                        const supplierRes = await getAllSuppliers({ limit: 200 });
+                        setSuppliers(supplierRes.data || []);
+                        setSelectedSupplier(newSup._id);
+                    } catch (err) {
+                        console.error('Failed to reload suppliers', err);
+                    }
+                }}
+            />
+
+            <QuickAddAccountModal
+                isOpen={isAddAccountOpen}
+                onClose={() => setIsAddAccountOpen(false)}
+                defaultCategory={accountTarget === 'EXPENSE' ? 'EXPENSE' : 'ASSET'}
+                onSuccess={async (newAcc) => {
+                    try {
+                        const codesRes = await getAllAccountingCodes();
+                        setAccountingCodes(codesRes || []);
+                        if (accountTarget === 'EXPENSE') {
+                            setExpenseAccount(newAcc._id);
+                        } else {
+                            setPaidThroughAccount(newAcc._id);
+                        }
+                    } catch (err) {
+                        console.error('Failed to reload accounts', err);
+                    }
+                }}
+            />
+
+            <QuickAddDriverModal
+                isOpen={isAddDriverOpen}
+                onClose={() => setIsAddDriverOpen(false)}
+                defaultBranchId={selectedBranch}
+                onSuccess={async (newDriver) => {
+                    try {
+                        const driverRes = await driverService.getAllDrivers({ limit: 200 });
+                        setDrivers(driverRes.data || []);
+                        setSelectedCustomer(newDriver._id);
+                    } catch (err) {
+                        console.error('Failed to reload drivers', err);
+                    }
+                }}
+            />
         </div>
     );
 };

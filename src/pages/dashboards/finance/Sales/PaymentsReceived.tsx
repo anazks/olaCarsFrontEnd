@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
+import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
+import PaymentReceivedDetailModal from './PaymentReceivedDetailModal';
 
 interface InvoiceReference {
     invoiceId: string;
@@ -14,9 +16,21 @@ interface InvoiceReference {
 
 interface DriverReference {
     _id: string;
-    name: string;
-    email: string;
+    driverId?: string;
+    personalInfo?: {
+        fullName: string;
+        email?: string;
+        phone?: string;
+    };
+    name?: string;
+    email?: string;
     avatarUrl?: string;
+}
+
+interface DepositedAccountReference {
+    _id: string;
+    code: string;
+    name: string;
 }
 
 interface PaymentReceived {
@@ -30,6 +44,7 @@ interface PaymentReceived {
     notes?: string;
     invoices: InvoiceReference[];
     status: 'COMPLETED' | 'VOID';
+    depositedTo?: DepositedAccountReference;
     createdAt: string;
 }
 
@@ -39,6 +54,10 @@ const PaymentsReceived = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
+
+    // Modals
+    const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState<PaymentReceived | null>(null);
 
     // Pagination
     const [page, setPage] = useState<number>(1);
@@ -64,7 +83,7 @@ const PaymentsReceived = () => {
         } else {
             setSortBy(field);
             setSortOrder('asc');
-        }
+            }
     };
 
     const SortIcon = ({ field }: { field: string }) => {
@@ -136,6 +155,14 @@ const PaymentsReceived = () => {
                         title="Refresh Data"
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                        onClick={() => setIsRecordModalOpen(true)}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300 cursor-pointer"
+                        style={{ background: 'var(--brand-lime)' }}
+                    >
+                        <DollarSign size={14} />
+                        Record Payment
                     </button>
                 </div>
             </div>
@@ -249,13 +276,29 @@ const PaymentsReceived = () => {
                                 payments.map((pmt) => (
                                     <tr 
                                         key={pmt._id} 
+                                        onClick={() => setSelectedPayment(pmt)}
                                         className="transition-colors cursor-pointer group"
                                         style={{ borderBottom: '1px solid var(--border-main)' }}
                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                     >
                                         <td className="p-6 font-black text-sm">{pmt.paymentNumber}</td>
-                                        <td className="p-6 font-bold text-xs">{pmt.driverId?.name || 'N/A'}</td>
+                                        <td className="p-6 font-bold text-xs">
+                                            {typeof pmt.driverId === 'object' && pmt.driverId ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-white" style={{ color: 'var(--text-main)' }}>
+                                                        {pmt.driverId.personalInfo?.fullName || pmt.driverId.name || 'N/A'}
+                                                    </span>
+                                                    {pmt.driverId.driverId && (
+                                                        <span className="text-[9px] font-mono text-dim tracking-wider uppercase mt-0.5">
+                                                            {pmt.driverId.driverId}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-dim">{String(pmt.driverId || 'N/A')}</span>
+                                            )}
+                                        </td>
                                         <td className="p-6 text-xs text-dim">{new Date(pmt.paymentDate).toLocaleDateString()}</td>
                                         <td className="p-6 text-right font-black text-brand-lime">${pmt.amountReceived.toLocaleString()}</td>
                                         <td className="p-6 text-xs font-medium">{pmt.paymentMethod}</td>
@@ -269,26 +312,26 @@ const PaymentsReceived = () => {
                         </tbody>
                     </table>
                 </div>
-                {!loading && payments.length > 0 && pagination && pagination.totalPages >= 1 && (
+                {!loading && payments.length > 0 && pagination && pagination.pages >= 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing {payments.length} of {pagination.totalItems} payments
+                            Showing {payments.length} of {pagination.total} payments
                         </p>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setPage(page - 1)}
                                 disabled={page === 1}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30"
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 cursor-pointer"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <ChevronLeft size={18} />
                             </button>
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: pagination.totalPages }, (_, i) => (
+                                {Array.from({ length: pagination.pages }, (_, i) => (
                                     <button
                                         key={i + 1}
                                         onClick={() => setPage(i + 1)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70'}`}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70'}`}
                                         style={{ 
                                             background: page === i + 1 ? 'var(--brand-lime)' : 'transparent',
                                             color: page === i + 1 ? '#000' : 'var(--text-main)',
@@ -301,8 +344,8 @@ const PaymentsReceived = () => {
                             </div>
                             <button
                                 onClick={() => setPage(page + 1)}
-                                disabled={page === pagination.totalPages}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30"
+                                disabled={page === pagination.pages}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 cursor-pointer"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <ChevronRight size={18} />
@@ -311,6 +354,21 @@ const PaymentsReceived = () => {
                     </div>
                 )}
             </div>
+
+            {isRecordModalOpen && (
+                <CreatePaymentReceivedModal
+                    isOpen={isRecordModalOpen}
+                    onClose={() => setIsRecordModalOpen(false)}
+                    onSuccess={() => fetchPayments()}
+                />
+            )}
+
+            {selectedPayment && (
+                <PaymentReceivedDetailModal
+                    payment={selectedPayment}
+                    onClose={() => setSelectedPayment(null)}
+                />
+            )}
         </div>
     );
 };
