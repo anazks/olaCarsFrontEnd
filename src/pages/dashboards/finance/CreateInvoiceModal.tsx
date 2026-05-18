@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent } from 'lucide-react';
-import { createInvoice } from '../../../services/invoiceService';
+import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent, CheckCircle2 } from 'lucide-react';
+import { createInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
+import api from '../../../services/api';
 import toast from 'react-hot-toast';
 
 interface LineItem {
@@ -24,6 +25,48 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
     const [driverSearch, setDriverSearch] = useState('');
     const [showDriverList, setShowDriverList] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+
+    const [selectedDriverBalance, setSelectedDriverBalance] = useState<number>(0);
+    const [selectedDriverPrepayment, setSelectedDriverPrepayment] = useState<number>(0);
+    const [loadingDriverBalances, setLoadingDriverBalances] = useState(false);
+
+    useEffect(() => {
+        const fetchDriverBalances = async () => {
+            if (!selectedDriver) {
+                setSelectedDriverBalance(0);
+                setSelectedDriverPrepayment(0);
+                return;
+            }
+            setLoadingDriverBalances(true);
+            try {
+                const [invoicesData, paymentsData] = await Promise.all([
+                    getInvoicesByDriver(selectedDriver._id),
+                    api.get('/api/payments-received', { params: { driverId: selectedDriver._id, limit: 100 } })
+                ]);
+
+                // Calculate Outstanding Account Receivable Balance
+                const outstanding = invoicesData.reduce((sum: number, inv: any) => sum + (inv.balance || 0), 0);
+                setSelectedDriverBalance(outstanding);
+
+                // Calculate Prepayment Credit (Extra Advance)
+                const paymentsList = paymentsData?.data?.data || paymentsData?.data || [];
+                const totalReceived = paymentsList.reduce((sum: number, p: any) => p.status === 'VOID' ? sum : sum + (p.amountReceived || 0), 0);
+                const totalApplied = paymentsList.reduce((sum: number, p: any) => {
+                    if (p.status === 'VOID') return sum;
+                    const applied = p.invoices?.reduce((invSum: number, inv: any) => invSum + (inv.amountApplied || 0), 0) || 0;
+                    return sum + applied;
+                }, 0);
+                const prepayment = Math.max(0, totalReceived - totalApplied);
+                setSelectedDriverPrepayment(prepayment);
+            } catch (err) {
+                console.error('Error fetching driver balances:', err);
+            } finally {
+                setLoadingDriverBalances(false);
+            }
+        };
+
+        fetchDriverBalances();
+    }, [selectedDriver]);
 
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState('');
@@ -137,7 +180,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                 </div>
 
                 {/* Scrollable Body */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
+                <form id="create-manual-invoice-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
                     <div className="p-8 space-y-8">
 
                         {/* Top Meta Row */}
@@ -181,11 +224,33 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                     )}
                                 </div>
                                 {selectedDriver && (
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg border" style={{ background: 'var(--bg-input)', color: 'var(--brand-lime)', borderColor: 'var(--border-main)' }}>
-                                            ✓ {selectedDriver.personalInfo?.fullName} · {selectedDriver.driverId}
-                                        </span>
-                                        <button type="button" onClick={() => { setSelectedDriver(null); setDriverSearch(''); }} className="text-[10px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
+                                    <div className="flex flex-col gap-2 mt-1.5 p-4 rounded-2xl border" style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: 'var(--border-main)' }}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg border animate-pulse" style={{ background: 'var(--bg-input)', color: 'var(--brand-lime)', borderColor: 'var(--border-main)' }}>
+                                                    ✓ {selectedDriver.personalInfo?.fullName} · {selectedDriver.driverId}
+                                                </span>
+                                                <button type="button" onClick={() => { setSelectedDriver(null); setDriverSearch(''); }} className="text-[10px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
+                                            </div>
+                                            {loadingDriverBalances && <span className="text-[9px] font-bold uppercase tracking-widest text-dim animate-pulse">Fetching Account Balances...</span>}
+                                        </div>
+                                        
+                                        {!loadingDriverBalances && (
+                                            <div className="grid grid-cols-2 gap-4 pt-2 border-t animate-in fade-in duration-300" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                <div className="p-3 rounded-xl bg-white/[0.01] border flex flex-col" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-dim block">Accounts Receivable (Due)</span>
+                                                    <span className={`text-xs font-black font-mono ${selectedDriverBalance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                        ${selectedDriverBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 rounded-xl bg-white/[0.01] border flex flex-col" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-dim block">Prepayment Credit (Extra)</span>
+                                                    <span className={`text-xs font-black font-mono ${selectedDriverPrepayment > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
+                                                        ${selectedDriverPrepayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -421,15 +486,31 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                                 <span>+ ${fmt(taxAmount)}</span>
                                             </div>
                                         )}
-                                        <div className="pt-4 border-t mt-2" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="pt-4 border-t mt-2 space-y-3" style={{ borderColor: 'var(--border-main)' }}>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Total (USD)</span>
-                                                <span className="text-2xl font-black font-mono tracking-tighter" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
+                                                <span className="text-xl font-black font-mono tracking-tight text-white">${fmt(grandTotal)}</span>
                                             </div>
+                                            {selectedDriverPrepayment > 0 && (
+                                                <>
+                                                    <div className="flex justify-between items-center text-[#C8E600]">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Prepayment Credit Applied</span>
+                                                        <span className="text-sm font-bold font-mono">− ${fmt(Math.min(grandTotal, selectedDriverPrepayment))}</span>
+                                                    </div>
+                                                    <div className="pt-3 border-t flex justify-between items-center border-dashed" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                        <span className="text-sm font-black uppercase tracking-widest text-brand-lime">Net Estimated Due</span>
+                                                        <span className="text-2xl font-black font-mono tracking-tighter text-brand-lime">${fmt(Math.max(0, grandTotal - selectedDriverPrepayment))}</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="px-5 py-3 bg-white/5 border-t text-[9px] font-bold italic" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                        * This invoice will be generated in PENDING status.
+                                        {selectedDriverPrepayment > 0 ? (
+                                            <span className="text-[#C8E600]">* Prepayment credit of ${fmt(Math.min(grandTotal, selectedDriverPrepayment))} will be automatically applied to settle this invoice upon creation.</span>
+                                        ) : (
+                                            <span>* This invoice will be generated in PENDING status.</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -440,8 +521,24 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                 {/* Sticky Footer */}
                 <div className="px-8 py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Amount Due</span>
-                        <span className="text-xl font-black" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
+                        {selectedDriverPrepayment > 0 ? (
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Invoice</span>
+                                    <span className="text-sm font-bold text-white">${fmt(grandTotal)}</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/10" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#C8E600]" style={{ color: 'var(--brand-lime)' }}>Net Estimated Due</span>
+                                    <span className="text-xl font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>${fmt(Math.max(0, grandTotal - selectedDriverPrepayment))}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Amount Due</span>
+                                <span className="text-xl font-black animate-in fade-in duration-300" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
@@ -454,8 +551,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                         </button>
                         <button
                             type="submit"
-                            form=""
-                            onClick={handleSubmit}
+                            form="create-manual-invoice-form"
                             disabled={submitting || grandTotal <= 0 || !selectedDriver || !dueDate}
                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-2.5 bg-brand-lime text-black font-black text-[11px] uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
                         >

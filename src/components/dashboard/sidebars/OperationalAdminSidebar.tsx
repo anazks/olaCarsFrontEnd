@@ -121,6 +121,17 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' }, ]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/operational-admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/operational-admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/operational-admin/collections/invoices' },
+            ]
+        },
+        {
             id: 'settings',
             label: 'Settings',
             icon: <Settings size={22} />,

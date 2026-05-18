@@ -124,6 +124,17 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/country-manager/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/country-manager/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/country-manager/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/country-manager/collections/invoices' },
+            ]
+        },
+        {
             id: 'finance',
             label: 'Finance',
             icon: <Calculator size={22} />,

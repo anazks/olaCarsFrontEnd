@@ -99,6 +99,17 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             ]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/branch-op-staff/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/branch-op-staff/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/branch-op-staff/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/branch-op-staff/collections/invoices' },
+            ]
+        },
+        {
             id: 'settings',
             label: 'Settings',
             icon: <Settings size={22} />,

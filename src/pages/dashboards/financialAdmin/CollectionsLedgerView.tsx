@@ -4,6 +4,8 @@ import {
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { getUserRole } from '../../../utils/auth';
 
 // Services
 import { 
@@ -21,6 +23,31 @@ interface CollectionsLedgerViewProps {
 const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const navigate = useNavigate();
+
+    const getRoutePrefix = () => {
+        const role = getUserRole();
+        switch (role) {
+            case 'admin':
+                return '/admin/admin';
+            case 'financeadmin':
+            case 'financialadmin':
+                return '/admin/financial-admin';
+            case 'operationadmin':
+            case 'operationaladmin':
+                return '/admin/operational-admin';
+            case 'countrymanager':
+                return '/admin/country-manager';
+            case 'branchmanager':
+                return '/admin/branch-manager';
+            case 'financestaff':
+                return '/admin/branch-fin-staff';
+            case 'operationstaff':
+                return '/admin/branch-op-staff';
+            default:
+                return '/admin/financial-admin';
+        }
+    };
 
     // Map metadata based on props
     const meta = useMemo(() => {
@@ -306,14 +333,34 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                 <input type="checkbox" className="rounded border-gray-300" />
                                             </td>
                                             <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 15).toString().padStart(2, '0')}</td>
-                                            <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                            <td 
+                                                className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                onClick={() => navigate(`${getRoutePrefix()}/invoices/${item.id}`)}
+                                            >
+                                                {item.invoiceNumber}
+                                            </td>
                                             <td className="py-4 px-3">
-                                                <div className="font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</div>
+                                                <div 
+                                                    className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                    onClick={() => item.driverId && navigate(`${getRoutePrefix()}/drivers/${item.driverId}`)}
+                                                >
+                                                    {item.driverName}
+                                                </div>
                                                 <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
                                             </td>
                                             <td className="py-4 px-3">
-                                                <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
-                                                <div className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Fleet #{item.fleetNumber}</div>
+                                                <div 
+                                                    className="font-semibold cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                                >
+                                                    {item.vehicleNumber}
+                                                </div>
+                                                <div 
+                                                    className="text-[10px] font-black uppercase tracking-widest mt-0.5 cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                                >
+                                                    Fleet #{item.fleetNumber}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-3">
                                                 <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.branch}</div>

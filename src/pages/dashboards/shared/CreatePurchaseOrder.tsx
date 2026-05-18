@@ -10,100 +10,11 @@ import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
-import CreateAccountingCodeModal from './CreateAccountingCodeModal';
+import { SearchableSelect } from '../../../components/common/SearchableSelect';
+import { QuickAddSupplierModal } from '../../../components/common/QuickAddSupplierModal';
+import { QuickAddAccountModal } from '../../../components/common/QuickAddAccountModal';
 
-interface SearchableAccountSelectProps {
-    options: AccountingCode[];
-    value: string;
-    onChange: (value: string) => void;
-    onAddNew: () => void;
-}
 
-const SearchableAccountSelect = ({ options, value, onChange, onAddNew }: SearchableAccountSelectProps) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-
-    const filteredOptions = options.filter(opt => 
-        opt.name.toLowerCase().includes(search.toLowerCase()) || 
-        opt.code.toLowerCase().includes(search.toLowerCase())
-    );
-
-    const selectedOption = options.find(opt => opt._id === value);
-
-    return (
-        <div className="relative">
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-4 py-2.5 rounded-xl border cursor-pointer flex justify-between items-center text-xs transition-all focus-within:ring-2 focus-within:ring-[#C8E600]"
-                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: selectedOption ? 'var(--text-main)' : 'var(--text-dim)' }}
-            >
-                <span className="truncate">{selectedOption ? `${selectedOption.code} - ${selectedOption.name}` : 'Select Account'}</span>
-                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </div>
-
-            {isOpen && (
-                <div 
-                    className="absolute z-[100] w-full mt-2 rounded-xl border shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="p-2 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                        <div className="relative">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
-                            <input 
-                                autoFocus
-                                type="text"
-                                placeholder="Search accounts..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 rounded-lg text-xs outline-none"
-                                style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                        {filteredOptions.length > 0 ? (
-                            filteredOptions.map(opt => (
-                                <div 
-                                    key={opt._id}
-                                    onClick={() => {
-                                        onChange(opt._id);
-                                        setIsOpen(false);
-                                        setSearch('');
-                                    }}
-                                    className="px-4 py-2.5 text-xs cursor-pointer transition-colors hover:bg-white/5 flex items-center justify-between"
-                                    style={{ color: value === opt._id ? '#C8E600' : 'var(--text-main)' }}
-                                >
-                                    <span>{opt.code} - {opt.name}</span>
-                                    {value === opt._id && <Check size={14} />}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-4 py-4 text-center text-xs opacity-50 italic">No accounts found</div>
-                        )}
-                    </div>
-
-                    <div className="p-2 border-t" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
-                        <button 
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onAddNew();
-                                setIsOpen(false);
-                            }}
-                            className="w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-lime/20 flex items-center justify-center gap-2"
-                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
-                        >
-                            <Plus size={14} /> New Account Code
-                        </button>
-                    </div>
-                </div>
-            )}
-            
-            {isOpen && <div className="fixed inset-0 z-[-1]" onClick={() => setIsOpen(false)} />}
-        </div>
-    );
-};
 
 
 const CreatePurchaseOrder = () => {
@@ -118,8 +29,10 @@ const CreatePurchaseOrder = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [userLevel, setUserLevel] = useState<number>(0);
-    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
     const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+
+    const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
 
 
     // Form state
@@ -311,18 +224,15 @@ const CreatePurchaseOrder = () => {
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                 Supplier <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                required
+                            <SearchableSelect
+                                options={suppliers.map(s => ({ value: s._id, label: `${s.name} (${s.category})` }))}
                                 value={formData.supplier}
-                                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">Select a supplier</option>
-                                {suppliers.map(s => (
-                                    <option key={s._id} value={s._id}>{s.name} ({s.category})</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData(prev => ({ ...prev, supplier: val }))}
+                                placeholder="Select Supplier"
+                                onAddNew={() => setIsAddSupplierOpen(true)}
+                                addNewText="Add New Supplier"
+                                required
+                            />
                         </div>
 
                         {/* Purpose */}
@@ -349,18 +259,13 @@ const CreatePurchaseOrder = () => {
                                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                     Target Branch <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    required
+                                <SearchableSelect
+                                    options={branches.map(b => ({ value: b._id, label: `${b.name} - ${b.city}` }))}
                                     value={formData.branch}
-                                    onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select a branch</option>
-                                    {branches.map(b => (
-                                        <option key={b._id} value={b._id}>{b.name} - {b.city}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData(prev => ({ ...prev, branch: val }))}
+                                    placeholder="Select Branch"
+                                    required
+                                />
                             </div>
                         ) : (
                             <div className="space-y-1.5 opacity-50">
@@ -433,14 +338,20 @@ const CreatePurchaseOrder = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Accounting Code <span className="text-red-500">*</span></label>
-                                        <SearchableAccountSelect 
-                                            options={accountingCodes}
+                                        <SearchableSelect 
+                                            options={accountingCodes.map(code => ({
+                                                value: code._id,
+                                                label: `${code.code} - ${code.name} (${code.category})`
+                                            }))}
                                             value={item.accountId || ''}
                                             onChange={(val) => updateItem(index, 'accountId', val)}
+                                            placeholder="Select Account"
                                             onAddNew={() => {
                                                 setActiveItemIndex(index);
-                                                setIsAccountModalOpen(true);
+                                                setIsAddAccountOpen(true);
                                             }}
+                                            addNewText="Add New Account"
+                                            required
                                         />
                                     </div>
                                 </div>
@@ -595,18 +506,38 @@ const CreatePurchaseOrder = () => {
                 )}
             </form>
 
-            <CreateAccountingCodeModal 
-                isOpen={isAccountModalOpen}
+            <QuickAddSupplierModal
+                isOpen={isAddSupplierOpen}
+                onClose={() => setIsAddSupplierOpen(false)}
+                onSuccess={async (newSup) => {
+                    try {
+                        const suppliersRes = await getAllSuppliers();
+                        setSuppliers(suppliersRes.data || []);
+                        setFormData(prev => ({ ...prev, supplier: newSup._id }));
+                    } catch (err) {
+                        console.error('Failed to reload suppliers', err);
+                    }
+                }}
+            />
+
+            <QuickAddAccountModal
+                isOpen={isAddAccountOpen}
                 onClose={() => {
-                    setIsAccountModalOpen(false);
+                    setIsAddAccountOpen(false);
                     setActiveItemIndex(null);
                 }}
-                onSuccess={(newCode) => {
-                    setAccountingCodes(prev => [...prev, newCode]);
-                    if (activeItemIndex !== null) {
-                        updateItem(activeItemIndex, 'accountId', newCode._id);
+                defaultCategory="EXPENSE"
+                onSuccess={async (newAcc) => {
+                    try {
+                        const codes = await getAllAccountingCodes();
+                        setAccountingCodes(codes);
+                        if (activeItemIndex !== null) {
+                            updateItem(activeItemIndex, 'accountId', newAcc._id);
+                        }
+                    } catch (err) {
+                        console.error('Failed to reload accounts', err);
                     }
-                    setIsAccountModalOpen(false);
+                    setIsAddAccountOpen(false);
                     setActiveItemIndex(null);
                 }}
             />

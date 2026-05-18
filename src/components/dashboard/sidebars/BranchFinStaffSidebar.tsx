@@ -86,6 +86,17 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             path: '/admin/branch-fin-staff'
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/branch-fin-staff/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/branch-fin-staff/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/branch-fin-staff/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/branch-fin-staff/collections/invoices' },
+            ]
+        },
+        {
             id: 'finance',
             label: 'Finance',
             icon: <Calculator size={22} />,

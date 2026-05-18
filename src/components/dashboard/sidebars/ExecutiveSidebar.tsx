@@ -124,6 +124,17 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Accident Reports', path: '/admin/admin/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/admin/collections/invoices' },
+            ]
+        },
+        {
             id: 'sales',
             label: 'Sales',
             icon: <ShoppingCart size={22} />,
