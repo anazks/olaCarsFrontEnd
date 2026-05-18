@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
     getAllSuppliers,
     createSupplier,
@@ -29,6 +30,7 @@ const CATEGORIES = [
 
 const ManageSuppliers = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -357,8 +359,9 @@ const ManageSuppliers = () => {
                                     {suppliers.map((supplier: Supplier) => (
                                         <tr
                                             key={supplier._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors"
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
                                             style={{ borderColor: 'var(--border-main)' }}
+                                            onClick={() => navigate(`${supplier._id}`)}
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
@@ -403,7 +406,15 @@ const ManageSuppliers = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        onClick={() => openEditModal(supplier)}
+                                                        onClick={(e) => { e.stopPropagation(); navigate(`${supplier._id}`); }}
+                                                        className="p-2 rounded-xl transition-all cursor-pointer hover:bg-brand-lime/20 active:scale-95"
+                                                        style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}
+                                                        title="View Supplier Profile & Ledger"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); openEditModal(supplier); }}
                                                         className="p-2 rounded-xl transition-all cursor-pointer hover:bg-blue-500/20 active:scale-95"
                                                         style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
                                                         title={t('management.common.edit', { defaultValue: 'Edit' })}
@@ -411,7 +422,7 @@ const ManageSuppliers = () => {
                                                         <Pencil size={15} />
                                                     </button>
                                                     <button
-                                                        onClick={() => setDeleteTarget(supplier)}
+                                                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(supplier); }}
                                                         className="p-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/20 active:scale-95"
                                                         style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
                                                         title={t('management.common.delete.title', { defaultValue: 'Delete' })}

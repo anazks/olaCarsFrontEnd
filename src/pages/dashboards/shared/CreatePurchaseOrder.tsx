@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText } from 'lucide-react';
+import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText, Search, ChevronDown } from 'lucide-react';
 import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose } from '../../../services/purchaseOrderService';
 import { createPurchaseOrder } from '../../../services/purchaseOrderService';
 import type { Supplier } from '../../../services/supplierService';
@@ -7,11 +7,108 @@ import { getAllSuppliers } from '../../../services/supplierService';
 import type { Branch } from '../../../services/branchService';
 import { getAllBranches } from '../../../services/branchService';
 import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
+import CreateAccountingCodeModal from './CreateAccountingCodeModal';
+
+interface SearchableAccountSelectProps {
+    options: AccountingCode[];
+    value: string;
+    onChange: (value: string) => void;
+    onAddNew: () => void;
+}
+
+const SearchableAccountSelect = ({ options, value, onChange, onAddNew }: SearchableAccountSelectProps) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const filteredOptions = options.filter(opt => 
+        opt.name.toLowerCase().includes(search.toLowerCase()) || 
+        opt.code.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const selectedOption = options.find(opt => opt._id === value);
+
+    return (
+        <div className="relative">
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full px-4 py-2.5 rounded-xl border cursor-pointer flex justify-between items-center text-xs transition-all focus-within:ring-2 focus-within:ring-[#C8E600]"
+                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: selectedOption ? 'var(--text-main)' : 'var(--text-dim)' }}
+            >
+                <span className="truncate">{selectedOption ? `${selectedOption.code} - ${selectedOption.name}` : 'Select Account'}</span>
+                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div 
+                    className="absolute z-[100] w-full mt-2 rounded-xl border shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="p-2 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+                            <input 
+                                autoFocus
+                                type="text"
+                                placeholder="Search accounts..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 rounded-lg text-xs outline-none"
+                                style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map(opt => (
+                                <div 
+                                    key={opt._id}
+                                    onClick={() => {
+                                        onChange(opt._id);
+                                        setIsOpen(false);
+                                        setSearch('');
+                                    }}
+                                    className="px-4 py-2.5 text-xs cursor-pointer transition-colors hover:bg-white/5 flex items-center justify-between"
+                                    style={{ color: value === opt._id ? '#C8E600' : 'var(--text-main)' }}
+                                >
+                                    <span>{opt.code} - {opt.name}</span>
+                                    {value === opt._id && <Check size={14} />}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-4 text-center text-xs opacity-50 italic">No accounts found</div>
+                        )}
+                    </div>
+
+                    <div className="p-2 border-t" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                        <button 
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAddNew();
+                                setIsOpen(false);
+                            }}
+                            className="w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-lime/20 flex items-center justify-center gap-2"
+                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600' }}
+                        >
+                            <Plus size={14} /> New Account Code
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {isOpen && <div className="fixed inset-0 z-[-1]" onClick={() => setIsOpen(false)} />}
+        </div>
+    );
+};
+
 
 const CreatePurchaseOrder = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -19,7 +116,11 @@ const CreatePurchaseOrder = () => {
     // Data for dropdowns
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
+    const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [userLevel, setUserLevel] = useState<number>(0);
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+    const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+
 
     // Form state
     const [formData, setFormData] = useState<CreatePurchaseOrderPayload>({
@@ -52,6 +153,10 @@ const CreatePurchaseOrder = () => {
                 const branchesRes = await getAllBranches();
                 setBranches(branchesRes.data || []);
             }
+
+            const codes = await getAllAccountingCodes();
+            setAccountingCodes(codes);
+
         } catch (err) {
             console.error('Failed to fetch initial data:', err);
             setError('Failed to load initial data. Please refresh.');
@@ -147,7 +252,8 @@ const CreatePurchaseOrder = () => {
             };
             await createPurchaseOrder(formattedData);
             setSuccess(true);
-            setTimeout(() => navigate('..'), 2000);
+            const basePath = location.pathname.split('/purchase-orders')[0];
+            setTimeout(() => navigate(`${basePath}/purchase-orders`), 2000);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to create purchase order');
         } finally {
@@ -325,7 +431,20 @@ const CreatePurchaseOrder = () => {
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Accounting Code <span className="text-red-500">*</span></label>
+                                        <SearchableAccountSelect 
+                                            options={accountingCodes}
+                                            value={item.accountId || ''}
+                                            onChange={(val) => updateItem(index, 'accountId', val)}
+                                            onAddNew={() => {
+                                                setActiveItemIndex(index);
+                                                setIsAccountModalOpen(true);
+                                            }}
+                                        />
+                                    </div>
                                 </div>
+
                                 <div className="md:col-span-2 space-y-1.5">
                                     <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Quantity <span className="text-red-500">*</span></label>
                                     <input
@@ -475,6 +594,22 @@ const CreatePurchaseOrder = () => {
                     </div>
                 )}
             </form>
+
+            <CreateAccountingCodeModal 
+                isOpen={isAccountModalOpen}
+                onClose={() => {
+                    setIsAccountModalOpen(false);
+                    setActiveItemIndex(null);
+                }}
+                onSuccess={(newCode) => {
+                    setAccountingCodes(prev => [...prev, newCode]);
+                    if (activeItemIndex !== null) {
+                        updateItem(activeItemIndex, 'accountId', newCode._id);
+                    }
+                    setIsAccountModalOpen(false);
+                    setActiveItemIndex(null);
+                }}
+            />
         </div>
     );
 };
