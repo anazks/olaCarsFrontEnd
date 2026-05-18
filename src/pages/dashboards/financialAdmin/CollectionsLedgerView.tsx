@@ -342,7 +342,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                             <td className="py-4 px-3">
                                                 <div 
                                                     className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                    onClick={() => item.driverId && navigate(`${getRoutePrefix()}/drivers/${item.driverId}`)}
+                                                    onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
                                                 >
                                                     {item.driverName}
                                                 </div>
