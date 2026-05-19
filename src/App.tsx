@@ -61,6 +61,7 @@ import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
 import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
 import AccidentReports from './pages/dashboards/shared/AccidentReports';
+import AccidentReportDetail from './pages/dashboards/shared/AccidentReportDetail';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
@@ -252,6 +253,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
@@ -341,6 +343,7 @@ function App() {
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
@@ -440,6 +443,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
 
               {/* Sales Routes */}
@@ -521,6 +525,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
@@ -584,6 +589,7 @@ function App() {
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
@@ -628,6 +634,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="target-management" element={<TargetManagement />} />
 
               {/* Nested Collections Routing Hub */}
@@ -685,6 +692,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="target-management" element={<TargetManagement />} />
 
               {/* Nested Collections Routing Hub */}
