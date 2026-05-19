@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import {
     getAllPayments,
     type PaymentTransaction
@@ -22,6 +23,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const PurchaseBillList = () => {
     const { t } = useTranslation();
+    const location = useLocation();
     const [payments, setPayments] = useState<PaymentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,12 @@ const PurchaseBillList = () => {
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+
+    useEffect(() => {
+        if (location.state?.search) {
+            setSearchQuery(location.state.search);
+        }
+    }, [location.state]);
 
     // Pagination State
     const [page, setPage] = useState(1);

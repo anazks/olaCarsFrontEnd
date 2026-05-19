@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
     Activity, RefreshCw, 
-    List, Receipt, Landmark, Calculator, BookMarked, Plus, Calendar, 
+    List, Calculator, BookMarked, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
     Building2, ClipboardList
@@ -669,12 +669,7 @@ const FinanceDashboard = () => {
                             <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-widest text-dim">Total Receivables</h3>
                         </div>
-                        <button 
-                            onClick={() => navigate('../vouchers')}
-                            className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-brand-lime bg-white/5 border border-white/5 px-2.5 py-1 rounded-lg hover:bg-brand-lime hover:text-black transition-all"
-                        >
-                            <Plus size={10} strokeWidth={3} /> New
-                        </button>
+
                     </div>
 
                     <div className="space-y-1 mb-6">
@@ -1209,31 +1204,7 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Quick Navigation Shortcuts */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div 
-                    onClick={() => navigate('../vouchers')}
-                    className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                        <Receipt size={16} />
-                    </div>
-                    <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Vouchers</h4>
-                    <p className="text-[9px] mt-1 text-dim">Payments & receipts</p>
-                </div>
-
-                <div 
-                    onClick={() => navigate('../balance-sheet')}
-                    className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                        <Landmark size={16} />
-                    </div>
-                    <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Balance Sheet</h4>
-                    <p className="text-[9px] mt-1 text-dim">Assets & liabilities</p>
-                </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div 
                     onClick={() => navigate('../taxes')}
                     className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     FileText, RefreshCw, Filter, Search, CheckCircle2, 
     Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, Calendar, Plus,
@@ -14,6 +14,7 @@ import InvoiceSettingsModal from './InvoiceSettingsModal';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,12 @@ const InvoiceList = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+
+    useEffect(() => {
+        if (location.state?.search) {
+            setSearchQuery(location.state.search);
+        }
+    }, [location.state]);
     
     // Server Pagination
     const [page, setPage] = useState(1);
@@ -44,6 +51,10 @@ const InvoiceList = () => {
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter]);
+
+    const handlePageChange = (pageNum: number) => {
+        setPage(pageNum);
+    };
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
