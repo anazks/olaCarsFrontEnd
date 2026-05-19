@@ -99,11 +99,7 @@ const InvoiceList = () => {
         navigate(`./${id}`);
     };
 
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= pagination.pages) {
-            setPage(newPage);
-        }
-    };
+
 
     const handleDeleteInvoice = async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this invoice?')) return;
@@ -127,19 +123,6 @@ const InvoiceList = () => {
         }
     };
 
-    // const handleGenerateWeekly = async () => {
-    //     if (!window.confirm('Are you sure you want to trigger weekly invoice generation for all active drivers now?')) return;
-    //     setGenerating(true);
-    //     try {
-    //         const result = await triggerWeeklyGeneration();
-    //         toast.success(`Generation complete: ${result.generatedCount} invoices created, ${result.skippedCount} skipped.`);
-    //         fetchData();
-    //     } catch (err: any) {
-    //         toast.error(err.response?.data?.message || 'Failed to generate weekly invoices');
-    //     } finally {
-    //         setGenerating(false);
-    //     }
-    // };
 
     return (
         <div className="container-responsive space-y-6 pb-12">
@@ -374,7 +357,7 @@ const InvoiceList = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold truncate max-w-[150px]" style={{ color: 'var(--text-main)' }}>
-                                                        {invoice.notes || (invoice.invoiceType === 'RENTAL' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
+                                                        {(invoice as any).description || invoice.notes || (invoice.invoiceType === 'RENTAL' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
                                                     </span>
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'RENTAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
