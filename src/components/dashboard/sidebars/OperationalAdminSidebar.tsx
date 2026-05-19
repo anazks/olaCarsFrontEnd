@@ -112,6 +112,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: 'Pending Entry Vehicles', path: '/admin/operational-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },

@@ -75,6 +75,7 @@ import BillDetail from './pages/dashboards/finance/Bills/BillDetail';
 import VehicleList from './pages/dashboards/shared/VehicleList';
 import CreateVehicle from './pages/dashboards/shared/CreateVehicle';
 import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
+import VehicleWorkshopHistory from './pages/dashboards/shared/VehicleWorkshopHistory';
 
 // Driver Pages
 import DriverList from './pages/dashboards/shared/DriverList';
@@ -206,9 +207,11 @@ function App() {
 
               {/* Vehicles */}
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -304,8 +307,10 @@ function App() {
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -383,9 +388,11 @@ function App() {
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -470,9 +477,11 @@ function App() {
                 <Route path="bills/:id" element={<BillDetail />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
                 <Route path="drivers" element={<DriverList />} />
@@ -544,6 +553,7 @@ function App() {
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
@@ -587,8 +597,11 @@ function App() {
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
+                <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -633,6 +646,7 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>

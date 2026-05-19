@@ -753,7 +753,7 @@
         "suspended": "Suspendido",
         "retired": "Retirado"
       },
-      "searchPlaceholder": "Buscar por VIN, marca o modelo...",
+      "searchPlaceholder": "Buscar por Nº de Placa, marca o modelo...",
       "advancedFilters": "Filtros Avanzados",
       "filters": {
         "allCategories": "Todas las Categorías",
@@ -762,7 +762,7 @@
       },
       "table": {
         "vehicle": "Vehículo",
-        "vin": "VIN",
+        "vin": "Nº de Placa",
         "year": "Año",
         "category": "Categoría",
         "price": "Precio"
@@ -897,7 +897,7 @@
           "make": "Marca",
           "model": "Modelo",
           "year": "Año",
-          "vin": "VIN",
+          "vin": "Nº de Placa",
           "category": "Categoría",
           "fuel": "Combustible",
           "transmission": "Transmisión",

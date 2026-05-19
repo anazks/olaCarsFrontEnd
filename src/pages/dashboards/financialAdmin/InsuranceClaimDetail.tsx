@@ -181,7 +181,7 @@ const InsuranceClaimDetail = () => {
                                     <div className="p-3 bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
                                     <div>
                                         <p className="font-bold text-sm">{vehicle.basicDetails.make} {vehicle.basicDetails.model} ({vehicle.basicDetails.year})</p>
-                                        <p className="text-xs text-gray-400 font-mono mt-1">VIN: {vehicle.basicDetails.vin} | REG: {vehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                        <p className="text-xs text-gray-400 font-mono mt-1">Plate No: {vehicle.basicDetails.vin} | REG: {vehicle.legalDocs?.registrationNumber || 'N/A'}</p>
                                     </div>
                                 </div>
                             )}

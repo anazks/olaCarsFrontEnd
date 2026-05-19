@@ -94,6 +94,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Task & Target Management', path: '/admin/branch-op-staff/target-management' },
                 { label: 'Accident Reports', path: '/admin/branch-op-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
+                { label: 'Pending Entry Vehicles', path: '/admin/branch-op-staff/pending-vehicles' },
                 { label: 'Manage Drivers', path: '/admin/branch-op-staff/drivers' },
                 { label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
                 { label: 'Support Desk', path: '/admin/branch-op-staff/complaints' },

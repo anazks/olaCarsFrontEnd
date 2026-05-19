@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History } from 'lucide-react';
-import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, payAdditionalPayment } from '../../../services/driverService';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, Image as ImageIcon, AlertCircle, FileCheck, Car, Tag, Download, Printer, TrendingUp, Gauge, Zap, CreditCard, History, ChevronDown, ChevronUp } from 'lucide-react';
+import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
+import { getDepositInvoicesByDriver } from '../../../services/invoiceService';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
@@ -13,7 +14,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const navigate = useNavigate()
     const [driver, setDriver] = useState<Driver | null>(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -23,9 +24,9 @@ const DriverDetail = () => {
     const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
+    const [invoices, setInvoices] = useState<any[]>([]);
 
-    const [apPaymentAmounts, setApPaymentAmounts] = useState<Record<string, string>>({});
-    const [processingAp, setProcessingAp] = useState<string | null>(null);
+    const [expandedPayments, setExpandedPayments] = useState<Record<string, boolean>>({});
     const currentUser = getUser();
     const userRole = getUserRole();
     const isManager = ['branchmanager', 'countrymanager', 'admin', 'financeadmin', 'operationadmin'].includes(userRole || '');
@@ -43,6 +44,13 @@ const DriverDetail = () => {
             const data = await getDriverById(id!);
             setDriver(data);
             if (data.creditCheck?.reviewNotes) setReviewNotes(data.creditCheck.reviewNotes);
+
+            try {
+                const invoiceData = await getDepositInvoicesByDriver(id!);
+                setInvoices(invoiceData);
+            } catch (invErr) {
+                console.error('Error fetching driver deposit invoices:', invErr);
+            }
 
             if (data.currentVehicle) {
                 try {
@@ -698,10 +706,23 @@ const DriverDetail = () => {
                             />
                         </div>
                         <InfoCard label="Registration" value={assignedVehicle.legalDocs?.registrationNumber || 'N/A'} />
-                        <InfoCard label="VIN Number" value={assignedVehicle.basicDetails.vin} />
+                        <InfoCard label="Plate No" value={assignedVehicle.basicDetails.vin} />
                         <InfoCard
                             label="Monthly Rent"
-                            value={assignedVehicle.basicDetails.monthlyRent ? `$${assignedVehicle.basicDetails.monthlyRent.toLocaleString()}` : 'N/A'}
+                            value={(() => {
+                                if (driver?.rentTracking && driver.rentTracking.length > 0) {
+                                    const amount = driver.rentTracking[0].amount;
+                                    const isWeekly = driver.rentTracking[0].weekLabel?.toLowerCase().includes('week');
+                                    const monthlyAmount = isWeekly ? amount * 4 : amount;
+                                    if (monthlyAmount > 0) {
+                                        return `$${monthlyAmount.toLocaleString()}`;
+                                    }
+                                }
+                                const purchasePrice = assignedVehicle.purchaseDetails?.purchasePrice || 0;
+                                const leaseDurationMonths = assignedVehicle.basicDetails?.leaseDurationMonths || 60;
+                                const rent = assignedVehicle.basicDetails?.monthlyRent || (purchasePrice > 0 ? Math.round((purchasePrice / leaseDurationMonths) * 100) / 100 : 0);
+                                return rent > 0 ? `$${rent.toLocaleString()}` : 'N/A';
+                            })()}
                             icon={<FileText size={14} />}
                         />
                     </div>
@@ -730,101 +751,186 @@ const DriverDetail = () => {
                     </div>
 
                     <div className="space-y-4 relative z-10">
-                        {driver.additionalPayments.map((payment) => (
-                            <div key={payment._id} className="p-4 rounded-xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-2.5 rounded-xl ${payment.status === 'PAID' ? 'bg-green-500/20 text-green-500' : 'bg-brand-lime/20 text-brand-lime'}`}>
-                                        <Tag size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{payment.type}</p>
-                                        <h3 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
-                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
+                        {driver.additionalPayments.map((payment) => {
+                            const isExpanded = !!expandedPayments[payment._id];
+                            
+                            // Find matching live invoice from backend invoices array
+                            const liveInvoice = invoices.find(inv => 
+                                (payment.invoiceRef && inv._id === payment.invoiceRef) ||
+                                (payment.invoiceNumber && inv.invoiceNumber === payment.invoiceNumber)
+                            );
 
-                                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 w-full md:w-auto">
-                                    <div className="grid grid-cols-2 md:flex gap-6">
-                                        <div className="text-center md:text-left">
-                                            <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Amount</p>
-                                            <p className="font-black text-sm" style={{ color: 'var(--text-main)' }}>${payment.amount.toLocaleString()}</p>
-                                        </div>
-                                        <div className="text-center md:text-left">
-                                            <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Balance</p>
-                                            <p className="font-black text-sm" style={{ color: payment.balance > 0 ? 'var(--brand-lime)' : 'var(--text-main)' }}>${payment.balance.toLocaleString()}</p>
-                                        </div>
-                                    </div>
+                            const status = liveInvoice ? liveInvoice.status : payment.status;
+                            const amount = liveInvoice ? (liveInvoice.totalAmountDue || liveInvoice.baseAmount) : payment.amount;
+                            const balance = liveInvoice ? liveInvoice.balance : payment.balance;
+                            const paymentsList = liveInvoice ? liveInvoice.payments : payment.payments;
+                            const notes = liveInvoice ? (liveInvoice.notes || payment.notes) : payment.notes;
+                            const paidAt = liveInvoice ? liveInvoice.paidAt : payment.paidAt;
+                            const amountPaid = liveInvoice ? liveInvoice.amountPaid : (payment.amountPaid || 0);
 
-                                    <div className="flex items-center gap-3 w-full md:w-auto">
-                                        {payment.status !== 'PAID' && (isFinanceStaff || isManager) ? (
-                                            <div className="flex items-center gap-2 w-full md:w-auto">
-                                                <div className="relative flex-1 md:w-32">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold opacity-50">$</span>
-                                                    <input 
-                                                        type="number"
-                                                        placeholder="Pay"
-                                                        value={apPaymentAmounts[payment._id] || ''}
-                                                        onChange={(e) => setApPaymentAmounts(prev => ({ ...prev, [payment._id]: e.target.value }))}
-                                                        className="w-full pl-6 pr-3 py-2 rounded-lg border text-xs font-bold outline-none focus:border-brand-lime"
-                                                        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    />
+                            return (
+                                <div 
+                                    key={payment._id} 
+                                    className="rounded-xl border overflow-hidden transition-all duration-200" 
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                >
+                                    {/* Header / Clickable Toggle */}
+                                    <div 
+                                        onClick={() => setExpandedPayments(prev => ({ ...prev, [payment._id]: !prev[payment._id] }))}
+                                        className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2.5 rounded-xl ${status === 'PAID' ? 'bg-green-500/20 text-green-500' : 'bg-brand-lime/20 text-brand-lime'}`}>
+                                                <Tag size={18} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{payment.type}</p>
+                                                    {payment.invoiceNumber && (
+                                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-dim">
+                                                            {payment.invoiceNumber}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <button 
-                                                    onClick={async () => {
-                                                        const amount = Number(apPaymentAmounts[payment._id]);
-                                                        if (!amount || amount <= 0) {
-                                                            toast.error('Enter a valid amount');
-                                                            return;
-                                                        }
-                                                        const toastId = toast.loading('Recording payment...');
-                                                        try {
-                                                            setProcessingAp(payment._id);
-                                                            await payAdditionalPayment(id!, payment._id, {
-                                                                amount,
-                                                                paymentMethod: 'Cash', // Default for now
-                                                                note: 'Manual payment from driver details'
-                                                            });
-                                                            toast.success('Payment recorded successfully', { id: toastId });
-                                                            setApPaymentAmounts(prev => ({ ...prev, [payment._id]: '' }));
-                                                            await fetchDriver();
-                                                        } catch (err: any) {
-                                                            toast.error(err.response?.data?.message || 'Payment failed', { id: toastId });
-                                                        } finally {
-                                                            setProcessingAp(null);
-                                                        }
-                                                    }}
-                                                    disabled={processingAp === payment._id || !apPaymentAmounts[payment._id]}
-                                                    className="px-4 py-2 bg-brand-lime text-black rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-                                                >
-                                                    {processingAp === payment._id ? '...' : 'Record'}
-                                                </button>
+                                                <h3 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
+                                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
                                             </div>
-                                        ) : (
-                                            <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                                payment.status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                payment.status === 'PARTIAL' ? 'bg-brand-lime/10 text-brand-lime border-brand-lime/20' :
-                                                'bg-white/5 text-dim border-white/10'
-                                            }`}>
-                                                {payment.status}
+                                        </div>
+
+                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 w-full md:w-auto">
+                                            <div className="grid grid-cols-2 md:flex gap-6">
+                                                <div className="text-center md:text-left">
+                                                    <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Amount</p>
+                                                    <p className="font-black text-sm" style={{ color: 'var(--text-main)' }}>${amount.toLocaleString()}</p>
+                                                </div>
+                                                <div className="text-center md:text-left">
+                                                    <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Balance</p>
+                                                    <p className="font-black text-sm" style={{ color: balance > 0 ? 'var(--brand-lime)' : 'var(--text-main)' }}>${balance.toLocaleString()}</p>
+                                                </div>
                                             </div>
-                                        )}
+
+                                            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                                                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                    status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                    status === 'PARTIAL' ? 'bg-brand-lime/10 text-brand-lime border-brand-lime/20' :
+                                                    status === 'OVERDUE' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                    'bg-white/5 text-dim border-white/10'
+                                                }`}>
+                                                    {status}
+                                                </div>
+                                                <div className="text-dim opacity-75">
+                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    {/* Expanded Section (Payment Breakdown & Details) */}
+                                    {isExpanded && (
+                                        <div className="border-t p-4 bg-white/[0.01]" style={{ borderColor: 'rgba(255,255,255,0.03)' }}>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                                {/* Left details */}
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Details</p>
+                                                    {notes && (
+                                                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                            <span className="font-semibold text-dim">Notes:</span> {notes}
+                                                        </p>
+                                                    )}
+                                                    {paidAt && (
+                                                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                            <span className="font-semibold text-dim">Last Payment Date:</span> {new Date(paidAt).toLocaleDateString()}
+                                                        </p>
+                                                    )}
+                                                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                        <span className="font-semibold text-dim">Total Paid:</span> ${amountPaid.toLocaleString()}
+                                                    </p>
+                                                </div>
+
+                                                {/* Right details / Invoice action */}
+                                                <div className="flex flex-col justify-between items-start md:items-end">
+                                                    <div className="space-y-1 md:text-right">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim">Invoice Association</p>
+                                                        {payment.invoiceNumber ? (
+                                                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                                Linked Invoice: <span className="font-bold text-white">{payment.invoiceNumber}</span>
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-xs text-dim italic">No direct invoice linked</p>
+                                                        )}
+                                                    </div>
+                                                    {payment.invoiceRef && (
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/invoices/${payment.invoiceRef}`);
+                                                            }}
+                                                            className="mt-3 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-wider text-white transition-all flex items-center gap-1.5"
+                                                        >
+                                                            <FileText size={12} /> View Invoice
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Transaction History Breakdown */}
+                                            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.03)' }}>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-2">Payment History Breakdown</p>
+                                                {!paymentsList || paymentsList.length === 0 ? (
+                                                    <p className="text-xs text-dim italic py-2">No payments recorded yet.</p>
+                                                ) : (
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                                        {paymentsList.map((p: any, index: number) => (
+                                                            <div key={index} className="p-3 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
+                                                                <div className="space-y-1">
+                                                                    <p className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                                        ${p.amount.toLocaleString()} ({p.paymentMethod || 'Cash'})
+                                                                    </p>
+                                                                    {p.note && <p className="text-[10px] text-dim">{p.note}</p>}
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-[10px] text-dim">{new Date(p.paidAt).toLocaleString()}</p>
+                                                                    {p.transactionId && (
+                                                                        <p className="text-[9px] font-mono text-brand-lime">TXID: {p.transactionId}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
 
             {/* Vehicle Rent Contract Details - Always visible when vehicle assigned */}
             {assignedVehicle && driver.status === 'ACTIVE' && (() => {
-                const purchasePrice = assignedVehicle.purchaseDetails?.purchasePrice || 0;
-                const leaseDurationMonths = assignedVehicle.basicDetails?.leaseDurationMonths || 60;
-                const monthlyRent = assignedVehicle.basicDetails?.monthlyRent || (purchasePrice > 0 ? Math.round((purchasePrice / leaseDurationMonths) * 100) / 100 : 0);
-                const totalContractValue = Math.round(monthlyRent * leaseDurationMonths);
-                const contractYears = Math.round((leaseDurationMonths / 12) * 10) / 10;
+                const sellingPrice = assignedVehicle.basicDetails?.sellingValue || assignedVehicle.purchaseDetails?.purchasePrice || 0;
+                const depositPayment = driver.additionalPayments?.find(
+                    p => p.type === 'DEPOSIT' && p.relatedVehicle === assignedVehicle._id
+                );
+                const depositAmount = depositPayment ? depositPayment.amount : 0;
+                const effectiveCost = Math.max(0, sellingPrice - depositAmount);
 
+                const isWeekly = driver.rentTracking && driver.rentTracking.length > 0 
+                    ? driver.rentTracking[0].weekLabel?.toLowerCase().includes('week') 
+                    : false;
 
+                const duration = driver.rentTracking && driver.rentTracking.length > 0 
+                    ? driver.rentTracking.length 
+                    : (isWeekly ? (assignedVehicle.basicDetails?.leaseDurationWeeks || 260) : (assignedVehicle.basicDetails?.leaseDurationMonths || 60));
+
+                const rent = driver.rentTracking && driver.rentTracking.length > 0 
+                    ? driver.rentTracking[0].amount 
+                    : (duration > 0 ? Math.ceil(effectiveCost / duration) : 0);
+
+                const totalContractValue = Math.round(rent * duration);
+                const contractYears = Math.round((isWeekly ? (duration / 52) : (duration / 12)) * 10) / 10;
 
                 return (
                     <div className="p-6 rounded-2xl shadow-sm border overflow-hidden relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
@@ -837,45 +943,51 @@ const DriverDetail = () => {
                                     <CreditCard size={20} />
                                 </div>
                                 <div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Vehicle Rent Contract</h2>
-                                <p className="text-[10px] font-medium opacity-50">Monthly Collection Plan</p>
+                                    <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Vehicle Rent Contract</h2>
+                                    <p className="text-[10px] font-medium opacity-50">{isWeekly ? 'Weekly Collection Plan' : 'Monthly Collection Plan'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm border"
+                                    style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: 'rgb(59,130,246)', borderColor: 'rgba(59,130,246,0.2)' }}>
+                                    {contractYears} Year Contract
+                                </div>
+                                <button 
+                                    onClick={() => navigate('rent-plan')}
+                                    className="px-4 py-1.5 rounded-xl bg-brand-lime text-black text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-lime/10"
+                                >
+                                    View Plan
+                                </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm border"
-                                style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: 'rgb(59,130,246)', borderColor: 'rgba(59,130,246,0.2)' }}>
-                                {contractYears} Year Contract
-                            </div>
-                            <button 
-                                onClick={() => navigate('rent-plan')}
-                                className="px-4 py-1.5 rounded-xl bg-brand-lime text-black text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-lime/10"
-                            >
-                                View Plan
-                            </button>
-                        </div>
-                    </div>
 
                         {/* Contract Key Figures */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10 mb-6">
                             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1 flex items-center gap-1"><Tag size={10} /> Purchase Price</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1 flex items-center gap-1"><Tag size={10} /> Selling Price</p>
                                 <p className="text-xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
-                                    {assignedVehicle.purchaseDetails?.currency || '$'}{purchasePrice.toLocaleString()}
+                                    {assignedVehicle.purchaseDetails?.currency || '$'}{sellingPrice.toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1 flex items-center gap-1"><Tag size={10} /> Down Payment</p>
+                                <p className="text-xl font-black tracking-tighter text-blue-400">
+                                    {assignedVehicle.purchaseDetails?.currency || '$'}{depositAmount.toLocaleString()}
                                 </p>
                             </div>
                             <div className="p-4 rounded-2xl bg-brand-lime/5 border border-brand-lime/10">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-lime/60 mb-1 flex items-center gap-1"><CreditCard size={10} /> Monthly Rent</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-lime/60 mb-1 flex items-center gap-1"><CreditCard size={10} /> {isWeekly ? 'Weekly Rent' : 'Monthly Rent'}</p>
                                 <p className="text-xl font-black tracking-tighter text-brand-lime">
-                                    ${monthlyRent.toLocaleString()}
+                                    ${rent.toLocaleString()}
                                 </p>
-                                <p className="text-[8px] font-bold text-dim mt-0.5">Fixed Monthly Rate</p>
+                                <p className="text-[8px] font-bold text-dim mt-0.5">{isWeekly ? 'Fixed Weekly Rate' : 'Fixed Monthly Rate'}</p>
                             </div>
                             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1 flex items-center gap-1"><Calendar size={10} /> Duration</p>
                                 <p className="text-xl font-black tracking-tighter" style={{ color: 'var(--text-main)' }}>
-                                    {leaseDurationMonths}
+                                    {duration}
                                 </p>
-                                <p className="text-[8px] font-bold text-dim mt-0.5">months ({contractYears} years)</p>
+                                <p className="text-[8px] font-bold text-dim mt-0.5">{isWeekly ? 'weeks' : 'months'} ({contractYears} years)</p>
                             </div>
                             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1 flex items-center gap-1"><FileText size={10} /> Total Value</p>
@@ -889,20 +1001,27 @@ const DriverDetail = () => {
                         <div className="relative z-10 mb-6 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
                             <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-3">Rent Calculation</p>
                             <div className="flex items-center gap-2 flex-wrap text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-dim">(</span>
                                 <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                                    {assignedVehicle.purchaseDetails?.currency || '$'}{purchasePrice.toLocaleString()}
+                                    {assignedVehicle.purchaseDetails?.currency || '$'}{sellingPrice.toLocaleString()}
+                                    <span className="text-[9px] opacity-40 ml-1 font-normal">Selling Price</span>
                                 </span>
-                                <span className="text-dim">÷</span>
+                                <span className="text-dim">-</span>
                                 <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                                    {leaseDurationMonths} months
+                                    {assignedVehicle.purchaseDetails?.currency || '$'}{depositAmount.toLocaleString()}
+                                    <span className="text-[9px] opacity-40 ml-1 font-normal">Down Payment</span>
+                                </span>
+                                <span className="text-dim">) ÷</span>
+                                <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                                    {duration} {isWeekly ? 'weeks' : 'months'}
+                                    <span className="text-[9px] opacity-40 ml-1 font-normal">Duration</span>
                                 </span>
                                 <span className="text-dim">=</span>
                                 <span className="px-3 py-1.5 rounded-xl bg-brand-lime/10 border border-brand-lime/20 text-brand-lime font-black">
-                                    ${monthlyRent.toLocaleString()} / month
+                                    ${rent.toLocaleString()} / {isWeekly ? 'week' : 'month'}
                                 </span>
                             </div>
                         </div>
-
 
                     </div>
                 );

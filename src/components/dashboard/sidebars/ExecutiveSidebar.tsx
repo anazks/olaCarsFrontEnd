@@ -116,6 +116,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Manage Vehicles', path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: 'Pending Entry Vehicles', path: '/admin/admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },

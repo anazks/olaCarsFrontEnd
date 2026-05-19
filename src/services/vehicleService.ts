@@ -63,6 +63,7 @@ export interface BasicDetails {
     fuelType: FuelType;
     transmission: Transmission;
     weeklyRent?: number;
+    sellingValue?: number;
     monthlyRent?: number;
     engineCapacity?: number;
     colour?: string;
@@ -382,7 +383,7 @@ export const progressVehicle = async (id: string, payload: ProgressVehiclePayloa
 // PUT update vehicle lease settings
 export const updateVehicleLeaseSettings = async (
     id: string, 
-    payload: { durationWeeks: number, weeklyRent: number }
+    payload: { durationWeeks: number; weeklyRent?: number; sellingValue?: number }
 ): Promise<Vehicle> => {
     const response = await api.put(`/api/vehicle/${id}/lease-settings`, payload);
     return response.data.data;
