@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     FileText, RefreshCw, Filter, Search, CheckCircle2, 
     Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, Calendar, Plus,
@@ -14,6 +14,7 @@ import InvoiceSettingsModal from './InvoiceSettingsModal';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -26,10 +27,16 @@ const InvoiceList = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+
+    useEffect(() => {
+        if (location.state?.search) {
+            setSearchQuery(location.state.search);
+        }
+    }, [location.state]);
     
     // Server Pagination
     const [page, setPage] = useState(1);
-    const [limit] = useState(25);
+    const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
@@ -44,6 +51,10 @@ const InvoiceList = () => {
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter]);
+
+    const handlePageChange = (pageNum: number) => {
+        setPage(pageNum);
+    };
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
@@ -122,7 +133,6 @@ const InvoiceList = () => {
             toast.error(err.response?.data?.message || 'Failed to delete all invoices');
         }
     };
-
 
 
     return (
@@ -358,7 +368,7 @@ const InvoiceList = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold truncate max-w-[150px]" style={{ color: 'var(--text-main)' }}>
-                                                        {(invoice as any).description || (invoice.invoiceType === 'RENTAL' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
+                                                        {(invoice as any).description || invoice.notes || (invoice.invoiceType === 'RENTAL' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
                                                     </span>
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'RENTAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
@@ -457,7 +467,7 @@ const InvoiceList = () => {
                             </p>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setPage(page - 1)}
+                                    onClick={() => handlePageChange(page - 1)}
                                     disabled={page === 1 || loading}
                                     className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
@@ -474,7 +484,7 @@ const InvoiceList = () => {
                                         return (
                                             <button
                                                 key={pageNum}
-                                                onClick={() => setPage(pageNum)}
+                                                onClick={() => handlePageChange(pageNum)}
                                                 className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                                 style={{ 
                                                     background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
@@ -488,7 +498,7 @@ const InvoiceList = () => {
                                     })}
                                 </div>
                                 <button
-                                    onClick={() => setPage(page + 1)}
+                                    onClick={() => handlePageChange(page + 1)}
                                     disabled={page === pagination.pages || loading}
                                     className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}

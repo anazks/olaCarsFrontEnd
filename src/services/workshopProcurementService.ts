@@ -70,3 +70,10 @@ export const getWorkshopProcurementRequests = async (
     });
     return response.data;
 };
+
+export const getWorkshopProcurementRequestById = async (
+    id: string
+): Promise<ProcurementRequest> => {
+    const response = await api.get(`/api/workshop-procurement/${id}`);
+    return response.data.data;
+};
