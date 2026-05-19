@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Landmark, Calculator, BookMarked } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
@@ -32,10 +32,29 @@ const GeneralLedger = () => {
     const userRole = getUserRole() || '';
     const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
 
+    const getThisMonthStart = () => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    };
+
+    const getThisMonthEnd = () => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    };
+
     // Filters
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getThisMonthStart);
+    const [endDate, setEndDate] = useState(getThisMonthEnd);
     const [selectedCode, setSelectedCode] = useState('ALL');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -46,6 +65,7 @@ const GeneralLedger = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (selectedCode !== 'ALL') filters.accountingCode = selectedCode;
+            if (debouncedSearch) filters.search = debouncedSearch;
             
             // Add pagination
             filters.page = page;
@@ -66,12 +86,12 @@ const GeneralLedger = () => {
         } finally {
             setLoading(false);
         }
-    }, [startDate, endDate, selectedCode, page, limit]);
+    }, [startDate, endDate, selectedCode, debouncedSearch, page, limit]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
         setPage(1);
-    }, [startDate, endDate, selectedCode]);
+    }, [startDate, endDate, selectedCode, debouncedSearch]);
 
     useEffect(() => {
         fetchData();
@@ -97,6 +117,55 @@ const GeneralLedger = () => {
         return sum + (entry.credit || 0);
     }, 0);
 
+    const renderDescriptionWithLinks = (description: string) => {
+        if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+
+        // Check for Bill patterns: e.g., BILL-1779... or "Bill BILL-..."
+        const billRegex = /(BILL-\d+|BILL-\w+)/i;
+        const invoiceRegex = /((?:INV|MAN)-\d+-\d+|(?:INV|MAN)-\d+)/i;
+
+        const matchBill = description.match(billRegex);
+        const matchInvoice = description.match(invoiceRegex);
+
+        const hasBill = !!matchBill || description.toLowerCase().includes('bill');
+        const hasInvoice = !!matchInvoice || description.toLowerCase().includes('invoice');
+
+        if (hasBill) {
+            const billNum = matchBill ? matchBill[0] : '';
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={() => navigate('/admin/financial-admin/bills', { state: { search: billNum } })}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                    >
+                        <Receipt size={11} strokeWidth={2.5} />
+                        View Bill {billNum ? `(${billNum})` : ''}
+                    </button>
+                </div>
+            );
+        }
+
+        if (hasInvoice) {
+            const invNum = matchInvoice ? matchInvoice[0] : '';
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={() => navigate('/admin/financial-admin/invoices', { state: { search: invNum } })}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                        style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                    >
+                        <FileText size={11} strokeWidth={2.5} />
+                        View Invoice {invNum ? `(${invNum})` : ''}
+                    </button>
+                </div>
+            );
+        }
+
+        return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
+    };
+
     return (
         <div className="container-responsive space-y-6">
             <Breadcrumbs 
@@ -113,7 +182,14 @@ const GeneralLedger = () => {
                         <FileText size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         General Ledger
                     </h1>
-                    <p className="text-xs font-medium text-dim mt-0.5">Immutable audit trail of all financial transactions</p>
+                    <p className="text-xs font-medium text-dim mt-0.5 flex flex-wrap items-center gap-2">
+                        <span>Immutable audit trail of all financial transactions</span>
+                        {startDate && endDate && (
+                            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--brand-lime)] font-mono text-[10px]">
+                                {new Date(startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} – {new Date(endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </span>
+                        )}
+                    </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
@@ -144,11 +220,24 @@ const GeneralLedger = () => {
 
             {/* Filters Bar */}
             <div className="p-4 rounded-2xl border transition-colors duration-300 flex flex-col sm:flex-row gap-4 flex-wrap" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-2 flex-grow max-w-xs">
+                    <input 
+                        type="text" 
+                        placeholder="Search description, code..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
+                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
+                    />
+                </div>
+
+                <div className="hidden sm:block w-px h-8 mx-1" style={{ background: 'var(--border-main)' }}></div>
+
                 <div className="flex items-center gap-2">
                     <Calendar size={18} style={{ color: 'var(--text-dim)' }} />
-                    <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Date Range:</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Date:</span>
                 </div>
-                <div className="flex items-center gap-2 flex-grow max-w-sm">
+                <div className="flex items-center gap-2 flex-grow max-w-xs">
                     <input 
                         type="date" 
                         value={startDate}
@@ -166,7 +255,7 @@ const GeneralLedger = () => {
                     />
                 </div>
                 
-                <div className="hidden sm:block w-px h-8 mx-2" style={{ background: 'var(--border-main)' }}></div>
+                <div className="hidden sm:block w-px h-8 mx-1" style={{ background: 'var(--border-main)' }}></div>
                 
                 <div className="flex items-center gap-2">
                     <Filter size={18} style={{ color: 'var(--text-dim)' }} />
@@ -175,7 +264,7 @@ const GeneralLedger = () => {
                 <select 
                     value={selectedCode}
                     onChange={(e) => setSelectedCode(e.target.value)}
-                    className="flex-grow sm:max-w-[250px] px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
+                    className="flex-grow sm:max-w-[200px] px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                     style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
                 >
                     <option value="ALL">All Accounts</option>
@@ -185,9 +274,14 @@ const GeneralLedger = () => {
                 </select>
 
                 {/* Clear Filters */}
-                {(startDate || endDate || selectedCode !== 'ALL') && (
+                {(startDate !== getThisMonthStart() || endDate !== getThisMonthEnd() || selectedCode !== 'ALL' || searchQuery !== '') && (
                     <button 
-                        onClick={() => { setStartDate(''); setEndDate(''); setSelectedCode('ALL'); }}
+                        onClick={() => { 
+                            setStartDate(getThisMonthStart()); 
+                            setEndDate(getThisMonthEnd()); 
+                            setSelectedCode('ALL'); 
+                            setSearchQuery('');
+                        }}
                         className="text-sm font-medium hover:underline ml-auto"
                         style={{ color: '#ef4444' }}
                     >
@@ -197,31 +291,7 @@ const GeneralLedger = () => {
             </div>
             
             {/* Navigation Shortcuts */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div 
-                    onClick={() => navigate('../vouchers')}
-                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                        <Receipt size={20} />
-                    </div>
-                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Voucher Management</h4>
-                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage payments & receipts</p>
-                </div>
-
-                <div 
-                    onClick={() => navigate('../balance-sheet')}
-                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                        <Landmark size={20} />
-                    </div>
-                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Balance Sheet</h4>
-                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>View assets & liabilities</p>
-                </div>
-
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div 
                     onClick={() => navigate('../taxes')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
@@ -247,7 +317,7 @@ const GeneralLedger = () => {
                 </div>
 
                 <div 
-                    onClick={() => navigate('../purchase-bills')}
+                    onClick={() => navigate('../bills')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -342,10 +412,10 @@ const GeneralLedger = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{entry.description}</div>
-                                                {entry.referenceId && (
-                                                    <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
-                                                )}
+                                                 {renderDescriptionWithLinks(entry.description)}
+                                                 {entry.referenceId && (
+                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-1 items-start">

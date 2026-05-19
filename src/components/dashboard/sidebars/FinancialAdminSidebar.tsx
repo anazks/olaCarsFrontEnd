@@ -158,9 +158,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'General Ledger', path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
-                { label: 'Staff Salaries', path: '/admin/financial-admin/staff-salaries', permission: 'REPORTS_VIEW' },
-                { label: 'Add Journal Entry', path: '/admin/financial-admin/ledger?action=create', permission: 'JOURNAL_CREATE' },
-                { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Manual Journals', path: '/admin/financial-admin/manual-journals', permission: 'JOURNAL_VIEW' },
             ]
         },
         {
@@ -199,12 +197,12 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
         },
         {
             id: 'settings',
-            label: 'Settings',
+            label: 'Account Settings',
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'Branch Management', path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
                 { label: 'Manage Suppliers', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
-                { label: 'System Preferences', path: '/admin/financial-admin/dashboard-settings' },
+                { label: 'Settings', path: '/admin/financial-admin/dashboard-settings' },
             ]
         },
     ];

@@ -101,6 +101,7 @@ import FinancialStatements from './pages/dashboards/finance/FinancialStatements'
 import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
+import ManualJournals from './pages/dashboards/finance/ManualJournals';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
 import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
 
@@ -236,6 +237,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -420,6 +422,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -499,6 +502,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -657,6 +661,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
