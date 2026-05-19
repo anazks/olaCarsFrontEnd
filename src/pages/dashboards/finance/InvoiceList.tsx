@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     FileText, RefreshCw, Filter, Search, CheckCircle2, 
-    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, DollarSign, Calendar, Plus,
+    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
-import { getInvoices, getInvoicesRegistry, deleteInvoice, deleteAllInvoices, triggerWeeklyGeneration } from '../../../services/invoiceService';
+import { getInvoicesRegistry, deleteInvoice, deleteAllInvoices } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -19,7 +19,6 @@ const InvoiceList = () => {
     const [error, setError] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [generating, setGenerating] = useState(false);
     
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,12 +29,12 @@ const InvoiceList = () => {
     
     // Server Pagination
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(25);
+    const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
     const [sortBy, setSortBy] = useState('dueDate');
-    const [sortOrder, setSortOrder] = useState<'desc' | 'desc'>('desc');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -128,19 +127,19 @@ const InvoiceList = () => {
         }
     };
 
-    const handleGenerateWeekly = async () => {
-        if (!window.confirm('Are you sure you want to trigger weekly invoice generation for all active drivers now?')) return;
-        setGenerating(true);
-        try {
-            const result = await triggerWeeklyGeneration();
-            toast.success(`Generation complete: ${result.generatedCount} invoices created, ${result.skippedCount} skipped.`);
-            fetchData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to generate weekly invoices');
-        } finally {
-            setGenerating(false);
-        }
-    };
+    // const handleGenerateWeekly = async () => {
+    //     if (!window.confirm('Are you sure you want to trigger weekly invoice generation for all active drivers now?')) return;
+    //     setGenerating(true);
+    //     try {
+    //         const result = await triggerWeeklyGeneration();
+    //         toast.success(`Generation complete: ${result.generatedCount} invoices created, ${result.skippedCount} skipped.`);
+    //         fetchData();
+    //     } catch (err: any) {
+    //         toast.error(err.response?.data?.message || 'Failed to generate weekly invoices');
+    //     } finally {
+    //         setGenerating(false);
+    //     }
+    // };
 
     return (
         <div className="container-responsive space-y-6 pb-12">
@@ -375,13 +374,13 @@ const InvoiceList = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold truncate max-w-[150px]" style={{ color: 'var(--text-main)' }}>
-                                                        {invoice.description || (invoice.invoiceType === 'AUTO' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
+                                                        {invoice.notes || (invoice.invoiceType === 'RENTAL' ? `Rent ${invoice.weekLabel || ''}` : 'Manual Entry')}
                                                     </span>
                                                     <div className="flex items-center gap-1.5 mt-1">
-                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'AUTO' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
-                                                            {invoice.invoiceType || 'AUTO'}
+                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest ${invoice.invoiceType === 'RENTAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
+                                                            {invoice.invoiceType || 'RENTAL'}
                                                         </span>
-                                                        {invoice.invoiceType === 'AUTO' && (
+                                                        {invoice.invoiceType === 'RENTAL' && (
                                                             <span className="text-[9px] font-black text-dim uppercase tracking-wider">{invoice.weekLabel || 'Cycle'}</span>
                                                         )}
                                                     </div>
@@ -474,7 +473,7 @@ const InvoiceList = () => {
                             </p>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => setPage(page - 1)}
+                                    onClick={() => handlePageChange(page - 1)}
                                     disabled={page === 1 || loading}
                                     className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
@@ -491,7 +490,7 @@ const InvoiceList = () => {
                                         return (
                                             <button
                                                 key={pageNum}
-                                                onClick={() => setPage(pageNum)}
+                                                onClick={() => handlePageChange(pageNum)}
                                                 className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                                 style={{ 
                                                     background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
@@ -505,7 +504,7 @@ const InvoiceList = () => {
                                     })}
                                 </div>
                                 <button
-                                    onClick={() => setPage(page + 1)}
+                                    onClick={() => handlePageChange(page + 1)}
                                     disabled={page === pagination.pages || loading}
                                     className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
