@@ -11,7 +11,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
-    const styles = {
+    const styles: Record<string, { bg: string; text: string; border: string; icon: any }> = {
         REQUESTED: {
             bg: 'rgba(59, 130, 246, 0.1)',
             text: '#3b82f6',
@@ -44,13 +44,19 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
         }
     };
 
-    const style = styles[status];
+    const normalizedStatus = (status || '').toUpperCase();
+    const style = styles[normalizedStatus] || {
+        bg: 'rgba(156, 163, 175, 0.1)',
+        text: '#9ca3af',
+        border: 'rgba(156, 163, 175, 0.3)',
+        icon: <Clock size={12} />
+    };
 
     return (
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
             {style.icon}
-            {t(`management.common.status.${status.toLowerCase()}`, { defaultValue: status })}
+            {t(`management.common.status.${(status || '').toLowerCase()}`, { defaultValue: status })}
         </div>
     );
 };

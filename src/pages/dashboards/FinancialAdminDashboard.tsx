@@ -9,7 +9,7 @@ import {
     MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 
 // Context & Services
 // import { useTheme } from '../../context/ThemeContext';
@@ -38,12 +38,22 @@ const FinancialAdminDashboard = () => {
     // New Tabs State
     const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections'>('overview');
 
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return format(d, 'yyyy-MM-dd');
+    };
+
+    const getToday = () => {
+        return format(new Date(), 'yyyy-MM-dd');
+    };
+
     // Set Initial Filter state with current month's span so inputs aren't blank
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-        endDate: format(new Date(), 'yyyy-MM-dd')
+        startDate: getOneMonthAgo(),
+        endDate: getToday()
     });
 
     // 1. Fetch Config
@@ -95,7 +105,18 @@ const FinancialAdminDashboard = () => {
         fetchData();
     }, [filters.country, filters.branch, filters.startDate, filters.endDate]);
 
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(p => ({ ...p, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
+
     const handleFilterChange = (key: string, val: string) => {
+        if (key === 'endDate' && filters.startDate && val && val < filters.startDate) {
+            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
+            return;
+        }
         setFilters(prev => ({ ...prev, [key]: val }));
     };
 
@@ -189,12 +210,13 @@ const FinancialAdminDashboard = () => {
                         <input
                             type="date"
                             value={filters.endDate}
+                            min={filters.startDate}
                             onChange={(e) => handleFilterChange('endDate', e.target.value)}
                             className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors"
                             style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                         />
                         {(filters.startDate || filters.endDate) && (
-                            <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="ml-1 text-red-500 hover:text-red-600">
+                            <button onClick={() => setFilters(p => ({ ...p, startDate: getOneMonthAgo(), endDate: getToday() }))} className="ml-1 text-red-500 hover:text-red-600">
                                 <FilterX size={14} />
                             </button>
                         )}

@@ -22,6 +22,7 @@ import type { AccountingCode } from '../../../services/accountingService';
 import { getAllBranches } from '../../../services/branchService';
 import { createVoucher } from '../../../services/ledgerService';
 import type { VoucherType, JournalLine } from '../../../services/ledgerService';
+import { useTheme } from '../../../context/ThemeContext';
 
 
 const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
@@ -31,6 +32,8 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
     isOpen: boolean,
     setIsOpen: (open: boolean) => void
 }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [search, setSearch] = useState('');
     const selectedCode = codes.find(c => c._id === selectedId);
 
@@ -40,6 +43,8 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
         c.category.toLowerCase().includes(search.toLowerCase())
     );
 
+    const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
+
     return (
         <div className="relative">
             <div
@@ -47,18 +52,21 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                     e.stopPropagation();
                     setIsOpen(!isOpen);
                 }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
+                style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
             >
-                <span className="text-sm text-white truncate">
+                <span className="text-sm truncate text-[color:var(--text-main)]">
                     {selectedCode ? `${selectedCode.code} - ${selectedCode.name}` : 'Select Account'}
                 </span>
-                <ChevronDown size={14} className={`text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: textDimColor }} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-[#1A1A1A] border border-white/10 rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-3 border-b border-white/5 bg-white/5 flex items-center gap-2">
-                        <Search size={14} className="text-white/40" />
+                <div className="absolute top-full left-0 w-full mt-2 border rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                     style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}>
+                    <div className="p-3 border-b flex items-center gap-2"
+                         style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                        <Search size={14} style={{ color: textDimColor }} />
                         <input
                             autoFocus
                             type="text"
@@ -66,7 +74,7 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onKeyDown={e => e.stopPropagation()}
-                            className="bg-transparent border-none text-xs text-white focus:ring-0 outline-none w-full"
+                            className="bg-transparent border-none text-xs focus:ring-0 outline-none w-full text-[color:var(--text-main)]"
                         />
                     </div>
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
@@ -78,15 +86,17 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                                     setIsOpen(false);
                                     setSearch('');
                                 }}
-                                className="px-4 py-3 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-white/[0.02] last:border-0"
+                                className="px-4 py-3 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b last:border-0"
+                                style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}
                             >
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-white group-hover:text-black">{code.code}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/60 group-hover:bg-black/10 group-hover:text-black font-bold uppercase tracking-wider">
+                                    <span className="text-xs font-bold text-[color:var(--text-main)] group-hover:text-black">{code.code}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider group-hover:bg-black/10 group-hover:text-black text-[color:var(--text-muted)]"
+                                          style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB' }}>
                                         {code.category}
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-white/60 group-hover:text-black/80 mt-0.5 truncate">{code.name}</p>
+                                <p className="text-[11px] group-hover:text-black/80 mt-0.5 truncate text-[color:var(--text-muted)]">{code.name}</p>
                             </div>
                         ))}
                     </div>
@@ -97,6 +107,8 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
 };
 
 const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [type, setType] = useState<VoucherType>('PAYMENT');
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
@@ -217,20 +229,24 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
     const ActiveIcon = typeConfig[type].icon;
 
+    // Accessibility high-contrast colors in light mode
+    const borderStyle = { borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' };
+    const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
+
     return (
-        <div className="bg-[#0A0A0A] overflow-hidden">
+        <div className="overflow-hidden bg-transparent" style={{ backgroundColor: 'var(--bg-card)' }}>
             {/* Header */}
-            <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            <div className="px-8 py-6 border-b flex justify-between items-center bg-white/[0.01]" style={borderStyle}>
                 <div className="flex items-center gap-4">
                     <div className={`p-3 ${typeConfig[type].bg} rounded-2xl`}>
                         <ActiveIcon size={28} className={typeConfig[type].color} />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">Create {type.charAt(0) + type.slice(1).toLowerCase()} Voucher</h2>
-                        <p className="text-xs text-white/40 mt-0.5">Record structured financial transaction</p>
+                        <h2 className="text-xl font-bold tracking-tight text-[color:var(--text-main)]">Create {type.charAt(0) + type.slice(1).toLowerCase()} Voucher</h2>
+                        <p className="text-xs mt-0.5" style={{ color: textDimColor }}>Record structured financial transaction</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="p-2.5 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all">
+                <button onClick={onClose} className="p-2.5 rounded-xl hover:bg-white/5 transition-all" style={{ color: textDimColor }}>
                     <X size={20} />
                 </button>
             </div>
@@ -245,17 +261,18 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             onClick={() => setType(vType)}
                             className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all ${
                                 type === vType 
-                                ? `bg-white/5 border-${typeConfig[vType].color.split('-')[1]}-500/50 shadow-[0_0_15px_rgba(255,255,255,0.05)]` 
-                                : 'border-white/5 bg-transparent hover:bg-white/5'
+                                ? `bg-white/5 shadow-[0_0_15px_rgba(255,255,255,0.05)]` 
+                                : 'bg-transparent hover:bg-white/5'
                             }`}
+                            style={{ borderColor: type === vType ? 'var(--brand-lime)' : (isDark ? 'var(--border-main)' : '#D1D5DB') }}
                         >
-                            {vType === 'PAYMENT' && <ArrowUpRight size={16} className={type === vType ? 'text-rose-500' : 'text-white/20'} />}
-                            {vType === 'RECEIPT' && <ArrowDownLeft size={16} className={type === vType ? 'text-emerald-500' : 'text-white/20'} />}
-                            {vType === 'JOURNAL' && <FileText size={16} className={type === vType ? 'text-amber-500' : 'text-white/20'} />}
-                            {vType === 'CONTRA' && <ArrowLeftRight size={16} className={type === vType ? 'text-blue-500' : 'text-white/20'} />}
-                            {vType === 'SALES' && <Receipt size={16} className={type === vType ? 'text-[#C8E600]' : 'text-white/20'} />}
-                            {vType === 'PURCHASE' && <Receipt size={16} className={type === vType ? 'text-indigo-500' : 'text-white/20'} />}
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${type === vType ? 'text-white' : 'text-white/40'}`}>
+                            {vType === 'PAYMENT' && <ArrowUpRight size={16} className={type === vType ? 'text-rose-500' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            {vType === 'RECEIPT' && <ArrowDownLeft size={16} className={type === vType ? 'text-emerald-500' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            {vType === 'JOURNAL' && <FileText size={16} className={type === vType ? 'text-amber-500' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            {vType === 'CONTRA' && <ArrowLeftRight size={16} className={type === vType ? 'text-blue-500' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            {vType === 'SALES' && <Receipt size={16} className={type === vType ? 'text-[#C8E600]' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            {vType === 'PURCHASE' && <Receipt size={16} className={type === vType ? 'text-indigo-500' : ''} style={{ color: type === vType ? '' : textDimColor }} />}
+                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: type === vType ? 'var(--text-main)' : textDimColor }}>
                                 {vType}
                             </span>
                         </button>
@@ -264,7 +281,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: textDimColor }}>
                             <Calendar size={12} /> Date
                         </label>
                         <input
@@ -272,25 +289,27 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             type="date"
                             value={header.date}
                             onChange={e => setHeader({ ...header, date: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
+                            style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB', colorScheme: isDark ? 'dark' : 'light' }}
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: textDimColor }}>
                             <Building2 size={12} /> Branch
                         </label>
                         <select
                             required
                             value={header.branch}
                             onChange={e => setHeader({ ...header, branch: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all appearance-none"
+                            className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none cursor-pointer focus:border-[#C8E600] text-[color:var(--text-main)]"
+                            style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                         >
-                            <option value="" className="bg-[#1A1A1A]">Select Branch</option>
-                            {branches.map(b => <option key={b._id} value={b._id} className="bg-[#1A1A1A]">{b.name}</option>)}
+                            <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Branch</option>
+                            {branches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{b.name}</option>)}
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: textDimColor }}>
                             <Tag size={12} /> Narration
                         </label>
                         <input
@@ -299,75 +318,80 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             placeholder="Brief description..."
                             value={header.narration}
                             onChange={e => setHeader({ ...header, narration: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#C8E600] outline-none transition-all"
+                            className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
+                            style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                         />
                     </div>
                 </div>
 
-                {/* Reference Info Section (Conditionally expanded) */}
-                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
-                    <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
+                {/* Reference Info Section */}
+                <div className="p-6 border rounded-2xl space-y-4" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: textDimColor }}>
                         <Hash size={12} /> Reference & Party Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-white/40">Ref Number (Inv/Chq)</label>
+                            <label className="text-[10px]" style={{ color: textDimColor }}>Ref Number (Inv/Chq)</label>
                             <input
                                 type="text"
                                 value={header.referenceInfo.referenceNumber}
                                 onChange={e => setHeader({ ...header, referenceInfo: { ...header.referenceInfo, referenceNumber: e.target.value } })}
-                                className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:border-white/20 outline-none transition-all"
+                                className="w-full border rounded-xl px-3 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
+                                style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-white/40">Party Name</label>
+                            <label className="text-[10px]" style={{ color: textDimColor }}>Party Name</label>
                             <input
                                 type="text"
                                 value={header.referenceInfo.partyName}
                                 onChange={e => setHeader({ ...header, referenceInfo: { ...header.referenceInfo, partyName: e.target.value } })}
-                                className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:border-white/20 outline-none transition-all"
+                                className="w-full border rounded-xl px-3 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
+                                style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-white/40">Party Type</label>
+                            <label className="text-[10px]" style={{ color: textDimColor }}>Party Type</label>
                             <select
                                 value={header.referenceInfo.partyType}
                                 onChange={e => setHeader({ ...header, referenceInfo: { ...header.referenceInfo, partyType: e.target.value } })}
-                                className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:border-white/20 outline-none transition-all appearance-none"
+                                className="w-full border rounded-xl px-3 py-2.5 text-xs outline-none transition-all appearance-none cursor-pointer focus:border-[#C8E600] text-[color:var(--text-main)]"
+                                style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                             >
-                                <option value="OTHER">Other</option>
-                                <option value="CUSTOMER">Customer</option>
-                                <option value="SUPPLIER">Supplier</option>
-                                <option value="DRIVER">Driver</option>
+                                <option value="OTHER" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Other</option>
+                                <option value="CUSTOMER" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Customer</option>
+                                <option value="SUPPLIER" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Supplier</option>
+                                <option value="DRIVER" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Driver</option>
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-white/40">External ID</label>
+                            <label className="text-[10px]" style={{ color: textDimColor }}>External ID</label>
                             <input
                                 type="text"
                                 value={header.referenceInfo.partyId}
                                 onChange={e => setHeader({ ...header, referenceInfo: { ...header.referenceInfo, partyId: e.target.value } })}
-                                className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:border-white/20 outline-none transition-all"
+                                className="w-full border rounded-xl px-3 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
+                                style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                             />
                         </div>
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.02]">
+                <div className="rounded-2xl border overflow-hidden bg-transparent" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                     <div className={`${lines.length > 3 ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
                         <table className="w-full text-left border-collapse">
-                            <thead className="bg-white/5 border-b border-white/5 sticky top-0 z-10">
+                            <thead className="border-b sticky top-0 z-10" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                                 <tr>
-                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Account</th>
-                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Description</th>
-                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">DR/CR</th>
-                                    <th className="px-5 py-4 text-[10px] font-bold text-white/40 uppercase tracking-widest">Amount</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Account</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Description</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>DR/CR</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Amount</th>
                                     <th className="px-5 py-4 text-right"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y" style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
                                 {lines.map((line, index) => (
-                                    <tr key={index} className="hover:bg-white/[0.01]">
+                                    <tr key={index} className="hover:bg-white/[0.01]" style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
                                         <td className="p-3 w-1/3">
                                             <AccountSelector
                                                 codes={accountingCodes}
@@ -383,29 +407,30 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                                                 placeholder="Line memo"
                                                 value={line.description}
                                                 onChange={e => updateLine(index, 'description', e.target.value)}
-                                                className="w-full bg-transparent border-none text-sm text-white focus:ring-0 outline-none"
+                                                className="w-full bg-transparent border-none text-sm focus:ring-0 outline-none text-[color:var(--text-main)]"
                                             />
                                         </td>
                                         <td className="p-3 w-32">
                                             <select
                                                 value={line.type}
                                                 onChange={e => updateLine(index, 'type', e.target.value)}
-                                                className={`w-full bg-transparent border-none text-xs font-bold focus:ring-0 outline-none ${line.type === 'DEBIT' ? 'text-emerald-500' : 'text-rose-500'}`}
+                                                className={`w-full bg-transparent border-none text-xs font-bold focus:ring-0 outline-none cursor-pointer ${line.type === 'DEBIT' ? 'text-emerald-500' : 'text-rose-500'}`}
                                             >
-                                                <option value="DEBIT" className="bg-[#1A1A1A]">DEBIT</option>
-                                                <option value="CREDIT" className="bg-[#1A1A1A]">CREDIT</option>
+                                                <option value="DEBIT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>DEBIT</option>
+                                                <option value="CREDIT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>CREDIT</option>
                                             </select>
                                         </td>
                                         <td className="p-3 w-40">
-                                            <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/5 focus-within:border-[#C8E600]/50 transition-all">
-                                                <span className="text-white/20 text-xs">$</span>
+                                            <div className="flex items-center gap-2 rounded-xl px-3 py-2 border transition-all focus-within:border-[#C8E600]/50"
+                                                 style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                                                <span className="text-xs" style={{ color: textDimColor }}>$</span>
                                                 <input
                                                     required
                                                     type="number"
                                                     step="0.01"
                                                     value={line.amount || ''}
                                                     onChange={e => updateLine(index, 'amount', e.target.value === '' ? 0 : Number(e.target.value))}
-                                                    className="w-full bg-transparent border-none p-0 text-sm text-white focus:ring-0 outline-none font-mono"
+                                                    className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 outline-none font-mono text-[color:var(--text-main)]"
                                                 />
                                             </div>
                                         </td>
@@ -426,21 +451,22 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                     <button
                         type="button"
                         onClick={handleAddLine}
-                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-t hover:bg-white/5"
+                        style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB', color: textDimColor }}
                     >
                         <Plus size={14} /> Add Transaction Line
                     </button>
                 </div>
 
                 {/* Totals & Actions */}
-                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-8 pt-8 border-t border-white/5">
+                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-8 pt-8 border-t" style={{ borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                     <div className="flex items-center gap-12">
                         <div className="space-y-1">
-                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Total Debit</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Total Debit</p>
                             <p className="text-2xl font-mono font-bold text-emerald-500">${totals.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Total Credit</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Total Credit</p>
                             <p className="text-2xl font-mono font-bold text-rose-500">${totals.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         </div>
                         {Math.abs(totals.debit - totals.credit) > 0.01 && (
@@ -454,7 +480,8 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl text-sm font-bold bg-white/5 text-white hover:bg-white/10 transition-all border border-white/5"
+                            className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl text-sm font-bold transition-all border"
+                            style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB', color: 'var(--text-main)' }}
                         >
                             Discard
                         </button>

@@ -19,8 +19,21 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { useTheme } from '../../../context/ThemeContext';
+
+const getOneMonthAgo = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().split('T')[0];
+};
+
+const getToday = () => {
+    return new Date().toISOString().split('T')[0];
+};
 
 const PurchaseBillList = () => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const { t } = useTranslation();
     const [payments, setPayments] = useState<PaymentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,8 +43,15 @@ const PurchaseBillList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getOneMonthAgo());
+    const [endDate, setEndDate] = useState(getToday());
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate('');
+        }
+    }, [startDate, endDate]);
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -155,26 +175,34 @@ const PurchaseBillList = () => {
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                         className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                        style={{ color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                     />
                     <div className="w-px h-4 bg-white/10"></div>
                     <input 
                         type="date" 
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (startDate && val && val < startDate) {
+                                setEndDate(startDate);
+                            } else {
+                                setEndDate(val);
+                            }
+                        }}
                         className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                        style={{ color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                     />
                 </div>
 
                 {/* Clear Button */}
-                {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
+                {(searchQuery || statusFilter !== 'ALL' || startDate !== getOneMonthAgo() || endDate !== getToday()) && (
                     <button
                         onClick={() => {
                             setSearchQuery('');
                             setStatusFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
+                            setStartDate(getOneMonthAgo());
+                            setEndDate(getToday());
                         }}
                         title="Clear Filters"
                         className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"

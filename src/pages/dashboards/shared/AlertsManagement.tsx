@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle,
-    Car, Calendar, MapPin, Building2, RefreshCw, Eye
+    Car, MapPin, Building2, RefreshCw, Eye
 } from 'lucide-react';
 import type { Alert } from '../../../services/alertService';
 import alertService from '../../../services/alertService';
@@ -30,6 +30,13 @@ const AlertsManagement = () => {
 
     const [startDate, setStartDate] = useState(oneMonthAgoStr);
     const [endDate, setEndDate] = useState(todayStr);
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
 
     useEffect(() => {
         fetchData();
@@ -269,7 +276,6 @@ const AlertsManagement = () => {
 
                 {/* Date Range */}
                 <div className="flex items-center gap-2">
-                    <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="date"
                         value={startDate}
@@ -281,8 +287,16 @@ const AlertsManagement = () => {
                     <input
                         type="date"
                         value={endDate}
+                        min={startDate}
                         max={todayStr}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (startDate && val && val < startDate) {
+                                setEndDate(startDate);
+                            } else {
+                                setEndDate(val);
+                            }
+                        }}
                         className="px-3 py-1.5 border rounded-lg text-xs outline-none font-bold"
                         style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />

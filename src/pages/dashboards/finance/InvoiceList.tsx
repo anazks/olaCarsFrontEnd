@@ -4,16 +4,50 @@ import { getInvoices, payInvoice } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { useTheme } from '../../../context/ThemeContext';
+import { format } from 'date-fns';
 
 const InvoiceList = () => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return format(d, 'yyyy-MM-dd');
+    };
+
+    const getToday = () => {
+        return format(new Date(), 'yyyy-MM-dd');
+    };
+
+    const [startDate, setStartDate] = useState(getOneMonthAgo());
+    const [endDate, setEndDate] = useState(getToday());
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
+
+    const handleStartDateChange = (val: string) => {
+        setStartDate(val);
+    };
+
+    const handleEndDateChange = (val: string) => {
+        if (startDate && val && val < startDate) {
+            setEndDate(startDate);
+            return;
+        }
+        setEndDate(val);
+    };
     
     // Pagination
     const [page, setPage] = useState(1);
@@ -170,17 +204,18 @@ const InvoiceList = () => {
                     <input 
                         type="date" 
                         value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
+                        onChange={(e) => handleStartDateChange(e.target.value)}
                         className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                        style={{ color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                     />
                     <div className="w-px h-4 bg-white/10"></div>
                     <input 
                         type="date" 
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate}
+                        onChange={(e) => handleEndDateChange(e.target.value)}
                         className="bg-transparent px-2 py-1.5 outline-none text-[10px] font-bold"
-                        style={{ color: 'var(--text-main)', colorScheme: 'dark' }}
+                        style={{ color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                     />
                 </div>
 
@@ -191,8 +226,8 @@ const InvoiceList = () => {
                             setSearchQuery('');
                             setStatusFilter('ALL');
                             setInvoiceTypeFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
+                            setStartDate(getOneMonthAgo());
+                            setEndDate(getToday());
                         }}
                         title="Clear Filters"
                         className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all active:scale-95"
@@ -344,14 +379,15 @@ const InvoiceList = () => {
             {/* Payment Modal */}
             {selectedInvoice && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Record Payment</h2>
-                            <p className="text-xs font-bold text-dim uppercase tracking-widest mt-1">Invoice: {selectedInvoice.invoiceNumber}</p>
+                    <div className="w-full max-w-md border rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <h2 className="text-2xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Record Payment</h2>
+                            <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-dim)' }}>Invoice: {selectedInvoice.invoiceNumber}</p>
                         </div>
                         <form onSubmit={handleRecordPayment} className="p-8 space-y-6">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Amount (USD)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Amount (USD)</label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-lime" size={18} />
                                     <input 
@@ -360,33 +396,36 @@ const InvoiceList = () => {
                                         max={selectedInvoice.balance}
                                         value={paymentAmount}
                                         onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                        className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime transition-all"
+                                        className="w-full pl-12 pr-4 py-3 border rounded-2xl font-bold outline-none focus:border-brand-lime transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
-                                <p className="text-[10px] font-bold text-dim mt-1">Remaining Balance: ${selectedInvoice.balance}</p>
+                                <p className="text-[10px] font-bold mt-1" style={{ color: 'var(--text-dim)' }}>Remaining Balance: ${selectedInvoice.balance}</p>
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Method</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Method</label>
                                 <select 
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:border-brand-lime appearance-none cursor-pointer"
+                                    className="w-full px-4 py-3 border rounded-2xl font-bold outline-none focus:border-brand-lime appearance-none cursor-pointer"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    <option value="Cash">Cash</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Card">Credit/Debit Card</option>
-                                    <option value="Mobile Money">Mobile Money</option>
+                                    <option value="Cash" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Cash</option>
+                                    <option value="Bank Transfer" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Bank Transfer</option>
+                                    <option value="Card" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Credit/Debit Card</option>
+                                    <option value="Mobile Money" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Mobile Money</option>
                                 </select>
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Notes / Reference</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Notes / Reference</label>
                                 <textarea 
                                     value={paymentNote}
                                     onChange={(e) => setPaymentNote(e.target.value)}
                                     placeholder="Any additional details..."
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white text-sm outline-none focus:border-brand-lime h-24 resize-none"
+                                    className="w-full px-4 py-3 border rounded-2xl text-sm outline-none focus:border-brand-lime h-24 resize-none"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
 
@@ -394,7 +433,8 @@ const InvoiceList = () => {
                                 <button 
                                     type="button"
                                     onClick={() => setSelectedInvoice(null)}
-                                    className="flex-1 py-3 rounded-2xl bg-white/5 text-dim font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
+                                    className="flex-1 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     Cancel
                                 </button>
@@ -411,22 +451,23 @@ const InvoiceList = () => {
                         {/* Payment History */}
                         {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
                             <div className="px-8 pb-8 space-y-4">
-                                <div className="pt-6 border-t border-white/5">
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-dim mb-4">Payment History</h3>
+                                <div className="pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--text-dim)' }}>Payment History</h3>
                                     <div className="space-y-2">
                                         {selectedInvoice.payments.map((p: any, idx: number) => (
-                                            <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                            <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border"
+                                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
                                                         <DollarSign size={14} />
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-xs text-white">${p.amount.toLocaleString()}</p>
-                                                        <p className="text-[9px] text-dim uppercase tracking-wider">{p.paymentMethod} • {new Date(p.paidAt).toLocaleDateString()}</p>
+                                                        <p className="font-bold text-xs" style={{ color: 'var(--text-main)' }}>${p.amount.toLocaleString()}</p>
+                                                        <p className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{p.paymentMethod} • {new Date(p.paidAt).toLocaleDateString()}</p>
                                                     </div>
                                                 </div>
                                                 {p.transactionId && (
-                                                    <span className="text-[8px] font-mono text-dim opacity-40">Ref: {p.transactionId.slice(-8)}</span>
+                                                    <span className="text-[8px] font-mono opacity-40" style={{ color: 'var(--text-dim)' }}>Ref: {p.transactionId.slice(-8)}</span>
                                                 )}
                                             </div>
                                         ))}

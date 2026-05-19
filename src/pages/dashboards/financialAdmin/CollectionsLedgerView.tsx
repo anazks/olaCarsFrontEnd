@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-     Calendar, MapPin, Building, 
+     MapPin, Building, 
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 
 // Services
 import { 
@@ -60,13 +60,23 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return format(d, 'yyyy-MM-dd');
+    };
+
+    const getToday = () => {
+        return format(new Date(), 'yyyy-MM-dd');
+    };
+
     // Filter state
     const [allBranches, setAllBranches] = useState<any[]>([]);
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: type === 'GENERAL' ? format(startOfMonth(new Date()), 'yyyy-MM-dd') : '',
-        endDate: type === 'GENERAL' ? format(new Date(), 'yyyy-MM-dd') : ''
+        startDate: type === 'GENERAL' ? getOneMonthAgo() : '',
+        endDate: type === 'GENERAL' ? getToday() : ''
     });
 
     // 1. Setup Lookups
@@ -140,6 +150,33 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(p => ({ ...p, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
+
+    const handleStartDateChange = (val: string) => {
+        setFilters(p => ({ ...p, startDate: val }));
+    };
+
+    const handleEndDateChange = (val: string) => {
+        if (filters.startDate && val && val < filters.startDate) {
+            setFilters(p => ({ ...p, endDate: filters.startDate }));
+            return;
+        }
+        setFilters(p => ({ ...p, endDate: val }));
+    };
+
+    const clearDates = () => {
+        setFilters(p => ({
+            ...p,
+            startDate: type === 'GENERAL' ? getOneMonthAgo() : '',
+            endDate: type === 'GENERAL' ? getToday() : ''
+        }));
+    };
+
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
@@ -204,18 +241,18 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
                         <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
                              style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                            <Calendar size={15} className="opacity-60" />
                             <input type="date" value={filters.startDate} 
-                                   onChange={(e) => updateFilter('startDate', e.target.value)}
-                                   className="bg-transparent text-xs font-bold border-none outline-none"
+                                   onChange={(e) => handleStartDateChange(e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                    style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                             <span className="text-xs opacity-50">-</span>
                             <input type="date" value={filters.endDate} 
-                                   onChange={(e) => updateFilter('endDate', e.target.value)}
-                                   className="bg-transparent text-xs font-bold border-none outline-none"
+                                   min={filters.startDate}
+                                   onChange={(e) => handleEndDateChange(e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                    style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                             {(filters.startDate || filters.endDate) && (
-                                <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="text-red-500 ml-1"><FilterX size={14}/></button>
+                                <button onClick={clearDates} className="text-red-500 ml-1"><FilterX size={14}/></button>
                             )}
                         </div>
                     </>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText } from 'lucide-react';
+import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText, Calendar } from 'lucide-react';
 import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose } from '../../../services/purchaseOrderService';
 import { createPurchaseOrder } from '../../../services/purchaseOrderService';
 import type { Supplier } from '../../../services/supplierService';
@@ -272,13 +272,38 @@ const CreatePurchaseOrder = () => {
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                 Expected Payment Date
                             </label>
-                            <input
-                                type="date"
-                                value={formData.paymentDate}
-                                onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            />
+                            <div className="relative flex items-center">
+                                <span className="absolute left-4 pointer-events-none z-10" style={{ color: 'var(--text-main)' }}>
+                                    <Calendar size={16} />
+                                </span>
+                                <input
+                                    type="date"
+                                    value={formData.paymentDate}
+                                    onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all left-date-picker"
+                                    style={{ 
+                                        background: 'var(--bg-input)', 
+                                        border: '1px solid var(--border-main)', 
+                                        color: 'var(--text-main)',
+                                        colorScheme: 'dark'
+                                    }}
+                                />
+                                <style>{`
+                                    .left-date-picker::-webkit-calendar-picker-indicator {
+                                        position: absolute;
+                                        left: 12px;
+                                        top: 50%;
+                                        transform: translateY(-50%);
+                                        margin: 0;
+                                        padding: 0;
+                                        cursor: pointer;
+                                        opacity: 0;
+                                        width: 20px;
+                                        height: 20px;
+                                        z-index: 20;
+                                    }
+                                `}</style>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -507,3 +507,30 @@
     transform: translateY(0);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   REACT-PHONE-INPUT-2 OVERRIDES FOR DARK/LIGHT THEMES
+   ══════════════════════════════════════════════════════════════ */
+.react-tel-input .country-list {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-main) !important;
+}
+
+.react-tel-input .country-list .country-name {
+  color: var(--text-main) !important;
+}
+
+.react-tel-input .country-list .dial-code {
+  color: var(--text-dim) !important;
+}
+
+.react-tel-input .country-list .country.highlight,
+.react-tel-input .country-list .country:hover {
+  background-color: var(--sidebar-hover) !important;
+}
+
+.react-tel-input .selected-flag:hover,
+.react-tel-input .selected-flag:focus {
+  background-color: var(--sidebar-hover) !important;
+}

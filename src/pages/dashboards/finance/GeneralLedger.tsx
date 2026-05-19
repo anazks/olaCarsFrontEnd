@@ -32,10 +32,27 @@ const GeneralLedger = () => {
     const userRole = getUserRole() || '';
     const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
 
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+    };
+
+    const getToday = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
     // Filters
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getOneMonthAgo());
+    const [endDate, setEndDate] = useState(getToday());
     const [selectedCode, setSelectedCode] = useState('ALL');
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -156,11 +173,18 @@ const GeneralLedger = () => {
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
-                    <span style={{ color: 'var(--text-dim)' }}>to</span>
                     <input 
                         type="date" 
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (startDate && val && val < startDate) {
+                                setEndDate(startDate);
+                            } else {
+                                setEndDate(val);
+                            }
+                        }}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
@@ -185,9 +209,9 @@ const GeneralLedger = () => {
                 </select>
 
                 {/* Clear Filters */}
-                {(startDate || endDate || selectedCode !== 'ALL') && (
+                {(startDate !== getOneMonthAgo() || endDate !== getToday() || selectedCode !== 'ALL') && (
                     <button 
-                        onClick={() => { setStartDate(''); setEndDate(''); setSelectedCode('ALL'); }}
+                        onClick={() => { setStartDate(getOneMonthAgo()); setEndDate(getToday()); setSelectedCode('ALL'); }}
                         className="text-sm font-medium hover:underline ml-auto"
                         style={{ color: '#ef4444' }}
                     >

@@ -7,8 +7,13 @@ import {
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
+import { useTheme } from '../../../../context/ThemeContext';
+import { format } from 'date-fns';
 
 const Customers = () => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     const navigate = useNavigate();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -20,8 +25,37 @@ const Customers = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [branchFilter, setBranchFilter] = useState('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return format(d, 'yyyy-MM-dd');
+    };
+
+    const getToday = () => {
+        return format(new Date(), 'yyyy-MM-dd');
+    };
+
+    const [startDate, setStartDate] = useState(getOneMonthAgo());
+    const [endDate, setEndDate] = useState(getToday());
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
+
+    const handleStartDateChange = (val: string) => {
+        setStartDate(val);
+    };
+
+    const handleEndDateChange = (val: string) => {
+        if (startDate && val && val < startDate) {
+            setEndDate(startDate);
+            return;
+        }
+        setEndDate(val);
+    };
 
     // Sorting State
     const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -213,24 +247,25 @@ const Customers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border transition-colors" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                             <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
                             <input
                                 type="date"
                                 value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                style={{ color: 'var(--text-main)' }}
+                                onChange={e => handleStartDateChange(e.target.value)}
+                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                             />
                         </div>
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border transition-colors" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                             <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
                             <input
                                 type="date"
                                 value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                style={{ color: 'var(--text-main)' }}
+                                min={startDate}
+                                onChange={e => handleEndDateChange(e.target.value)}
+                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
                             />
                         </div>
                     </div>

@@ -358,6 +358,7 @@ const DriverPerformanceDashboard = () => {
 
     return (
         <div className="p-6 container-responsive space-y-8">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
             {/* ── Header ──────────────────────────────────────────────── */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div>

@@ -115,7 +115,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Assigned Missions', path: '/admin/country-manager/my-tasks' },
                 { label: 'Insurance Management', path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
                 { label: 'Manage Vehicles', path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Manage Drivers', path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
+                { label: 'Manage Drivers', path: '/admin/country-manager/drivers' },
                 { label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },

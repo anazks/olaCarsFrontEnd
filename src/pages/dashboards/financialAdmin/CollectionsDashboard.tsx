@@ -5,11 +5,11 @@ import {
 
 } from 'recharts';
 import {
-    Library, DollarSign, ShieldAlert, Calendar,
+    Library, DollarSign, ShieldAlert,
     MapPin, Building, Search, Filter,
     TrendingUp, Wallet, FileText, Clock, FilterX
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 
 // Services
 import { 
@@ -56,12 +56,22 @@ const CollectionsDashboard = () => {
     // Lookup collections
     const [allBranches, setAllBranches] = useState<any[]>([]);
 
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return format(d, 'yyyy-MM-dd');
+    };
+
+    const getToday = () => {
+        return format(new Date(), 'yyyy-MM-dd');
+    };
+
     // Filter presets
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-        endDate: format(new Date(), 'yyyy-MM-dd')
+        startDate: getOneMonthAgo(),
+        endDate: getToday()
     });
 
     // 1. Fetch Initial Setup (Branches)
@@ -157,8 +167,27 @@ const CollectionsDashboard = () => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(p => ({ ...p, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
+
+    const handleStartDateChange = (val: string) => {
+        setFilters(p => ({ ...p, startDate: val }));
+    };
+
+    const handleEndDateChange = (val: string) => {
+        if (filters.startDate && val && val < filters.startDate) {
+            setFilters(p => ({ ...p, endDate: filters.startDate }));
+            return;
+        }
+        setFilters(p => ({ ...p, endDate: val }));
+    };
+
     const clearDates = () => {
-        setFilters(p => ({ ...p, startDate: '', endDate: '' }));
+        setFilters(p => ({ ...p, startDate: getOneMonthAgo(), endDate: getToday() }));
     };
 
     // Inline Loading spinner component
@@ -194,7 +223,7 @@ const CollectionsDashboard = () => {
             </div>
 
                 {/* CONTROL BOARD: FILTERS */}
-                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
+                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors mb-8"
                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     
                     {/* Country Dropdown */}
@@ -228,14 +257,14 @@ const CollectionsDashboard = () => {
                     {/* Date Constraints */}
                     <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
                          style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
                         <input type="date" value={filters.startDate} 
-                               onChange={(e) => updateFilter('startDate', e.target.value)}
+                               onChange={(e) => handleStartDateChange(e.target.value)}
                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                         <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
                         <input type="date" value={filters.endDate} 
-                               onChange={(e) => updateFilter('endDate', e.target.value)}
+                               min={filters.startDate}
+                               onChange={(e) => handleEndDateChange(e.target.value)}
                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                         {(filters.startDate || filters.endDate) && (
@@ -343,7 +372,7 @@ const CollectionsDashboard = () => {
                     </div>
 
                     <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
-                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                         <div className="flex justify-between items-start">
                             <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center">
                                 <DollarSign size={24} className="text-[#C8E600]" />
@@ -351,7 +380,7 @@ const CollectionsDashboard = () => {
                             <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400">Forecast 30d</div>
                         </div>
                         <div className="mt-8">
-                            <div className="text-3xl font-black text-white">${(metrics?.forecastAmount || 0).toLocaleString()}</div>
+                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>${(metrics?.forecastAmount || 0).toLocaleString()}</div>
                             <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Projected Collections</p>
                             <p className="text-xs opacity-40 mt-4">Calculated future billing inflows pending execution between today and the coming 30 days.</p>
                         </div>
@@ -600,14 +629,15 @@ const CollectionsDashboard = () => {
 // Helper Visual Components matching Dashboard specs
 const MetricStatCard = ({ title, value, description, icon, iconBg, highlight }: any) => (
     <div className={`rounded-3xl p-6 border shadow-sm flex flex-col justify-between hover:-translate-y-1 duration-300 transition-all`}
-         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
         <div className="flex justify-between items-start">
             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${iconBg}`}>
                 {icon}
             </div>
         </div>
         <div className="mt-6">
-            <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : 'text-white'}`}>{value}</div>
+            <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : ''}`}
+                 style={highlight ? {} : { color: 'var(--text-main)' }}>{value}</div>
             <p className="text-[11px] font-black tracking-wider uppercase mt-2 opacity-40">{title}</p>
             <p className="text-[10px] font-medium text-[#C8E600] mt-1">{description}</p>
         </div>

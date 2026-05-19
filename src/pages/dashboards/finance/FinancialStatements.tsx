@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Landmark, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
+import { TrendingUp, Landmark, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -9,12 +9,28 @@ const FinancialStatements = () => {
     const [loading, setLoading] = useState(true);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-    
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+    };
+
+    const getToday = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+        startDate: getOneMonthAgo(),
+        endDate: getToday()
     });
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -78,7 +94,6 @@ const FinancialStatements = () => {
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Calendar size={18} className="text-dim" />
                     <input 
                         type="date" 
                         value={filters.startDate}
@@ -89,7 +104,15 @@ const FinancialStatements = () => {
                     <input 
                         type="date" 
                         value={filters.endDate}
-                        onChange={e => setFilters({...filters, endDate: e.target.value})}
+                        min={filters.startDate}
+                        onChange={e => {
+                            const val = e.target.value;
+                            if (filters.startDate && val && val < filters.startDate) {
+                                setFilters({...filters, endDate: filters.startDate});
+                            } else {
+                                setFilters({...filters, endDate: val});
+                            }
+                        }}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>
