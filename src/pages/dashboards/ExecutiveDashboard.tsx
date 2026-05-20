@@ -37,7 +37,6 @@ const ExecutiveDashboard = () => {
     const [poData, setPoData] = useState<any[]>([]);
     const [staffData, setStaffData] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
-
     // KPI States
     const [kpiData, setKpiData] = useState({
         totalActiveVehicles: 0,
@@ -103,6 +102,8 @@ const ExecutiveDashboard = () => {
             const endD = globalEndDate ? new Date(globalEndDate) : new Date();
             endD.setHours(23, 59, 59, 999);
             startD.setHours(0, 0, 0, 0);
+            const diffDays = (endD.getTime() - startD.getTime()) / (1000 * 3600 * 24);
+            const groupByDay = diffDays <= 60;
 
             // KPI Calculations
             let newKpi = { ...kpiData };
@@ -283,6 +284,7 @@ const ExecutiveDashboard = () => {
                 const drivers = driverRes.value.data || [];
                 const statusCounts = { PAID: 0, PARTIAL: 0, PENDING: 0, OVERDUE: 0 };
                 const scoreCounts = { 'Unscored': 0, '<60': 0, '60-80': 0, '80+': 0 };
+                const rentMap = new Map<string, { period: string; Paid: number; Pending: number; Overdue: number }>();
 
                 drivers.forEach(d => {
                     // Fleet Collections logic
@@ -302,6 +304,28 @@ const ExecutiveDashboard = () => {
                             statusCounts.PAID++;
                         }
                     }
+
+                    // Rent trend logic
+                    rt.forEach((week: any) => {
+                        const wd = new Date(week.dueDate || week.startDate || new Date());
+                        if (wd < startD || wd > endD) return;
+                        
+                        const pKey = groupByDay 
+                            ? wd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                            : wd.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
+                            
+                        const curr = rentMap.get(pKey) || { period: pKey, Paid: 0, Pending: 0, Overdue: 0 };
+                        const amtPaid = week.amountPaid || 0;
+                        const bal = week.balance || 0;
+                        if (week.status === 'PAID') {
+                            curr.Paid += amtPaid;
+                        } else {
+                            const isOverdue = new Date(week.dueDate || '') < new Date();
+                            if (isOverdue) curr.Overdue += bal;
+                            else curr.Pending += bal;
+                        }
+                        rentMap.set(pKey, curr);
+                    });
 
                     // Score Logic
                     const s = d.performance?.drivingScore || 0;
@@ -323,6 +347,16 @@ const ExecutiveDashboard = () => {
                     { name: '60-80', Drivers: scoreCounts['60-80'], fill: COLORS.yellow },
                     { name: '80+', Drivers: scoreCounts['80+'], fill: COLORS.green }
                 ].filter(d => d.Drivers > 0));
+
+                const rTrend = Array.from(rentMap.values()).sort((a,b) => {
+                    if (groupByDay) {
+                        const da = new Date(`${a.period} ${new Date().getFullYear()}`);
+                        const db = new Date(`${b.period} ${new Date().getFullYear()}`);
+                        return da.getTime() - db.getTime();
+                    }
+                    return new Date(`01 ${a.period}`).getTime() - new Date(`01 ${b.period}`).getTime();
+                });
+                setRentTrendData(rTrend);
             }
 
             // 3. Vehicle Analytics
@@ -355,16 +389,43 @@ const ExecutiveDashboard = () => {
             if (poRes.status === 'fulfilled') {
                 const pos = poRes.value.data || [];
                 let approved = 0, waiting = 0, rejected = 0;
+                const poMap = new Map<string, { period: string; Approved: number; Pending: number; Rejected: number }>();
+
                 pos.forEach(p => {
                     if (p.status === 'APPROVED') approved++;
                     else if (p.status === 'REJECTED') rejected++;
                     else waiting++; // WAITING or others
+
+                    const pd = new Date(p.createdAt || p.date || new Date());
+                    if (pd < startD || pd > endD) return;
+                    
+                    const pKey = groupByDay 
+                        ? pd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                        : pd.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
+                        
+                    const curr = poMap.get(pKey) || { period: pKey, Approved: 0, Pending: 0, Rejected: 0 };
+                    const amt = p.totalAmount || 1;
+                    if (p.status === 'APPROVED') curr.Approved += amt;
+                    else if (p.status === 'REJECTED') curr.Rejected += amt;
+                    else curr.Pending += amt;
+                    poMap.set(pKey, curr);
                 });
+
                 setPoData([
                     { name: 'Waiting', value: waiting, color: COLORS.yellow },
                     { name: 'Approved', value: approved, color: COLORS.green },
                     { name: 'Rejected', value: rejected, color: COLORS.red }
                 ].filter(d => d.value > 0));
+
+                const poTrend = Array.from(poMap.values()).sort((a,b) => {
+                    if (groupByDay) {
+                        const da = new Date(`${a.period} ${new Date().getFullYear()}`);
+                        const db = new Date(`${b.period} ${new Date().getFullYear()}`);
+                        return da.getTime() - db.getTime();
+                    }
+                    return new Date(`01 ${a.period}`).getTime() - new Date(`01 ${b.period}`).getTime();
+                });
+                setPoTrendData(poTrend);
             }
 
             // 5. Staff Analytics

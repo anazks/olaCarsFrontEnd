@@ -134,7 +134,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Customers', path: '/admin/financial-admin/customers' },
                 { label: 'Invoices', path: '/admin/financial-admin/invoices' },
                 { label: 'Payments Received', path: '/admin/financial-admin/payments-received' },
-                { label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' },
+                ...(currentUser?.role !== 'admin' ? [{ label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' }] : []),
             ]
         },
         {
