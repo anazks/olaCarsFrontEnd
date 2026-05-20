@@ -117,47 +117,73 @@ const GeneralLedger = () => {
         return sum + (entry.credit || 0);
     }, 0);
 
+    const handleInvoiceClick = async (invoiceNumber: string) => {
+        try {
+            const { getInvoices } = await import('../../../services/invoiceService');
+            const response = await getInvoices({ search: invoiceNumber });
+            if (response.data && response.data.length > 0) {
+                const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
+                navigate(`/admin/financial-admin/invoices/${invoice._id}`);
+            } else {
+                navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+            }
+        } catch (err) {
+            navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+        }
+    };
+
+    const handleBillClick = async (billNumber: string) => {
+        try {
+            const { getAllBills } = await import('../../../services/billService');
+            const response = await getAllBills({ search: billNumber });
+            if (response.success && response.data && response.data.length > 0) {
+                const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
+                navigate(`/admin/financial-admin/bills/${bill._id}`);
+            } else {
+                navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+            }
+        } catch (err) {
+            navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+        }
+    };
+
     const renderDescriptionWithLinks = (description: string) => {
         if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
 
-        // Check for Bill patterns: e.g., BILL-1779... or "Bill BILL-..."
-        const billRegex = /(BILL-\d+|BILL-\w+)/i;
-        const invoiceRegex = /((?:INV|MAN)-\d+-\d+|(?:INV|MAN)-\d+)/i;
+        const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/i;
+        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
 
         const matchBill = description.match(billRegex);
         const matchInvoice = description.match(invoiceRegex);
 
-        const hasBill = !!matchBill || description.toLowerCase().includes('bill');
-        const hasInvoice = !!matchInvoice || description.toLowerCase().includes('invoice');
-
-        if (hasBill) {
-            const billNum = matchBill ? matchBill[0] : '';
+        if (matchBill) {
+            const billNum = matchBill[0];
             return (
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => navigate('/admin/financial-admin/bills', { state: { search: billNum } })}
+                        onClick={() => handleBillClick(billNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                     >
                         <Receipt size={11} strokeWidth={2.5} />
-                        View Bill {billNum ? `(${billNum})` : ''}
+                        View Bill ({billNum})
                     </button>
                 </div>
             );
         }
 
-        if (hasInvoice) {
-            const invNum = matchInvoice ? matchInvoice[0] : '';
+        if (matchInvoice) {
+            const invNum = matchInvoice[0];
             return (
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => navigate('/admin/financial-admin/invoices', { state: { search: invNum } })}
+                        onClick={() => handleInvoiceClick(invNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                         style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
                     >
                         <FileText size={11} strokeWidth={2.5} />
-                        View Invoice {invNum ? `(${invNum})` : ''}
+                        View Invoice ({invNum})
                     </button>
                 </div>
             );
