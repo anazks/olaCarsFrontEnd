@@ -124,18 +124,21 @@ function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
 
-  // Background permission/profile refresh (every 2 minutes for faster updates)
-  useAuthRefresh(120000);
+  // Activity-aware background token & profile refresh (profile every 5 minutes)
+  useAuthRefresh(300000);
 
   useEffect(() => {
-    // Check token validity every 30 seconds
+    // Check token validity every 60 seconds — but only logout if there's
+    // truly no way to recover (no refresh token at all)
     const interval = setInterval(() => {
       const token = getToken();
       if (token && !isTokenValid()) {
-        console.warn('[App] Session expired - logging out');
+        // isTokenValid already returns true if a refreshToken exists,
+        // so reaching here means BOTH tokens are gone/expired
+        console.warn('[App] Session fully expired (no refresh token) — logging out');
         logout();
       }
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
