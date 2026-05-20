@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ShieldAlert, MapPin, Car, Phone, Mail, ArrowLeft,
-    CheckCircle2, XCircle, Clock, Eye, AlertTriangle, 
-    FileText, Camera, Users, Calendar, AlertCircle, Sparkles,
+    CheckCircle2, Clock, Eye, AlertTriangle, 
+    FileText, Camera, Users, Calendar,
     UserCheck, ShieldCheck, Map
 } from 'lucide-react';
 import { 
@@ -11,14 +11,12 @@ import {
     updateAccidentReportStatus, 
     type AccidentReport 
 } from '../../../services/accidentReportService';
-import { getUserRole } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const AccidentReportDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const userRole = getUserRole() || '';
 
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<AccidentReport | null>(null);

@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    ShieldAlert, Search, MapPin, Car, Phone, Mail, 
-    CheckCircle2, XCircle, Clock, Eye, AlertTriangle, RefreshCw,
-    ChevronRight, FileText, Camera, Users
+    ShieldAlert, Search, MapPin, Car, 
+    CheckCircle2, Clock, Eye, AlertTriangle, RefreshCw,
+    FileText
 } from 'lucide-react';
 import { 
     getAllAccidentReports, 
     getBranchAccidentReports, 
-    updateAccidentReportStatus, 
     type AccidentReport 
 } from '../../../services/accidentReportService';
 import { getUserRole, getUser } from '../../../utils/auth';
