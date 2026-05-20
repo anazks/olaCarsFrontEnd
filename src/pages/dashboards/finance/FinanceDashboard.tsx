@@ -4,7 +4,7 @@ import {
     List, Calculator, BookMarked, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2, ClipboardList
+    Building2, ClipboardList, FileText
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -17,11 +17,11 @@ import type { Expense } from '../../../services/expenseService';
 import { useNavigate } from 'react-router-dom';
 import { 
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
+    Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
-import { getUser } from '../../../utils/auth';
+import { getUser, getUserRole } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -32,6 +32,7 @@ const FinanceDashboard = () => {
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
     const user = getUser();
+    const userRole = getUserRole();
 
     // Zoho Toggles
     // @ts-ignore
@@ -74,15 +75,15 @@ const FinanceDashboard = () => {
         try {
             // Safe aggregation: catch individual failures so the UI never crashes
             const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes] = await Promise.all([
-                getLedgerEntries().catch(() => [] as LedgerEntry[]),
+                getLedgerEntries().catch(() => ({ data: [] as LedgerEntry[] })),
                 getTasks({ assignedTo: user?.id || user?._id }).catch(() => [] as StaffTask[]),
                 getInvoices({ limit: 1000 }).catch(() => ({ data: [] as Invoice[] })),
                 getAllBills({ limit: 1000 }).catch(() => ({ data: [] as Bill[] })),
                 getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] as Expense[] }))
             ]);
 
-            const resolvedLedger = Array.isArray(ledgerRes) ? ledgerRes : [];
-            const resolvedTasks = Array.isArray(taskRes) ? taskRes : [];
+            const resolvedLedger = Array.isArray(ledgerRes) ? ledgerRes : (ledgerRes && 'data' in ledgerRes && Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
+            const resolvedTasks = Array.isArray(taskRes) ? taskRes : (taskRes && 'data' in taskRes && Array.isArray(taskRes.data) ? taskRes.data : []);
             const resolvedInvoices = (invoiceRes && Array.isArray(invoiceRes.data)) ? invoiceRes.data : [];
             
             // Extract Bills from response which has standard { success: true, data: Bill[] }
@@ -819,7 +820,7 @@ const FinanceDashboard = () => {
                     <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-6 mb-6">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block" />
+                                <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: 'rgb(212, 241, 46)' }} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-dim">Total Income</span>
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black font-mono" style={{ color: 'var(--text-main)' }}>
@@ -828,7 +829,7 @@ const FinanceDashboard = () => {
                         </div>
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded bg-red-500 inline-block" />
+                                <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: 'rgba(212, 241, 46, 0.4)' }} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-dim">Total Expenses</span>
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black font-mono" style={{ color: 'var(--text-main)' }}>
@@ -843,13 +844,15 @@ const FinanceDashboard = () => {
                             <BarChart data={currentMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(Number(value))} />
                                 <Tooltip 
                                     cursor={{ fill: 'rgba(255,255,255,0.01)' }}
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                    formatter={(value: any) => formatCurrency(Number(value))}
                                 />
-                                <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                                <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                <Bar name="Income" dataKey="income" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                <Bar name="Expense" dataKey="expense" fill="rgba(212, 241, 46, 0.4)" radius={[4, 4, 0, 0]} maxBarSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -880,44 +883,20 @@ const FinanceDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Donut Chart container with absolute center metric */}
-                    <div className="relative flex justify-center items-center py-6" style={{ minHeight: 200 }}>
-                        <div className="absolute text-center flex flex-col justify-center items-center pointer-events-none">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-dim">All Expenses</span>
-                            <span className="text-base sm:text-lg font-black font-mono mt-1" style={{ color: 'var(--text-main)' }}>
-                                {formatCurrency(currentDataset.topExpenses.reduce((acc, curr) => acc + curr.value, 0))}
-                            </span>
-                        </div>
-
-                        <ResponsiveContainer width="100%" height={180}>
-                            <PieChart>
-                                <Pie
-                                    data={currentDataset.topExpenses}
-                                    innerRadius={55}
-                                    outerRadius={75}
-                                    paddingAngle={3}
-                                    dataKey="value"
-                                >
-                                    {currentDataset.topExpenses.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                            </PieChart>
+                    {/* Line Chart container */}
+                    <div className="py-6" style={{ minHeight: 220 }}>
+                        <ResponsiveContainer width="100%" height={220}>
+                            <LineChart data={[...currentDataset.topExpenses].sort((a,b)=>b.value-a.value)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} dy={8} />
+                                <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={(val) => formatCurrency(val)} />
+                                <Tooltip 
+                                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                    formatter={(value: any) => formatCurrency(Number(value))} 
+                                />
+                                <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                            </LineChart>
                         </ResponsiveContainer>
-                    </div>
-
-                    {/* Legend listing */}
-                    <div className="space-y-3.5 mt-4">
-                        {currentDataset.topExpenses.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-xs font-bold">
-                                <div className="flex items-center gap-2 max-w-[65%]">
-                                    <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                                    <span className="text-dim truncate">{item.name}</span>
-                                </div>
-                                <span className="font-mono shrink-0" style={{ color: 'var(--text-main)' }}>{formatCurrency(item.value)}</span>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </div>
@@ -943,25 +922,27 @@ const FinanceDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                    {/* Area Chart */}
+                    {/* Line Chart */}
                     <div className="xl:col-span-3" style={{ width: '100%', height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--brand-lime)" stopOpacity={0.2}/>
-                                        <stop offset="95%" stopColor="var(--brand-lime)" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
+                            <LineChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(Number(value))} />
                                 <Tooltip 
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                    formatter={(value: any) => formatCurrency(Number(value))}
+                                    itemStyle={{ color: 'rgb(212, 241, 46)', fontWeight: 'bold' }}
+                                    formatter={(value: any) => [formatCurrency(Number(value)), 'Cash Balance']}
                                 />
-                                <Area type="monotone" dataKey="cash" stroke="var(--brand-lime)" strokeWidth={3} fillOpacity={1} fill="url(#colorCash)" />
-                            </AreaChart>
+                                <Line 
+                                    type="linear" 
+                                    dataKey="cash" 
+                                    stroke="rgb(212, 241, 46)" 
+                                    strokeWidth={3} 
+                                    dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)', stroke: 'rgb(212, 241, 46)' }} 
+                                    activeDot={{ r: 7, strokeWidth: 2, fill: 'rgb(212, 241, 46)', stroke: '#000' }} 
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
 
@@ -1034,12 +1015,15 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={currentDataset.profitMargin}>
+                                <LineChart data={currentDataset.profitMargin} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <Tooltip formatter={(value: any) => `${value}%`} />
-                                    <Line type="monotone" dataKey="margin" stroke="var(--brand-lime)" strokeWidth={3} dot={false} />
+                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => `${value}%`} 
+                                    />
+                                    <Line type="monotone" dataKey="margin" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -1059,18 +1043,16 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={currentDataset.aging}>
+                                <LineChart data={currentDataset.aging} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="range" stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                    <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                                        {currentDataset.aging.map((_, idx) => {
-                                            const colors = ['#EAB308', '#F97316', '#EF4444', '#B91C1C'];
-                                            return <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />;
-                                        })}
-                                    </Bar>
-                                </BarChart>
+                                    <XAxis dataKey="range" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                    />
+                                    <Line type="monotone" dataKey="amount" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1089,14 +1071,17 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={currentDataset.taxLiability}>
+                                <LineChart data={currentDataset.taxLiability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                    <Bar dataKey="output" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Output Tax" />
-                                    <Bar dataKey="input" fill="#10B981" radius={[4, 4, 0, 0]} name="Input Tax" />
-                                </BarChart>
+                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                    />
+                                    <Line type="monotone" dataKey="output" stroke="rgb(212, 241, 46)" strokeWidth={2} name="Output Tax" dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
+                                    <Line type="monotone" dataKey="input" stroke="#0EA5E9" strokeWidth={2} name="Input Tax" dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1115,19 +1100,16 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={currentDataset.projections}>
-                                    <defs>
-                                        <linearGradient id="projColor" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={currentDataset.projections} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                    <Area type="monotone" dataKey="projected" stroke="#10B981" fillOpacity={1} fill="url(#projColor)" strokeWidth={2} />
-                                </AreaChart>
+                                    <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                    />
+                                    <Line type="monotone" dataKey="projected" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1146,19 +1128,15 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={currentDataset.revenueStreams}
-                                        innerRadius={45}
-                                        outerRadius={65}
-                                        dataKey="value"
-                                    >
-                                        {currentDataset.revenueStreams.map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                </PieChart>
+                                <LineChart data={currentDataset.revenueStreams} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                    />
+                                    <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1177,16 +1155,16 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={currentDataset.opexCapex}>
+                                <LineChart data={currentDataset.opexCapex} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} />
-                                    <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                        <Cell fill="#EC4899" />
-                                        <Cell fill="#8B5CF6" />
-                                    </Bar>
-                                </BarChart>
+                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
+                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                    />
+                                    <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1204,48 +1182,26 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Quick Navigation Shortcuts */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div 
-                    onClick={() => navigate('../taxes')}
-                    className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                        <Calculator size={16} />
+            {userRole !== 'admin' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div 
+                        onClick={() => navigate('../invoices')}
+                        className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                    >
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
+                            <FileText size={16} />
+                        </div>
+                        <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Invoices</h4>
+                        <p className="text-[9px] mt-1 text-dim">Manage financial invoices</p>
                     </div>
-                    <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Tax Ledger</h4>
-                    <p className="text-[9px] mt-1 text-dim">GST & tax rules</p>
                 </div>
-
-                <div 
-                    onClick={() => navigate('../chart-of-accounts')}
-                    className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                        <BookMarked size={16} />
-                    </div>
-                    <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Chart of Accounts</h4>
-                    <p className="text-[9px] mt-1 text-dim">Double-entry codes</p>
-                </div>
-
-                <div 
-                    onClick={() => navigate('../purchase-bills')}
-                    className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                        <ClipboardList size={16} />
-                    </div>
-                    <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Purchase Bills</h4>
-                    <p className="text-[9px] mt-1 text-dim">Track vendor liabilities</p>
-                </div>
-            </div>
+            )}
 
             {/* Bottom Deck: Assigned Tasks & Recent Transactions */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 ${userRole !== 'admin' ? 'xl:grid-cols-3' : ''} gap-6`}>
                 {/* Global Transaction Ledger */}
-                <div className="xl:col-span-2 rounded-2xl border overflow-hidden flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className={`${userRole !== 'admin' ? 'xl:col-span-2' : ''} rounded-2xl border overflow-hidden flex flex-col justify-between`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-6 bg-brand-lime rounded-full" />
@@ -1276,33 +1232,13 @@ const FinanceDashboard = () => {
                                 </thead>
                                 <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                     {liveData.ledger.length === 0 ? (
-                                        // High quality mock ledger rows matching our screen if live empty
-                                        [
-                                            { date: '2026-05-18', desc: 'Manual Invoice Generated - INV-2026-001', code: '4100', name: 'Sales Income', amount: 190000.00, isDebit: false },
-                                            { date: '2026-05-18', desc: 'Record Driver Weekly Rent Payment', code: '4100', name: 'Sales Income', amount: 101320.00, isDebit: false },
-                                            { date: '2026-05-18', desc: 'Vendor Bill Conversion - PO-49021', code: '2100', name: 'Accounts Payable', amount: 800.00, isDebit: true },
-                                            { date: '2026-05-18', desc: 'Lubricant purchase and engine test cost', code: '5100', name: 'Labor Expenses', amount: 1200.00, isDebit: true },
-                                            { date: '2026-05-18', desc: 'Brake pad replacement and job cost', code: '5200', name: 'Cost of Goods Sold', amount: 200.00, isDebit: true },
-                                            { date: '2026-05-18', desc: 'Tire rotation thread service tax', code: '5300', name: 'Job Costing', amount: 10.00, isDebit: true }
-                                        ].map((mock, idx) => (
-                                            <tr key={idx} className="hover:bg-white/[0.01] transition-colors">
-                                                <td className="px-6 py-4 font-medium" style={{ color: 'var(--text-main)' }}>{new Date(mock.date).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4 text-dim max-w-xs truncate font-medium">{mock.desc}</td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] font-mono text-dim">{mock.code}</span>
-                                                        <span className="text-[10px] font-bold text-dim">{mock.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <span className={`font-mono font-black ${mock.isDebit ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                        {mock.isDebit ? '-' : '+'}{formatCurrency(mock.amount)}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-dim font-bold text-xs uppercase tracking-wider">
+                                                No recent ledger entries found
+                                            </td>
+                                        </tr>
                                     ) : (
-                                        liveData.ledger.slice(0, 8).map((entry) => {
+                                        liveData.ledger.slice(0, 10).map((entry) => {
                                             const entryDateStr = entry.entryDate || entry.date;
                                             const dateObj = new Date(entryDateStr);
                                             const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
@@ -1337,61 +1273,63 @@ const FinanceDashboard = () => {
                 </div>
 
                 {/* Assigned Operational Missions */}
-                <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between mb-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
-                            <Activity size={14} /> Assigned Tasks
-                        </h4>
-                        <span className="text-[9px] font-bold opacity-45 px-2 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
-                            {tasks.length} Active
-                        </span>
-                    </div>
+                {userRole !== 'admin' && (
+                    <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
+                                <Activity size={14} /> Assigned Tasks
+                            </h4>
+                            <span className="text-[9px] font-bold opacity-45 px-2 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                                {tasks.length} Active
+                            </span>
+                        </div>
 
-                    <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar max-h-[300px]">
-                        {tasks.length === 0 ? (
-                            <div className="py-16 text-center opacity-20 flex flex-col items-center gap-3">
-                                <List size={32} strokeWidth={1} />
-                                <p className="text-[10px] font-black uppercase tracking-widest">No Active Task Directives</p>
-                            </div>
-                        ) : (
-                            tasks.map((task) => (
-                                <div key={task._id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] group hover:border-brand-lime/30 transition-all">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="text-xs font-black group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>{task.title}</p>
-                                        <button 
-                                            onClick={() => handleTaskUpdate(task._id!, 'COMPLETED')}
-                                            className="w-5 h-5 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-black text-[10px] transition-all"
-                                            title="Mark as completed"
-                                        >
-                                            ✓
-                                        </button>
-                                    </div>
-                                    <p className="text-[10px] text-dim font-medium line-clamp-2 mb-3">{task.description}</p>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 border border-white/10 text-dim">
-                                            {task.status}
-                                        </span>
-                                        <span className="text-[8px] font-bold opacity-30">
-                                            Due: {new Date(task.dueDate).toLocaleDateString()}
-                                        </span>
-                                    </div>
+                        <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar max-h-[300px]">
+                            {tasks.length === 0 ? (
+                                <div className="py-16 text-center opacity-20 flex flex-col items-center gap-3">
+                                    <List size={32} strokeWidth={1} />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">No Active Task Directives</p>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            ) : (
+                                tasks.map((task) => (
+                                    <div key={task._id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] group hover:border-brand-lime/30 transition-all">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <p className="text-xs font-black group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>{task.title}</p>
+                                            <button 
+                                                onClick={() => handleTaskUpdate(task._id!, 'COMPLETED')}
+                                                className="w-5 h-5 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-black text-[10px] transition-all"
+                                                title="Mark as completed"
+                                            >
+                                                ✓
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-dim font-medium line-clamp-2 mb-3">{task.description}</p>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 border border-white/10 text-dim">
+                                                {task.status}
+                                            </span>
+                                            <span className="text-[8px] font-bold opacity-30">
+                                                Due: {new Date(task.dueDate).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
 
-                    <div className="mt-6 pt-4 border-t border-white/5">
-                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-xs">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Institutional Sync</p>
+                        <div className="mt-6 pt-4 border-t border-white/5">
+                            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-xs">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Institutional Sync</p>
+                                </div>
+                                <p className="text-[10px] leading-relaxed text-dim italic">
+                                    "Real-time task tracking synchronized. Directives from financial central systems are mapped instantly."
+                                </p>
                             </div>
-                            <p className="text-[10px] leading-relaxed text-dim italic">
-                                "Real-time task tracking synchronized. Directives from financial central systems are mapped instantly."
-                            </p>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

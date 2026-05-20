@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
-    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText
+    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText, UserPlus
 } from 'lucide-react';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
+import { getUser, getUserRole } from '../../../../utils/auth';
 
 const Customers = () => {
     const navigate = useNavigate();
+    const userRole = getUserRole();
+    const user = getUser();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -156,13 +159,15 @@ const Customers = () => {
                             <DollarSign size={14} className="opacity-70" /> Payments
                         </button>
 
-                        <button
-                            onClick={() => navigate('../../shared/drivers/create')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
-                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                        >
-                            <Plus size={14} strokeWidth={3} /> Add Customer
-                        </button>
+                        {userRole !== 'admin' && (
+                            <button
+                                onClick={() => navigate('../../shared/drivers/create')}
+                                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300"
+                                style={{ background: 'var(--brand-lime)' }}
+                            >
+                                <UserPlus size={14} /> Add Customer
+                            </button>
+                        )}
                     </div>
                 </div>
 

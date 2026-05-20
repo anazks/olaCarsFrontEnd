@@ -11,10 +11,12 @@ import type { Invoice } from '../../../services/invoiceService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getUserRole } from '../../../utils/auth';
 
 const InvoiceDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const userRole = getUserRole();
     
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -303,7 +305,7 @@ const InvoiceDetail = () => {
                             </button>
                         )}
 
-                        {invoice.balance > 0 && (
+                        {invoice.balance > 0 && userRole !== 'admin' && (
                             <button 
                                 onClick={triggerCreditNoteModal}
                                 className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg transition-colors cursor-pointer"
@@ -312,7 +314,7 @@ const InvoiceDetail = () => {
                             </button>
                         )}
 
-                        {invoice.status !== 'PAID' && (
+                        {invoice.status !== 'PAID' && userRole !== 'admin' && (
                             <button 
                                 onClick={triggerPaymentModal}
                                 className="flex items-center gap-1.5 px-5 py-2.5 bg-green-500 text-white font-black text-[10px] uppercase tracking-widest hover:scale-[1.03] active:scale-95 transition-all rounded-xl shadow-2xl cursor-pointer"

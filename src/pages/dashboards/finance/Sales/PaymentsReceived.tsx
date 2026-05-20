@@ -7,6 +7,7 @@ import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
 import PaymentReceivedDetailModal from './PaymentReceivedDetailModal';
+import { getUser, getUserRole } from '../../../../utils/auth';
 
 interface InvoiceReference {
     invoiceId: string;
@@ -49,6 +50,8 @@ interface PaymentReceived {
 }
 
 const PaymentsReceived = () => {
+    const user = getUser();
+    const userRole = getUserRole();
     const [payments, setPayments] = useState<PaymentReceived[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -151,14 +154,16 @@ const PaymentsReceived = () => {
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                     </button>
-                    <button
-                        onClick={() => setIsRecordModalOpen(true)}
-                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300 cursor-pointer"
-                        style={{ background: 'var(--brand-lime)' }}
-                    >
-                        <DollarSign size={14} />
-                        Record Payment
-                    </button>
+                    {userRole !== 'admin' && (
+                        <button
+                            onClick={() => setIsRecordModalOpen(true)}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300 cursor-pointer"
+                            style={{ background: 'var(--brand-lime)' }}
+                        >
+                            <DollarSign size={14} />
+                            Record Payment
+                        </button>
+                    )}
                 </div>
             </div>
 
