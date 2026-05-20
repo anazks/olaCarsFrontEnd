@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell,
-    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
+    LineChart, Line
 } from 'recharts';
 import {
     Car, Users, DollarSign, RefreshCw, Activity, ShoppingCart,
@@ -37,6 +38,8 @@ const ExecutiveDashboard = () => {
     const [poData, setPoData] = useState<any[]>([]);
     const [staffData, setStaffData] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
+    const [rentTrendData, setRentTrendData] = useState<any[]>([]);
+    const [poTrendData, setPoTrendData] = useState<any[]>([]);
     // KPI States
     const [kpiData, setKpiData] = useState({
         totalActiveVehicles: 0,
@@ -752,15 +755,13 @@ const ExecutiveDashboard = () => {
                             <div className="h-[220px] w-full relative z-10">
                                 {financeTotals.some(t => t.amount > 0) ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={financeTotals} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+                                        <LineChart data={financeTotals} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                             <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                                {financeTotals.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Bar>
-                                        </BarChart>
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Line type="monotone" dataKey="amount" stroke="#148F85" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Financial Data</div>
@@ -779,21 +780,24 @@ const ExecutiveDashboard = () => {
                                 <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
                                     <Users size={20} className="group-hover:scale-110 transition-transform" />
                                 </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-blue-500 transition-colors">Fleet Payables</h2>
+                                <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-blue-500 transition-colors">Fleet Payables (Rent Trend)</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {fleetData.length > 0 ? (
+                                {rentTrendData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={fleetData} innerRadius={60} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
-                                                {fleetData.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
-                                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                                        </PieChart>
+                                        <LineChart data={rentTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                            <XAxis dataKey="period" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                            <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 600 }} />
+                                            <Line type="monotone" dataKey="Paid" name="Paid" stroke={COLORS.green} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                            <Line type="monotone" dataKey="Pending" name="Pending" stroke={COLORS.blue} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                            <Line type="monotone" dataKey="Overdue" name="Overdue" stroke={COLORS.red} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Fleet Data</div>
+                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Rent Data</div>
                                 )}
                             </div>
                         </div>
@@ -809,15 +813,13 @@ const ExecutiveDashboard = () => {
                             <div className="h-[220px] w-full">
                                 {driverData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={driverData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                        <LineChart data={driverData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                             <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="Drivers" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                                {driverData.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Bar>
-                                        </BarChart>
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Line type="monotone" dataKey="Drivers" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Drive Score Data</div>
@@ -836,15 +838,13 @@ const ExecutiveDashboard = () => {
                             <div className="h-[220px] w-full">
                                 {vehicleData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={vehicleData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                        <LineChart data={vehicleData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                             <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="count" name="Vehicles" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                                {vehicleData.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Bar>
-                                        </BarChart>
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Line type="monotone" dataKey="count" name="Vehicles" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Vehicle Data</div>
@@ -863,17 +863,21 @@ const ExecutiveDashboard = () => {
                                 <div className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-500">
                                     <ShoppingCart size={20} className="group-hover:scale-110 transition-transform" />
                                 </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-yellow-500 transition-colors">PO Tracking</h2>
+                                <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-yellow-500 transition-colors">PO Tracking (Trend)</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {poData.length > 0 ? (
+                                {poTrendData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={poData} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
-                                                {poData.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
-                                        </PieChart>
+                                        <LineChart data={poTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                            <XAxis dataKey="period" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                            <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 600 }} />
+                                            <Line type="monotone" dataKey="Approved" name="Approved" stroke={COLORS.green} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                            <Line type="monotone" dataKey="Pending" name="Pending" stroke={COLORS.yellow} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                            <Line type="monotone" dataKey="Rejected" name="Rejected" stroke={COLORS.red} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No PO Data</div>
@@ -897,15 +901,13 @@ const ExecutiveDashboard = () => {
                             <div className="h-[220px] w-full relative z-10">
                                 {staffData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={staffData} layout="vertical" margin={{ top: 0, right: 0, left: 30, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} />
-                                            <XAxis type="number" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <YAxis dataKey="name" type="category" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Bar dataKey="count" name="Staff" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                                                {staffData.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                            </Bar>
-                                        </BarChart>
+                                        <LineChart data={staffData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
+                                            <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                                            <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                            <Line type="monotone" dataKey="count" name="Staff" stroke="#f97316" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                        </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Staff Data</div>

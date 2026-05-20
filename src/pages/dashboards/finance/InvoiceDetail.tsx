@@ -299,7 +299,7 @@ const InvoiceDetail = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    {invoice.status !== 'PAID' && (
+                    {invoice.status !== 'PAID' && userRole !== 'admin' && (
                         <button 
                             onClick={triggerEditModal}
                             className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all"
@@ -309,7 +309,7 @@ const InvoiceDetail = () => {
                         </button>
                     )}
 
-                    {invoice.balance > 0 && (
+                    {invoice.balance > 0 && userRole !== 'admin' && (
                         <button 
                             onClick={triggerCreditNoteModal}
                             className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-bold text-xs rounded-xl transition-all"
@@ -318,7 +318,7 @@ const InvoiceDetail = () => {
                         </button>
                     )}
 
-                    {invoice.status !== 'PAID' && (
+                    {invoice.status !== 'PAID' && userRole !== 'admin' && (
                         <button 
                             onClick={triggerPaymentModal}
                             className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#C8E600] text-black font-black text-xs hover:scale-[1.02] active:scale-95 transition-all rounded-xl shadow-lg"
@@ -331,12 +331,14 @@ const InvoiceDetail = () => {
                         <Printer size={14}/> Print
                     </button>
 
-                    <button 
-                        onClick={handleDeleteInvoice}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all"
-                    >
-                        <Trash2 size={14}/> Delete
-                    </button>
+                    {userRole !== 'admin' && (
+                        <button 
+                            onClick={handleDeleteInvoice}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                        >
+                            <Trash2 size={14}/> Delete
+                        </button>
+                    )}
                 </div>
             </div>
 

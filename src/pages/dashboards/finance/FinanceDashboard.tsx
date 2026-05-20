@@ -1251,14 +1251,14 @@ const FinanceDashboard = () => {
                                                     <td className="px-6 py-4 text-dim max-w-xs truncate font-medium">{entry.description}</td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] font-mono text-dim">
+                                                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] text-dim">
                                                                 {entry.accountingCode?.code}
                                                             </span>
                                                             <span className="text-[10px] font-bold text-dim">{entry.accountingCode?.name}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <span className={`font-mono font-black ${isDebit ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                        <span className={`font-black ${isDebit ? 'text-red-400' : 'text-emerald-400'}`}>
                                                             {isDebit ? '-' : '+'}{formatCurrency(amount)}
                                                         </span>
                                                     </td>

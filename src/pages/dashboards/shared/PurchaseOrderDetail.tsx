@@ -6,7 +6,7 @@ import {
 } from '../../../services/purchaseOrderService';
 import systemSettingsService from '../../../services/systemSettingsService';
 import type { PurchaseOrder, POStatus } from '../../../services/purchaseOrderService';
-import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
+import { getDecodedToken, ROLE_LEVELS, getUserRole } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, UserCheck, History,
@@ -26,6 +26,7 @@ const PurchaseOrderDetail = () => {
     const [po, setPo] = useState<PurchaseOrder | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const userRole = getUserRole();
     const [actionLoading, setActionLoading] = useState(false);
     const [poThreshold, setPoThreshold] = useState<number>(1000); // Default fallback
 
@@ -224,16 +225,18 @@ const PurchaseOrderDetail = () => {
                                 <Trash2 size={18} /> Dispose PO
                             </button>
                         </HasPermission>
-                        <HasPermission permission="PURCHASE_ORDER_EDIT">
-                            <button
-                                onClick={handleConvertToBill}
-                                disabled={actionLoading}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                style={{ background: '#C8E600', color: '#111' }}
-                            >
-                                {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
-                            </button>
-                        </HasPermission>
+                        {userRole !== 'admin' && (
+                            <HasPermission permission="PURCHASE_ORDER_EDIT">
+                                <button
+                                    onClick={handleConvertToBill}
+                                    disabled={actionLoading}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                    style={{ background: '#C8E600', color: '#111' }}
+                                >
+                                    {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
+                                </button>
+                            </HasPermission>
+                        )}
                     </div>
                 )}
 

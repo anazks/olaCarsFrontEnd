@@ -236,52 +236,52 @@ const Expenses = () => {
                             <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('expenseNumber')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Expense # <SortIcon field="expenseNumber" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('expenseDate')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Date <SortIcon field="expenseDate" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('expenseAccount')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Debit Account <SortIcon field="expenseAccount" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('paidThroughAccount')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Paid Through <SortIcon field="paidThroughAccount" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('supplier')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Vendor <SortIcon field="supplier" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('customer')}>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Customer <SortIcon field="customer" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Notes / Memo</div>
+                                        <div className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Notes / Memo</div>
                                     </th>
                                     <th className="py-4 px-6 text-right group cursor-pointer select-none" onClick={() => handleSort('amount')}>
-                                        <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Amount <SortIcon field="amount" />
                                         </div>
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5 font-semibold text-xs" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
+                            <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
                                         <td colSpan={8} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={24} />
-                                                <span className="text-[10px] font-black tracking-widest text-dim uppercase">Fetching Expenses...</span>
+                                                <span className="text-xs font-black tracking-widest text-dim uppercase">Fetching Expenses...</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -296,8 +296,8 @@ const Expenses = () => {
                                 ) : sortedExpenses.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="py-20 text-center text-dim uppercase">
-                                            <p className="text-[10px] font-black tracking-widest opacity-60">No Expenses Recorded</p>
-                                            <p className="text-[9px] lowercase opacity-40 mt-1">Click Record Expense to get started</p>
+                                            <p className="text-xs font-black tracking-widest opacity-60">No Expenses Recorded</p>
+                                            <p className="text-[10px] lowercase opacity-40 mt-1">Click Record Expense to get started</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -305,56 +305,58 @@ const Expenses = () => {
                                         <tr 
                                             key={exp._id} 
                                             onClick={() => navigate(exp._id)}
-                                            className="hover:bg-white/[0.02] transition-colors cursor-pointer" 
+                                            className="transition-colors cursor-pointer group" 
                                             style={{ borderBottom: '1px solid var(--border-main)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             {/* Expense # */}
-                                            <td className="py-4.5 px-6 font-black text-brand-lime select-all" style={{ color: 'var(--brand-lime)' }}>
+                                            <td className="py-4 px-6 font-black text-brand-lime select-all" style={{ color: 'var(--brand-lime)' }}>
                                                 {exp.expenseNumber}
                                             </td>
 
                                             {/* Date */}
-                                            <td className="py-4.5 px-6" style={{ color: 'var(--text-main)' }}>
+                                            <td className="py-4 px-6 text-dim">
                                                 {new Date(exp.expenseDate).toLocaleDateString()}
                                             </td>
 
                                             {/* Debit Account */}
-                                            <td className="py-4.5 px-6" style={{ color: 'var(--text-main)' }}>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Tag size={12} className="text-brand-lime/75" />
-                                                    <span>{exp.expenseAccount?.code} - {exp.expenseAccount?.name}</span>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>{exp.expenseAccount?.name}</span>
+                                                    <span className="text-[9px] font-bold text-dim uppercase tracking-wider mt-0.5 opacity-60">Code: {exp.expenseAccount?.code}</span>
                                                 </div>
                                             </td>
 
                                             {/* Paid Through (Credit) */}
-                                            <td className="py-4.5 px-6" style={{ color: 'var(--text-main)' }}>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Landmark size={12} className="text-[#C8E600]/75" />
-                                                    <span>{exp.paidThroughAccount?.code} - {exp.paidThroughAccount?.name}</span>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>{exp.paidThroughAccount?.name}</span>
+                                                    <span className="text-[9px] font-bold text-dim uppercase tracking-wider mt-0.5 opacity-60">Code: {exp.paidThroughAccount?.code}</span>
                                                 </div>
                                             </td>
 
                                             {/* Vendor */}
-                                            <td className="py-4.5 px-6" style={{ color: 'var(--text-main)' }}>
+                                            <td className="py-4 px-6" style={{ color: 'var(--text-main)' }}>
                                                 {exp.supplier ? (
                                                     <span className="flex items-center gap-1.5 opacity-80"><ShoppingBag size={12} /> {exp.supplier.name}</span>
                                                 ) : <span className="opacity-30">—</span>}
                                             </td>
 
                                             {/* Customer */}
-                                            <td className="py-4.5 px-6" style={{ color: 'var(--text-main)' }}>
+                                            <td className="py-4 px-6" style={{ color: 'var(--text-main)' }}>
                                                 {exp.customer ? (
                                                     <span className="flex items-center gap-1.5 opacity-80"><User size={12} /> {exp.customer.name || exp.customer.firstName}</span>
                                                 ) : <span className="opacity-30">—</span>}
                                             </td>
 
                                             {/* Notes */}
-                                            <td className="py-4.5 px-6 text-dim italic truncate max-w-xs font-normal" title={exp.notes}>
+                                            <td className="py-4 px-6 text-dim italic truncate max-w-xs font-normal" title={exp.notes}>
                                                 {exp.notes || '—'}
                                             </td>
 
                                             {/* Amount */}
-                                            <td className="py-4.5 px-6 text-right font-black font-mono text-sm" style={{ color: 'var(--text-main)' }}>
+                                            <td className="py-4 px-6 text-right font-black text-sm" style={{ color: 'var(--text-main)' }}>
                                                 ${fmt(exp.amount)}
                                             </td>
                                         </tr>

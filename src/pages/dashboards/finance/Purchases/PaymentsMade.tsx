@@ -6,6 +6,7 @@ import {
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentMadeModal from './CreatePaymentMadeModal';
+import { getUserRole } from '../../../../utils/auth';
 
 interface BillReference {
     billId: string;
@@ -35,6 +36,7 @@ interface PaymentMade {
 }
 
 const PaymentsMade = () => {
+    const userRole = getUserRole();
     const [payments, setPayments] = useState<PaymentMade[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
@@ -136,14 +138,16 @@ const PaymentsMade = () => {
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                     </button>
-                    <button 
-                        onClick={() => setIsCreateModalOpen(true)} 
-                        className="flex items-center gap-1.5 px-4 py-2 bg-brand-lime text-black text-xs font-black uppercase tracking-wider rounded-xl hover:shadow-lg active:scale-95 transition-all duration-300 cursor-pointer"
-                        style={{ background: 'var(--brand-lime)' }}
-                    >
-                        <Plus size={14} strokeWidth={3} />
-                        Record Payment Made
-                    </button>
+                    {userRole !== 'admin' && (
+                        <button 
+                            onClick={() => setIsCreateModalOpen(true)} 
+                            className="flex items-center gap-1.5 px-4 py-2 bg-brand-lime text-black text-xs font-black uppercase tracking-wider rounded-xl hover:shadow-lg active:scale-95 transition-all duration-300 cursor-pointer"
+                            style={{ background: 'var(--brand-lime)' }}
+                        >
+                            <Plus size={14} strokeWidth={3} />
+                            Record Payment Made
+                        </button>
+                    )}
                 </div>
             </div>
 
