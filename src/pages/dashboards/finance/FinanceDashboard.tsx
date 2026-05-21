@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import OlaLoader from '../../../components/common/OlaLoader';
 import { 
     Activity, RefreshCw, 
-    List, Calculator, BookMarked, Plus, Calendar, 
+    List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2, ClipboardList, FileText
+    Building2, FileText
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -17,7 +18,7 @@ import type { Expense } from '../../../services/expenseService';
 import { useNavigate } from 'react-router-dom';
 import { 
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend
+    Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
@@ -49,16 +50,6 @@ const FinanceDashboard = () => {
         expenses: [] as Expense[],
         ledger: [] as LedgerEntry[],
     });
-
-    // Color Palettes
-    const COLORS = [
-        '#10B981', // Emerald (Labor / Active)
-        '#F97316', // Orange (COGS / Warning)
-        '#3B82F6', // Blue (Job Costing / Info)
-        '#EC4899', // Pink (Administrative)
-        '#8B5CF6', // Purple (Marketing)
-        '#EAB308'  // Yellow (Other)
-    ];
 
     const getCurrencySymbol = () => '$';
 
@@ -606,6 +597,10 @@ const FinanceDashboard = () => {
             opexCapex
         };
     };
+
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
+    }
 
     const currentDataset = getLiveDataCalculated();
 
@@ -1218,7 +1213,7 @@ const FinanceDashboard = () => {
                     <div className="overflow-x-auto flex-grow">
                         {loading ? (
                             <div className="py-20 flex justify-center">
-                                <div className="w-8 h-8 border-2 border-brand-lime border-t-transparent rounded-full animate-spin" />
+                                <OlaLoader size="sm" />
                             </div>
                         ) : (
                             <table className="w-full text-left border-collapse text-xs">

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import {
-    ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell,
+    ResponsiveContainer,
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
     LineChart, Line
 } from 'recharts';
@@ -32,10 +33,8 @@ const ExecutiveDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [financeTotals, setFinanceTotals] = useState<{ name: string; amount: number; fill: string }[]>([]);
-    const [fleetData, setFleetData] = useState<any[]>([]);
     const [vehicleData, setVehicleData] = useState<any[]>([]);
     const [driverData, setDriverData] = useState<any[]>([]);
-    const [poData, setPoData] = useState<any[]>([]);
     const [staffData, setStaffData] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [rentTrendData, setRentTrendData] = useState<any[]>([]);
@@ -338,12 +337,6 @@ const ExecutiveDashboard = () => {
                     else scoreCounts['80+']++;
                 });
 
-                setFleetData([
-                    { name: 'Paid', value: statusCounts.PAID, color: COLORS.green },
-                    { name: 'Pending', value: statusCounts.PENDING, color: COLORS.blue },
-                    { name: 'Overdue', value: statusCounts.OVERDUE, color: COLORS.red }
-                ].filter(d => d.value > 0));
-
                 setDriverData([
                     { name: 'Unscored', Drivers: scoreCounts.Unscored, fill: COLORS.teal },
                     { name: '<60', Drivers: scoreCounts['<60'], fill: COLORS.red },
@@ -399,7 +392,7 @@ const ExecutiveDashboard = () => {
                     else if (p.status === 'REJECTED') rejected++;
                     else waiting++; // WAITING or others
 
-                    const pd = new Date(p.createdAt || p.date || new Date());
+                    const pd = new Date(p.createdAt || p.purchaseOrderDate || new Date());
                     if (pd < startD || pd > endD) return;
                     
                     const pKey = groupByDay 
@@ -413,12 +406,6 @@ const ExecutiveDashboard = () => {
                     else curr.Pending += amt;
                     poMap.set(pKey, curr);
                 });
-
-                setPoData([
-                    { name: 'Waiting', value: waiting, color: COLORS.yellow },
-                    { name: 'Approved', value: approved, color: COLORS.green },
-                    { name: 'Rejected', value: rejected, color: COLORS.red }
-                ].filter(d => d.value > 0));
 
                 const poTrend = Array.from(poMap.values()).sort((a,b) => {
                     if (groupByDay) {
@@ -446,7 +433,9 @@ const ExecutiveDashboard = () => {
         } catch (e) {
             console.error('Failed fetching data', e);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+            }, 900);
         }
     };
 
@@ -455,6 +444,10 @@ const ExecutiveDashboard = () => {
     }, []);
 
     // ─── Render Components ──────────────────────────────────────────
+
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
+    }
 
     return (
         <div className="container-responsive space-y-6">
@@ -541,13 +534,7 @@ const ExecutiveDashboard = () => {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="min-h-[500px] flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-[#148F85] border-t-transparent rounded-full animate-spin" />
-                </div>
-            ) : (
-                <>
-                    {/* Custom KPI Layout */}
+            {/* Custom KPI Layout */}
                     <div className="flex flex-col gap-6 mb-6">
                         {/* Top Row: Left KPIs (2x2) and Right Alerts */}
                         <div className="flex flex-col lg:flex-row gap-6">
@@ -916,8 +903,6 @@ const ExecutiveDashboard = () => {
                         </div>
 
                     </div>
-                </>
-            )}
         </div>
     );
 };

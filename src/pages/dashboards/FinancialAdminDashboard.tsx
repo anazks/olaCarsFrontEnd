@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
@@ -87,7 +88,9 @@ const FinancialAdminDashboard = () => {
         } catch (error) {
             console.error('Error loading dashboard metrics', error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+            }, 900);
         }
     };
 
@@ -99,15 +102,8 @@ const FinancialAdminDashboard = () => {
         setFilters(prev => ({ ...prev, [key]: val }));
     };
 
-    if (loading && !dashboardData) {
-        return (
-            <div
-                className="h-screen w-full flex items-center justify-center transition-colors"
-                style={{ background: 'var(--bg-main)' }}
-            >
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
-            </div>
-        );
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
     }
 
     const { stats, alerts, fleetStatus, revenueOverview, overduePayments, vehicleMovement } = dashboardData || {};

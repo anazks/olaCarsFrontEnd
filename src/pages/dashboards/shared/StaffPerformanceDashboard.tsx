@@ -5,8 +5,8 @@ import {
     ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search, Target
 } from 'lucide-react';
 import { 
-    ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
-    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
+    ResponsiveContainer, 
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
     LineChart, Line, AreaChart, Area
 } from 'recharts';
 

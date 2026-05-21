@@ -26,6 +26,7 @@ import {
 import { getAllBranches } from '../../../services/branchService';
 import { useTheme } from '../../../context/ThemeContext';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import OlaLoader from '../../../components/common/OlaLoader';
 
 const CollectionsDashboard = () => {
     const { theme } = useTheme();
@@ -213,11 +214,7 @@ const CollectionsDashboard = () => {
 
     // Inline Loading spinner component
     if (loading && !metrics) {
-        return (
-            <div className="h-screen w-full flex items-center justify-center transition-colors" style={{ background: 'var(--bg-main)' }}>
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
-            </div>
-        );
+        return <OlaLoader fullScreen size="lg" />;
     }
 
     return (

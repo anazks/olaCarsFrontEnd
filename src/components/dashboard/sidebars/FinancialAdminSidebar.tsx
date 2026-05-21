@@ -30,6 +30,7 @@ interface SubItem {
     label: string;
     path: string;
     permission?: string;
+    badge?: string;
 }
 
 interface MenuItem {
@@ -54,9 +55,8 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
 
     useEffect(() => {
         // Auto expand parent section of active route if relevant
-        const currentPath = location.pathname;
         const activeItem = menuItems.find(item =>
-            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+            item.subItems?.some(sub => isActive(sub.path))
         );
         if (activeItem) {
             setOpenSection(activeItem.id);
@@ -65,8 +65,8 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
 
     const isActive = (path: string) => {
         if (!path) return false;
-        if (path === '/admin/financial-admin') {
-            return location.pathname === '/admin/financial-admin';
+        if (path === '/admin/admin' || path === '/admin/financial-admin' || path === '/admin/branch-fin-staff') {
+            return location.pathname === path;
         }
         return location.pathname.startsWith(path);
     };
@@ -93,7 +93,13 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             id: 'dashboard',
             label: t('sidebar.items.dashboard', 'Dashboard'),
             icon: <LayoutGrid size={22} />,
-            path: '/admin/financial-admin'
+            subItems: [
+                { label: 'Executive Dashboard', path: '/admin/financial-admin' },
+                { label: 'Collections Dashboard', path: '/admin/financial-admin/collections/dashboard' },
+                { label: 'Fleet Dashboard', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: 'W-Group', path: '/admin/financial-admin/wgroup-dashboard', badge: 'BETA' },
+            ]
         },
         {
             id: 'fleet',
@@ -317,11 +323,16 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                                                 <div
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
-                                                    className={`cursor-pointer py-2 text-sm transition-colors
+                                                    className={`cursor-pointer py-2 text-sm transition-colors flex items-center justify-between
                                                         ${isItActive ? 'text-[var(--sidebar-active)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
-                                                    {sub.label}
+                                                    <span>{sub.label}</span>
+                                                    {sub.badge && (
+                                                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-rose-600 text-white leading-none mr-2">
+                                                            {sub.badge}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
 

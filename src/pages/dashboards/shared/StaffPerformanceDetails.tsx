@@ -27,9 +27,6 @@ import {
     YAxis, 
     CartesianGrid, 
     Tooltip as RechartsTooltip,
-    BarChart,
-    Bar,
-    Cell,
     LineChart,
     Line
 } from 'recharts';
