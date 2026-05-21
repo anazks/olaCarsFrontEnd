@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import OlaLoader from '../../../components/common/OlaLoader';
 import { 
     Activity, RefreshCw, 
     List, Plus, Calendar, 
@@ -596,6 +597,10 @@ const FinanceDashboard = () => {
             opexCapex
         };
     };
+
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
+    }
 
     const currentDataset = getLiveDataCalculated();
 
@@ -1208,7 +1213,7 @@ const FinanceDashboard = () => {
                     <div className="overflow-x-auto flex-grow">
                         {loading ? (
                             <div className="py-20 flex justify-center">
-                                <div className="w-8 h-8 border-2 border-brand-lime border-t-transparent rounded-full animate-spin" />
+                                <OlaLoader size="sm" />
                             </div>
                         ) : (
                             <table className="w-full text-left border-collapse text-xs">

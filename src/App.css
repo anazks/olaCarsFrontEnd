@@ -518,3 +518,42 @@
   letter-spacing: 0.02em !important;
   font-weight: 500 !important;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CUSTOM OLA CONCENTRIC LOGO SPINNER OVERRIDE
+   ══════════════════════════════════════════════════════════════ */
+.animate-spin.rounded-full {
+  border-color: #C8E600 !important;
+  border-top-color: transparent !important;
+  background: #FFFFFF !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 0 15px rgba(200, 230, 0, 0.15) !important;
+}
+
+.animate-spin.rounded-full::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 58% !important;
+  height: 58% !important;
+  background: #000000 !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+}
+
+.animate-spin.rounded-full::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 25% !important;
+  height: 25% !important;
+  background: #C8E600 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 4px #C8E600 !important;
+  box-sizing: border-box !important;
+}

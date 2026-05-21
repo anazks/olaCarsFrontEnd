@@ -418,12 +418,12 @@ const PurchaseOrderList = () => {
                             <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
                                     <th className="py-4 px-3 text-left w-10">Sl No.</th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderNumber')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderNumber' as any)}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.poDetails')} <SortIcon field="purchaseOrderNumber" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('status' as any)}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.common.table.status')} <SortIcon field="status" />
                                         </div>
