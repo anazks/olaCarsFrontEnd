@@ -22,7 +22,7 @@ const InsuranceClaimsView = () => {
             const claimsRes = await getClaims();
             setClaims(claimsRes.data || []);
         } catch (error: any) {
-            toast.error(error.message || 'Failed to fetch claims');
+            toast.error(error.response?.data?.message || error.message || 'Failed to fetch claims');
         } finally {
             setLoading(false);
         }

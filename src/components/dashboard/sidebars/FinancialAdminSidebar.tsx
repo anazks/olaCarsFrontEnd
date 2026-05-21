@@ -169,7 +169,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: 'All Insurance', path: '/admin/financial-admin/vehicle-policies' },
                 { label: 'Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
-                { label: 'Settings', path: '/admin/financial-admin/insurances' },
+                { label: 'Providers', path: '/admin/financial-admin/insurances' },
             ]
         },
         {
