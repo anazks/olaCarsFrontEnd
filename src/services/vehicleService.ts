@@ -302,15 +302,37 @@ export interface VehicleFilters {
 
 // GET all vehicles
 export const getAllVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
+    const params = { ...filters } as Record<string, unknown>;
+
+    if (filters.category) {
+        params['basicDetails.category'] = filters.category;
+        delete params.category;
+    }
+    if (filters.fuelType) {
+        params['basicDetails.fuelType'] = filters.fuelType;
+        delete params.fuelType;
+    }
+
     const response = await api.get('/api/vehicle/', {
-        params: filters
+        params
     });
     return response.data;
 };
 
 // GET all available vehicles for rental
 export const getAvailableVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
-    const response = await api.get('/api/vehicle/available', { params: filters });
+    const params = { ...filters } as Record<string, unknown>;
+
+    if (filters.category) {
+        params['basicDetails.category'] = filters.category;
+        delete params.category;
+    }
+    if (filters.fuelType) {
+        params['basicDetails.fuelType'] = filters.fuelType;
+        delete params.fuelType;
+    }
+
+    const response = await api.get('/api/vehicle/available', { params });
     return response.data;
 };
 

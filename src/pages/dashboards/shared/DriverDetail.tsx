@@ -11,6 +11,18 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
+const formatDriverDate = (date?: string | null): string => {
+    if (!date) return 'N/A';
+    const parsed = new Date(date);
+    return Number.isNaN(parsed.getTime()) ? 'N/A' : parsed.toLocaleDateString();
+};
+
+const formatDriverTime = (date?: string | null, fallback = 'Just now'): string => {
+    if (!date) return fallback;
+    const parsed = new Date(date);
+    return Number.isNaN(parsed.getTime()) ? fallback : parsed.toLocaleTimeString();
+};
+
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -57,10 +69,6 @@ const DriverDetail = () => {
             } else {
                 setAssignedVehicle(null);
             }
-
-
-
-            console.log(data, "data");
 
         } catch (error) {
             console.error('Error fetching driver:', error);
@@ -739,7 +747,7 @@ const DriverDetail = () => {
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{payment.type}</p>
                                         <h3 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
-                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {formatDriverDate(payment.dueDate)}</p>
                                     </div>
                                 </div>
 
@@ -927,7 +935,7 @@ const DriverDetail = () => {
                             </div>
                             <div className="flex items-center gap-2 px-4 py-2 bg-black/20 rounded-xl border border-white/5">
                                 <History size={14} className="text-dim" />
-                                <span className="text-[10px] font-bold uppercase text-dim">Last Sync: {driver.performance?.lastUpdated ? new Date(driver.performance.lastUpdated).toLocaleTimeString() : 'Just now'}</span>
+                                <span className="text-[10px] font-bold uppercase text-dim">Last Sync: {formatDriverTime(driver.performance?.lastUpdated)}</span>
                             </div>
                         </div>
 
@@ -1000,8 +1008,8 @@ const DriverDetail = () => {
                             <InfoCard label="Email Address" value={driver.personalInfo?.email} />
                             <InfoCard label="Phone Number" value={driver.personalInfo?.phone} />
                             <InfoCard label="Branch" value={typeof driver.branch === 'object' ? driver.branch.name : driver.branch} icon={<Building2 size={14} />} />
-                            <InfoCard label="Applied Date" value={new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()} icon={<Calendar size={14} />} />
-                            <InfoCard label="Birth Date" value={driver.personalInfo?.dateOfBirth ? new Date(driver.personalInfo.dateOfBirth).toLocaleDateString() : 'N/A'} />
+                            <InfoCard label="Applied Date" value={formatDriverDate(driver.createdAt || driver.appliedAt)} icon={<Calendar size={14} />} />
+                            <InfoCard label="Birth Date" value={formatDriverDate(driver.personalInfo?.dateOfBirth)} />
                             <InfoCard label="Nationality" value={driver.personalInfo?.nationality || 'N/A'} />
                             <InfoCard label="WhatsApp" value={driver.personalInfo?.whatsappNumber || 'N/A'} />
                             <InfoCard label="ID Type" value={driver.identityDocs?.idType || 'N/A'} />
@@ -1071,7 +1079,7 @@ const DriverDetail = () => {
                             </h3>
                             <div className="space-y-3">
                                 <InfoCard label="Status" value={driver.backgroundCheck?.status} />
-                                <InfoCard label="Last Check" value={driver.backgroundCheck?.performedAt ? new Date(driver.backgroundCheck.performedAt).toLocaleDateString() : 'N/A'} />
+                                <InfoCard label="Last Check" value={formatDriverDate(driver.backgroundCheck?.performedAt)} />
                             </div>
                         </div>
                     </div>
@@ -1141,7 +1149,7 @@ const DriverDetail = () => {
                                             <div className="flex-1">
                                                 <p className="font-bold text-sm">{driver.backgroundCheck?.status || 'PENDING'}</p>
                                                 <p className="text-[10px] opacity-60 font-medium italic">
-                                                    {driver.backgroundCheck?.issuedDate ? `Issued: ${new Date(driver.backgroundCheck.issuedDate).toLocaleDateString()}` : 'Date Not Recorded'}
+                                                    {driver.backgroundCheck?.issuedDate ? `Issued: ${formatDriverDate(driver.backgroundCheck.issuedDate)}` : 'Date Not Recorded'}
                                                 </p>
                                             </div>
 

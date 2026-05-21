@@ -79,6 +79,7 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
     const [branches, setBranches] = useState<Branch[]>([]);
     const [branchesLoading, setBranchesLoading] = useState(false);
     const [selectedBranch, setSelectedBranch] = useState('');
+    const [branchError, setBranchError] = useState<string | null>(null);
     const [showAddBranch, setShowAddBranch] = useState(false);
     const [addingBranch, setAddingBranch] = useState(false);
     const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
@@ -182,7 +183,10 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
             // Refresh list and auto-select the new branch
             await fetchBranches();
             const newId = (created as any)?._id || (created as any)?.data?._id;
-            if (newId) setSelectedBranch(newId);
+            if (newId) {
+                setSelectedBranch(newId);
+                setBranchError(null);
+            }
             setShowAddBranch(false);
             setQuickBranch({ name: '', code: '', city: '', state: '', address: '', email: '', phone: '', countryManager: '' });
         } catch (err: any) {
@@ -367,9 +371,11 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         }
 
         if (needsBranchSelection && !selectedBranch) {
+            setBranchError('Please select a branch before uploading.');
             toast.error('Please select a branch before uploading.');
             return;
         }
+        setBranchError(null);
 
         setUploading(true);
         try {
@@ -378,7 +384,10 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
             const res = await bulkCreateDrivers(payload, branchToSend);
             setResult(res.data);
-            toast.success(res.message);
+            const successMessage = res.data.errors.length > 0
+                ? res.message
+                : `${res.data.created.length} driver(s) created successfully.`;
+            toast.success(successMessage);
             if (res.data.created.length > 0) {
                 onSuccess();
             }
@@ -479,7 +488,10 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                     <div className="relative">
                                         <select
                                             value={selectedBranch}
-                                            onChange={(e) => setSelectedBranch(e.target.value)}
+                                            onChange={(e) => {
+                                                setSelectedBranch(e.target.value);
+                                                if (branchError) setBranchError(null);
+                                            }}
                                             className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         >
@@ -490,6 +502,11 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                         </select>
                                         <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
                                     </div>
+                                    {branchError && (
+                                        <p className="text-xs font-semibold mt-2 ml-1" style={{ color: '#ef4444' }}>
+                                            {branchError}
+                                        </p>
+                                    )}
                                     <div className="flex items-center justify-between mt-2">
                                         {selectedBranch ? (
                                             <p className="text-xs font-medium" style={{ color: 'var(--brand-lime)' }}>
