@@ -8,7 +8,6 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedRow {
     fullName: string; email: string; phone: string;

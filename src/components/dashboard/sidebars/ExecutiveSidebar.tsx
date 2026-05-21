@@ -197,7 +197,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/admin/dashboard-settings' },
-                { label: 'Bulk Uploads', path: '/admin/admin/bulk-uploads' },
+                { label: 'System Bulk Uploads', path: '/admin/admin/bulk-uploads' },
             ]
         },
     ];

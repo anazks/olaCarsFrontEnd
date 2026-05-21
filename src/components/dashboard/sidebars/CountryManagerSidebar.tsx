@@ -152,7 +152,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/country-manager/dashboard-settings' },
-                { label: 'Bulk Uploads', path: '/admin/country-manager/bulk-uploads' },
+                { label: 'System Bulk Uploads', path: '/admin/country-manager/bulk-uploads' },
             ]
         },
     ];

@@ -9,7 +9,6 @@ import { createManualJournal } from '../../../services/ledgerService';
 import toast from 'react-hot-toast';
 
 import type { AccountingCode } from '../../../services/accountingService';
-import type { Branch } from '../../../services/branchService';
 
 interface ParsedRow {
     date: string;

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Upload, Users, Car, DatabaseZap, BookOpen, Download, ShieldAlert, ArrowRight, Lock } from 'lucide-react';
+import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -13,7 +12,6 @@ import BulkUploadJournal from '../finance/BulkUploadJournal';
 type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | null;
 
 const BulkUploadsHub = () => {
-    const { t } = useTranslation();
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
