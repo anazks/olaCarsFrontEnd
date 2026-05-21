@@ -96,7 +96,7 @@ const PurchaseOrderList = () => {
     const [endDate, setEndDate] = useState('');
 
     // Sorting State
-    const [sortBy, setSortBy] = useState<PurchaseOrderFilters['sortBy']>('createdAt');
+    const [sortBy, setSortBy] = useState<any>('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const [currentUserId, setCurrentUserId] = useState('');
@@ -172,7 +172,7 @@ const PurchaseOrderList = () => {
         }
     };
 
-    const handleSort = (field: PurchaseOrderFilters['sortBy']) => {
+    const handleSort = (field: any) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -192,7 +192,7 @@ const PurchaseOrderList = () => {
         }
     };
 
-    const SortIcon = ({ field }: { field: PurchaseOrderFilters['sortBy'] }) => {
+    const SortIcon = ({ field }: { field: any }) => {
         if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
         return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: '#C8E600' }} /></div>;
     };

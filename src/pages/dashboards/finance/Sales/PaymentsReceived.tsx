@@ -7,7 +7,7 @@ import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
 import PaymentReceivedDetailModal from './PaymentReceivedDetailModal';
-import { getUser, getUserRole } from '../../../../utils/auth';
+import { getUserRole } from '../../../../utils/auth';
 
 interface InvoiceReference {
     invoiceId: string;
@@ -50,7 +50,6 @@ interface PaymentReceived {
 }
 
 const PaymentsReceived = () => {
-    const user = getUser();
     const userRole = getUserRole();
     const [payments, setPayments] = useState<PaymentReceived[]>([]);
     const [loading, setLoading] = useState<boolean>(true);

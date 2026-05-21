@@ -11,12 +11,11 @@ import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
-import { getUser, getUserRole } from '../../../utils/auth';
+import { getUserRole } from '../../../utils/auth';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const user = getUser();
     const userRole = getUserRole();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);

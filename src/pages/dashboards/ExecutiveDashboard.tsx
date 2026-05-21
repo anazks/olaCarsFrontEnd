@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-    ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell,
+    ResponsiveContainer,
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
     LineChart, Line
 } from 'recharts';
@@ -32,10 +32,8 @@ const ExecutiveDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [financeTotals, setFinanceTotals] = useState<{ name: string; amount: number; fill: string }[]>([]);
-    const [fleetData, setFleetData] = useState<any[]>([]);
     const [vehicleData, setVehicleData] = useState<any[]>([]);
     const [driverData, setDriverData] = useState<any[]>([]);
-    const [poData, setPoData] = useState<any[]>([]);
     const [staffData, setStaffData] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [rentTrendData, setRentTrendData] = useState<any[]>([]);
@@ -338,12 +336,6 @@ const ExecutiveDashboard = () => {
                     else scoreCounts['80+']++;
                 });
 
-                setFleetData([
-                    { name: 'Paid', value: statusCounts.PAID, color: COLORS.green },
-                    { name: 'Pending', value: statusCounts.PENDING, color: COLORS.blue },
-                    { name: 'Overdue', value: statusCounts.OVERDUE, color: COLORS.red }
-                ].filter(d => d.value > 0));
-
                 setDriverData([
                     { name: 'Unscored', Drivers: scoreCounts.Unscored, fill: COLORS.teal },
                     { name: '<60', Drivers: scoreCounts['<60'], fill: COLORS.red },
@@ -399,7 +391,7 @@ const ExecutiveDashboard = () => {
                     else if (p.status === 'REJECTED') rejected++;
                     else waiting++; // WAITING or others
 
-                    const pd = new Date(p.createdAt || p.date || new Date());
+                    const pd = new Date(p.createdAt || p.purchaseOrderDate || new Date());
                     if (pd < startD || pd > endD) return;
                     
                     const pKey = groupByDay 
@@ -413,12 +405,6 @@ const ExecutiveDashboard = () => {
                     else curr.Pending += amt;
                     poMap.set(pKey, curr);
                 });
-
-                setPoData([
-                    { name: 'Waiting', value: waiting, color: COLORS.yellow },
-                    { name: 'Approved', value: approved, color: COLORS.green },
-                    { name: 'Rejected', value: rejected, color: COLORS.red }
-                ].filter(d => d.value > 0));
 
                 const poTrend = Array.from(poMap.values()).sort((a,b) => {
                     if (groupByDay) {

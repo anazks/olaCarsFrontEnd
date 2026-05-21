@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     CreditCard, Plus, Search, Filter, RefreshCw, 
-    ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User, Tag, Landmark,
+    ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as expenseService from '../../../../services/expenseService';

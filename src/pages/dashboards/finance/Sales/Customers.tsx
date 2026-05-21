@@ -2,17 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
-    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText, UserPlus
+    ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus
 } from 'lucide-react';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import { getUser, getUserRole } from '../../../../utils/auth';
+import { getUserRole } from '../../../../utils/auth';
 
 const Customers = () => {
     const navigate = useNavigate();
     const userRole = getUserRole();
-    const user = getUser();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
