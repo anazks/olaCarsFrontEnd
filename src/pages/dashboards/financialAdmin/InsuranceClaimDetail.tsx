@@ -144,7 +144,7 @@ const InsuranceClaimDetail = () => {
         );
     }
 
-    const currentStatusIndex = STATUS_ORDER.indexOf(claim.status);
+    // const currentStatusIndex = STATUS_ORDER.indexOf(claim.status);
     const isTerminal = claim.status === 'CLOSED';
 
     return (
