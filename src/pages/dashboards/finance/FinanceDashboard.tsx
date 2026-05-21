@@ -18,8 +18,7 @@ import type { Expense } from '../../../services/expenseService';
 import { useNavigate } from 'react-router-dom';
 import { 
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
-    AreaChart, Area
+    Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
@@ -718,7 +717,7 @@ const FinanceDashboard = () => {
                                             <Cell fill="#F97316" />
                                         </Pie>
                                         <Tooltip 
-                                            formatter={(val: number) => formatCurrency(val === 0.001 ? 0 : val)}
+                                            formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
                                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
                                         />
                                     </PieChart>
@@ -793,7 +792,7 @@ const FinanceDashboard = () => {
                                             <Cell fill="#F43F5E" />
                                         </Pie>
                                         <Tooltip 
-                                            formatter={(val: number) => formatCurrency(val === 0.001 ? 0 : val)}
+                                            formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
                                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
                                         />
                                     </PieChart>
