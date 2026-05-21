@@ -18,7 +18,7 @@ import type { Expense } from '../../../services/expenseService';
 import { useNavigate } from 'react-router-dom';
 import { 
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, Legend
+    Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
 import type { StaffTask } from '../../../services/taskService';
@@ -655,58 +655,81 @@ const FinanceDashboard = () => {
             )}
 
             {/* ========================================================
-                1. RECEIVABLES & PAYABLES CARDS (ZOHO BOOK PARITY LAYOUT)
+                1. RECEIVABLES & PAYABLES CARDS (ENHANCED VISUAL LAYOUT)
                 ======================================================== */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Total Receivables */}
+                {/* Enhanced Total Receivables */}
                 <div className="rounded-2xl border p-6 flex flex-col justify-between group transition-all hover:border-white/10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
+                            <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-widest text-dim">Total Receivables</h3>
                         </div>
-
                     </div>
 
-                    <div className="space-y-1 mb-6">
-                        <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Invoices</p>
-                        <h2 className="text-3xl sm:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {formatCurrency(currentDataset.receivables.totalUnpaid)}
-                        </h2>
-                    </div>
-
-                    {/* Progress slider representing division of receivables */}
-                    <div className="space-y-4">
-                        <div className="w-full h-2 rounded-full overflow-hidden flex bg-white/5">
-                            {/* Current bar */}
-                            <div 
-                                className="h-full bg-emerald-500 transition-all duration-500" 
-                                style={{ width: `${currentDataset.receivables.totalUnpaid > 0 ? (currentDataset.receivables.current / currentDataset.receivables.totalUnpaid) * 100 : 0}%` }}
-                            />
-                            {/* Overdue bar */}
-                            <div 
-                                className="h-full bg-orange-500 transition-all duration-500" 
-                                style={{ width: `${currentDataset.receivables.totalUnpaid > 0 ? (currentDataset.receivables.overdue / currentDataset.receivables.totalUnpaid) * 100 : 100}%` }}
-                            />
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="space-y-1 w-full md:w-1/2">
+                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Invoices</p>
+                            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-main)' }}>
+                                {formatCurrency(currentDataset.receivables.totalUnpaid)}
+                            </h2>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between text-xs font-bold text-dim">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                                        <span>Current:</span>
+                                    </div>
+                                    <span className="font-bold text-emerald-400">{formatCurrency(currentDataset.receivables.current)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs font-bold text-dim">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block animate-pulse" />
+                                        <span>Overdue:</span>
+                                    </div>
+                                    <span className="font-bold text-orange-400">{formatCurrency(currentDataset.receivables.overdue)}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[11px] font-bold text-dim">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                                <span>Current : <span className="font-mono" style={{ color: 'var(--text-main)' }}>{formatCurrency(currentDataset.receivables.current)}</span></span>
-                            </div>
-                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-brand-lime transition-all">
-                                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block animate-pulse" />
-                                <span>Overdue : <span className="font-mono" style={{ color: 'var(--text-main)' }}>{formatCurrency(currentDataset.receivables.overdue)}</span></span>
-                                <ChevronDown size={12} className="opacity-60" />
-                            </div>
+                        <div className="h-[140px] w-full md:w-1/2 flex justify-center relative">
+                            {currentDataset.receivables.totalUnpaid === 0 ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-dim text-xs opacity-50">
+                                    <PieIcon size={32} className="mb-2 opacity-50" />
+                                    <span>No Receivables</span>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Current', value: currentDataset.receivables.current || 0.001 },
+                                                { name: 'Overdue', value: currentDataset.receivables.overdue }
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={40}
+                                            outerRadius={60}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            <Cell fill="#10B981" />
+                                            <Cell fill="#F97316" />
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
+                                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Total Payables */}
+                {/* Enhanced Total Payables */}
                 <div className="rounded-2xl border p-6 flex flex-col justify-between group transition-all hover:border-white/10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-widest text-dim">Total Payables</h3>
@@ -719,38 +742,62 @@ const FinanceDashboard = () => {
                         </button>
                     </div>
 
-                    <div className="space-y-1 mb-6">
-                        <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Bills</p>
-                        <h2 className="text-3xl sm:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {formatCurrency(currentDataset.payables.totalUnpaid)}
-                        </h2>
-                    </div>
-
-                    {/* Progress slider representing payables */}
-                    <div className="space-y-4">
-                        <div className="w-full h-2 rounded-full overflow-hidden flex bg-white/5">
-                            {/* Current bar */}
-                            <div 
-                                className="h-full bg-blue-500 transition-all duration-500" 
-                                style={{ width: `${currentDataset.payables.totalUnpaid > 0 ? (currentDataset.payables.current / currentDataset.payables.totalUnpaid) * 100 : 100}%` }}
-                            />
-                            {/* Overdue bar */}
-                            <div 
-                                className="h-full bg-orange-500 transition-all duration-500" 
-                                style={{ width: `${currentDataset.payables.totalUnpaid > 0 ? (currentDataset.payables.overdue / currentDataset.payables.totalUnpaid) * 100 : 0}%` }}
-                            />
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="space-y-1 w-full md:w-1/2">
+                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Bills</p>
+                            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-main)' }}>
+                                {formatCurrency(currentDataset.payables.totalUnpaid)}
+                            </h2>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between text-xs font-bold text-dim">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+                                        <span>Current:</span>
+                                    </div>
+                                    <span className="font-bold text-blue-400">{formatCurrency(currentDataset.payables.current)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs font-bold text-dim">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block animate-pulse" />
+                                        <span>Overdue:</span>
+                                    </div>
+                                    <span className="font-bold text-rose-400">{formatCurrency(currentDataset.payables.overdue)}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[11px] font-bold text-dim">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block animate-pulse" />
-                                <span>Current : <span className="font-mono" style={{ color: 'var(--text-main)' }}>{formatCurrency(currentDataset.payables.current)}</span></span>
-                            </div>
-                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-brand-lime transition-all">
-                                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />
-                                <span>Overdue : <span className="font-mono" style={{ color: 'var(--text-main)' }}>{formatCurrency(currentDataset.payables.overdue)}</span></span>
-                                <ChevronDown size={12} className="opacity-60" />
-                            </div>
+                        <div className="h-[140px] w-full md:w-1/2 flex justify-center relative">
+                            {currentDataset.payables.totalUnpaid === 0 ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-dim text-xs opacity-50">
+                                    <PieIcon size={32} className="mb-2 opacity-50" />
+                                    <span>No Payables</span>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Current', value: currentDataset.payables.current || 0.001 },
+                                                { name: 'Overdue', value: currentDataset.payables.overdue }
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={40}
+                                            outerRadius={60}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            <Cell fill="#3B82F6" />
+                                            <Cell fill="#F43F5E" />
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
+                                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -818,7 +865,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: 'rgb(212, 241, 46)' }} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-dim">Total Income</span>
                             </div>
-                            <h2 className="text-xl sm:text-2xl font-black font-mono" style={{ color: 'var(--text-main)' }}>
+                            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
                                 {formatCurrency(currentIncome)}
                             </h2>
                         </div>
@@ -827,7 +874,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: 'rgba(212, 241, 46, 0.4)' }} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-dim">Total Expenses</span>
                             </div>
-                            <h2 className="text-xl sm:text-2xl font-black font-mono" style={{ color: 'var(--text-main)' }}>
+                            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
                                 {formatCurrency(currentExpense)}
                             </h2>
                         </div>
@@ -878,19 +925,20 @@ const FinanceDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Line Chart container */}
-                    <div className="py-6" style={{ minHeight: 220 }}>
-                        <ResponsiveContainer width="100%" height={220}>
-                            <LineChart data={[...currentDataset.topExpenses].sort((a,b)=>b.value-a.value)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} dy={8} />
-                                <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={(val) => formatCurrency(val)} />
+                    {/* Enhanced Bar Chart container (Reduced Size) */}
+                    <div className="py-4 flex-grow flex items-center justify-center" style={{ minHeight: 160, maxHeight: 160 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={[...currentDataset.topExpenses].sort((a,b)=>b.value-a.value).slice(0, 5)} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
+                                <XAxis type="number" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={(val) => formatCurrency(val)} />
+                                <YAxis type="category" dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} width={80} />
                                 <Tooltip 
+                                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                     formatter={(value: any) => formatCurrency(Number(value))} 
                                 />
-                                <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                            </LineChart>
+                                <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[0, 4, 4, 0]} barSize={16} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -917,27 +965,21 @@ const FinanceDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                    {/* Line Chart */}
+                    {/* Bar Chart */}
                     <div className="xl:col-span-3" style={{ width: '100%', height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={10} />
                                 <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(Number(value))} />
                                 <Tooltip 
+                                    cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                     itemStyle={{ color: 'rgb(212, 241, 46)', fontWeight: 'bold' }}
                                     formatter={(value: any) => [formatCurrency(Number(value)), 'Cash Balance']}
                                 />
-                                <Line 
-                                    type="linear" 
-                                    dataKey="cash" 
-                                    stroke="rgb(212, 241, 46)" 
-                                    strokeWidth={3} 
-                                    dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)', stroke: 'rgb(212, 241, 46)' }} 
-                                    activeDot={{ r: 7, strokeWidth: 2, fill: 'rgb(212, 241, 46)', stroke: '#000' }} 
-                                />
-                            </LineChart>
+                                <Bar dataKey="cash" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </div>
 
@@ -949,7 +991,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded bg-gray-500 inline-block" />
                                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">Cash as on 01/04/2026</span>
                             </div>
-                            <h3 className="text-lg font-black font-mono" style={{ color: 'var(--text-main)' }}>
+                            <h3 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
                                 {formatCurrency(currentDataset.cashFlow.startCash)}
                             </h3>
                         </div>
@@ -960,7 +1002,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block animate-pulse" />
                                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">Incoming ( + )</span>
                             </div>
-                            <h3 className="text-lg font-black font-mono text-emerald-400">
+                            <h3 className="text-lg font-bold text-emerald-400">
                                 {formatCurrency(currentDataset.cashFlow.incoming)}
                             </h3>
                         </div>
@@ -971,7 +1013,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded bg-red-500 inline-block" />
                                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">Outgoing ( - )</span>
                             </div>
-                            <h3 className="text-lg font-black font-mono text-red-400">
+                            <h3 className="text-lg font-bold text-red-400">
                                 {formatCurrency(currentDataset.cashFlow.outgoing)}
                             </h3>
                         </div>
@@ -982,7 +1024,7 @@ const FinanceDashboard = () => {
                                 <span className="w-2.5 h-2.5 rounded bg-brand-lime inline-block" />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Cash as on 31/03/2027 ( = )</span>
                             </div>
-                            <h3 className="text-xl font-black font-mono text-brand-lime">
+                            <h3 className="text-xl font-bold text-brand-lime">
                                 {formatCurrency(currentDataset.cashFlow.endCash)}
                             </h3>
                         </div>
@@ -1018,7 +1060,7 @@ const FinanceDashboard = () => {
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => `${value}%`} 
                                     />
-                                    <Line type="monotone" dataKey="margin" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
+                                    <Line type="linear" dataKey="margin" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -1038,7 +1080,7 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={currentDataset.aging} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <BarChart data={currentDataset.aging} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="range" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
@@ -1046,8 +1088,8 @@ const FinanceDashboard = () => {
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => formatCurrency(Number(value))} 
                                     />
-                                    <Line type="monotone" dataKey="amount" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                </LineChart>
+                                    <Bar dataKey="amount" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1066,7 +1108,7 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={currentDataset.taxLiability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <BarChart data={currentDataset.taxLiability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
@@ -1074,9 +1116,9 @@ const FinanceDashboard = () => {
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => formatCurrency(Number(value))} 
                                     />
-                                    <Line type="monotone" dataKey="output" stroke="rgb(212, 241, 46)" strokeWidth={2} name="Output Tax" dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
-                                    <Line type="monotone" dataKey="input" stroke="#0EA5E9" strokeWidth={2} name="Input Tax" dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
-                                </LineChart>
+                                    <Bar dataKey="output" fill="rgb(212, 241, 46)" name="Output Tax" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                    <Bar dataKey="input" fill="#0EA5E9" name="Input Tax" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1103,7 +1145,7 @@ const FinanceDashboard = () => {
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => formatCurrency(Number(value))} 
                                     />
-                                    <Line type="monotone" dataKey="projected" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
+                                    <Line type="linear" dataKey="projected" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -1123,15 +1165,15 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={currentDataset.revenueStreams} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <BarChart data={currentDataset.revenueStreams} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <Tooltip 
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => formatCurrency(Number(value))} 
                                     />
-                                    <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                </LineChart>
+                                    <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
@@ -1150,7 +1192,7 @@ const FinanceDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: 160 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={currentDataset.opexCapex} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <BarChart data={currentDataset.opexCapex} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
@@ -1158,8 +1200,8 @@ const FinanceDashboard = () => {
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                         formatter={(value: any) => formatCurrency(Number(value))} 
                                     />
-                                    <Line type="monotone" dataKey="value" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                </LineChart>
+                                    <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
