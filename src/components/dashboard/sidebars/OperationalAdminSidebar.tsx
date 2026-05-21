@@ -46,9 +46,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     const userRole = 'Operational Admin';
 
     useEffect(() => {
-        const currentPath = location.pathname;
         const activeItem = menuItems.find(item =>
-            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+            item.subItems?.some(sub => isActive(sub.path))
         );
         if (activeItem) {
             setOpenSection(activeItem.id);
@@ -57,8 +56,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
 
     const isActive = (path: string) => {
         if (!path) return false;
-        if (path === '/admin/operational-admin') {
-            return location.pathname === '/admin/operational-admin';
+        if (path === '/admin/admin' || path === '/admin/financial-admin' || path === '/admin/operational-admin' || path === '/admin/branch-fin-staff') {
+            return location.pathname === path;
         }
         return location.pathname.startsWith(path);
     };
@@ -84,7 +83,12 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             id: 'dashboard',
             label: t('sidebar.items.opsOverview', 'Operations Overview'),
             icon: <LayoutGrid size={22} />,
-            path: '/admin/operational-admin'
+            subItems: [
+                { label: 'Executive Dashboard', path: '/admin/operational-admin' },
+                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
+                { label: 'Fleet Dashboard', path: '/admin/operational-admin/driver-performance' },
+                { label: 'Finance Dashboard', path: '/admin/operational-admin/finance-dashboard' },
+            ]
         },
         {
             id: 'staff',

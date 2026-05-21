@@ -88,6 +88,7 @@ import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssi
 import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerformanceDashboard';
 import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
 import StaffPerformanceDetails from './pages/dashboards/shared/StaffPerformanceDetails';
+import WGroupDashboard from './pages/dashboards/WGroupDashboard';
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
@@ -174,6 +175,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
               <Route index element={<ExecutiveDashboard />} />
+              <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
@@ -341,6 +343,7 @@ function App() {
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
@@ -360,6 +363,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
+              <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
