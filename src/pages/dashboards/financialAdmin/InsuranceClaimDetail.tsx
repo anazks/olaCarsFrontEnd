@@ -16,7 +16,7 @@ import { getVehiclePoliciesByVehicleId } from '../../../services/insuranceServic
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-const STATUS_ORDER: ClaimStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAYMENT_RECEIVED', 'CLOSED'];
+// const STATUS_ORDER: ClaimStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAYMENT_RECEIVED', 'CLOSED'];
 
 const ALLOWED_TRANSITIONS: Record<ClaimStatus, ClaimStatus[]> = {
     DRAFT: ['SUBMITTED'],
