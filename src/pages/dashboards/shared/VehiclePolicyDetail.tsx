@@ -204,7 +204,7 @@ const VehiclePolicyDetail = () => {
                                     <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">{vehicle.legalDocs?.registrationNumber || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">VIN</p>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Plate No</p>
                                     <p className="font-medium font-mono text-gray-400">{vehicle.basicDetails.vin}</p>
                                 </div>
                             </div>

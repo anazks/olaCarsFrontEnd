@@ -115,13 +115,25 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: 'Assigned Missions', path: '/admin/country-manager/my-tasks' },
                 { label: 'Insurance Management', path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
                 { label: 'Manage Vehicles', path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Manage Drivers', path: '/admin/country-manager/drivers' },
+                { label: 'Pending Entry Vehicles', path: '/admin/country-manager/pending-vehicles', permission: 'VEHICLE_VIEW' },
+                { label: 'Manage Drivers', path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Alerts Management', path: '/admin/country-manager/alerts' },
 
                 { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },]
+        },
+        {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/country-manager/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/country-manager/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/country-manager/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/country-manager/collections/invoices' },
+            ]
         },
         {
             id: 'finance',

@@ -137,6 +137,8 @@ export interface Driver {
             note?: string;
         }>;
         relatedVehicle?: string;
+        invoiceRef?: string;
+        invoiceNumber?: string;
         notes?: string;
     }>;
     appliedAt: string;

@@ -103,8 +103,8 @@ const AdminLogin = () => {
             </video>
 
             {/* Theme-reactive Overlay for Readability */}
-            <div 
-                className="absolute top-0 left-0 w-full h-full z-10 transition-all duration-500" 
+            <div
+                className="absolute top-0 left-0 w-full h-full z-10 transition-all duration-500"
                 style={{ background: theme === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.3)' }}
             />
 
@@ -135,9 +135,13 @@ const AdminLogin = () => {
                         className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl mx-auto mb-4 shadow-lg"
                         style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
-                        OC
+                        <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
+                            <div className="bg-black w-[22px] h-[22px] rounded-full flex items-center justify-center">
+                                <div className="bg-[#D4F12E] w-2.5 h-2.5 rounded-full"></div>
+                            </div>
+                        </div>
                     </div>
-                    <h1 className="text-2xl font-bold transition-colors" style={{ color: 'var(--text-main)' }}>{t('login.staffPortal')}</h1>
+                    <h1 className="text-2xl font-bold transition-colors" style={{ color: 'var(--text-main)' }}> Ola Cars {t('login.staffPortal')}</h1>
                     <p className="text-sm mt-2 transition-colors" style={{ color: 'var(--text-dim)' }}>{t('login.signInMessage')}</p>
                 </div>
 

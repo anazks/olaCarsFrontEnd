@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-     MapPin, Building, 
+     Calendar, MapPin, Building, 
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { getUserRole } from '../../../utils/auth';
 
 // Services
 import { 
@@ -21,6 +23,31 @@ interface CollectionsLedgerViewProps {
 const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const navigate = useNavigate();
+
+    const getRoutePrefix = () => {
+        const role = getUserRole();
+        switch (role) {
+            case 'admin':
+                return '/admin/admin';
+            case 'financeadmin':
+            case 'financialadmin':
+                return '/admin/financial-admin';
+            case 'operationadmin':
+            case 'operationaladmin':
+                return '/admin/operational-admin';
+            case 'countrymanager':
+                return '/admin/country-manager';
+            case 'branchmanager':
+                return '/admin/branch-manager';
+            case 'financestaff':
+                return '/admin/branch-fin-staff';
+            case 'operationstaff':
+                return '/admin/branch-op-staff';
+            default:
+                return '/admin/financial-admin';
+        }
+    };
 
     // Map metadata based on props
     const meta = useMemo(() => {
@@ -60,23 +87,13 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return format(d, 'yyyy-MM-dd');
-    };
-
-    const getToday = () => {
-        return format(new Date(), 'yyyy-MM-dd');
-    };
-
     // Filter state
     const [allBranches, setAllBranches] = useState<any[]>([]);
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: type === 'GENERAL' ? getOneMonthAgo() : '',
-        endDate: type === 'GENERAL' ? getToday() : ''
+        startDate: type === 'GENERAL' ? format(startOfMonth(new Date()), 'yyyy-MM-dd') : '',
+        endDate: type === 'GENERAL' ? format(new Date(), 'yyyy-MM-dd') : ''
     });
 
     // 1. Setup Lookups
@@ -150,33 +167,6 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
-    // Keep end date valid relative to start date
-    useEffect(() => {
-        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
-            setFilters(p => ({ ...p, endDate: filters.startDate }));
-        }
-    }, [filters.startDate, filters.endDate]);
-
-    const handleStartDateChange = (val: string) => {
-        setFilters(p => ({ ...p, startDate: val }));
-    };
-
-    const handleEndDateChange = (val: string) => {
-        if (filters.startDate && val && val < filters.startDate) {
-            setFilters(p => ({ ...p, endDate: filters.startDate }));
-            return;
-        }
-        setFilters(p => ({ ...p, endDate: val }));
-    };
-
-    const clearDates = () => {
-        setFilters(p => ({
-            ...p,
-            startDate: type === 'GENERAL' ? getOneMonthAgo() : '',
-            endDate: type === 'GENERAL' ? getToday() : ''
-        }));
-    };
-
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
@@ -241,18 +231,18 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
                         <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
                              style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                            <Calendar size={15} className="opacity-60" />
                             <input type="date" value={filters.startDate} 
-                                   onChange={(e) => handleStartDateChange(e.target.value)}
-                                   className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                                   onChange={(e) => updateFilter('startDate', e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none"
                                    style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                             <span className="text-xs opacity-50">-</span>
                             <input type="date" value={filters.endDate} 
-                                   min={filters.startDate}
-                                   onChange={(e) => handleEndDateChange(e.target.value)}
-                                   className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                                   onChange={(e) => updateFilter('endDate', e.target.value)}
+                                   className="bg-transparent text-xs font-bold border-none outline-none"
                                    style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                             {(filters.startDate || filters.endDate) && (
-                                <button onClick={clearDates} className="text-red-500 ml-1"><FilterX size={14}/></button>
+                                <button onClick={() => setFilters(p => ({ ...p, startDate: '', endDate: '' }))} className="text-red-500 ml-1"><FilterX size={14}/></button>
                             )}
                         </div>
                     </>
@@ -343,14 +333,34 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                 <input type="checkbox" className="rounded border-gray-300" />
                                             </td>
                                             <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 15).toString().padStart(2, '0')}</td>
-                                            <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
+                                            <td 
+                                                className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                onClick={() => navigate(`${getRoutePrefix()}/invoices/${item.id}`)}
+                                            >
+                                                {item.invoiceNumber}
+                                            </td>
                                             <td className="py-4 px-3">
-                                                <div className="font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</div>
+                                                <div 
+                                                    className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                    onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
+                                                >
+                                                    {item.driverName}
+                                                </div>
                                                 <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
                                             </td>
                                             <td className="py-4 px-3">
-                                                <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
-                                                <div className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Fleet #{item.fleetNumber}</div>
+                                                <div 
+                                                    className="font-semibold cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                                >
+                                                    {item.vehicleNumber}
+                                                </div>
+                                                <div 
+                                                    className="text-[10px] font-black uppercase tracking-widest mt-0.5 cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                                >
+                                                    Fleet #{item.fleetNumber}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-3">
                                                 <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.branch}</div>

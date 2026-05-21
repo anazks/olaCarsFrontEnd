@@ -46,9 +46,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     const userRole = 'Operational Admin';
 
     useEffect(() => {
-        const currentPath = location.pathname;
         const activeItem = menuItems.find(item =>
-            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+            item.subItems?.some(sub => isActive(sub.path))
         );
         if (activeItem) {
             setOpenSection(activeItem.id);
@@ -57,8 +56,8 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
 
     const isActive = (path: string) => {
         if (!path) return false;
-        if (path === '/admin/operational-admin') {
-            return location.pathname === '/admin/operational-admin';
+        if (path === '/admin/admin' || path === '/admin/financial-admin' || path === '/admin/operational-admin' || path === '/admin/branch-fin-staff') {
+            return location.pathname === path;
         }
         return location.pathname.startsWith(path);
     };
@@ -84,7 +83,12 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             id: 'dashboard',
             label: t('sidebar.items.opsOverview', 'Operations Overview'),
             icon: <LayoutGrid size={22} />,
-            path: '/admin/operational-admin'
+            subItems: [
+                { label: 'Executive Dashboard', path: '/admin/operational-admin' },
+                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
+                { label: 'Fleet Dashboard', path: '/admin/operational-admin/driver-performance' },
+                { label: 'Finance Dashboard', path: '/admin/operational-admin/finance-dashboard' },
+            ]
         },
         {
             id: 'staff',
@@ -112,6 +116,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: 'Pending Entry Vehicles', path: '/admin/operational-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
                 { label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
@@ -119,6 +124,17 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                 { label: 'Alerts Management', path: '/admin/operational-admin/alerts' },
            
                 { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' }, ]
+        },
+        {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/operational-admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/operational-admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/operational-admin/collections/invoices' },
+            ]
         },
         {
             id: 'settings',

@@ -18,7 +18,7 @@ interface ParsedRow {
     emergencyName?: string; emergencyRelationship?: string; emergencyPhone?: string;
     vehicleNumber: string;
     vehicleMake?: string; vehicleModel?: string; vehicleYear?: string;
-    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string;
+    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string; vehicleSellingValue?: string;
     activationDate?: string; deactivationDate?: string; remarks?: string;
     _rowErrors: string[];
 }
@@ -32,7 +32,7 @@ const MIGRATION_COLUMNS = [
     'idType','idNumber','licenseNumber','licenseCountry','licenseExpiry',
     'emergencyName','emergencyRelationship','emergencyPhone',
     'vehicleNumber','vehicleMake','vehicleModel','vehicleYear',
-    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin',
+    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','vehicleSellingValue',
     'activationDate','deactivationDate','remarks'
 ];
 
@@ -44,7 +44,7 @@ const SAMPLE_DATA = [{
     emergencyName:'Jane Smith', emergencyRelationship:'Spouse', emergencyPhone:'+254700000002',
     vehicleNumber:'KAA 123A',
     vehicleMake:'Toyota', vehicleModel:'Corolla', vehicleYear:'2022',
-    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'',
+    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'', vehicleSellingValue:'15000',
     activationDate:'2024-01-15', deactivationDate:'', remarks:'Migrated from old system'
 }];
 

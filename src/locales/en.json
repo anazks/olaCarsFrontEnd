@@ -753,7 +753,7 @@
         "suspended": "Suspended",
         "retired": "Retired"
       },
-      "searchPlaceholder": "Search by VIN, make, or model...",
+      "searchPlaceholder": "Search by Plate No, make, or model...",
       "advancedFilters": "Advanced Filters",
       "filters": {
         "allCategories": "All Categories",
@@ -762,7 +762,7 @@
       },
       "table": {
         "vehicle": "Vehicle",
-        "vin": "VIN",
+        "vin": "Plate No",
         "year": "Year",
         "category": "Category",
         "condition": "Condition",
@@ -896,7 +896,7 @@
           "make": "Make",
           "model": "Model",
           "year": "Year",
-          "vin": "VIN",
+          "vin": "Plate No",
           "category": "Category",
           "fuel": "Fuel",
           "transmission": "Transmission",

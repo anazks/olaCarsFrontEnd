@@ -2,7 +2,7 @@ import api from './api';
 import type { Supplier } from './supplierService';
 import type { Branch } from './branchService';
 
-export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED';
+export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED';
 export type POPurpose = 'Vehicle' | 'Spare Parts' | 'Others';
 
 export interface PurchaseOrderItem {
@@ -10,6 +10,7 @@ export interface PurchaseOrderItem {
     quantity: number;
     description?: string;
     unitPrice: number;
+    accountId?: string;
     images?: (File | string)[]; // File for upload, string for view
 }
 
@@ -138,6 +139,9 @@ export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): 
         formData.append(`items[${index}][unitPrice]`, String(item.unitPrice));
         if (item.description) {
             formData.append(`items[${index}][description]`, item.description);
+        }
+        if (item.accountId) {
+            formData.append(`items[${index}][accountId]`, item.accountId);
         }
 
         if (item.images && item.images.length > 0) {

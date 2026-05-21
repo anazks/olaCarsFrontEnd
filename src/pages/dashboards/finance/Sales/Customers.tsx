@@ -2,19 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
-    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText
+    ArrowUpDown, ArrowUp, ArrowDown, Plus, DollarSign, FileText, UserPlus
 } from 'lucide-react';
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import { useTheme } from '../../../../context/ThemeContext';
-import { format } from 'date-fns';
+import { getUser, getUserRole } from '../../../../utils/auth';
 
 const Customers = () => {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
-
     const navigate = useNavigate();
+    const userRole = getUserRole();
+    const user = getUser();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,37 +23,8 @@ const Customers = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [branchFilter, setBranchFilter] = useState('ALL');
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return format(d, 'yyyy-MM-dd');
-    };
-
-    const getToday = () => {
-        return format(new Date(), 'yyyy-MM-dd');
-    };
-
-    const [startDate, setStartDate] = useState(getOneMonthAgo());
-    const [endDate, setEndDate] = useState(getToday());
-
-    // Keep end date valid relative to start date
-    useEffect(() => {
-        if (startDate && endDate && endDate < startDate) {
-            setEndDate(startDate);
-        }
-    }, [startDate, endDate]);
-
-    const handleStartDateChange = (val: string) => {
-        setStartDate(val);
-    };
-
-    const handleEndDateChange = (val: string) => {
-        if (startDate && val && val < startDate) {
-            setEndDate(startDate);
-            return;
-        }
-        setEndDate(val);
-    };
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     // Sorting State
     const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -190,13 +159,15 @@ const Customers = () => {
                             <DollarSign size={14} className="opacity-70" /> Payments
                         </button>
 
-                        <button
-                            onClick={() => navigate('../../shared/drivers/create')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
-                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                        >
-                            <Plus size={14} strokeWidth={3} /> Add Customer
-                        </button>
+                        {userRole !== 'admin' && (
+                            <button
+                                onClick={() => navigate('../../shared/drivers/create')}
+                                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300"
+                                style={{ background: 'var(--brand-lime)' }}
+                            >
+                                <UserPlus size={14} /> Add Customer
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -247,25 +218,24 @@ const Customers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border transition-colors" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
                             <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
                             <input
                                 type="date"
                                 value={startDate}
-                                onChange={e => handleStartDateChange(e.target.value)}
-                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
-                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
+                                onChange={e => setStartDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
                             />
                         </div>
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border transition-colors" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
                             <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
                             <input
                                 type="date"
                                 value={endDate}
-                                min={startDate}
-                                onChange={e => handleEndDateChange(e.target.value)}
-                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
-                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
+                                onChange={e => setEndDate(e.target.value)}
+                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                style={{ color: 'var(--text-main)' }}
                             />
                         </div>
                     </div>

@@ -135,7 +135,7 @@ const CreateInsuranceClaim = () => {
                                 <div className="p-3 bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
                                 <div>
                                     <p className="font-bold text-sm text-white">{selectedVehicle.basicDetails.make} {selectedVehicle.basicDetails.model}</p>
-                                    <p className="text-xs text-gray-400 font-mono mt-1">VIN: {selectedVehicle.basicDetails.vin} | REG: {selectedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                    <p className="text-xs text-gray-400 font-mono mt-1">Plate No: {selectedVehicle.basicDetails.vin} | REG: {selectedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
                                 </div>
                             </div>
                         )}

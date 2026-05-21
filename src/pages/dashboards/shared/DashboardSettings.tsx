@@ -22,6 +22,8 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import { changePassword } from '../../../services/authService';
 import systemSettingsService from '../../../services/systemSettingsService';
 import ManageBankAccounts from '../finance/ManageBankAccounts';
+import ChartOfAccounts from '../finance/ChartOfAccounts';
+import TaxManagement from '../finance/TaxManagement';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const DashboardSettings = () => {
@@ -31,7 +33,31 @@ const DashboardSettings = () => {
     const role = getUserRole();
     
     // State for Tabs
-    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'banking'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'accounts'>('profile');
+    const [activeAccountSubTab, setActiveAccountSubTab] = useState<'chart' | 'taxes' | 'banking'>('chart');
+
+    // Parse URL params for direct sub-tab routing
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        const sub = params.get('sub');
+        if (tab === 'accounts') {
+            setActiveTab('accounts');
+            if (sub === 'chart') {
+                setActiveAccountSubTab('chart');
+            } else if (sub === 'taxes') {
+                setActiveAccountSubTab('taxes');
+            } else if (sub === 'banking') {
+                setActiveAccountSubTab('banking');
+            }
+        } else if (tab === 'profile') {
+            setActiveTab('profile');
+        } else if (tab === 'appearance') {
+            setActiveTab('appearance');
+        } else if (tab === 'operations') {
+            setActiveTab('operations');
+        }
+    }, [window.location.search]);
 
     // Profile State
     const [passwords, setPasswords] = useState({
@@ -172,11 +198,11 @@ const DashboardSettings = () => {
                     </button>
                 )}
                 <button 
-                    onClick={() => setActiveTab('banking')}
-                    className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'banking' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
-                    style={activeTab !== 'banking' ? { color: 'var(--text-dim)' } : {}}
+                    onClick={() => setActiveTab('accounts')}
+                    className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'accounts' ? 'bg-lime text-black shadow-lg shadow-lime/20' : 'hover:bg-white/5'}`}
+                    style={activeTab !== 'accounts' ? { color: 'var(--text-dim)' } : {}}
                 >
-                    <Building2 size={16} /> Bank Accounts
+                    <Building2 size={16} /> Accounts
                 </button>
             </div>
 
@@ -496,9 +522,48 @@ const DashboardSettings = () => {
                         </div>
                     )}
 
-                    {activeTab === 'banking' && (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <ManageBankAccounts />
+                    {activeTab === 'accounts' && (
+                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                            {/* Sub-tab Navigation */}
+                            <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-main)] pb-3 overflow-x-auto no-scrollbar">
+                                <button
+                                    onClick={() => setActiveAccountSubTab('chart')}
+                                    className={`px-5 py-2.5 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all cursor-pointer ${
+                                        activeAccountSubTab === 'chart'
+                                            ? 'bg-lime text-black shadow-md shadow-lime/10'
+                                            : 'text-[var(--text-dim)] hover:text-[var(--text-main)] hover:bg-white/5'
+                                    }`}
+                                >
+                                    Chart of Accounts
+                                </button>
+                                <button
+                                    onClick={() => setActiveAccountSubTab('taxes')}
+                                    className={`px-5 py-2.5 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all cursor-pointer ${
+                                        activeAccountSubTab === 'taxes'
+                                            ? 'bg-lime text-black shadow-md shadow-lime/10'
+                                            : 'text-[var(--text-dim)] hover:text-[var(--text-main)] hover:bg-white/5'
+                                    }`}
+                                >
+                                    Tax Management
+                                </button>
+                                <button
+                                    onClick={() => setActiveAccountSubTab('banking')}
+                                    className={`px-5 py-2.5 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all cursor-pointer ${
+                                        activeAccountSubTab === 'banking'
+                                            ? 'bg-lime text-black shadow-md shadow-lime/10'
+                                            : 'text-[var(--text-dim)] hover:text-[var(--text-main)] hover:bg-white/5'
+                                    }`}
+                                >
+                                    Bank Accounts
+                                </button>
+                            </div>
+
+                            {/* Sub-tab Content Area */}
+                            <div className="pt-2">
+                                {activeAccountSubTab === 'chart' && <ChartOfAccounts isEmbedded={true} />}
+                                {activeAccountSubTab === 'taxes' && <TaxManagement isEmbedded={true} />}
+                                {activeAccountSubTab === 'banking' && <ManageBankAccounts />}
+                            </div>
                         </div>
                     )}
                 </div>

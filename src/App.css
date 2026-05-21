@@ -509,28 +509,51 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   REACT-PHONE-INPUT-2 OVERRIDES FOR DARK/LIGHT THEMES
+   RECHARTS TYPOGRAPHY & LAYOUT STYLING FIX
    ══════════════════════════════════════════════════════════════ */
-.react-tel-input .country-list {
-  background-color: var(--bg-card) !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border-main) !important;
+.recharts-text, 
+.recharts-cartesian-axis-tick-value, 
+.recharts-legend-item-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  letter-spacing: 0.02em !important;
+  font-weight: 500 !important;
 }
 
-.react-tel-input .country-list .country-name {
-  color: var(--text-main) !important;
+/* ══════════════════════════════════════════════════════════════
+   CUSTOM OLA CONCENTRIC LOGO SPINNER OVERRIDE
+   ══════════════════════════════════════════════════════════════ */
+.animate-spin.rounded-full {
+  border-color: #C8E600 !important;
+  border-top-color: transparent !important;
+  background: #FFFFFF !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 0 15px rgba(200, 230, 0, 0.15) !important;
 }
 
-.react-tel-input .country-list .dial-code {
-  color: var(--text-dim) !important;
+.animate-spin.rounded-full::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 58% !important;
+  height: 58% !important;
+  background: #000000 !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
 }
 
-.react-tel-input .country-list .country.highlight,
-.react-tel-input .country-list .country:hover {
-  background-color: var(--sidebar-hover) !important;
-}
-
-.react-tel-input .selected-flag:hover,
-.react-tel-input .selected-flag:focus {
-  background-color: var(--sidebar-hover) !important;
+.animate-spin.rounded-full::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 25% !important;
+  height: 25% !important;
+  background: #C8E600 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 4px #C8E600 !important;
+  box-sizing: border-box !important;
 }
