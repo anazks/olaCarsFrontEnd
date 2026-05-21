@@ -182,7 +182,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             subItems: [
                 { label: 'All Insurance', path: '/admin/admin/vehicle-policies' },
                 { label: 'Claims', path: '/admin/admin/insurance-claims' },
-                { label: 'Settings', path: '/admin/admin/insurances' },
+                { label: 'Providers', path: '/admin/admin/insurances' },
             ]
         },
         {
