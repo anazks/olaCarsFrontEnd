@@ -436,9 +436,17 @@ const VehicleDetail = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
-                            {vehicle.basicDetails?.make || 'New'} {vehicle.basicDetails?.model || 'Vehicle'} {vehicle.basicDetails?.year || ''}
-                        </h1>
+                        <div className="flex items-center gap-2.5">
+                            <h1 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                                {vehicle.basicDetails?.make || 'New'} {vehicle.basicDetails?.model || 'Vehicle'} {vehicle.basicDetails?.year || ''}
+                            </h1>
+                            {vehicleAlerts.some(a => a.type === 'MAINTENANCE' && a.metadata?.source === 'WORKSHOP_PULL') && (
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/25 animate-pulse flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                    Flagged
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</p>
                     </div>
                     {assignedDriver && (
@@ -467,39 +475,113 @@ const VehicleDetail = () => {
             </div>
 
             {/* Alert Banner */}
-            {vehicleAlerts.length > 0 && (
-                <div
-                    className="p-4 rounded-2xl flex items-start gap-4 border animate-in fade-in slide-in-from-top-4 duration-300"
-                    style={{
-                        background: 'rgba(239, 68, 68, 0.05)',
-                        borderColor: 'rgba(239, 68, 68, 0.2)',
-                        color: 'var(--text-main)'
-                    }}
-                >
-                    <div className="p-2 rounded-xl bg-red-500/10 text-red-500 mt-0.5">
-                        <AlertTriangle size={20} />
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="font-bold text-sm text-red-500 mb-1">Active Alerts Detected</h4>
-                        <div className="space-y-2">
-                            {vehicleAlerts.map(alert => (
-                                <div key={alert._id} className="flex items-center justify-between gap-4">
-                                    <p className="text-xs opacity-90">{alert.message}</p>
+            {(() => {
+                const workshopAlerts = vehicleAlerts.filter(a => a.type === 'MAINTENANCE' && a.metadata?.source === 'WORKSHOP_PULL');
+                const generalAlerts = vehicleAlerts.filter(a => !(a.type === 'MAINTENANCE' && a.metadata?.source === 'WORKSHOP_PULL'));
+
+                return (
+                    <div className="space-y-4">
+                        {/* Workshop Service Alerts */}
+                        {workshopAlerts.map(alert => (
+                            <div
+                                key={alert._id}
+                                className="p-4 rounded-2xl flex items-start gap-4 border animate-in fade-in slide-in-from-top-4 duration-300"
+                                style={{
+                                    background: 'rgba(245, 158, 11, 0.04)',
+                                    borderColor: 'rgba(245, 158, 11, 0.25)',
+                                    color: 'var(--text-main)'
+                                }}
+                            >
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 mt-0.5 border border-amber-500/25">
+                                    <Wrench size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                        <h4 className="font-bold text-sm text-amber-500">🛠️ Workshop Service Reminder</h4>
+                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                            Workshop Flagged
+                                        </span>
+                                    </div>
+                                    <div className="text-xs opacity-90 leading-relaxed font-medium">
+                                        {alert.message}
+                                    </div>
+                                    {alert.metadata?.notes && (
+                                        <div className="mt-2 text-xs p-2.5 rounded-lg border leading-normal animate-in fade-in duration-350" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                            <span className="font-bold block text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Workshop Notes:</span>
+                                            "{alert.metadata.notes}"
+                                        </div>
+                                    )}
+                                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-dim" style={{ color: 'var(--text-dim)' }}>
+                                        {alert.metadata?.pulledByName && (
+                                            <span>Flagged By: {alert.metadata.pulledByName}</span>
+                                        )}
+                                        {alert.createdAt && (
+                                            <span>• Flagged On: {new Date(alert.createdAt).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-2 shrink-0 pt-1">
                                     <button
                                         onClick={async () => {
                                             await alertService.resolveAlert(alert._id);
                                             setVehicleAlerts(prev => prev.filter(a => a._id !== alert._id));
                                         }}
-                                        className="text-[10px] font-bold uppercase tracking-widest text-dim hover:text-lime transition-colors whitespace-nowrap"
+                                        className="px-3.5 py-1.5 rounded-lg border text-xs font-semibold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                                        style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--text-main)' }}
                                     >
-                                        Mark Resolved
+                                        Remove Flagging
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            await alertService.resolveAlert(alert._id);
+                                            setVehicleAlerts(prev => prev.filter(a => a._id !== alert._id));
+                                        }}
+                                        className="px-3.5 py-1.5 rounded-lg border text-xs font-semibold hover:bg-[#C8E600] hover:text-[#0A0A0A] transition-all cursor-pointer"
+                                        style={{ borderColor: 'rgba(200, 230, 0, 0.3)', color: 'var(--text-main)' }}
+                                    >
+                                        Resolve & Service Done
                                     </button>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
+
+                        {/* General/System Alerts */}
+                        {generalAlerts.length > 0 && (
+                            <div
+                                className="p-4 rounded-2xl flex items-start gap-4 border animate-in fade-in slide-in-from-top-4 duration-300"
+                                style={{
+                                    background: 'rgba(239, 68, 68, 0.05)',
+                                    borderColor: 'rgba(239, 68, 68, 0.2)',
+                                    color: 'var(--text-main)'
+                                }}
+                            >
+                                <div className="p-2 rounded-xl bg-red-500/10 text-red-500 mt-0.5">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-sm text-red-500 mb-1">Active Alerts Detected</h4>
+                                    <div className="space-y-2">
+                                        {generalAlerts.map(alert => (
+                                            <div key={alert._id} className="flex items-center justify-between gap-4">
+                                                <p className="text-xs opacity-90">{alert.message}</p>
+                                                <button
+                                                    onClick={async () => {
+                                                        await alertService.resolveAlert(alert._id);
+                                                        setVehicleAlerts(prev => prev.filter(a => a._id !== alert._id));
+                                                    }}
+                                                    className="text-[10px] font-bold uppercase tracking-widest text-dim hover:text-lime transition-colors whitespace-nowrap"
+                                                >
+                                                    Mark Resolved
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Pipeline Progress - Only show if NOT active/rented */}
             {!(vehicle.status === 'ACTIVE — RENTED') && (
