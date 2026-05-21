@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell,
@@ -446,7 +447,9 @@ const ExecutiveDashboard = () => {
         } catch (e) {
             console.error('Failed fetching data', e);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+            }, 900);
         }
     };
 
@@ -455,6 +458,10 @@ const ExecutiveDashboard = () => {
     }, []);
 
     // ─── Render Components ──────────────────────────────────────────
+
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
+    }
 
     return (
         <div className="container-responsive space-y-6">
@@ -541,13 +548,7 @@ const ExecutiveDashboard = () => {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="min-h-[500px] flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-[#148F85] border-t-transparent rounded-full animate-spin" />
-                </div>
-            ) : (
-                <>
-                    {/* Custom KPI Layout */}
+            {/* Custom KPI Layout */}
                     <div className="flex flex-col gap-6 mb-6">
                         {/* Top Row: Left KPIs (2x2) and Right Alerts */}
                         <div className="flex flex-col lg:flex-row gap-6">
@@ -916,8 +917,6 @@ const ExecutiveDashboard = () => {
                         </div>
 
                     </div>
-                </>
-            )}
         </div>
     );
 };
