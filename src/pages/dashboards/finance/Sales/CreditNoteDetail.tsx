@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     DollarSign, AlertCircle, X, Printer, ArrowLeft, 
     Edit3, FileSpreadsheet, FileCheck, Undo2, Filter, 
-    RefreshCw, CheckCircle2, Sun, Moon, User, Link
+    RefreshCw, CheckCircle2, Sun, Moon, User, Link,
+    Calendar, FileText, History, Clock, CheckCircle
 } from 'lucide-react';
 import { getCreditNoteById, voidCreditNote, updateCreditNote, applyCreditNote } from '../../../../services/creditNoteService';
 import { getInvoicesByDriver } from '../../../../services/invoiceService';
@@ -207,119 +208,120 @@ const CreditNoteDetail = () => {
         }
     };
 
-
-
     const convertToWords = (num: number) => `${num.toLocaleString('en-US')} USD`;
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-[60vh]">
-                <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                <p style={{ color: 'var(--text-dim)' }}>Loading credit note details...</p>
             </div>
         );
     }
 
     if (error || !note) {
         return (
-            <div className="container-responsive py-10 text-center space-y-6">
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-8 max-w-md mx-auto shadow">
-                    <AlertCircle className="text-rose-500 mx-auto mb-4" size={48} />
-                    <h3 className="text-lg font-black uppercase tracking-wider mb-2" style={{ color: 'var(--text-main)' }}>Load Error</h3>
-                    <p className="text-sm text-dim mb-6">{error || "Credit Note details unavailable."}</p>
-                    <button onClick={() => navigate('..')} className="px-6 py-2.5 bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10">
-                        Go Back
-                    </button>
-                </div>
+            <div className="max-w-2xl mx-auto p-8 rounded-3xl border text-center space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <AlertCircle size={48} className="mx-auto text-red-500 opacity-50" />
+                <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Credit Note Not Found</h1>
+                <p style={{ color: 'var(--text-dim)' }}>{error || "The credit note you're looking for doesn't exist."}</p>
+                <button onClick={() => navigate('..')} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+                    Back to List
+                </button>
             </div>
         );
     }
 
+    const statusColors: any = {
+        OPEN: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
+        APPLIED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
+        CLOSED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
+        VOID: { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', icon: <AlertCircle size={16} /> }
+    };
+
+    const s = statusColors[note.status] || statusColors.OPEN;
+
     return (
-        <div className="container-responsive space-y-6 animate-in fade-in duration-500">
-            <Breadcrumbs 
-                items={[
-                    { label: 'Sales', path: '../credit-notes' },
-                    { label: 'Credit Notes', path: '../credit-notes' },
-                    { label: note.creditNoteNumber || 'View Note', active: true }
-                ]} 
-            />
+        <div className="max-w-6xl mx-auto space-y-6 pb-20">
+            <Breadcrumbs items={[
+                { label: 'Dashboard', path: '/admin/financial-admin' }, 
+                { label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' },
+                { label: note.creditNoteNumber || 'View Note', active: true }
+            ]} />
 
-            <div className="flex flex-col overflow-hidden border rounded-[2.5rem] shadow-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                
-                {/* Toolbar Header */}
-                <div className="p-5 border-b flex flex-col md:flex-row items-center justify-between gap-4 flex-shrink-0 rounded-t-[2.5rem]" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-4 self-start md:self-center">
-                        <button 
-                            onClick={() => navigate('../credit-notes')}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 text-brand-lime border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all cursor-pointer"
-                        >
-                            <ArrowLeft size={13} strokeWidth={3} /> Registry
-                        </button>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-black uppercase tracking-wide leading-none" style={{ color: 'var(--text-main)' }}>{note.creditNoteNumber || 'LEGACY'}</h1>
-                                <StatusBadge status={note.status} />
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>{note.creditNoteNumber || 'LEGACY'}</h1>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border"
+                                style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
+                                {s.icon} {note.status.replace('_', ' ')}
                             </div>
-                            <p className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Value Dated: {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}</p>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end md:self-center">
-                        {['OPEN', 'DRAFT'].includes(note.status) && (
-                            <>
-                                <button 
-                                    onClick={triggerApplyModal}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-xl active:scale-95 transition-all cursor-pointer"
-                                >
-                                    <FileCheck size={12} strokeWidth={2.5} /> Apply to Invoice
-                                </button>
-
-                                {/* <button 
-                                    onClick={handleRefundCreditNote}
-                                    disabled={submittingRefund}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 border border-amber-600/10 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-widest rounded-xl shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <DollarSign size={12} strokeWidth={2.5} /> Refund Credit
-                                </button> */}
-                                
-                                <button 
-                                    onClick={triggerEditModal}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-xl active:scale-95 transition-all cursor-pointer"
-                                >
-                                    <Edit3 size={12} strokeWidth={2.5} /> Edit Credit Note
-                                </button>
-
-                                <button 
-                                    onClick={handleVoidCreditNote}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer"
-                                >
-                                    <Undo2 size={12} strokeWidth={3} /> Void Credit
-                                </button>
-                            </>
-                        )}
-
-                        <div className="h-6 w-px bg-white/10 mx-1 hidden md:block" />
-                        <button
-                            onClick={toggleTheme}
-                            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                            className="flex items-center justify-center p-2.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95 transition-all cursor-pointer"
-                            style={{ color: 'var(--text-dim)' }}
-                        >
-                            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                        </button>
-                        <button onClick={() => window.print()} className="flex items-center gap-1 px-3.5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-xl active:scale-95 cursor-pointer"><Printer size={12} /> Print</button>
                     </div>
                 </div>
 
-                {/* Canvas Content Area */}
-                <div className="flex-1 p-6 md:p-10 space-y-10 overflow-y-auto custom-scrollbar" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex items-center gap-3">
+                    {['OPEN', 'DRAFT'].includes(note.status) && (
+                        <>
+                            <button 
+                                onClick={triggerEditModal}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border hover:bg-white/5 transition-all"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <Edit3 size={16} /> Edit Credit Note
+                            </button>
+
+                            <button 
+                                onClick={handleVoidCreditNote}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                            >
+                                <Undo2 size={16} /> Void Credit
+                            </button>
+
+                            <button
+                                onClick={triggerApplyModal}
+                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 text-[#111]"
+                                style={{ background: '#C8E600' }}
+                            >
+                                <FileCheck size={16} /> Apply to Invoice
+                            </button>
+                        </>
+                    )}
+                    <div className="h-6 w-px bg-white/10 mx-1" />
+                    <button
+                        onClick={toggleTheme}
+                        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        className="flex items-center justify-center p-2.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95 transition-all cursor-pointer"
+                        style={{ color: 'var(--text-dim)' }}
+                    >
+                        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                    </button>
+                    <button 
+                        onClick={() => window.print()} 
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border hover:bg-white/5 transition-all"
+                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <Printer size={16} /> Print
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Linked Invoice Alert Banner */}
                     {note.invoiceId && note.status === 'CLOSED' && (
-                        <div className="w-full max-w-4xl mx-auto p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex justify-between items-center shadow-inner animate-in fade-in duration-300">
+                        <div className="p-4 rounded-2xl flex justify-between items-center shadow-inner border animate-in fade-in duration-300"
+                            style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
                             <div className="flex items-center gap-3">
                                 <FileCheck className="text-blue-400" size={18} />
                                 <div>
-                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Applied directly to invoice</p>
-                                    <p className="text-[10px] text-dim mt-0.5">Dynamic offset finalized against {note.invoiceId.invoiceNumber}</p>
+                                    <p className="text-xs font-bold uppercase" style={{ color: 'var(--text-main)' }}>Applied directly to invoice</p>
+                                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>Dynamic offset finalized against {note.invoiceId.invoiceNumber}</p>
                                 </div>
                             </div>
                             <span className="text-[9px] font-black text-blue-400 border border-blue-500/30 bg-blue-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Applied</span>
@@ -327,143 +329,195 @@ const CreditNoteDetail = () => {
                     )}
 
                     {note.invoiceId && ['OPEN', 'DRAFT'].includes(note.status) && (
-                        <div className="w-full max-w-4xl mx-auto p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex justify-between items-center shadow-inner animate-in fade-in duration-300">
+                        <div className="p-4 rounded-2xl flex justify-between items-center shadow-inner border animate-in fade-in duration-300"
+                            style={{ background: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>
                             <div className="flex items-center gap-3">
                                 <AlertCircle className="text-amber-400" size={18} />
                                 <div>
-                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Linked intended target</p>
-                                    <p className="text-[10px] text-dim mt-0.5">Ready to be applied to {note.invoiceId.invoiceNumber}. Click "Apply to Invoice" above to post.</p>
+                                    <p className="text-xs font-bold uppercase" style={{ color: 'var(--text-main)' }}>Linked intended target</p>
+                                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>Ready to be applied to {note.invoiceId.invoiceNumber}. Click "Apply to Invoice" above to post.</p>
                                 </div>
                             </div>
                             <span className="text-[9px] font-black text-amber-400 border border-amber-500/30 bg-amber-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Draft Link</span>
                         </div>
                     )}
 
-                    {/* PRINT SHEET CANVAS */}
-                    <div className="w-full max-w-4xl mx-auto rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col aspect-[1/1.41] relative animate-in zoom-in-95 select-text" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                        <div className={`absolute top-8 -right-12 rotate-45 text-white text-[10px] font-black uppercase tracking-widest py-1.5 px-14 flex items-center justify-center shadow select-none ${note.status === 'VOID' ? 'bg-rose-500':'bg-emerald-500'}`}>
-                            {note.status}
-                        </div>
-                        <div className="p-8 md:p-14 flex-1 flex flex-col space-y-12">
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b pb-10" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="space-y-2">
-                                    <h3 className="text-2xl font-black text-brand-lime px-4 py-1.5 rounded-xl inline-block select-none" style={{ background: 'var(--bg-input)' }}>OLA CARS</h3>
-                                    <p className="text-xs font-bold tracking-tight" style={{ color: 'var(--text-dim)' }}>Logistics Finance Division</p>
+                    {/* Summary Card */}
+                    <div className="rounded-3xl border p-6 grid grid-cols-1 sm:grid-cols-2 gap-8" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                    <User size={20} />
                                 </div>
-                                <div className="text-right">
-                                    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Credit Note</h2>
-                                    <div className="grid grid-cols-2 gap-x-5 gap-y-2 text-left text-[11px] mt-4 border p-4 rounded-2xl" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                        <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Note Identifier</span><span className="font-black" style={{ color: 'var(--text-main)' }}>: {note.creditNoteNumber || 'LEGACY'}</span>
-                                        <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Recorded Date</span><span className="font-black" style={{ color: 'var(--text-main)' }}>: {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}</span>
-                                        <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Primary Reason</span><span className="font-black truncate max-w-[120px]" style={{ color: 'var(--text-main)' }}>: {note.reason || 'Legacy'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between gap-6 text-xs">
                                 <div>
-                                    <p className="font-black text-[9px] uppercase tracking-widest mb-2.5" style={{ color: 'var(--text-dim)' }}>BILL TO / ACCOUNT NAME</p>
-                                    <p className="font-black text-base tracking-tight" style={{ color: 'var(--text-main)' }}>{note.driverId?.personalInfo?.fullName || (note as any).name || 'Unresolved Account'}</p>
-                                    <p className="font-semibold mt-0.5" style={{ color: 'var(--text-dim)' }}>{note.driverId?.personalInfo?.email || 'N/A'}</p>
-                                    <p className="text-[10px] font-mono uppercase tracking-wider mt-1.5 inline-block px-2 py-0.5 rounded border" style={{ background: 'var(--bg-input)', color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>Operator Key: {note.driverId?.driverId || 'N/A'}</p>
+                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Driver</p>
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
+                                        {note.driverId?.personalInfo?.fullName || note.driverId?.fullName || note.name || 'Unresolved Account'}
+                                    </p>
                                 </div>
                             </div>
-
-                            <div className="flex-1">
-                                <table className="w-full border-collapse text-left text-xs">
-                                    <thead>
-                                        <tr className="border-y text-[10px] font-black uppercase tracking-widest" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                            <th className="py-4 px-3 w-[10%]">#</th>
-                                            <th className="py-4 px-3 w-[60%]">Description of Credit Value Reversal</th>
-                                            <th className="py-4 px-3 text-center w-[10%]">Qty</th>
-                                            <th className="py-4 px-3 text-right w-[20%]">Total Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y font-medium" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <tr style={{ borderColor: 'var(--border-main)' }}>
-                                            <td className="py-6 px-3 font-black text-sm">1</td>
-                                            <td className="py-6 px-3">
-                                                <span className="font-black text-sm block mb-1">{note.reason || 'Legacy Accounting Correction'}</span>
-                                                {note.notes && <p className="text-[11px] italic leading-relaxed mt-1" style={{ color: 'var(--text-dim)' }}>Memo Context: "{note.notes}"</p>}
-                                            </td>
-                                            <td className="py-6 px-3 text-center font-bold">1.00</td>
-                                            <td className="py-6 px-3 text-right font-black text-sm" style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="border-t pt-8 flex flex-col md:flex-row justify-between gap-8" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="space-y-2 max-w-[300px]">
-                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Valuation In Words</p>
-                                    <p className="text-[11px] font-black italic border-l-2 pl-4 leading-relaxed" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>{convertToWords(note.amount)} Only</p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                    <FileText size={20} />
                                 </div>
-                                <div className="w-full md:w-[320px] space-y-2 text-xs">
-                                    <div className="flex justify-between font-bold" style={{ color: 'var(--text-dim)' }}><span>Gross Reconcile Amount</span><span style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString()}</span></div>
-                                    <div className="flex justify-between border-t pt-2 font-black text-lg" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}><span>TOTAL REGISTERED</span><span>${note.amount?.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-rose-500 font-bold pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}><span>Credits Allocated</span><span>(-) ${note.status === 'CLOSED' || note.status === 'APPLIED' ? note.amount?.toLocaleString() : "0.00"}</span></div>
-                                    <div className="flex justify-between items-center p-3 border rounded-2xl text-sm font-black mt-3 shadow-inner" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <span>UNALLOCATED RESIDUE</span>
-                                        <span className="font-mono">${note.status === 'OPEN' ? note.amount?.toLocaleString() : "0.00"}</span>
-                                    </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Linked Invoice</p>
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
+                                        {note.invoiceId && typeof note.invoiceId === 'object' ? note.invoiceId.invoiceNumber : 'Standalone Credit'}
+                                    </p>
                                 </div>
                             </div>
-
-                            <div className="pt-14 flex justify-end border-t border-dashed mt-auto" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="text-center w-[200px] space-y-1.5 select-none">
-                                    <div className="h-10 border-b relative" style={{ borderColor: 'var(--border-main)' }}>
-                                        <span className="absolute bottom-0.5 right-1/2 translate-x-1/2 text-xl font-serif italic select-none" style={{ color: 'var(--text-dim)', opacity: 0.4 }}>OlaFinance</span>
-                                    </div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reconciliations Officer</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                    <Calendar size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Credit Date</p>
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
+                                        {note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : 'Not Specified'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-[#C8E600]">
+                                    <DollarSign size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Reason</p>
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
+                                        {note.reason || 'Legacy Accounting Correction'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* AUDIT LEDGER ACTIVITY BLOCK */}
-                    <div className="w-full max-w-4xl mx-auto rounded-[2rem] border shadow-xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="p-6 border-b bg-black/10 flex items-center gap-2 shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
-                            <FileSpreadsheet className="text-brand-lime" size={18} />
-                            <h2 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Reconciliation Ledger Activity</h2>
+                    {/* Items Table */}
+                    <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                            <FileText size={16} className="text-[#C8E600]" />
+                            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Credit Note Items</h3>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-white/5">
+                                <tr>
+                                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Description / Reason</th>
+                                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Qty</th>
+                                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                <tr className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{note.reason || 'Credit Value Reversal'}</div>
+                                        {note.notes && (
+                                            <div className="text-[10px] mt-1 text-[#C8E600] font-black uppercase tracking-widest">
+                                                Memo: {note.notes}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>1.00</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-right" style={{ color: 'var(--text-main)' }}>
+                                        ${note.amount.toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Reconciliation Ledger Activity */}
+                    <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                            <FileSpreadsheet size={16} className="text-[#C8E600]" />
+                            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Reconciliation Ledger Activity</h3>
                         </div>
                         <div className="p-6 overflow-x-auto">
-                            <table className="w-full border-collapse text-left text-xs">
+                            <table className="w-full text-left text-xs">
                                 <thead>
-                                    <tr className="text-[10px] font-black uppercase border-b pb-3" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
+                                    <tr className="text-[10px] font-bold uppercase border-b pb-3" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
                                         <th className="pb-3 pr-4">Recorded Entry Date</th>
                                         <th className="pb-3 px-4">Classification</th>
                                         <th className="pb-3 px-4">Accounting Map</th>
-                                        <th className="pb-3 pl-4 text-right">Total Debited Value</th>
+                                        <th className="pb-3 pl-4 text-right">Value</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5" style={{ borderColor: 'var(--border-main)' }}>
-                                    <tr className="hover:bg-white/[0.02] transition-colors">
-                                        <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.createdAt).toLocaleDateString()}</td>
-                                        <td className="py-4 px-4 font-black uppercase tracking-wider text-indigo-400">Credit Issuance</td>
-                                        <td className="py-4 px-4 italic font-medium text-dim">Initial creation of ledger note draft.</td>
-                                        <td className="py-4 pl-4 text-right font-black" style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <tbody className="divide-y divide-white/5">
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                        <td className="py-4 pr-4 font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(note.createdAt).toLocaleDateString()}</td>
+                                        <td className="py-4 px-4 font-bold uppercase tracking-wider text-indigo-400">Credit Issuance</td>
+                                        <td className="py-4 px-4 font-medium" style={{ color: 'var(--text-dim)' }}>Initial creation of ledger note.</td>
+                                        <td className="py-4 pl-4 text-right font-bold" style={{ color: 'var(--text-main)' }}>${note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                     {note.status === 'CLOSED' && (
-                                        <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
-                                            <td className="py-4 px-4 font-black uppercase tracking-wider text-emerald-400">Applied Adjustment</td>
-                                            <td className="py-4 px-4 italic font-medium text-dim">Direct offset deduction executed on Invoice {note.invoiceId?.invoiceNumber || 'Target'}.</td>
-                                            <td className="py-4 pl-4 text-right font-black text-rose-400">-${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <tr className="hover:bg-white/5 transition-colors">
+                                            <td className="py-4 pr-4 font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
+                                            <td className="py-4 px-4 font-bold uppercase tracking-wider text-emerald-400">Applied Adjustment</td>
+                                            <td className="py-4 px-4 font-medium" style={{ color: 'var(--text-dim)' }}>Direct offset deduction executed on Invoice {note.invoiceId?.invoiceNumber || 'Target'}.</td>
+                                            <td className="py-4 pl-4 text-right font-bold text-red-500">-${note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                     )}
                                     {note.status === 'VOID' && (
-                                        <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
-                                            <td className="py-4 px-4 font-black uppercase tracking-wider text-rose-500">Void Cancellation</td>
-                                            <td className="py-4 px-4 italic font-medium text-dim">Ledger reversal posted - note rendered inactive.</td>
-                                            <td className="py-4 pl-4 text-right font-black text-rose-500">-${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <tr className="hover:bg-white/5 transition-colors">
+                                            <td className="py-4 pr-4 font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
+                                            <td className="py-4 px-4 font-bold uppercase tracking-wider text-rose-500">Void Cancellation</td>
+                                            <td className="py-4 px-4 font-medium" style={{ color: 'var(--text-dim)' }}>Ledger reversal posted - note rendered inactive.</td>
+                                            <td className="py-4 pl-4 text-right font-bold text-rose-500">-${note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                </div>
 
+                <div className="space-y-6">
+                    {/* Financial Summary */}
+                    <div className="rounded-3xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit Summary</h3>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center text-sm">
+                                <span style={{ color: 'var(--text-dim)' }}>Total Credit Issued</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>${note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span style={{ color: 'var(--text-dim)' }}>Credits Allocated</span>
+                                <span className="font-bold text-red-500">
+                                    -${(note.status === 'CLOSED' || note.status === 'APPLIED') ? note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </span>
+                            </div>
+                            <div className="pt-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>Remaining Credit</span>
+                                <span className="text-2xl font-black text-[#C8E600]">
+                                    ${note.status === 'OPEN' ? note.amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Info */}
+                    <div className="rounded-3xl border p-6 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: '#C8E600' }}>
+                            <History size={14} /> Audit Info
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Created At</p>
+                                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{new Date(note.createdAt).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Last Updated</p>
+                                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Valuation In Words</p>
+                                <p className="text-[11px] font-black italic border-l-2 pl-3 leading-relaxed" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
+                                    {convertToWords(note.amount)} Only
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -472,24 +526,22 @@ const CreditNoteDetail = () => {
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="w-full max-w-lg border shadow-2xl overflow-hidden rounded-3xl max-h-[92vh] flex flex-col" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
 
-                        {/* ── Header ── */}
+                        {/* Header */}
                         <div className="p-6 border-b bg-black/20 flex justify-between items-center flex-shrink-0" style={{ borderColor: 'var(--border-main)' }}>
                             <div>
                                 <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                    <Edit3 size={18} className="text-brand-lime"/> Edit Credit Note
+                                    <Edit3 size={18} className="text-[#C8E600]"/> Edit Credit Note
                                 </h2>
                                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>{note.creditNoteNumber}</p>
                             </div>
                             <button onClick={() => setIsEditModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16}/></button>
                         </div>
 
-                        {/* ── Form: scrollable body + sticky footer ── */}
+                        {/* Form */}
                         <form onSubmit={handleEditCreditNote} className="flex flex-col flex-1 min-h-0">
-
-                            {/* Scrollable Fields */}
                             <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
 
-                                {/* ── Driver Picker ── */}
+                                {/* Driver Picker */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                         <User size={11}/> Linked Driver
@@ -497,7 +549,7 @@ const CreditNoteDetail = () => {
                                     <select
                                         value={editDriverId}
                                         onChange={e => handleEditDriverChange(e.target.value)}
-                                        className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer appearance-none focus:border-brand-lime transition-colors"
+                                        className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer appearance-none focus:border-[#C8E600] transition-colors"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         disabled={loadingDriverList}
                                     >
@@ -513,7 +565,7 @@ const CreditNoteDetail = () => {
                                     </select>
                                 </div>
 
-                                {/* ── Invoice Linker ── */}
+                                {/* Invoice Linker */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                                         <Link size={11}/> Link to Invoice <span className="opacity-50 normal-case font-semibold">(optional)</span>
@@ -521,7 +573,7 @@ const CreditNoteDetail = () => {
                                     <select
                                         value={editInvoiceId}
                                         onChange={e => setEditInvoiceId(e.target.value)}
-                                        className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer appearance-none focus:border-brand-lime transition-colors"
+                                        className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer appearance-none focus:border-[#C8E600] transition-colors"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         disabled={loadingEditInvoices || !editDriverId}
                                     >
@@ -542,7 +594,7 @@ const CreditNoteDetail = () => {
                                 {/* Divider */}
                                 <div className="border-t" style={{ borderColor: 'var(--border-main)' }} />
 
-                                {/* ── Amount ── */}
+                                {/* Amount */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit Value ($)</label>
                                     <div className="relative">
@@ -551,13 +603,13 @@ const CreditNoteDetail = () => {
                                             type="number" step="0.01" required
                                             value={editAmount}
                                             onChange={e => setEditAmount(Number(e.target.value))}
-                                            className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-black focus:border-brand-lime outline-none"
+                                            className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-black focus:border-[#C8E600] outline-none"
                                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
                                 </div>
 
-                                {/* ── Date ── */}
+                                {/* Date */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit Date *</label>
                                     <input
@@ -569,14 +621,14 @@ const CreditNoteDetail = () => {
                                     />
                                 </div>
 
-                                {/* ── Reason ── */}
+                                {/* Reason */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Category Reason *</label>
                                     <select
                                         required
                                         value={editReason}
                                         onChange={e => setEditReason(e.target.value)}
-                                        className="w-full px-4 py-2.5 border rounded-xl text-xs outline-none cursor-pointer appearance-none focus:border-brand-lime"
+                                        className="w-full px-4 py-2.5 border rounded-xl text-xs outline-none cursor-pointer appearance-none focus:border-[#C8E600]"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     >
                                         <option value="Overcharge Reversal" style={{ background: 'var(--bg-card)' }}>Overcharge Reversal</option>
@@ -587,7 +639,7 @@ const CreditNoteDetail = () => {
                                     </select>
                                 </div>
 
-                                {/* ── Notes ── */}
+                                {/* Notes */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Audit Memo</label>
                                     <textarea
@@ -600,18 +652,12 @@ const CreditNoteDetail = () => {
                                 </div>
                             </div>
 
-                            {/* ── Sticky Footer — always visible ── */}
-                            <div
-                                className="flex gap-3 p-5 border-t flex-shrink-0"
-                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
-                            >
+                            <div className="flex gap-3 p-5 border-t flex-shrink-0" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                                 <button
                                     type="button"
                                     onClick={() => setIsEditModalOpen(false)}
                                     className="flex-1 py-3 border font-black text-[10px] uppercase rounded-xl transition-colors cursor-pointer"
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)', background: 'transparent' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >Cancel</button>
                                 <button
                                     type="submit"
@@ -635,20 +681,20 @@ const CreditNoteDetail = () => {
                         <div className="p-6 border-b bg-black/20 flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                             <div>
                                 <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                    <FileCheck size={18} className="text-brand-lime"/> Apply to Invoice
+                                    <FileCheck size={18} className="text-[#C8E600]"/> Apply to Invoice
                                 </h2>
-                                <p className="text-[10px] text-brand-lime font-black uppercase tracking-widest mt-0.5">
+                                <p className="text-[10px] text-[#C8E600] font-black uppercase tracking-widest mt-0.5">
                                     Credit Value: ${note.amount.toLocaleString()}
                                 </p>
                             </div>
-                            <button onClick={() => setIsApplyModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer"><X size={16}/></button>
+                            <button onClick={() => setIsApplyModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16}/></button>
                         </div>
 
                         <form onSubmit={handleConfirmApply} className="p-6 space-y-4">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Specify Ledger Statement</label>
                                 {loadingApplyInvoices ? (
-                                    <div className="flex items-center justify-center py-6"><RefreshCw className="animate-spin text-brand-lime" size={18}/></div>
+                                    <div className="flex items-center justify-center py-6"><RefreshCw className="animate-spin text-[#C8E600]" size={18}/></div>
                                 ) : applyInvoices.length === 0 ? (
                                     <div className="text-center py-5 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
                                         <AlertCircle className="text-rose-500 mx-auto mb-2" size={18}/>
@@ -661,7 +707,7 @@ const CreditNoteDetail = () => {
                                             required 
                                             value={applyInvoiceId} 
                                             onChange={e => setApplyInvoiceId(e.target.value)} 
-                                            className="w-full pl-4 pr-8 py-3 border rounded-xl text-xs font-black outline-none cursor-pointer appearance-none focus:border-brand-lime" 
+                                            className="w-full pl-4 pr-8 py-3 border rounded-xl text-xs font-black outline-none cursor-pointer appearance-none focus:border-[#C8E600]" 
                                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         >
                                             <option value="" style={{background: 'var(--bg-card)'}}>-- Select Target Invoice --</option>
@@ -679,14 +725,14 @@ const CreditNoteDetail = () => {
                             </div>
                             
                             {applyInvoiceId && applyInvoices.length > 0 && (
-                                <div className="p-4 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 shadow-inner space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                <div className="p-4 rounded-2xl bg-[#C8E600]/10 border border-[#C8E600]/20 shadow-inner space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-dim">
                                         <span>Will Apply:</span>
                                         <span style={{ color: 'var(--text-main)' }}>${Math.min(note.amount, (applyInvoices.find(i => i._id === applyInvoiceId)?.balance || 0)).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-[#A3A3A3]">
                                         <span>Post Balance:</span>
-                                        <span className="text-brand-lime">${Math.max(0, (applyInvoices.find(i => i._id === applyInvoiceId)?.balance || 0) - note.amount).toLocaleString()}</span>
+                                        <span className="text-[#C8E600]">${Math.max(0, (applyInvoices.find(i => i._id === applyInvoiceId)?.balance || 0) - note.amount).toLocaleString()}</span>
                                     </div>
                                 </div>
                             )}
@@ -698,7 +744,7 @@ const CreditNoteDetail = () => {
                                     disabled={submittingApply || applyInvoices.length === 0 || !applyInvoiceId} 
                                     className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] uppercase rounded-xl shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 hover:scale-[1.02] transition-all cursor-pointer"
                                 >
-                                    {submittingApply ? <RefreshCw size={12} className="animate-spin"/> : <CheckCircle2 size={12} strokeWidth={2.5}/>}
+                                    {submittingApply ? <RefreshCw size={12} className="animate-spin"/> : <CheckCircle2 className="font-bold" size={12} strokeWidth={2.5}/>}
                                     {submittingApply ? 'Finalizing...' : 'Post Application'}
                                 </button>
                             </div>
@@ -706,21 +752,8 @@ const CreditNoteDetail = () => {
                     </div>
                 </div>
             )}
-
         </div>
     );
-};
-
-const StatusBadge = ({ status }: { status: string }) => {
-    switch (status) {
-        case 'CLOSED':
-        case 'APPLIED':
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none">Closed</span>;
-        case 'VOID':
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none">Void</span>;
-        default:
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-amber-500/10 text-amber-400 border-amber-500/20 select-none">Open</span>;
-    }
 };
 
 export default CreditNoteDetail;
