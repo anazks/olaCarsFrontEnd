@@ -210,6 +210,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Branch Management', path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
                 { label: 'Manage Suppliers', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
                 { label: 'Settings', path: '/admin/financial-admin/dashboard-settings' },
+                { label: 'Bulk Uploads', path: '/admin/financial-admin/bulk-uploads' },
             ]
         },
     ];

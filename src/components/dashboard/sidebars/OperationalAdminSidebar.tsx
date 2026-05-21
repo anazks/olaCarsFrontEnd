@@ -142,6 +142,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/operational-admin/dashboard-settings' },
+                { label: 'Bulk Uploads', path: '/admin/operational-admin/bulk-uploads' },
             ]
         },
     ];

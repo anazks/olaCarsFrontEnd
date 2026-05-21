@@ -4,77 +4,81 @@ import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import { bulkCreateDrivers, type BulkUploadResult } from '../../../services/driverService';
+import { bulkCreateVehicles, type BulkVehicleUploadResult } from '../../../services/vehicleService';
 import { getAllBranches, createBranch, type Branch, type CreateBranchPayload } from '../../../services/branchService';
 import { getAllCountryManagers, createCountryManager, type CountryManager, type CreateCountryManagerPayload } from '../../../services/countryManagerService';
 import { getDecodedToken } from '../../../utils/auth';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-interface ParsedDriver {
-    fullName: string;
-    email: string;
-    phone: string;
-    whatsappNumber?: string;
-    dateOfBirth?: string;
-    nationality?: string;
-    idType?: string;
-    idNumber?: string;
-    licenseNumber?: string;
-    licenseCountry?: string;
-    licenseExpiry?: string;
-    emergencyName?: string;
-    emergencyRelationship?: string;
-    emergencyPhone?: string;
+interface ParsedVehicle {
+    make: string;
+    model: string;
+    year: string | number;
+    vin: string;
+    registrationNumber: string;
+    registrationExpiry?: string;
+    category?: string;
+    fuelType?: string;
+    transmission?: string;
+    colour?: string;
+    odometer?: string | number;
+    gpsSerialNumber?: string;
+    purchasePrice?: string | number;
+    vendorName?: string;
+    purchaseDate?: string;
+    paymentMethod?: string;
+    weeklyRent?: string | number;
+    sellingValue?: string | number;
+    leaseDurationWeeks?: string | number;
+    fleetNumber?: string;
     _rowErrors: string[];
 }
 
-interface BulkDriverUploadProps {
+interface BulkVehicleUploadProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-// Roles that get their branch auto-assigned from JWT
 const AUTO_ASSIGN_ROLES = ['operationstaff', 'financestaff', 'branchmanager'];
 
-// CSV columns — branch is NEVER in the file
 const CSV_COLUMNS = [
-    'fullName', 'email', 'phone', 'whatsappNumber', 'dateOfBirth', 'nationality',
-    'idType', 'idNumber', 'licenseNumber', 'licenseCountry', 'licenseExpiry',
-    'emergencyName', 'emergencyRelationship', 'emergencyPhone'
+    'make', 'model', 'year', 'vin', 'registrationNumber', 'registrationExpiry',
+    'category', 'fuelType', 'transmission', 'colour', 'odometer', 'gpsSerialNumber',
+    'purchasePrice', 'vendorName', 'purchaseDate', 'paymentMethod', 'weeklyRent',
+    'sellingValue', 'leaseDurationWeeks', 'fleetNumber'
 ];
 
 const SAMPLE_DATA = [
     {
-        fullName: 'John Smith', email: 'john.smith@example.com', phone: '+254700000001',
-        whatsappNumber: '+254700000001', dateOfBirth: '1995-05-15', nationality: 'Kenyan',
-        idType: 'National ID', idNumber: 'ID-12345678', licenseNumber: 'DL-123456',
-        licenseCountry: 'Kenya', licenseExpiry: '2028-12-31',
-        emergencyName: 'Jane Smith', emergencyRelationship: 'Spouse', emergencyPhone: '+254700000002'
+        make: 'Toyota', model: 'Corolla', year: 2022, vin: '1NXBR32E6NZ000001',
+        registrationNumber: 'KCC 123A', registrationExpiry: '2027-12-31',
+        category: 'Sedan', fuelType: 'Petrol', transmission: 'Automatic', colour: 'White',
+        odometer: 15000, gpsSerialNumber: 'GPS-998811', purchasePrice: 18000,
+        vendorName: 'Toyota Kenya', purchaseDate: '2023-01-15', paymentMethod: 'Cash',
+        weeklyRent: 150, sellingValue: 14000, leaseDurationWeeks: 260, fleetNumber: 'FL-001'
     },
     {
-        fullName: 'Maria Garcia', email: 'maria.garcia@example.com', phone: '+254711223344',
-        whatsappNumber: '+254711223344', dateOfBirth: '1990-08-22', nationality: 'Kenyan',
-        idType: 'Passport', idNumber: 'PP-88552211', licenseNumber: 'DL-789012',
-        licenseCountry: 'Kenya', licenseExpiry: '2029-06-30',
-        emergencyName: 'Carlos Garcia', emergencyRelationship: 'Brother', emergencyPhone: '+254722334455'
+        make: 'Nissan', model: 'X-Trail', year: 2021, vin: 'JN1TA0CP8LX000002',
+        registrationNumber: 'KCD 456B', registrationExpiry: '2026-06-30',
+        category: 'SUV', fuelType: 'Diesel', transmission: 'Automatic', colour: 'Silver',
+        odometer: 42000, gpsSerialNumber: 'GPS-776622', purchasePrice: 22000,
+        vendorName: 'Nissan Motors', purchaseDate: '2022-08-20', paymentMethod: 'Finance',
+        weeklyRent: 200, sellingValue: 17500, leaseDurationWeeks: 260, fleetNumber: 'FL-002'
     }
 ];
 
-const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps) => {
+const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProps) => {
     const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
     const isAutoAssign = AUTO_ASSIGN_ROLES.includes(userRole);
-    const needsBranchSelection = !isAutoAssign; // COUNTRYMANAGER, ADMIN, etc.
+    const needsBranchSelection = !isAutoAssign;
 
-    const [parsedDrivers, setParsedDrivers] = useState<ParsedDriver[]>([]);
+    const [parsedVehicles, setParsedVehicles] = useState<ParsedVehicle[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
-    const [result, setResult] = useState<BulkUploadResult | null>(null);
+    const [result, setResult] = useState<BulkVehicleUploadResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [branchesLoading, setBranchesLoading] = useState(false);
@@ -86,7 +90,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         name: '', code: '', city: '', state: '', address: '', email: '', phone: '', countryManager: ''
     });
 
-    // Inline CM creation state
     const [showAddCM, setShowAddCM] = useState(false);
     const [addingCM, setAddingCM] = useState(false);
     const [cmFormError, setCmFormError] = useState<string | null>(null);
@@ -94,13 +97,11 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         fullName: '', email: '', password: '', phone: '', country: ''
     });
 
-    // Common countries list
     const countries = [
         "Panama", "United States", "United Kingdom", "Canada", "Australia", "Germany",
         "France", "India", "Nigeria", "South Africa", "United Arab Emirates"
     ];
 
-    // Load branches for dropdown (only for CM/Admin roles)
     const fetchBranches = useCallback(async () => {
         setBranchesLoading(true);
         try {
@@ -114,14 +115,12 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
             fetchBranches();
-            // Also fetch country managers for the quick-add-branch form
             getAllCountryManagers({ limit: 100 })
                 .then(res => setCountryManagers(res.data || []))
                 .catch(() => { /* non-critical */ });
         }
     }, [isOpen, needsBranchSelection]);
 
-    // Inline CM creation handler
     const handleCreateCM = async () => {
         if (!cmForm.fullName.trim() || !cmForm.email.trim() || !cmForm.password.trim() || !cmForm.phone.trim() || !cmForm.country.trim()) {
             setCmFormError('All fields are required.');
@@ -140,7 +139,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
             };
             await createCountryManager(payload);
             toast.success(`Country Manager "${payload.fullName}" created!`);
-            // Refresh country managers list
             const response = await getAllCountryManagers({ limit: 100 });
             setCountryManagers(response.data || []);
             setShowAddCM(false);
@@ -152,7 +150,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         }
     };
 
-    // Quick-add a branch, then auto-select it
     const handleQuickAddBranch = async () => {
         if (!quickBranch.name.trim() || !quickBranch.code.trim() || !quickBranch.email.trim()) {
             toast.error('Branch name, code, and email are required.');
@@ -179,7 +176,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
             };
             const created = await createBranch(payload);
             toast.success(`Branch "${payload.name}" created!`);
-            // Refresh list and auto-select the new branch
             await fetchBranches();
             const newId = (created as any)?._id || (created as any)?.data?._id;
             if (newId) setSelectedBranch(newId);
@@ -195,64 +191,39 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         
-        // Basic presence
-        if (!row.fullName?.trim()) errors.push('Missing fullName');
-        if (!row.email?.trim()) errors.push('Missing email');
-        if (!row.phone?.trim()) errors.push('Missing phone');
+        if (!row.make?.trim()) errors.push('Missing make');
+        if (!row.model?.trim()) errors.push('Missing model');
+        if (!row.year || isNaN(Number(row.year))) errors.push('Missing or invalid year');
+        if (!row.vin?.trim()) errors.push('Missing vin');
+        if (!row.registrationNumber?.trim()) errors.push('Missing registrationNumber');
 
-        // Email format
-        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-            errors.push('Invalid email format');
-        }
-
-        // Phone: 6-15 digits (allowing + at start)
-        const phoneDigits = (row.phone || '').replace(/[^\d]/g, '');
-        if (row.phone && (phoneDigits.length < 6 || phoneDigits.length > 15)) {
-            errors.push('Phone must be 6-15 digits');
-        }
-
-        // WhatsApp: if provided, 6-15 digits
-        if (row.whatsappNumber) {
-            const waDigits = row.whatsappNumber.replace(/[^\d]/g, '');
-            if (waDigits.length < 6 || waDigits.length > 15) {
-                errors.push('WhatsApp must be 6-15 digits');
+        if (row.year) {
+            const yr = Number(row.year);
+            const currentYear = new Date().getFullYear();
+            if (yr < 1980 || yr > currentYear + 1) {
+                errors.push(`Year must be between 1980 and ${currentYear + 1}`);
             }
         }
 
-        // Emergency Phone: 6-15 digits
-        if (row.emergencyPhone) {
-            const epDigits = row.emergencyPhone.replace(/[^\d]/g, '');
-            if (epDigits.length < 6 || epDigits.length > 15) {
-                errors.push('Emergency phone must be 6-15 digits');
-            }
+        if (row.vin && row.vin.trim().length !== 17) {
+            errors.push('VIN must be exactly 17 characters');
         }
 
-        // DOB: 14+ years ago
-        if (row.dateOfBirth) {
-            const dob = new Date(row.dateOfBirth);
-            if (isNaN(dob.getTime())) {
-                errors.push('Invalid dateOfBirth format (YYYY-MM-DD)');
-            } else {
-                const minAge = new Date();
-                minAge.setFullYear(minAge.getFullYear() - 14);
-                if (dob > minAge) errors.push('Driver must be at least 14 years old');
-            }
+        if (row.odometer && isNaN(Number(row.odometer))) {
+            errors.push('Odometer must be a number');
         }
 
-        // License Expiry: Future
-        if (row.licenseExpiry) {
-            const expiry = new Date(row.licenseExpiry);
-            if (isNaN(expiry.getTime())) {
-                errors.push('Invalid licenseExpiry format (YYYY-MM-DD)');
-            } else if (expiry <= new Date()) {
-                errors.push('License expiry must be in the future');
-            }
+        if (row.weeklyRent && isNaN(Number(row.weeklyRent))) {
+            errors.push('Weekly rent must be a number');
+        }
+
+        if (row.purchasePrice && isNaN(Number(row.purchasePrice))) {
+            errors.push('Purchase price must be a number');
         }
 
         return errors;
     }, []);
 
-    // Parse file content
     const parseFile = (file: File) => {
         setResult(null);
         setFileName(file.name);
@@ -269,11 +240,11 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
-                    const rows: ParsedDriver[] = (jsonData as any[]).map(row => ({
+                    const rows: ParsedVehicle[] = (jsonData as any[]).map(row => ({
                         ...row,
                         _rowErrors: validateRow(row),
                     }));
-                    setParsedDrivers(rows);
+                    setParsedVehicles(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the Excel file.');
                     } else {
@@ -290,11 +261,11 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                 skipEmptyLines: true,
                 transformHeader: (h: string) => h.trim(),
                 complete: (results) => {
-                    const rows: ParsedDriver[] = (results.data as any[]).map(row => ({
+                    const rows: ParsedVehicle[] = (results.data as any[]).map(row => ({
                         ...row,
                         _rowErrors: validateRow(row),
                     }));
-                    setParsedDrivers(rows);
+                    setParsedVehicles(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the file.');
                     } else {
@@ -327,13 +298,12 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
 
     const handleDragLeave = () => setDragOver(false);
 
-    // Download sample template
     const downloadTemplate = (format: 'csv' | 'txt' | 'xlsx') => {
         if (format === 'xlsx') {
             const worksheet = XLSX.utils.json_to_sheet(SAMPLE_DATA);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Drivers");
-            XLSX.writeFile(workbook, `driver_bulk_template.xlsx`);
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicles");
+            XLSX.writeFile(workbook, `vehicle_bulk_template.xlsx`);
             return;
         }
 
@@ -341,7 +311,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         if (format === 'csv') {
             content = Papa.unparse(SAMPLE_DATA, { columns: CSV_COLUMNS });
         } else {
-            // Tab-delimited .txt
             const header = CSV_COLUMNS.join('\t');
             const rows = SAMPLE_DATA.map(row =>
                 CSV_COLUMNS.map(col => (row as any)[col] ?? '').join('\t')
@@ -353,15 +322,14 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `driver_bulk_template.${format}`;
+        a.download = `vehicle_bulk_template.${format}`;
         a.click();
         URL.revokeObjectURL(url);
     };
 
-    // Submit to backend
     const handleSubmit = async () => {
-        const validDrivers = parsedDrivers.filter(d => d._rowErrors.length === 0);
-        if (validDrivers.length === 0) {
+        const validVehicles = parsedVehicles.filter(v => v._rowErrors.length === 0);
+        if (validVehicles.length === 0) {
             toast.error('No valid rows to upload. Fix errors first.');
             return;
         }
@@ -373,10 +341,9 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
 
         setUploading(true);
         try {
-            // Strip internal _rowErrors before sending
-            const payload = validDrivers.map(({ _rowErrors, ...rest }) => rest);
+            const payload = validVehicles.map(({ _rowErrors, ...rest }) => rest);
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await bulkCreateDrivers(payload, branchToSend);
+            const res = await bulkCreateVehicles(payload, branchToSend);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) {
@@ -390,7 +357,7 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
     };
 
     const handleReset = () => {
-        setParsedDrivers([]);
+        setParsedVehicles([]);
         setFileName('');
         setResult(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -402,15 +369,15 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
         onClose();
     };
 
-    const validCount = parsedDrivers.filter(d => d._rowErrors.length === 0).length;
-    const errorCount = parsedDrivers.filter(d => d._rowErrors.length > 0).length;
+    const validCount = parsedVehicles.filter(v => v._rowErrors.length === 0).length;
+    const errorCount = parsedVehicles.filter(v => v._rowErrors.length > 0).length;
 
     if (!isOpen) return null;
 
     const selectedBranchName = branches.find(b => b._id === selectedBranch)?.name;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
             <div
                 className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -423,10 +390,10 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                         </div>
                         <div>
                             <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
-                                {t('management.drivers.bulkUpload.title', 'Bulk Driver Upload')}
+                                {t('management.vehicles.bulkUpload.title', 'Bulk Vehicle Upload')}
                             </h2>
                             <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                                {t('management.drivers.bulkUpload.subtitle', 'Upload CSV or TXT files to create multiple driver applications at once')}
+                                {t('management.vehicles.bulkUpload.subtitle', 'Upload CSV or TXT files to create multiple vehicle records at once')}
                             </p>
                         </div>
                     </div>
@@ -437,14 +404,13 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                    {/* Branch Selector (for Country Manager / Admin roles) */}
+                    {/* Branch Selector */}
                     {needsBranchSelection && (
                         <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.03)' }}>
                             <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
-                                Assign Drivers to Branch *
+                                Assign Vehicles to Branch *
                             </label>
 
-                            {/* Loading state */}
                             {branchesLoading && (
                                 <div className="flex items-center gap-2 py-3">
                                     <Loader2 size={16} className="animate-spin" style={{ color: 'var(--brand-lime)' }} />
@@ -452,14 +418,13 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                 </div>
                             )}
 
-                            {/* Empty state — no branches at all */}
                             {!branchesLoading && branches.length === 0 && !showAddBranch && (
                                 <div className="flex flex-col items-center gap-3 py-6">
                                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.08)' }}>
                                         <Building2 size={24} style={{ color: 'var(--brand-lime)' }} />
                                     </div>
                                     <p className="text-sm font-medium text-center" style={{ color: 'var(--text-dim)' }}>
-                                        No branches found. Create one first to assign drivers.
+                                        No branches found. Create one first to assign vehicles.
                                     </p>
                                     <button
                                         onClick={() => setShowAddBranch(true)}
@@ -471,7 +436,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                 </div>
                             )}
 
-                            {/* Dropdown + Add Branch link */}
                             {!branchesLoading && branches.length > 0 && (
                                 <>
                                     <div className="relative">
@@ -491,7 +455,7 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                     <div className="flex items-center justify-between mt-2">
                                         {selectedBranch ? (
                                             <p className="text-xs font-medium" style={{ color: 'var(--brand-lime)' }}>
-                                                ✓ All uploaded drivers will be assigned to <strong>{selectedBranchName}</strong>
+                                                ✓ All uploaded vehicles will be assigned to <strong>{selectedBranchName}</strong>
                                             </p>
                                         ) : <span />}
                                         <button
@@ -506,16 +470,13 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                 </>
                             )}
 
-                            {/* Quick Add Branch Form */}
                             {showAddBranch && (
                                 <div className="mt-3 p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                                     <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Quick Add Branch</p>
 
-                                    {/* No Country Managers — inline creation form */}
                                     {countryManagers.length === 0 ? (
                                         <div className="space-y-3">
                                             {!showAddCM ? (
-                                                /* Prompt */
                                                 <div className="flex flex-col items-center gap-3 py-5">
                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(234,179,8,0.1)' }}>
                                                         <UserCircle size={22} style={{ color: '#eab308' }} />
@@ -533,7 +494,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                                     </button>
                                                 </div>
                                             ) : (
-                                                /* Inline CM form */
                                                 <div className="space-y-3 p-3 rounded-lg border" style={{ borderColor: 'rgba(234,179,8,0.3)', background: 'rgba(234,179,8,0.03)' }}>
                                                     <div className="flex items-center gap-2">
                                                         <UserCircle size={16} style={{ color: '#eab308' }} />
@@ -609,7 +569,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                             )}
                                         </div>
                                     ) : (
-                                        /* Branch form — Country Managers available */
                                         <>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                                 <input
@@ -633,21 +592,13 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                                     className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                 />
-                                                {/* Phone */}
-                                                <div>
-                                                    <PhoneInput
-                                                        country={"in"}
-                                                        value={quickBranch.phone}
-                                                        onChange={(phone) => setQuickBranch({ ...quickBranch, phone })}
-                                                        containerStyle={{ width: '100%' }}
-                                                        inputStyle={{
-                                                            width: '100%', height: '40px',
-                                                            background: 'var(--bg-card)', border: '1px solid var(--border-main)',
-                                                            color: 'var(--text-main)', borderRadius: '8px', fontSize: '14px'
-                                                        }}
-                                                        buttonStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}
-                                                    />
-                                                </div>
+                                                <input
+                                                    type="text" placeholder="Phone"
+                                                    value={quickBranch.phone}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, phone: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
                                                 <input
                                                     type="text" placeholder="City"
                                                     value={quickBranch.city}
@@ -662,7 +613,6 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                                     className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                 />
-                                                {/* Country Manager dropdown */}
                                                 <div className="relative">
                                                     <select
                                                         value={quickBranch.countryManager}
@@ -712,17 +662,16 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                         </div>
                     )}
 
-                    {/* Auto-assign info for branch-level roles */}
                     {isAutoAssign && (
                         <div className="flex items-center gap-2 px-4 py-3 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.03)' }}>
                             <CheckCircle size={16} style={{ color: 'var(--brand-lime)' }} />
                             <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                                All uploaded drivers will be automatically assigned to your branch.
+                                All uploaded vehicles will be automatically assigned to your branch.
                             </span>
                         </div>
                     )}
 
-                    {/* Template Downloads */}
+                    {/* Templates */}
                     <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                         <Info size={16} style={{ color: 'var(--brand-lime)' }} />
                         <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
@@ -754,7 +703,7 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                     </div>
 
                     {/* Drop Zone */}
-                    {parsedDrivers.length === 0 && !result && (
+                    {parsedVehicles.length === 0 && !result && (
                         <div
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
@@ -771,10 +720,10 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                             </div>
                             <div className="text-center">
                                 <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                    {t('management.drivers.bulkUpload.dropzoneTitle', 'Drop your Excel, CSV or TXT file here')}
+                                    Drop your Excel, CSV or TXT file here
                                 </p>
                                 <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
-                                    {t('management.drivers.bulkUpload.dropzoneSubtitle', 'or click to browse. Supports .xlsx, .xls, .csv and .txt')}
+                                    or click to browse. Supports .xlsx, .xls, .csv and .txt
                                 </p>
                             </div>
                             <input
@@ -788,7 +737,7 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                     )}
 
                     {/* Preview Table */}
-                    {parsedDrivers.length > 0 && !result && (
+                    {parsedVehicles.length > 0 && !result && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -796,95 +745,92 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                         <FileText size={14} className="inline mr-1" /> {fileName}
                                     </span>
                                     <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>
-                                        <CheckCircle size={12} /> {validCount} valid
+                                        {validCount} valid
                                     </span>
                                     {errorCount > 0 && (
-                                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(255,80,80,0.1)', color: '#ef4444' }}>
-                                            <AlertTriangle size={12} /> {errorCount} errors
+                                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                            {errorCount} invalid
                                         </span>
                                     )}
                                 </div>
-                                <button onClick={handleReset} className="text-xs font-bold px-3 py-1.5 rounded-lg border transition-all hover:scale-105" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                    Clear & Re-upload
+                                <button
+                                    onClick={handleReset}
+                                    className="text-xs font-bold transition-all hover:scale-105"
+                                    style={{ color: 'var(--text-dim)' }}
+                                >
+                                    Clear File
                                 </button>
                             </div>
 
-                            <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="overflow-x-auto max-h-64">
-                                    <table className="w-full text-left border-collapse text-xs">
-                                        <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-main)' }}>
-                                            <tr>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>#</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Status</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Full Name</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Email</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Phone</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Nationality</th>
-                                                <th className="px-3 py-2 font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>License #</th>
+                            <div className="border rounded-xl overflow-hidden max-h-60 overflow-y-auto" style={{ borderColor: 'var(--border-main)' }}>
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
+                                            <th className="p-3 font-black text-dim uppercase">Row</th>
+                                            <th className="p-3 font-black text-dim uppercase">Make</th>
+                                            <th className="p-3 font-black text-dim uppercase">Model</th>
+                                            <th className="p-3 font-black text-dim uppercase">Year</th>
+                                            <th className="p-3 font-black text-dim uppercase">VIN</th>
+                                            <th className="p-3 font-black text-dim uppercase">Registration</th>
+                                            <th className="p-3 font-black text-dim uppercase text-right">Errors / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {parsedVehicles.map((row, idx) => (
+                                            <tr key={idx} className="border-b last:border-0" style={{ borderColor: 'var(--border-main)' }}>
+                                                <td className="p-3 font-medium text-dim">{idx + 1}</td>
+                                                <td className="p-3 font-bold text-main">{row.make || '—'}</td>
+                                                <td className="p-3 text-main">{row.model || '—'}</td>
+                                                <td className="p-3 text-main">{row.year || '—'}</td>
+                                                <td className="p-3 font-mono text-main">{row.vin || '—'}</td>
+                                                <td className="p-3 text-main">{row.registrationNumber || '—'}</td>
+                                                <td className="p-3 text-right">
+                                                    {row._rowErrors.length > 0 ? (
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            {row._rowErrors.map((err, errIdx) => (
+                                                                <span key={errIdx} className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-500 flex items-center gap-1 font-semibold">
+                                                                    <AlertTriangle size={10} /> {err}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-500 font-semibold">
+                                                            Ready
+                                                        </span>
+                                                    )}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {parsedDrivers.map((d, i) => {
-                                                const hasError = d._rowErrors.length > 0;
-                                                return (
-                                                    <tr
-                                                        key={i}
-                                                        className="border-t"
-                                                        style={{
-                                                            borderColor: 'var(--border-main)',
-                                                            background: hasError ? 'rgba(255,80,80,0.04)' : 'transparent'
-                                                        }}
-                                                        title={hasError ? d._rowErrors.join(', ') : ''}
-                                                    >
-                                                        <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
-                                                        <td className="px-3 py-2">
-                                                            {hasError
-                                                                ? <AlertTriangle size={14} className="text-red-400" />
-                                                                : <CheckCircle size={14} className="text-green-400" />}
-                                                        </td>
-                                                        <td className="px-3 py-2 font-medium" style={{ color: hasError ? '#ef4444' : 'var(--text-main)' }}>{d.fullName || '—'}</td>
-                                                        <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{d.email || '—'}</td>
-                                                        <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{d.phone || '—'}</td>
-                                                        <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{d.nationality || '—'}</td>
-                                                        <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{d.licenseNumber || '—'}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
 
-                    {/* Result Summary */}
+                    {/* Upload Results */}
                     {result && (
-                        <div className="space-y-4">
-                            <div className="p-5 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'rgba(200,230,0,0.03)' }}>
-                                <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--text-main)' }}>Upload Results</h3>
-                                <div className="flex gap-6">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle size={18} className="text-green-400" />
-                                        <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{result.created.length} Created</span>
-                                    </div>
-                                    {result.errors.length > 0 && (
-                                        <div className="flex items-center gap-2">
-                                            <AlertTriangle size={18} className="text-red-400" />
-                                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{result.errors.length} Failed</span>
-                                        </div>
-                                    )}
+                        <div className="space-y-4 p-5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-500/10 text-green-500">
+                                    <CheckCircle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-main">Upload Completed</h3>
+                                    <p className="text-xs text-dim">
+                                        Successfully created {result.created.length} vehicle(s). {result.errors.length} error(s) occurred.
+                                    </p>
                                 </div>
                             </div>
 
                             {result.errors.length > 0 && (
-                                <div className="p-4 rounded-xl border" style={{ borderColor: 'rgba(255,80,80,0.2)', background: 'rgba(255,80,80,0.03)' }}>
-                                    <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#ef4444' }}>
-                                        Failed Rows
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold text-red-500 flex items-center gap-1">
+                                        <AlertTriangle size={14} /> Upload Failures ({result.errors.length})
                                     </p>
-                                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                                        {result.errors.map((err, i) => (
-                                            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                <span className="font-mono font-bold" style={{ color: '#ef4444' }}>Row {err.row}:</span>
+                                    <div className="max-h-40 overflow-y-auto border rounded-xl p-3 text-xs space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                        {result.errors.map((err, idx) => (
+                                            <div key={idx} className="flex gap-2 text-red-400 font-medium">
+                                                <span className="font-bold text-dim">Row {err.row}:</span>
                                                 <span>{err.message}</span>
                                             </div>
                                         ))}
@@ -892,44 +838,50 @@ const BulkDriverUpload = ({ isOpen, onClose, onSuccess }: BulkDriverUploadProps)
                                 </div>
                             )}
 
-                            <button onClick={handleReset} className="text-xs font-bold px-4 py-2 rounded-lg border transition-all hover:scale-105" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                Upload Another File
-                            </button>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={handleReset}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                                >
+                                    Upload Another File
+                                </button>
+                                <button
+                                    onClick={handleClose}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold border-none transition-all hover:scale-105 active:scale-95 shadow-lg"
+                                    style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                >
+                                    Done
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                    <button
-                        onClick={handleClose}
-                        className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all border"
-                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)', background: 'var(--bg-input)' }}
-                    >
-                        {t('common.cancel', 'Cancel')}
-                    </button>
-                    {parsedDrivers.length > 0 && !result && (
+                {!result && (
+                    <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                        <button
+                            onClick={handleClose}
+                            className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                        >
+                            Cancel
+                        </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={uploading || validCount === 0 || (needsBranchSelection && !selectedBranch)}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50 disabled:hover:scale-100 border-none"
+                            disabled={uploading || parsedVehicles.length === 0 || validCount === 0}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border-none transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-lg"
                             style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                         >
-                            {uploading ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" /> Uploading...
-                                </>
-                            ) : (
-                                <>
-                                    <Upload size={16} /> Upload {validCount} Driver{validCount !== 1 ? 's' : ''}
-                                </>
-                            )}
+                            {uploading ? <Loader2 size={16} className="animate-spin" /> : null}
+                            {uploading ? 'Uploading...' : `Upload ${validCount} Vehicle(s)`}
                         </button>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-export default BulkDriverUpload;
+export default BulkVehicleUpload;

@@ -131,6 +131,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-fin-staff/dashboard-settings' },
+                { label: 'Bulk Uploads', path: '/admin/branch-fin-staff/bulk-uploads' },
             ]
         },
     ];

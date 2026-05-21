@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     User, 
     Moon, 
@@ -14,7 +15,8 @@ import {
     RefreshCw,
     AlertTriangle,
     Settings,
-    Building2
+    Building2,
+    Upload
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';
@@ -25,12 +27,40 @@ import ManageBankAccounts from '../finance/ManageBankAccounts';
 import ChartOfAccounts from '../finance/ChartOfAccounts';
 import TaxManagement from '../finance/TaxManagement';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import toast from 'react-hot-toast';
 
 const DashboardSettings = () => {
     const { t, i18n } = useTranslation();
     const { theme, toggleTheme } = useTheme();
     const user = getUser();
     const role = getUserRole();
+    const navigate = useNavigate();
+
+    const handleBulkUploadsClick = () => {
+        let rolePath = '';
+        const normalizedRole = role?.toLowerCase();
+        if (normalizedRole === 'admin') {
+            rolePath = 'admin';
+        } else if (normalizedRole === 'operationadmin') {
+            rolePath = 'operational-admin';
+        } else if (normalizedRole === 'financeadmin') {
+            rolePath = 'financial-admin';
+        } else if (normalizedRole === 'countrymanager') {
+            rolePath = 'country-manager';
+        } else if (normalizedRole === 'branchmanager') {
+            rolePath = 'branch-manager';
+        } else if (normalizedRole === 'operationstaff') {
+            rolePath = 'operation-staff';
+        } else if (normalizedRole === 'financestaff') {
+            rolePath = 'finance-staff';
+        }
+        
+        if (rolePath) {
+            navigate(`/admin/${rolePath}/bulk-uploads`);
+        } else {
+            toast.error("You are not authorized to access bulk uploads.");
+        }
+    };
     
     // State for Tabs
     const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'operations' | 'accounts'>('profile');
@@ -203,6 +233,13 @@ const DashboardSettings = () => {
                     style={activeTab !== 'accounts' ? { color: 'var(--text-dim)' } : {}}
                 >
                     <Building2 size={16} /> Accounts
+                </button>
+                <button 
+                    onClick={handleBulkUploadsClick}
+                    className="flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap hover:bg-white/5"
+                    style={{ color: 'var(--text-dim)' }}
+                >
+                    <Upload size={16} /> Bulk Uploads
                 </button>
             </div>
 

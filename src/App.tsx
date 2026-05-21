@@ -58,6 +58,7 @@ import TargetManagement from './pages/dashboards/shared/TargetManagement';
 // import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
+import BulkUploadsHub from './pages/dashboards/shared/BulkUploadsHub';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
 import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
 import AccidentReports from './pages/dashboards/shared/AccidentReports';
@@ -240,6 +241,7 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />

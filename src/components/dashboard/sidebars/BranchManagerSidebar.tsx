@@ -138,6 +138,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-manager/dashboard-settings' },
+                { label: 'Bulk Uploads', path: '/admin/branch-manager/bulk-uploads' },
             ]
         },
     ];

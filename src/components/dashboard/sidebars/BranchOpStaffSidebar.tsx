@@ -117,6 +117,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-op-staff/dashboard-settings' },
+                { label: 'Bulk Uploads', path: '/admin/branch-op-staff/bulk-uploads' },
             ]
         },
     ];
