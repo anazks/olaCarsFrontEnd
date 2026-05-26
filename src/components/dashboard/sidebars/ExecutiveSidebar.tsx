@@ -11,7 +11,10 @@ import {
     ChevronDown,
     ChevronUp,
     User,
-    X
+    X,
+    ShoppingCart,
+    ShoppingBag,
+    Shield
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +29,7 @@ interface SubItem {
     label: string;
     path: string;
     permission?: string;
+    badge?: string;
 }
 
 interface MenuItem {
@@ -48,9 +52,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
     const userRole = 'Executive';
 
     useEffect(() => {
-        const currentPath = location.pathname;
         const activeItem = menuItems.find(item =>
-            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+            item.subItems?.some(sub => isActive(sub.path))
         );
         if (activeItem) {
             setOpenSection(activeItem.id);
@@ -59,8 +62,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
 
     const isActive = (path: string) => {
         if (!path) return false;
-        if (path === '/admin/admin') {
-            return location.pathname === '/admin/admin';
+        if (path === '/admin/admin' || path === '/admin/financial-admin' || path === '/admin/branch-fin-staff') {
+            return location.pathname === path;
         }
         return location.pathname.startsWith(path);
     };
@@ -86,7 +89,13 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             id: 'dashboard',
             label: t('sidebar.items.dashboard', 'Dashboard'),
             icon: <LayoutGrid size={22} />,
-            path: '/admin/admin'
+            subItems: [
+                { label: 'Executive Dashboard', path: '/admin/admin' },
+                { label: 'Collections Dashboard', path: '/admin/admin/collections/dashboard' },
+                { label: 'Fleet Dashboard', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Finance Dashboard', path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: 'W-Group', path: '/admin/admin/wgroup-dashboard', badge: 'BETA' },
+            ]
         },
         {
             id: 'staff',
@@ -113,21 +122,67 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Manage Vehicles', path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: 'Pending Entry Vehicles', path: '/admin/admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
-                { label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
 
                 { label: 'Accident Reports', path: '/admin/admin/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/admin/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/admin/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/admin/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/admin/collections/invoices' },
+            ]
+        },
+        {
+            id: 'sales',
+            label: 'Sales',
+            icon: <ShoppingCart size={22} />,
+            subItems: [
+                { label: 'Customers', path: '/admin/admin/customers' },
+                { label: 'Invoices', path: '/admin/admin/invoices' },
+                { label: 'Payments Received', path: '/admin/admin/payments-received' },
+                { label: 'Credit Notes', path: '/admin/admin/credit-notes' },
+            ]
+        },
+        {
+            id: 'purchases',
+            label: 'Purchases',
+            icon: <ShoppingBag size={22} />,
+            subItems: [
+                { label: 'Vendors', path: '/admin/admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: 'Expenses', path: '/admin/admin/expenses' },
+                { label: 'Purchase Orders', path: '/admin/admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Purchase Requests', path: '/admin/admin/workshop-purchase-requests', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: 'Bills', path: '/admin/admin/bills' },
+                { label: 'Payments Made', path: '/admin/admin/payments-made' },
+            ]
+        },
+        {
             id: 'finance',
-            label: 'Finance',
+            label: 'Accounts',
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'General Ledger', path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
-                { label: 'Finance Dashboard', path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
-                { label: 'Staff Payrolls', path: '/admin/admin/staff-salaries', permission: 'REPORTS_VIEW' },
+                { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
+                { label: 'Financial Statements', path: '/admin/admin/financial-statements', permission: 'REPORTS_VIEW' },
+                { label: 'Taxes', path: '/admin/admin/taxes' },
+            ]
+        },
+        {
+            id: 'insurance',
+            label: 'Insurance',
+            icon: <Shield size={22} />,
+            subItems: [
+                { label: 'All Insurance', path: '/admin/admin/vehicle-policies' },
+                { label: 'Claims', path: '/admin/admin/insurance-claims' },
+                { label: 'Providers', path: '/admin/admin/insurances' },
             ]
         },
         {
@@ -142,6 +197,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/admin/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/admin/bulk-uploads' },
             ]
         },
     ];
@@ -250,11 +306,16 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                                                 <div
                                                     key={idx}
                                                     onClick={() => handleNavigation(sub.path)}
-                                                    className={`cursor-pointer py-2 text-sm transition-colors
+                                                    className={`cursor-pointer py-2 text-sm transition-colors flex items-center justify-between
                                                         ${isItActive ? 'text-[var(--sidebar-active)] font-medium' : 'text-[var(--sidebar-text)] hover:text-[var(--text-main)]'}
                                                     `}
                                                 >
-                                                    {sub.label}
+                                                    <span>{sub.label}</span>
+                                                    {sub.badge && (
+                                                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-rose-600 text-white leading-none mr-2">
+                                                            {sub.badge}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
 

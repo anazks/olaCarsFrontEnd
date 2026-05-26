@@ -96,14 +96,13 @@ const EditAgreement = () => {
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('..')}
-                        className="p-3 rounded-2xl border hover:bg-black/5 dark:hover:bg-white/5 text-dim transition-all"
-                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                    >
-                        <ArrowLeft size={24} />
-                    </button>
+                <div className="flex flex-col gap-4">
+                    <Breadcrumbs
+                        items={[
+                            { label: 'Dashboard', path: '#' },
+                            { label: isEdit ? 'Edit Agreement' : 'Create Agreement', active: true }
+                        ]}
+                    />
                     <div>
                         <h1 className="text-xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                             {isEdit ? 'Edit Agreement' : 'Create New Agreement'}
@@ -155,7 +154,10 @@ const EditAgreement = () => {
                                 type="text"
                                 placeholder="e.g. Terms of Service"
                                 value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                onChange={(e) => {
+                                    const sanitizedTitle = e.target.value.replace(/[^A-Za-z\s_-]/g, '');
+                                    setFormData({ ...formData, title: sanitizedTitle });
+                                }}
                                 className="w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-lime transition-all"
                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />

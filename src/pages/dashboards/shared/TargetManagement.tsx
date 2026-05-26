@@ -271,18 +271,18 @@ const TargetManagement = () => {
                             <TargetIcon size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                             Target Management
                         </h1>
-                        <p className="text-xs font-medium text-dim mt-0.5">Strategic benchmarking and workforce performance objectives.</p>
+                        <p className="text-xs font-semibold text-dim mt-0.5">Strategic benchmarking and workforce performance objectives.</p>
                     </div>
 
                     <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)]">
                         <div className="text-right">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Active</p>
-                            <p className="text-sm font-black text-[var(--text-main)] leading-none">{existingTargets.length}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Active</p>
+                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTargets.length}</p>
                         </div>
                         <div className="w-px h-6 bg-[var(--border-main)] mx-2" />
                         <div className="text-right">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-dim">Volume</p>
-                            <p className="text-sm font-black text-[var(--text-main)] leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Volume</p>
+                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
                         </div>
                     </div>
                 </div>
@@ -294,10 +294,10 @@ const TargetManagement = () => {
                 {canAssign && (
                     <div className="space-y-6">
                         {/* Task Assignment Box */}
-                        <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden relative group">
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden relative group">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
                             <div
-                                className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
+                                className="p-6 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
                                 onClick={() => setIsTaskAssignmentOpen(!isTaskAssignmentOpen)}
                             >
                                 <div className="flex items-center gap-4">
@@ -305,32 +305,32 @@ const TargetManagement = () => {
                                         <FileText size={20} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-black text-[var(--text-main)]">Deploy New Task</h2>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim">Assign qualitative directives to countries, branches, or staff</p>
+                                        <h2 className="text-base font-bold text-[var(--text-main)]">Deploy New Task</h2>
+                                        <p className="text-xs font-semibold text-dim">Assign qualitative directives to countries, branches, or staff</p>
                                     </div>
                                 </div>
                                 <div className="text-dim">
-                                    {isTaskAssignmentOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                    {isTaskAssignmentOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </div>
                             </div>
 
                             {isTaskAssignmentOpen && (
-                                <form onSubmit={handleTaskSubmit} className="p-8 transition-all duration-300">
+                                <form onSubmit={handleTaskSubmit} className="p-6 transition-all duration-300">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Task Title</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Task Title</label>
                                             <input
                                                 type="text"
                                                 value={taskFormData.title}
                                                 onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                                                 placeholder="Enter task title..."
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                 required
                                             />
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Scope</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Scope</label>
                                             <select
                                                 value={taskFormData.targetType}
                                                 onChange={(e) => {
@@ -338,7 +338,7 @@ const TargetManagement = () => {
                                                     setTaskFormData({ ...taskFormData, targetType: newType, targetId: '' });
                                                     setTaskFilters({ country: '', branchId: '', role: '' });
                                                 }}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
                                             >
                                                 {canAssignCountry && <option value="COUNTRY">National Country</option>}
                                                 {canAssignBranch && <option value="BRANCH">Regional Branch</option>}
@@ -347,7 +347,7 @@ const TargetManagement = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">
                                                 {taskFormData.targetType === 'COUNTRY' ? 'Select Country' : 
                                                  taskFormData.targetType === 'BRANCH' ? 'Select Branch' : 'Select Role & Staff'}
                                             </label>
@@ -361,7 +361,7 @@ const TargetManagement = () => {
                                                             setTaskFilters({ ...taskFilters, role: e.target.value, branchId: '', country: '' });
                                                             setTaskFormData({ ...taskFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">1. Select Role Type</option>
@@ -379,7 +379,7 @@ const TargetManagement = () => {
                                                             setTaskFilters({ ...taskFilters, country: e.target.value, branchId: '' });
                                                             setTaskFormData({ ...taskFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">2. Select Country</option>
@@ -397,7 +397,7 @@ const TargetManagement = () => {
                                                             setTaskFilters({ ...taskFilters, branchId: e.target.value });
                                                             setTaskFormData({ ...taskFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] disabled:opacity-50"
                                                         required={taskFormData.targetType === 'BRANCH' || (taskFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(taskFilters.role))}
                                                         disabled={taskFormData.targetType === 'BRANCH' && canAssignCountry && !taskFilters.country}
                                                     >
@@ -410,7 +410,7 @@ const TargetManagement = () => {
                                                                     return managerId === userId;
                                                                 }
                                                                 return true;
-                                                            })
+                                                             })
                                                             .map(b => (
                                                                 <option key={b._id} value={b._id}>{b.name}</option>
                                                             ))
@@ -422,7 +422,7 @@ const TargetManagement = () => {
                                                 <select
                                                     value={taskFormData.targetId}
                                                     onChange={(e) => setTaskFormData({ ...taskFormData, targetId: e.target.value })}
-                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] disabled:opacity-50"
                                                     required
                                                     disabled={(taskFormData.targetType === 'BRANCH' || (taskFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(taskFilters.role))) && !taskFilters.branchId}
                                                 >
@@ -473,30 +473,30 @@ const TargetManagement = () => {
 
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                                         <div className="lg:col-span-2 space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Description</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Description</label>
                                             <textarea
                                                 value={taskFormData.description}
                                                 onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                                                 placeholder="Detailed instructions for this task..."
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)] min-h-[100px]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] min-h-[100px]"
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-6">
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Due Date</label>
+                                                <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Due Date</label>
                                                 <input
                                                     type="date"
                                                     value={taskFormData.dueDate}
                                                     onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
-                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold text-[var(--text-main)] uppercase"
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold text-[var(--text-main)] uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all"
                                                     required
                                                 />
                                             </div>
                                             <button
                                                 type="submit"
                                                 disabled={loading}
-                                                className="w-full py-4 rounded-2xl bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] active:scale-[0.98] flex items-center justify-center gap-3"
+                                                className="w-full py-3 px-8 rounded-xl bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-3"
                                             >
                                                 {loading ? <Activity className="animate-spin" size={18} /> : <>Deploy Task <ArrowRight size={18} /></>}
                                             </button>
@@ -507,10 +507,10 @@ const TargetManagement = () => {
                         </div>
 
                         {/* Target Assignment Box */}
-                        <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden relative group">
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden relative group">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-lime/30 to-transparent" />
                             <div
-                                className="p-8 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
+                                className="p-6 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
                                 onClick={() => setIsTargetAssignmentOpen(!isTargetAssignmentOpen)}
                             >
                                 <div className="flex items-center gap-4">
@@ -518,20 +518,20 @@ const TargetManagement = () => {
                                         <TrendingUp size={20} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-black text-[var(--text-main)]">Deploy New Target</h2>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim">Assign quantitative objectives to countries, branches, or staff</p>
+                                        <h2 className="text-base font-bold text-[var(--text-main)]">Deploy New Target</h2>
+                                        <p className="text-xs font-semibold text-dim">Assign quantitative objectives to countries, branches, or staff</p>
                                     </div>
                                 </div>
                                 <div className="text-dim">
-                                    {isTargetAssignmentOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                    {isTargetAssignmentOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </div>
                             </div>
 
                             {isTargetAssignmentOpen && (
-                                <form onSubmit={handleTargetSubmit} className="p-8 transition-all duration-300">
+                                <form onSubmit={handleTargetSubmit} className="p-6 transition-all duration-300">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Scope</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Scope</label>
                                             <select
                                                 value={targetFormData.targetType}
                                                 onChange={(e) => {
@@ -539,7 +539,7 @@ const TargetManagement = () => {
                                                     setTargetFormData({ ...targetFormData, targetType: newType, targetId: '' });
                                                     setTargetFilters({ country: '', branchId: '', role: '' });
                                                 }}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
                                             >
                                                 {canAssignCountry && <option value="COUNTRY">National Country</option>}
                                                 {canAssignBranch && <option value="BRANCH">Regional Branch</option>}
@@ -548,7 +548,7 @@ const TargetManagement = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">
                                                 {targetFormData.targetType === 'COUNTRY' ? 'Select Country' : 
                                                  targetFormData.targetType === 'BRANCH' ? 'Select Branch' : 'Select Role & Staff'}
                                             </label>
@@ -562,7 +562,7 @@ const TargetManagement = () => {
                                                             setTargetFilters({ ...targetFilters, role: e.target.value, branchId: '', country: '' });
                                                             setTargetFormData({ ...targetFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">1. Select Role Type</option>
@@ -580,7 +580,7 @@ const TargetManagement = () => {
                                                             setTargetFilters({ ...targetFilters, country: e.target.value, branchId: '' });
                                                             setTargetFormData({ ...targetFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">2. Select Country</option>
@@ -598,7 +598,7 @@ const TargetManagement = () => {
                                                             setTargetFilters({ ...targetFilters, branchId: e.target.value });
                                                             setTargetFormData({ ...targetFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] disabled:opacity-50"
                                                         required={targetFormData.targetType === 'BRANCH' || (targetFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(targetFilters.role))}
                                                         disabled={targetFormData.targetType === 'BRANCH' && canAssignCountry && !targetFilters.country}
                                                     >
@@ -623,7 +623,7 @@ const TargetManagement = () => {
                                                 <select
                                                     value={targetFormData.targetId}
                                                     onChange={(e) => setTargetFormData({ ...targetFormData, targetId: e.target.value })}
-                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] disabled:opacity-50"
                                                     required
                                                     disabled={(targetFormData.targetType === 'BRANCH' || (targetFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(targetFilters.role))) && !targetFilters.branchId}
                                                 >
@@ -672,11 +672,11 @@ const TargetManagement = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Category</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Category</label>
                                             <select
                                                 value={targetFormData.category}
                                                 onChange={(e) => setTargetFormData({ ...targetFormData, category: e.target.value as any })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
                                             >
                                                 <option value="DRIVER_ACQUISITION">Driver Acquisition</option>
                                                 <option value="RENTAL">Rental (New Leases)</option>
@@ -685,12 +685,12 @@ const TargetManagement = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Target Value</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Target Value</label>
                                             <input
                                                 type="number"
                                                 value={targetFormData.targetValue}
                                                 onChange={(e) => setTargetFormData({ ...targetFormData, targetValue: parseInt(e.target.value) })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-xl font-black focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-lime"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-base font-bold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
                                                 min="0"
                                                 required
                                             />
@@ -699,22 +699,22 @@ const TargetManagement = () => {
 
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                                         <div className="lg:col-span-2 space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Target Note / Description</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Target Note / Description</label>
                                             <input
                                                 type="text"
                                                 value={targetFormData.notes}
                                                 onChange={(e) => setTargetFormData({ ...targetFormData, notes: e.target.value })}
                                                 placeholder="Specific instructions for this objective..."
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-dim ml-2">Due Date</label>
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Due Date</label>
                                             <input
                                                 type="date"
                                                 value={targetFormData.endDate}
                                                 onChange={(e) => setTargetFormData({ ...targetFormData, endDate: e.target.value })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-2xl p-4 text-sm font-bold text-[var(--text-main)] uppercase"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold text-[var(--text-main)] uppercase focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all"
                                                 required
                                             />
                                         </div>
@@ -724,7 +724,7 @@ const TargetManagement = () => {
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="px-10 py-4 rounded-2xl bg-lime text-black font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(200,230,0,0.2)] active:scale-[0.98] flex items-center gap-3"
+                                            className="px-8 py-3 rounded-xl bg-lime text-black font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(200,230,0,0.15)] hover:scale-[1.01] active:scale-[0.98] flex items-center gap-3"
                                         >
                                             {loading ? <Activity className="animate-spin" size={18} /> : <>Deploy Target <ArrowRight size={18} /></>}
                                         </button>
@@ -739,8 +739,8 @@ const TargetManagement = () => {
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-1">
-                            <h2 className="text-2xl font-black text-[var(--text-main)]">Operational Pulse</h2>
-                            <p className="text-xs font-bold text-dim uppercase tracking-widest">Active directives and objectives tracking</p>
+                            <h2 className="text-lg font-bold text-[var(--text-main)]">Operational Pulse</h2>
+                            <p className="text-xs font-semibold text-dim uppercase tracking-wider">Active directives and objectives tracking</p>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -748,13 +748,13 @@ const TargetManagement = () => {
                             <div className="flex bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-main)] shadow-inner">
                                 <button
                                     onClick={() => setActiveTab('TASKS')}
-                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'TASKS' ? 'bg-blue-500 text-white shadow-lg' : 'text-dim hover:text-[var(--text-main)]'}`}
+                                    className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'TASKS' ? 'bg-blue-500 text-white shadow-lg' : 'text-dim hover:text-[var(--text-main)]'}`}
                                 >
                                     <FileText size={14} /> Tasks
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('TARGETS')}
-                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'TARGETS' ? 'bg-lime text-black shadow-lg' : 'text-dim hover:text-[var(--text-main)]'}`}
+                                    className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'TARGETS' ? 'bg-lime text-black shadow-lg' : 'text-dim hover:text-[var(--text-main)]'}`}
                                 >
                                     <BarChart3 size={14} /> Targets
                                 </button>
@@ -767,26 +767,26 @@ const TargetManagement = () => {
                                     placeholder={`Filter ${activeTab.toLowerCase()}...`}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl pl-12 pr-6 py-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                    className="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl pl-12 pr-6 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Authority Tasks (Assigned to User) */}
-                    <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                    <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                         <div
-                            className="p-6 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
+                            className="p-5 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
                             onClick={() => setIsAssignedListOpen(!isAssignedListOpen)}
                         >
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeTab === 'TASKS' ? 'bg-blue-500/10 text-blue-400' : 'bg-lime/10 text-lime'}`}>
                                     <Shield size={20} />
                                 </div>
-                                <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-wider">Directives Assigned to You</h3>
+                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Directives Assigned to You</h3>
                             </div>
                             <div className="flex items-center gap-4">
-                                <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-black text-dim border border-[var(--border-main)]">
+                                <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-bold text-dim border border-[var(--border-main)]">
                                     {assignedToMe.length} {activeTab === 'TASKS' ? 'Tasks' : 'Targets'}
                                 </span>
                                 <div className="text-dim">
@@ -800,68 +800,68 @@ const TargetManagement = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-[var(--bg-input)]">
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Source / Recipient</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Objective Details</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border(--border-main)]">Timeline</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right">Magnitude</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center pr-8">Action</th>
+                                            <th className="p-4 pl-8 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Source / Recipient</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Objective Details</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Timeline</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">Magnitude</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-center pr-8">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border-main)]">
                                         {fetching ? (
                                             <tr><td colSpan={5} className="p-20 text-center animate-pulse text-dim">Fetching directives...</td></tr>
                                         ) : assignedToMe.length === 0 ? (
-                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-black uppercase tracking-widest italic opacity-30">No active {activeTab.toLowerCase()}</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No active {activeTab.toLowerCase()}</td></tr>
                                         ) : (
                                             assignedToMe.map((t) => (
                                                 <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
-                                                    <td className="p-5 pl-8">
+                                                    <td className="p-4 pl-8">
                                                         <div className="flex items-center gap-4">
                                                             <div className={`w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:${activeTab === 'TASKS' ? 'text-blue-400' : 'text-lime'} transition-colors`}>
                                                                 {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                             </div>
                                                             <div>
-                                                                <p className="text-sm font-black text-[var(--text-main)]">{getTargetName(t)}</p>
-                                                                <p className="text-[9px] font-bold text-dim flex items-center gap-1 mt-0.5 uppercase tracking-tighter">
+                                                                <p className="text-sm font-bold text-[var(--text-main)]">{getTargetName(t)}</p>
+                                                                <p className="text-[10px] font-semibold text-dim flex items-center gap-1 mt-0.5 uppercase tracking-wide">
                                                                     <User size={10} className={activeTab === 'TASKS' ? 'text-blue-400' : 'text-lime'} /> By {t.assignedBy?.fullName || 'System'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5">
+                                                    <td className="p-4">
                                                         <div className="space-y-1">
-                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${activeTab === 'TASKS' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-lime/10 border-lime/20 text-lime'}`}>
+                                                            <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${activeTab === 'TASKS' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-lime/10 border-lime/20 text-lime'}`}>
                                                                 {activeTab === 'TASKS' ? t.title : t.category.replace('_', ' ')}
                                                             </span>
-                                                            <p className="text-xs font-medium text-dim line-clamp-1">{activeTab === 'TASKS' ? t.description : (t.notes || 'No specific instructions')}</p>
+                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{activeTab === 'TASKS' ? t.description : (t.notes || 'No specific instructions')}</p>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5">
+                                                    <td className="p-4">
                                                         <div className={`flex flex-col ${new Date(activeTab === 'TASKS' ? t.dueDate : t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'text-rose-500' : 'text-dim'}`}>
-                                                            <span className="text-[11px] font-black">{new Date(activeTab === 'TASKS' ? t.dueDate : t.endDate).toLocaleDateString()}</span>
-                                                            <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                            <span className="text-[11px] font-semibold">{new Date(activeTab === 'TASKS' ? t.dueDate : t.endDate).toLocaleDateString()}</span>
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                                                                 {new Date(activeTab === 'TASKS' ? t.dueDate : t.endDate) < new Date() && t.status !== 'COMPLETED' ? <AlertCircle size={10} /> : <Clock size={10} />}
                                                                 {new Date(activeTab === 'TASKS' ? t.dueDate : t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'Overdue' : 'Remaining'}
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5 text-right">
+                                                    <td className="p-4 text-right">
                                                         {activeTab === 'TARGETS' ? (
-                                                            <p className="text-2xl font-black text-lime">{t.targetValue}</p>
+                                                            <span className="inline-block font-mono text-sm font-bold text-lime bg-lime/10 px-3 py-1 rounded-lg">{t.targetValue}</span>
                                                         ) : (
-                                                            <span className="text-[10px] font-black text-dim uppercase tracking-widest italic opacity-50">Qualitative</span>
+                                                            <span className="text-[10px] font-bold text-dim uppercase tracking-wider italic opacity-50">Qualitative</span>
                                                         )}
                                                     </td>
-                                                    <td className="p-5 text-center pr-8">
+                                                    <td className="p-4 text-center pr-8">
                                                         {t.status === 'COMPLETED' ? (
                                                             <div className="flex items-center justify-center gap-2 text-lime">
-                                                                <CheckCircle2 size={18} />
-                                                                <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
+                                                                 <CheckCircle2 size={18} />
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider">Completed</span>
                                                             </div>
                                                         ) : (
                                                             <button
                                                                 onClick={() => activeTab === 'TASKS' ? handleUpdateTaskStatus(t._id!, 'COMPLETED') : handleUpdateTargetStatus(t._id!, 'COMPLETED')}
-                                                                className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest ${activeTab === 'TASKS' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white' : 'bg-lime/10 text-lime border border-lime/20 hover:bg-lime hover:text-black'}`}
+                                                                className={`px-4 py-2 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider ${activeTab === 'TASKS' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white' : 'bg-lime/10 text-lime border border-lime/20 hover:bg-lime hover:text-black'}`}
                                                             >
                                                                 Complete
                                                             </button>
@@ -878,19 +878,19 @@ const TargetManagement = () => {
 
                     {/* Delegated Tasks (Assigned BY User) - Hidden for staff roles */}
                     {canAssign && (
-                    <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                    <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                         <div
-                            className="p-6 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
+                            className="p-5 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
                             onClick={() => setIsDelegatedListOpen(!isDelegatedListOpen)}
                         >
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeTab === 'TASKS' ? 'bg-blue-500/10 text-blue-400' : 'bg-lime/10 text-lime'}`}>
                                     <TrendingUp size={20} />
                                 </div>
-                                <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-wider">Objectives You Delegated</h3>
+                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Objectives You Delegated</h3>
                             </div>
                             <div className="flex items-center gap-4">
-                                <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-black text-dim border border-[var(--border-main)]">
+                                <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-bold text-dim border border-[var(--border-main)]">
                                     {delegatedByMe.length} {activeTab === 'TASKS' ? 'Tasks' : 'Targets'}
                                 </span>
                                 <div className="text-dim">
@@ -904,62 +904,62 @@ const TargetManagement = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-[var(--bg-input)]">
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Recipient</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Type & Title</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Status</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right">{activeTab === 'TARGETS' ? 'Magnitude' : 'Timeline'}</th>
-                                            <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center pr-8">Progress</th>
+                                            <th className="p-4 pl-8 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Recipient</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Type & Title</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Status</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">{activeTab === 'TARGETS' ? 'Magnitude' : 'Timeline'}</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-center pr-8">Progress</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border-main)]">
                                         {fetching ? (
-                                            <tr><td colSpan={5} className="p-20 text-center text-dim">Fetching...</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center text-dim animate-pulse">Fetching...</td></tr>
                                         ) : delegatedByMe.length === 0 ? (
-                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-black uppercase tracking-widest italic opacity-30">No objectives delegated</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No objectives delegated</td></tr>
                                         ) : (
                                             delegatedByMe.map((t) => (
                                                 <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
-                                                    <td className="p-5 pl-8">
+                                                    <td className="p-4 pl-8">
                                                         <div className="flex items-center gap-4">
                                                             <div className={`w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:${activeTab === 'TASKS' ? 'text-blue-400' : 'text-lime'} transition-colors`}>
                                                                 {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                             </div>
                                                             <div>
-                                                                <p className="text-sm font-black text-[var(--text-main)]">{getTargetName(t)}</p>
-                                                                <p className="text-[9px] font-black text-dim uppercase tracking-widest mt-0.5">{t.targetType}</p>
+                                                                <p className="text-sm font-bold text-[var(--text-main)]">{getTargetName(t)}</p>
+                                                                <p className="text-[10px] font-semibold text-dim uppercase tracking-wider mt-0.5">{t.targetType}</p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5">
+                                                    <td className="p-4">
                                                         <div className="space-y-1">
-                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${activeTab === 'TASKS' ? 'bg-blue-500/5 border-blue-500/10 text-blue-400' : 'bg-lime/5 border-lime/10 text-lime'}`}>
+                                                            <span className={`text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${activeTab === 'TASKS' ? 'bg-blue-500/5 border-blue-500/10 text-blue-400' : 'bg-lime/5 border-lime/10 text-lime'}`}>
                                                                 {activeTab === 'TASKS' ? 'Directive' : t.category.replace('_', ' ')}
                                                             </span>
-                                                            <p className="text-xs font-bold text-dim line-clamp-1">{activeTab === 'TASKS' ? t.title : (t.notes || 'Standard Objective')}</p>
+                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{activeTab === 'TASKS' ? t.title : (t.notes || 'Standard Objective')}</p>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5">
+                                                    <td className="p-4">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-1.5 h-1.5 rounded-full ${t.status === 'COMPLETED' ? 'bg-lime' : 'bg-orange-400 animate-pulse'}`} />
-                                                            <span className={`text-[10px] font-black uppercase tracking-widest ${t.status === 'COMPLETED' ? 'text-lime' : 'text-orange-400'}`}>
+                                                            <span className={`text-[10px] font-bold uppercase tracking-wider ${t.status === 'COMPLETED' ? 'text-lime' : 'text-orange-400'}`}>
                                                                 {t.status || 'PENDING'}
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="p-5 text-right">
+                                                    <td className="p-4 text-right">
                                                         {activeTab === 'TARGETS' ? (
-                                                            <p className="text-2xl font-black text-lime font-plus-jakarta">{t.targetValue}</p>
+                                                            <span className="inline-block font-mono text-sm font-bold text-lime bg-lime/10 px-3 py-1 rounded-lg">{t.targetValue}</span>
                                                         ) : (
-                                                            <p className="text-xs font-black text-dim">{new Date(t.dueDate).toLocaleDateString()}</p>
+                                                            <span className="text-xs font-semibold text-dim">{new Date(t.dueDate).toLocaleDateString()}</span>
                                                         )}
                                                     </td>
-                                                    <td className="p-5 text-center pr-8">
+                                                    <td className="p-4 text-center pr-8">
                                                         <div className="w-full bg-[var(--bg-input)] h-1 rounded-full overflow-hidden">
                                                             <div
                                                                 className={`h-full transition-all duration-1000 ${t.status === 'COMPLETED' ? 'w-full bg-lime' : (t.status === 'IN_PROGRESS' ? 'w-1/2 bg-blue-400' : 'w-1/4 bg-orange-400')}`}
                                                             />
                                                         </div>
-                                                        <p className="text-[8px] font-black uppercase tracking-widest mt-2 text-dim">
+                                                        <p className="text-[8px] font-bold uppercase tracking-wider mt-2 text-dim">
                                                             {t.status === 'COMPLETED' ? 'Mission Success' : 'Deployment Active'}
                                                         </p>
                                                     </td>

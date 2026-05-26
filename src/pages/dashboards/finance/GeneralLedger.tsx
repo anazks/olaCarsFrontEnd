@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Landmark, Calculator, BookMarked } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Upload } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
+import BulkUploadJournal from './BulkUploadJournal';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -26,33 +27,36 @@ const GeneralLedger = () => {
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
 
     const userRole = getUserRole() || '';
     const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
 
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
+    const getThisMonthStart = () => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     };
 
-    const getToday = () => {
-        return new Date().toISOString().split('T')[0];
+    const getThisMonthEnd = () => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
     };
 
     // Filters
-    const [startDate, setStartDate] = useState(getOneMonthAgo());
-    const [endDate, setEndDate] = useState(getToday());
+    const [startDate, setStartDate] = useState(getThisMonthStart);
+    const [endDate, setEndDate] = useState(getThisMonthEnd);
     const [selectedCode, setSelectedCode] = useState('ALL');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    // Keep end date valid relative to start date
     useEffect(() => {
-        if (startDate && endDate && endDate < startDate) {
-            setEndDate(startDate);
-        }
-    }, [startDate, endDate]);
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -63,6 +67,7 @@ const GeneralLedger = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (selectedCode !== 'ALL') filters.accountingCode = selectedCode;
+            if (debouncedSearch) filters.search = debouncedSearch;
             
             // Add pagination
             filters.page = page;
@@ -83,12 +88,12 @@ const GeneralLedger = () => {
         } finally {
             setLoading(false);
         }
-    }, [startDate, endDate, selectedCode, page, limit]);
+    }, [startDate, endDate, selectedCode, debouncedSearch, page, limit]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
         setPage(1);
-    }, [startDate, endDate, selectedCode]);
+    }, [startDate, endDate, selectedCode, debouncedSearch]);
 
     useEffect(() => {
         fetchData();
@@ -114,6 +119,81 @@ const GeneralLedger = () => {
         return sum + (entry.credit || 0);
     }, 0);
 
+    const handleInvoiceClick = async (invoiceNumber: string) => {
+        try {
+            const { getInvoices } = await import('../../../services/invoiceService');
+            const response = await getInvoices({ search: invoiceNumber });
+            if (response.data && response.data.length > 0) {
+                const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
+                navigate(`/admin/financial-admin/invoices/${invoice._id}`);
+            } else {
+                navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+            }
+        } catch (err) {
+            navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+        }
+    };
+
+    const handleBillClick = async (billNumber: string) => {
+        try {
+            const { getAllBills } = await import('../../../services/billService');
+            const response = await getAllBills({ search: billNumber });
+            if (response.success && response.data && response.data.length > 0) {
+                const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
+                navigate(`/admin/financial-admin/bills/${bill._id}`);
+            } else {
+                navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+            }
+        } catch (err) {
+            navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+        }
+    };
+
+    const renderDescriptionWithLinks = (description: string) => {
+        if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+
+        const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/i;
+        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+
+        const matchBill = description.match(billRegex);
+        const matchInvoice = description.match(invoiceRegex);
+
+        if (matchBill) {
+            const billNum = matchBill[0];
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={() => handleBillClick(billNum)}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                    >
+                        <Receipt size={11} strokeWidth={2.5} />
+                        View Bill ({billNum})
+                    </button>
+                </div>
+            );
+        }
+
+        if (matchInvoice) {
+            const invNum = matchInvoice[0];
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={() => handleInvoiceClick(invNum)}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                        style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                    >
+                        <FileText size={11} strokeWidth={2.5} />
+                        View Invoice ({invNum})
+                    </button>
+                </div>
+            );
+        }
+
+        return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
+    };
+
     return (
         <div className="container-responsive space-y-6">
             <Breadcrumbs 
@@ -130,7 +210,14 @@ const GeneralLedger = () => {
                         <FileText size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         General Ledger
                     </h1>
-                    <p className="text-xs font-medium text-dim mt-0.5">Immutable audit trail of all financial transactions</p>
+                    <p className="text-xs font-medium text-dim mt-0.5 flex flex-wrap items-center gap-2">
+                        <span>Immutable audit trail of all financial transactions</span>
+                        {startDate && endDate && (
+                            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--brand-lime)] font-mono text-[10px]">
+                                {new Date(startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} – {new Date(endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </span>
+                        )}
+                    </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
@@ -141,13 +228,22 @@ const GeneralLedger = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canCreateEntry && (
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
-                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                        >
-                            <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowBulkUploadModal(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border hover:scale-105 active:scale-95 hover:bg-white/5 cursor-pointer"
+                                style={{ background: 'transparent', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
+                            >
+                                <Upload size={14} strokeWidth={3} /> Bulk Upload
+                            </button>
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                            >
+                                <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -161,11 +257,24 @@ const GeneralLedger = () => {
 
             {/* Filters Bar */}
             <div className="p-4 rounded-2xl border transition-colors duration-300 flex flex-col sm:flex-row gap-4 flex-wrap" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-2 flex-grow max-w-xs">
+                    <input 
+                        type="text" 
+                        placeholder="Search description, code..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
+                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
+                    />
+                </div>
+
+                <div className="hidden sm:block w-px h-8 mx-1" style={{ background: 'var(--border-main)' }}></div>
+
                 <div className="flex items-center gap-2">
                     <Calendar size={18} style={{ color: 'var(--text-dim)' }} />
-                    <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Date Range:</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Date:</span>
                 </div>
-                <div className="flex items-center gap-2 flex-grow max-w-sm">
+                <div className="flex items-center gap-2 flex-grow max-w-xs">
                     <input 
                         type="date" 
                         value={startDate}
@@ -173,24 +282,17 @@ const GeneralLedger = () => {
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
+                    <span style={{ color: 'var(--text-dim)' }}>to</span>
                     <input 
                         type="date" 
                         value={endDate}
-                        min={startDate}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            if (startDate && val && val < startDate) {
-                                setEndDate(startDate);
-                            } else {
-                                setEndDate(val);
-                            }
-                        }}
+                        onChange={(e) => setEndDate(e.target.value)}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
                 </div>
                 
-                <div className="hidden sm:block w-px h-8 mx-2" style={{ background: 'var(--border-main)' }}></div>
+                <div className="hidden sm:block w-px h-8 mx-1" style={{ background: 'var(--border-main)' }}></div>
                 
                 <div className="flex items-center gap-2">
                     <Filter size={18} style={{ color: 'var(--text-dim)' }} />
@@ -199,7 +301,7 @@ const GeneralLedger = () => {
                 <select 
                     value={selectedCode}
                     onChange={(e) => setSelectedCode(e.target.value)}
-                    className="flex-grow sm:max-w-[250px] px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
+                    className="flex-grow sm:max-w-[200px] px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                     style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
                 >
                     <option value="ALL">All Accounts</option>
@@ -209,9 +311,14 @@ const GeneralLedger = () => {
                 </select>
 
                 {/* Clear Filters */}
-                {(startDate !== getOneMonthAgo() || endDate !== getToday() || selectedCode !== 'ALL') && (
+                {(startDate !== getThisMonthStart() || endDate !== getThisMonthEnd() || selectedCode !== 'ALL' || searchQuery !== '') && (
                     <button 
-                        onClick={() => { setStartDate(getOneMonthAgo()); setEndDate(getToday()); setSelectedCode('ALL'); }}
+                        onClick={() => { 
+                            setStartDate(getThisMonthStart()); 
+                            setEndDate(getThisMonthEnd()); 
+                            setSelectedCode('ALL'); 
+                            setSearchQuery('');
+                        }}
                         className="text-sm font-medium hover:underline ml-auto"
                         style={{ color: '#ef4444' }}
                     >
@@ -221,31 +328,7 @@ const GeneralLedger = () => {
             </div>
             
             {/* Navigation Shortcuts */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div 
-                    onClick={() => navigate('../vouchers')}
-                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                        <Receipt size={20} />
-                    </div>
-                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Voucher Management</h4>
-                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage payments & receipts</p>
-                </div>
-
-                <div 
-                    onClick={() => navigate('../balance-sheet')}
-                    className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-lime/20" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
-                        <Landmark size={20} />
-                    </div>
-                    <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Balance Sheet</h4>
-                    <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>View assets & liabilities</p>
-                </div>
-
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div 
                     onClick={() => navigate('../taxes')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
@@ -271,7 +354,7 @@ const GeneralLedger = () => {
                 </div>
 
                 <div 
-                    onClick={() => navigate('../purchase-bills')}
+                    onClick={() => navigate('../bills')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -366,10 +449,10 @@ const GeneralLedger = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm" style={{ color: 'var(--text-main)' }}>{entry.description}</div>
-                                                {entry.referenceId && (
-                                                    <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
-                                                )}
+                                                 {renderDescriptionWithLinks(entry.description)}
+                                                 {entry.referenceId && (
+                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-1 items-start">
@@ -473,6 +556,18 @@ const GeneralLedger = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
                     <CreateJournalEntry 
                         onClose={() => setShowCreateModal(false)} 
+                        onSuccess={() => {
+                            fetchData();
+                        }} 
+                    />
+                </div>
+            )}
+
+            {/* Bulk Upload Modal */}
+            {showBulkUploadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                    <BulkUploadJournal 
+                        onClose={() => setShowBulkUploadModal(false)} 
                         onSuccess={() => {
                             fetchData();
                         }} 

@@ -48,7 +48,7 @@ const VehiclePolicyDetail = () => {
                 }
             }
         } catch (error: any) {
-            toast.error(error.message || 'Failed to load policy details');
+            toast.error(error.response?.data?.message || error.message || 'Failed to load policy details');
         } finally {
             setLoading(false);
         }
@@ -198,14 +198,16 @@ const VehiclePolicyDetail = () => {
                         </h2>
                         {vehicle ? (
                             <div className="space-y-3 mt-4">
-                                <p className="font-bold text-lg">{vehicle.basicDetails.make} {vehicle.basicDetails.model} ({vehicle.basicDetails.year})</p>
+                                <p className="font-bold text-lg">
+                                    {vehicle?.basicDetails?.make || 'Unknown Make'} {vehicle?.basicDetails?.model || 'Unknown Model'} {vehicle?.basicDetails?.year ? `(${vehicle.basicDetails.year})` : ''}
+                                </p>
                                 <div>
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Registration Number</p>
-                                    <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">{vehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                    <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">{vehicle?.legalDocs?.registrationNumber || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">VIN</p>
-                                    <p className="font-medium font-mono text-gray-400">{vehicle.basicDetails.vin}</p>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Plate No</p>
+                                    <p className="font-medium font-mono text-gray-400">{vehicle?.basicDetails?.vin || 'N/A'}</p>
                                 </div>
                             </div>
                         ) : (

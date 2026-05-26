@@ -27,9 +27,8 @@ import {
     YAxis, 
     CartesianGrid, 
     Tooltip as RechartsTooltip,
-    BarChart,
-    Bar,
-    Cell
+    LineChart,
+    Line
 } from 'recharts';
 import { getIndividualStaffPerformance } from '../../../services/staffPerformanceService';
 import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
@@ -110,87 +109,86 @@ const StaffPerformanceDetails = () => {
                 </button>
                 <div className="flex items-center gap-4">
                      <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Analysis Period</span>
-                     <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)]">
+                     <div className="flex items-center gap-2 p-1 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)]">
                         <input 
                             type="date" 
                             value={dateRange.startDate} 
                             onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                            className="bg-transparent text-[11px] font-black px-3 py-1 outline-none text-lime"
+                            className="bg-transparent text-[11px] font-bold px-3 py-1.5 outline-none"
+                            style={{ color: 'var(--text-main)' }}
                         />
                         <div className="w-px h-4 bg-[var(--border-main)]" />
                         <input 
                             type="date" 
                             value={dateRange.endDate} 
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="bg-transparent text-[11px] font-black px-3 py-1 outline-none text-lime"
+                            className="bg-transparent text-[11px] font-bold px-3 py-1.5 outline-none"
+                            style={{ color: 'var(--text-main)' }}
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Premium Profile Header */}
-            <div className="relative group overflow-hidden rounded-[2.5rem] border border-[var(--border-main)] glass-dark p-8 md:p-12">
+            {/* Profile Header */}
+            <div className="relative group overflow-hidden rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-4 md:p-6">
                 {/* Abstract Background Decoration */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-lime/5 blur-[100px] rounded-full -mr-48 -mt-48 transition-all duration-1000 group-hover:scale-125" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full -ml-32 -mb-32" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-lime/5 blur-[80px] rounded-full -mr-32 -mt-32 transition-all duration-1000 group-hover:scale-125" />
 
-                <div className="relative z-10 flex flex-col lg:flex-row items-center lg:items-start gap-10">
-                    {/* Simplified Avatar */}
-                    <div className="w-24 h-24 rounded-2xl bg-lime flex items-center justify-center text-black text-4xl font-black shadow-sm">
-                        {profile.fullName.split(' ')[0].charAt(0).toUpperCase()}
-                    </div>
-
-                    <div className="flex-1 text-center lg:text-left">
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-4">
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-[var(--text-main)]">
-                                {profile.fullName}
-                            </h1>
-                            <div className="flex justify-center lg:justify-start gap-2">
-                                <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border flex items-center gap-1.5 ${
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    {/* Left: Avatar, Name & Designation */}
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-lime flex items-center justify-center text-black text-xl font-black shadow-sm shrink-0">
+                            {profile.fullName.split(' ')[0].charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-lg md:text-xl font-black tracking-tight text-[var(--text-main)]">
+                                    {profile.fullName}
+                                </h1>
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border flex items-center gap-1 ${
                                     profile.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
                                 }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${profile.status === 'ACTIVE' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
+                                    <div className={`w-1 h-1 rounded-full ${profile.status === 'ACTIVE' ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
                                     {profile.status}
                                 </span>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 mt-8">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Designation</p>
-                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-[var(--text-main)]">
-                                    <Shield size={14} className="text-lime" /> {profile.role}
-                                </p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Operations Hub</p>
-                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-[var(--text-main)]">
-                                    <Building2 size={14} className="text-lime" /> {hierarchy.branch?.name || 'Global'}
-                                </p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">System Access</p>
-                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-[var(--text-main)]">
-                                    <Smartphone size={14} className="text-lime" /> {profile.phone || 'Encrypted'}
-                                </p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Tenure Date</p>
-                                <p className="text-sm font-bold flex items-center justify-center lg:justify-start gap-2 text-[var(--text-main)]">
-                                    <Calendar size={14} className="text-lime" /> {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </p>
-                            </div>
+                            <p className="text-xs font-bold text-dim mt-1 flex items-center gap-1.5">
+                                <Shield size={12} className="text-lime" /> {profile.role}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="hidden xl:flex flex-col gap-3">
-                         <div className="p-4 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-main)] text-center">
-                            <p className="text-[20px] font-black text-lime leading-none">{performance.successRate}%</p>
-                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Efficiency</p>
+                    {/* Middle: Horizontal Meta Info */}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t md:border-t-0 border-[var(--border-main)] pt-4 md:pt-0">
+                        <div className="space-y-0.5">
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-45">Hub</span>
+                            <p className="text-xs font-bold flex items-center gap-1.5 text-[var(--text-main)]">
+                                <Building2 size={12} className="text-lime" /> {hierarchy.branch?.name || 'Global'}
+                            </p>
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-45">Access</span>
+                            <p className="text-xs font-bold flex items-center gap-1.5 text-[var(--text-main)]">
+                                <Smartphone size={12} className="text-lime" /> {profile.phone || 'Encrypted'}
+                            </p>
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-45">Tenure</span>
+                            <p className="text-xs font-bold flex items-center gap-1.5 text-[var(--text-main)]">
+                                <Calendar size={12} className="text-lime" /> {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Right: Compact stats */}
+                    <div className="flex items-center gap-3 border-t md:border-t-0 border-[var(--border-main)] pt-4 md:pt-0">
+                         <div className="px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] text-center min-w-[80px]">
+                            <p className="text-base font-black text-lime leading-none">{performance.successRate}%</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest opacity-45 mt-1">Efficiency</p>
                          </div>
-                         <div className="p-4 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-main)] text-center">
-                            <p className="text-[20px] font-black text-blue-400 leading-none">{attendance.length}</p>
-                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mt-1">Check-ins</p>
+                         <div className="px-3.5 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] text-center min-w-[80px]">
+                            <p className="text-base font-black text-blue-400 leading-none">{attendance.length}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest opacity-45 mt-1">Check-ins</p>
                          </div>
                     </div>
                 </div>
@@ -231,7 +229,7 @@ const StaffPerformanceDetails = () => {
             {/* Tabbed Intelligence Section */}
             <div className="space-y-8">
                 {/* Tabs Navigation */}
-                <div className="flex flex-wrap gap-3 p-2 bg-[var(--bg-input)] rounded-[1.5rem] border border-[var(--border-main)] w-fit">
+                <div className="flex flex-wrap gap-3 p-2 bg-[var(--bg-input)] rounded-2xl border border-[var(--border-main)] w-fit">
                     {[
                         { id: 'performance', label: 'Operational Performance', icon: Activity },
                         { id: 'financials', label: 'Payroll & Remuneration', icon: DollarSign },
@@ -258,7 +256,7 @@ const StaffPerformanceDetails = () => {
                         {activeTab === 'performance' && (
                             <div className="space-y-8">
                                 {/* Distribution Chart */}
-                                <div className="p-8 rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] group hover:border-lime/20 transition-all">
+                                <div className="p-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] group hover:border-lime/20 transition-all">
                                     <div className="flex justify-between items-center mb-8">
                                         <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                             <div className="w-1.5 h-6 bg-lime rounded-full" />
@@ -277,31 +275,34 @@ const StaffPerformanceDetails = () => {
                                     </div>
                                     <div className="h-[300px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={[
-                                                { name: 'COMPLETED', count: performance.taskStats.completed, fill: '#22c55e' },
-                                                { name: 'PENDING', count: performance.taskStats.pending, fill: '#eab308' },
-                                                { name: 'PROCESSED', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0, fill: '#C8E600' }
+                                            <LineChart data={[
+                                                { name: 'COMPLETED', count: performance.taskStats.completed },
+                                                { name: 'PENDING', count: performance.taskStats.pending },
+                                                { name: 'PROCESSED', count: roleAnalytics.driversOnboarded || roleAnalytics.vehiclesProcessed || 0 }
                                             ]}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
                                                 <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} fontStyle="italic" tickLine={false} axisLine={false} dy={10} />
                                                 <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />
                                                 <RechartsTooltip 
-                                                    cursor={{ fill: 'var(--bg-input)' }} 
                                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} 
                                                     itemStyle={{ color: 'var(--text-main)' }}
                                                 />
-                                                <Bar dataKey="count" radius={[12, 12, 4, 4]} maxBarSize={50} animationDuration={2000}>
-                                                    {[0, 1, 2].map((_, index) => (
-                                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : index === 1 ? '#eab308' : '#C8E600'} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
+                                                <Line 
+                                                    type="monotone" 
+                                                    dataKey="count" 
+                                                    stroke="#C8E600" 
+                                                    strokeWidth={3} 
+                                                    activeDot={{ r: 8 }} 
+                                                    dot={{ r: 6, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }}
+                                                    animationDuration={2000}
+                                                />
+                                            </LineChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
 
                                 {/* Detailed Log */}
-                                <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                                <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                                     <div className="p-8 border-b border-[var(--border-main)] flex justify-between items-center">
                                         <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
@@ -349,7 +350,7 @@ const StaffPerformanceDetails = () => {
                             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Remuneration Structure */}
-                                    <div className="p-8 rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)]">
+                                    <div className="p-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)]">
                                         <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                              <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
                                              Pay Structure
@@ -393,7 +394,7 @@ const StaffPerformanceDetails = () => {
                                     </div>
 
                                     {/* Disbursement Analytics */}
-                                    <div className="p-8 rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)]">
+                                    <div className="p-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)]">
                                         <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                              <div className="w-1.5 h-6 bg-purple-400 rounded-full" />
                                              Pay Trends
@@ -428,7 +429,7 @@ const StaffPerformanceDetails = () => {
                                 </div>
 
                                 {/* Pay History Ledger */}
-                                <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                                <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                                     <div className="p-8 border-b border-[var(--border-main)]">
                                          <h2 className="text-xl font-black uppercase tracking-tighter">Disbursement Ledger</h2>
                                     </div>
@@ -463,7 +464,7 @@ const StaffPerformanceDetails = () => {
                         )}
 
                         {activeTab === 'attendance' && (
-                            <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="p-8 border-b border-[var(--border-main)] flex justify-between items-center">
                                     <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                         <div className="w-1.5 h-6 bg-blue-400 rounded-full" />
@@ -518,7 +519,7 @@ const StaffPerformanceDetails = () => {
                     {/* Contextual Intelligence Sidebar */}
                     <div className="space-y-8">
                         {/* Organizational Hierarchy */}
-                        <div className="p-8 rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] relative overflow-hidden group">
+                        <div className="p-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-125 transition-transform duration-700">
                                 <Building2 size={80} />
                             </div>
@@ -560,7 +561,7 @@ const StaffPerformanceDetails = () => {
                         </div>
 
                         {/* Communication Matrix */}
-                        <div className="p-8 rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] group">
+                        <div className="p-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] group">
                             <h2 className="text-lg font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
                                 <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
                                 Connectivity

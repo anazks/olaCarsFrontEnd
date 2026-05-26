@@ -155,7 +155,8 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
     });
 
     const [lines, setLines] = useState<JournalLine[]>([
-        { accountingCode: '', type: 'DEBIT', amount: 0, description: '' }
+        { accountingCode: '', type: 'DEBIT', amount: 0, description: '' },
+        { accountingCode: '', type: 'CREDIT', amount: 0, description: '' }
     ]);
 
     useEffect(() => {
@@ -321,6 +322,22 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         setLines(newLines);
     };
 
+    const handleDebitChange = (index: number, valStr: string) => {
+        const newLines = [...lines];
+        const val = valStr === '' ? 0 : Number(valStr);
+        newLines[index].type = 'DEBIT';
+        newLines[index].amount = val;
+        setLines(newLines);
+    };
+
+    const handleCreditChange = (index: number, valStr: string) => {
+        const newLines = [...lines];
+        const val = valStr === '' ? 0 : Number(valStr);
+        newLines[index].type = 'CREDIT';
+        newLines[index].amount = val;
+        setLines(newLines);
+    };
+
     const totals = lines.reduce((acc, line) => {
         if (line.type === 'DEBIT') acc.debit += Number(line.amount || 0);
         else acc.credit += Number(line.amount || 0);
@@ -338,6 +355,22 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
 
         if (lines.some(line => !line.accountingCode)) {
             setError('Please select an accounting code for all transaction lines');
+            return;
+        }
+
+        // Double-entry accounting validation: must have at least one debit and credit
+        const debits = lines.filter(l => l.type === 'DEBIT');
+        const credits = lines.filter(l => l.type === 'CREDIT');
+
+        if (debits.length === 0 || credits.length === 0) {
+            setError('A valid double-entry journal must contain at least one DEBIT line and one CREDIT line.');
+            return;
+        }
+
+        // Debits must equal credits
+        const diff = Math.abs(totals.debit - totals.credit);
+        if (diff > 0.01) {
+            setError(`The journal is out of balance. Total Debits must equal Total Credits. Current out-of-balance amount is $${diff.toFixed(2)}.`);
             return;
         }
 
@@ -441,10 +474,10 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-[var(--bg-input)]">
                                 <tr>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Accounting Code</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Account</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Description</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Type</th>
-                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Amount</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider text-right">Debits</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider text-right">Credits</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider">Tax Option</th>
                                     <th className="px-4 py-3 text-[10px] font-bold text-dim uppercase tracking-wider text-right"></th>
                                 </tr>
@@ -475,23 +508,23 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                             />
                                         </td>
                                         <td className="p-2 w-32">
-                                            <select
-                                                value={line.type}
-                                                onChange={e => updateLine(index, 'type', e.target.value)}
-                                                className="w-full bg-transparent border-none text-xs font-bold text-[var(--text-main)] focus:ring-0 outline-none"
-                                            >
-                                                <option value="DEBIT" className="bg-[var(--bg-card)] text-emerald-500">DEBIT</option>
-                                                <option value="CREDIT" className="bg-[var(--bg-card)] text-rose-500">CREDIT</option>
-                                            </select>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={line.type === 'DEBIT' && line.amount ? line.amount : ''}
+                                                onChange={e => handleDebitChange(index, e.target.value)}
+                                                className="w-full bg-transparent border-none text-sm text-[var(--text-main)] text-right focus:ring-0 outline-none font-mono text-emerald-400 font-bold"
+                                            />
                                         </td>
                                         <td className="p-2 w-32">
                                             <input
-                                                required
                                                 type="number"
                                                 step="0.01"
-                                                value={line.amount || ''}
-                                                onChange={e => updateLine(index, 'amount', e.target.value === '' ? 0 : Number(e.target.value))}
-                                                className="w-full bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none font-mono"
+                                                placeholder="0.00"
+                                                value={line.type === 'CREDIT' && line.amount ? line.amount : ''}
+                                                onChange={e => handleCreditChange(index, e.target.value)}
+                                                className="w-full bg-transparent border-none text-sm text-[var(--text-main)] text-right focus:ring-0 outline-none font-mono text-rose-400 font-bold"
                                             />
                                         </td>
                                         <td className="p-2 w-40 relative group">
@@ -544,6 +577,32 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                     </div>
                 </div>
 
+                {/* Double Entry Balance Summary */}
+                <div className="flex justify-end pt-2">
+                    <div className="bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-4 min-w-[320px] space-y-2">
+                        <div className="flex justify-between text-xs text-dim">
+                            <span>Sub Total</span>
+                            <div className="flex gap-12 font-mono">
+                                <span className="w-24 text-right">${totals.debit.toFixed(2)}</span>
+                                <span className="w-24 text-right">${totals.credit.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold text-[var(--text-main)] border-t border-[var(--border-main)] pt-2">
+                            <span>Total ($)</span>
+                            <div className="flex gap-12 font-mono text-[#C8E600]">
+                                <span className="w-24 text-right">${totals.debit.toFixed(2)}</span>
+                                <span className="w-24 text-right">${totals.credit.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        {Math.abs(totals.debit - totals.credit) > 0.001 && (
+                            <div className="flex justify-between text-xs font-bold text-rose-500 border-t border-[var(--border-main)]/50 pt-2">
+                                <span>Difference</span>
+                                <span className="font-mono">${Math.abs(totals.debit - totals.credit).toFixed(2)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Footer / Totals */}
                 <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pt-4 border-t border-[var(--border-main)]">
                     <div className="space-y-4 w-full sm:w-auto">
@@ -554,8 +613,8 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                         )}
                         <div className="flex items-center gap-6">
                             <div className="space-y-1">
-                                <p className="text-[10px] text-dim font-bold uppercase">Journal Amount</p>
-                                <p className="text-xl font-mono font-bold text-[#C8E600]">${(totals.debit + totals.credit).toFixed(2)}</p>
+                                <p className="text-[10px] text-dim font-bold uppercase">Balanced Journal Amount</p>
+                                <p className="text-xl font-mono font-bold text-[#C8E600]">${totals.debit.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>

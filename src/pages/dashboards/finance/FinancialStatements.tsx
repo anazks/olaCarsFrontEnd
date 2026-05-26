@@ -1,36 +1,20 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Landmark, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
+import { TrendingUp, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const FinancialStatements = () => {
-    const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
+    const activeTab = 'PL';
     const [loading, setLoading] = useState(true);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-    };
-
-    const getToday = () => {
-        return new Date().toISOString().split('T')[0];
-    };
-
+    
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: getOneMonthAgo(),
-        endDate: getToday()
+        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0]
     });
-
-    // Keep end date valid relative to start date
-    useEffect(() => {
-        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
-            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
-        }
-    }, [filters.startDate, filters.endDate]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -45,10 +29,10 @@ const FinancialStatements = () => {
         try {
             if (activeTab === 'PL') {
                 const data = await getPLReport(filters);
-                setReportData(data);
+                setReportData(data.data || data);
             } else {
                 const data = await getBalanceSheetReport(filters);
-                setReportData(data);
+                setReportData(data.data || data);
             }
         } catch (error) {
             console.error('Failed to fetch report', error);
@@ -94,6 +78,7 @@ const FinancialStatements = () => {
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <Calendar size={18} className="text-dim" />
                     <input 
                         type="date" 
                         value={filters.startDate}
@@ -104,15 +89,7 @@ const FinancialStatements = () => {
                     <input 
                         type="date" 
                         value={filters.endDate}
-                        min={filters.startDate}
-                        onChange={e => {
-                            const val = e.target.value;
-                            if (filters.startDate && val && val < filters.startDate) {
-                                setFilters({...filters, endDate: filters.startDate});
-                            } else {
-                                setFilters({...filters, endDate: val});
-                            }
-                        }}
+                        onChange={e => setFilters({...filters, endDate: e.target.value})}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>
@@ -129,21 +106,7 @@ const FinancialStatements = () => {
                 </select>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-[var(--bg-input)] rounded-xl w-fit">
-                <button 
-                    onClick={() => setActiveTab('PL')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'PL' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
-                >
-                    <TrendingUp size={16} /> Profit & Loss
-                </button>
-                <button 
-                    onClick={() => setActiveTab('BS')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'BS' ? 'bg-[#C8E600] text-[#0A0A0A]' : 'text-dim hover:text-[var(--text-main)]'}`}
-                >
-                    <Landmark size={16} /> Balance Sheet
-                </button>
-            </div>
+
 
             {/* Main Report View */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

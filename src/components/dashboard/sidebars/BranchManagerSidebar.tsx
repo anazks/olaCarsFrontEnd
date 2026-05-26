@@ -122,11 +122,23 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                 { label: 'Accident Reports', path: '/admin/branch-manager/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/branch-manager/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/branch-manager/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/branch-manager/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/branch-manager/collections/invoices' },
+            ]
+        },
+        {
             id: 'settings',
             label: 'Settings',
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-manager/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/branch-manager/bulk-uploads' },
             ]
         },
     ];

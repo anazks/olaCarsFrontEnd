@@ -7,7 +7,7 @@ import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import OlaLoader from '../../../components/common/OlaLoader';
 
 // ─── Types ────────────────────────────────────────────────────────────
 type SortKey = 'name' | 'drivingScore' | 'avgSpeed' | 'totalDistance' | 'fuelEfficiency' | 'safetyTotal' | 'outstanding' | 'weeklyRent';
@@ -341,6 +341,7 @@ const DriverPerformanceDashboard = () => {
     };
 
     if (loading) {
+<<<<<<< HEAD
         return (
             <div className="p-8 space-y-6 animate-pulse">
                 <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
@@ -353,6 +354,9 @@ const DriverPerformanceDashboard = () => {
                 <div className="h-96 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
             </div>
         );
+=======
+        return <OlaLoader fullScreen size="lg" />;
+>>>>>>> 70bbfa02d0c390d75474fd7b7b8f337ad62a1d9b
     }
 
     return (

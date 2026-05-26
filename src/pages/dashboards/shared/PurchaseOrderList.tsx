@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown } from 'lucide-react';
-import { getAllPurchaseOrders } from '../../../services/purchaseOrderService';
+import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown, Trash2 } from 'lucide-react';
+import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../../services/purchaseOrderService';
+import { getDecodedToken } from '../../../utils/auth';
 import type { PurchaseOrder, POStatus, PaginationMetadata, PurchaseOrderFilters } from '../../../services/purchaseOrderService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
@@ -41,6 +42,12 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
             text: '#ef4444',
             border: 'rgba(239, 68, 68, 0.3)',
             icon: <XCircle size={12} />
+        },
+        DISPOSED: {
+            bg: 'rgba(100, 116, 139, 0.1)',
+            text: '#64748b',
+            border: 'rgba(100, 116, 139, 0.3)',
+            icon: <Trash2 size={12} />
         }
     };
 
@@ -95,10 +102,18 @@ const PurchaseOrderList = () => {
     const [endDate, setEndDate] = useState('');
 
     // Sorting State
-    const [sortBy, setSortBy] = useState<PurchaseOrderFilters['sortBy']>('createdAt');
+    const [sortBy, setSortBy] = useState<any>('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+    const [currentUserId, setCurrentUserId] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const decoded = getDecodedToken();
+        if (decoded) {
+            setCurrentUserId(decoded.id || '');
+        }
+    }, []);
 
     // Fetch initial metadata (suppliers & branches)
     useEffect(() => {
@@ -163,7 +178,7 @@ const PurchaseOrderList = () => {
         }
     };
 
-    const handleSort = (field: PurchaseOrderFilters['sortBy']) => {
+    const handleSort = (field: any) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -173,7 +188,17 @@ const PurchaseOrderList = () => {
         setCurrentPage(1);
     };
 
-    const SortIcon = ({ field }: { field: PurchaseOrderFilters['sortBy'] }) => {
+    const handleQuickApprove = async (poId: string) => {
+        if (!window.confirm('Are you sure you want to approve this order?')) return;
+        try {
+            await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
+            fetchPOs();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Approval failed');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: any }) => {
         if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
         return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: '#C8E600' }} /></div>;
     };
@@ -258,6 +283,7 @@ const PurchaseOrderList = () => {
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>
                                 <option value="APPROVED">{t('management.common.status.approved')}</option>
                                 <option value="REJECTED">{t('management.common.status.rejected')}</option>
+                                <option value="DISPOSED">Disposed</option>
                             </select>
                         </div>
 
@@ -378,9 +404,9 @@ const PurchaseOrderList = () => {
             )}
 
             {/* Table Section */}
-            <div className="rounded-2xl overflow-hidden border transition-colors duration-300 shadow-2xl" 
+            <div className="border shadow-lg rounded-[2rem] overflow-hidden" 
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto custom-scrollbar">
                     {loading && pos.length === 0 ? (
                         <div className="flex items-center justify-center py-20">
                             <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(200,230,0,0.3)]" />
@@ -394,47 +420,61 @@ const PurchaseOrderList = () => {
                             <p className="text-sm mt-1 opacity-50">{t('management.purchaseOrders.empty.refine')}</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-separate border-spacing-0">
-                            <thead>
-                                <tr className="transition-colors duration-300" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                                    <th className="px-6 py-5">
-                                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors" 
-                                            style={{ color: 'var(--text-dim)' }}>
-                                            {t('management.purchaseOrders.table.poDetails')}
-                                        </button>
+                        <table className="w-full border-collapse text-left text-xs select-text">
+                            <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <th className="py-4 px-3 text-left w-10">Sl No.</th>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderNumber' as any)}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.purchaseOrders.table.poDetails')} <SortIcon field="purchaseOrderNumber" />
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
-                                    <th className="px-6 py-5">
-                                        <button onClick={() => handleSort('totalAmount')} 
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
-                                            style={{ color: 'var(--text-dim)' }}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('status' as any)}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.common.table.status')} <SortIcon field="status" />
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-right group cursor-pointer select-none" onClick={() => handleSort('totalAmount')}>
+                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.totalAmount')} <SortIcon field="totalAmount" />
-                                        </button>
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.table.sourceInfo')}</th>
-                                    <th className="px-6 py-5">
-                                        <button onClick={() => handleSort('purchaseOrderDate')} 
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors"
-                                            style={{ color: 'var(--text-dim)' }}>
+                                    <th className="py-4 px-6 text-left">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {t('management.purchaseOrders.table.sourceInfo')}
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderDate')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.timeline')} <SortIcon field="purchaseOrderDate" />
-                                        </button>
+                                        </div>
                                     </th>
-                                    <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>{t('management.purchaseOrders.table.explore')}</th>
+                                    <th className="py-4 px-6 text-center text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                        {t('management.purchaseOrders.table.explore')}
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody className={loading ? 'opacity-40 transition-opacity' : ''}>
-                                {pos.map((po) => (
+                            <tbody className={`divide-y divide-white/5 font-medium ${loading ? 'opacity-40 transition-opacity' : ''}`} style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
+                                {pos.map((po, index) => (
                                     <tr
                                         key={po._id}
-                                        className="border-t hover:bg-[#C8E600]/[0.02] transition-colors group"
-                                        style={{ borderColor: 'var(--border-main)' }}
+                                        onClick={() => navigate(po._id)}
+                                        className="transition-colors cursor-pointer group"
+                                        style={{ borderBottom: '1px solid var(--border-main)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                     >
-                                        <td className="px-6 py-6 lg:min-w-[220px]">
+                                        <td className="py-4 px-3 font-semibold text-gray-500">
+                                            {(index + 1 + (currentPage - 1) * limit).toString().padStart(2, '0')}
+                                        </td>
+                                        <td className="py-4 px-6 font-black">
                                             <div className="flex flex-col gap-1">
                                                 <div className="font-black text-sm flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                     {po.purchaseOrderNumber}
                                                     {po.isBilled && (
-                                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black tracking-tighter uppercase whitespace-nowrap">{t('management.purchaseOrders.table.billed')}</span>
+                                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black tracking-tighter uppercase whitespace-nowrap">
+                                                            {t('management.purchaseOrders.table.billed')}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -442,34 +482,34 @@ const PurchaseOrderList = () => {
                                                         {po.purpose}
                                                     </span>
                                                     {po.isEdited && (
-                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-black italic uppercase">{t('management.purchaseOrders.table.modded')}</span>
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-black italic uppercase">
+                                                            {t('management.purchaseOrders.table.modded')}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-6">
+                                        <td className="py-4 px-6">
                                             <StatusBadge status={po.status} />
                                         </td>
-                                        <td className="px-6 py-6">
-                                            <div className="text-base font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                                                ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </div>
+                                        <td className="py-4 px-6 text-right font-black text-sm" style={{ color: 'var(--text-main)' }}>
+                                            ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             <div className="text-[10px] opacity-40 font-bold" style={{ color: 'var(--text-dim)' }}>
                                                 {t('management.purchaseOrders.table.uniqueItems', { count: po.items.length })}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-6">
+                                        <td className="py-4 px-6">
                                             <div className="space-y-1">
                                                 <div className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                                    <div className="w-1 h-1 rounded-full bg-[#C8E600]" />
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
                                                     {typeof po.supplier === 'object' ? po.supplier.name : t('management.purchaseOrders.table.unknownVendor')}
                                                 </div>
-                                                <div className="text-[10px] opacity-50 font-medium flex items-center gap-2 pl-3" style={{ color: 'var(--text-dim)' }}>
+                                                <div className="text-[10px] opacity-50 font-medium flex items-center gap-2 pl-3.5" style={{ color: 'var(--text-dim)' }}>
                                                     {typeof po.branch === 'object' ? po.branch.name : t('management.purchaseOrders.table.unknownBranch')}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-6">
+                                        <td className="py-4 px-6">
                                             <div className="flex flex-col">
                                                 <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                                                     {new Date(po.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -479,15 +519,28 @@ const PurchaseOrderList = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-6">
-                                            <div className="flex items-center justify-end">
+                                        <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
+                                            <div className="flex justify-center gap-2">
+                                                {po.status === 'WAITING' && po.createdBy !== currentUserId && (
+                                                    <HasPermission permission="PURCHASE_ORDER_APPROVE">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleQuickApprove(po._id);
+                                                            }}
+                                                            className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-[#C8E600] hover:border-[#C8E600]/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center mr-1"
+                                                            title="Quick Approve"
+                                                        >
+                                                            <CheckCircle size={14} strokeWidth={2.5} />
+                                                        </button>
+                                                    </HasPermission>
+                                                )}
                                                 <button
                                                     onClick={() => navigate(po._id)}
-                                                    className="p-3 rounded-xl transition-all cursor-pointer hover:bg-[#C8E600] hover:text-black group-hover:shadow-[0_0_15px_rgba(200,230,0,0.2)]"
-                                                    style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-dim)' }}
+                                                    className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
                                                     title={t('management.purchaseOrders.table.explore')}
                                                 >
-                                                    <Eye size={18} />
+                                                    <Eye size={14} strokeWidth={2.5} />
                                                 </button>
                                             </div>
                                         </td>
@@ -499,61 +552,57 @@ const PurchaseOrderList = () => {
                 </div>
 
                 {/* Pagination Controls */}
-                {pagination && (
-                    <div className="px-8 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" 
+                {!loading && pos.length > 0 && pagination && pagination.totalPages >= 1 && (
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" 
                         style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            {t('management.purchaseOrders.pagination.reviewing', { 
-                                count: pos.length, 
-                                total: pagination.total,
-                                interpolation: { escapeValue: false }
-                            })}
-                        </div>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                            Showing {pos.length} of {pagination.total} orders
+                        </p>
                         
-                        {pagination.totalPages > 1 && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1 || loading}
-                                    className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed group"
-                                    style={{ color: 'var(--text-main)' }}
-                                >
-                                    <ChevronLeft size={20} className="group-active:-translate-x-1 transition-transform" />
-                                </button>
-                                
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-black/20 rounded-2xl border border-white/5">
-                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                        let pageNum = currentPage;
-                                        if (pagination.totalPages <= 5) pageNum = i + 1;
-                                        else if (currentPage <= 3) pageNum = i + 1;
-                                        else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
-                                        else pageNum = currentPage - 2 + i;
-                                        
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${currentPage === pageNum ? 'bg-[#C8E600] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
-                                                style={{ 
-                                                    color: currentPage === pageNum ? '#000' : 'var(--text-main)' 
-                                                }}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                
-                                <button
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === pagination.totalPages || loading}
-                                    className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed group"
-                                    style={{ color: 'var(--text-main)' }}
-                                >
-                                    <ChevronRight size={20} className="group-active:translate-x-1 transition-transform" />
-                                </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (pagination.totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                            style={{ 
+                                                background: currentPage === pageNum ? 'var(--brand-lime)' : 'transparent',
+                                                color: currentPage === pageNum ? '#000' : 'var(--text-main)',
+                                                border: currentPage === pageNum ? 'none' : '1px solid var(--border-main)'
+                                            }}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        )}
+                            
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

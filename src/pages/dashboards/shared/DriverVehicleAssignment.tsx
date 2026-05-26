@@ -23,14 +23,15 @@ const DriverVehicleAssignment = () => {
     const [error, setError] = useState<string | null>(null);
     const [uploadedContract, setUploadedContract] = useState<File | null>(null);
     const [generatingPreview, setGeneratingPreview] = useState(false);
+    const [hasPreviewed, setHasPreviewed] = useState(false);
     
-    const [durationMonths, setDurationMonths] = useState<number>(60);
-    const [durationWeeks, setDurationWeeks] = useState<number>(260);
+    const [durationMonths, setDurationMonths] = useState<number>(0);
+    const [durationWeeks, setDurationWeeks] = useState<number>(0);
     const [monthlyRent, setMonthlyRent] = useState<number>(0);
     const [weeklyRent, setWeeklyRent] = useState<number>(0);
-    const [frequency, setFrequency] = useState<'MONTHLY' | 'WEEKLY'>('MONTHLY');
+    const [frequency, setFrequency] = useState<'MONTHLY' | 'WEEKLY' | null>(null);
     const [depositAmount, setDepositAmount] = useState<number>(0);
-    const [hasDeposit, setHasDeposit] = useState<boolean>(false);
+    const [hasDeposit, setHasDeposit] = useState<boolean | null>(null);
     const [notes, setNotes] = useState('');
 
     useEffect(() => {
@@ -66,17 +67,28 @@ const DriverVehicleAssignment = () => {
     }, [id]);
 
     useEffect(() => {
+        setHasDeposit(null);
+        setDepositAmount(0);
+        setFrequency(null);
+        setDurationMonths(0);
+        setDurationWeeks(0);
+        setHasPreviewed(false);
+        setUploadedContract(null);
+        setNotes('');
+    }, [selectedVehicleId]);
+
+    useEffect(() => {
         if (selectedVehicleId) {
             const v = vehicles.find(v => v._id === selectedVehicleId);
             if (v) {
-                const purchasePrice = v.purchaseDetails?.purchasePrice || 0;
+                const sellingValue = v.basicDetails?.sellingValue || 0;
                 const deposit = hasDeposit ? depositAmount : 0;
-                const effectiveCost = Math.max(0, purchasePrice - deposit);
+                const effectiveCost = Math.max(0, sellingValue - deposit);
                 
                 if (frequency === 'MONTHLY') {
                     const rent = durationMonths > 0 ? Math.ceil(effectiveCost / durationMonths) : 0;
                     setMonthlyRent(rent);
-                } else {
+                } else if (frequency === 'WEEKLY') {
                     const rent = durationWeeks > 0 ? Math.ceil(effectiveCost / durationWeeks) : 0;
                     setWeeklyRent(rent);
                 }
@@ -143,6 +155,7 @@ const DriverVehicleAssignment = () => {
                     window.open(url, '_blank');
                     toast.success('Preview generated.', { id: toastId });
                     setGeneratingPreview(false);
+                    setHasPreviewed(true);
                 }
             });
         } catch (err: any) {
@@ -180,7 +193,7 @@ const DriverVehicleAssignment = () => {
                 durationWeeks: frequency === 'WEEKLY' ? durationWeeks : durationMonths * 4,
                 monthlyRent: frequency === 'MONTHLY' ? monthlyRent : weeklyRent * 4,
                 weeklyRent: frequency === 'WEEKLY' ? weeklyRent : Math.ceil(monthlyRent / 4),
-                frequency: frequency,
+                frequency: frequency || undefined,
                 depositAmount: hasDeposit ? depositAmount : 0,
                 notes: notes
             });
@@ -206,6 +219,10 @@ const DriverVehicleAssignment = () => {
         v.basicDetails.vin.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+
+    const isStep1Done = hasDeposit === false || (hasDeposit === true && depositAmount > 0);
+    const isStep2Done = isStep1Done && frequency !== null;
+    const isStep3Done = isStep2Done && ((frequency === 'MONTHLY' && durationMonths > 0) || (frequency === 'WEEKLY' && durationWeeks > 0));
 
     console.log('[DEBUG] DriverVehicleAssignment - Rendering component. Driver:', !!driver, 'Vehicles:', vehicles.length);
 
@@ -260,7 +277,7 @@ const DriverVehicleAssignment = () => {
             <div className="relative">
                 <input
                     type="text"
-                    placeholder="Search by make, model, VIN or registration..."
+                    placeholder="Search by make, model, Plate No or registration..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full border p-3.5 lg:p-4 pl-12 rounded-2xl font-bold shadow-sm outline-none focus:border-brand-lime transition-all"
@@ -305,7 +322,7 @@ const DriverVehicleAssignment = () => {
                                     </div>
                                     <div className="pt-3 mt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">VIN: {vehicle.basicDetails.vin}</p>
+                                            <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">Plate No: {vehicle.basicDetails.vin}</p>
                                             {vehicle.basicDetails.weeklyRent ? (
                                                 <p className="text-xs font-black text-brand-lime">${vehicle.basicDetails.weeklyRent.toLocaleString()}/wk</p>
                                             ) : null}
@@ -349,148 +366,166 @@ const DriverVehicleAssignment = () => {
                                     <p className="font-black text-lg lg:text-xl truncate">
                                         {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.make} {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.model}
                                     </p>
+                                    {vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.sellingValue !== undefined && (
+                                        <p className="text-xs font-bold mt-0.5" style={{ color: 'var(--brand-lime)' }}>
+                                            Selling Value: ${vehicles.find(v => v._id === selectedVehicleId)?.basicDetails.sellingValue?.toLocaleString()} USD
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-3 lg:gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">Deposit / Down Payment</label>
-                                    <div className="flex gap-2">
-                                    <div className="flex gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/10 w-fit">
-                                        <button 
-                                            onClick={() => setHasDeposit(true)}
-                                            className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all ${hasDeposit ? 'bg-brand-lime text-black shadow-lg shadow-brand-lime/10' : 'text-dim hover:text-white'}`}
-                                        >
-                                            YES
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setHasDeposit(false);
-                                                setDepositAmount(0);
-                                            }}
-                                            className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all ${!hasDeposit ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
-                                        >
-                                            NO
-                                        </button>
-                                    </div>
-                                    {hasDeposit && (
-                                        <div className="relative animate-in fade-in slide-in-from-left-2 duration-300">
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Amount"
-                                                value={depositAmount || ''}
-                                                onChange={(e) => setDepositAmount(Number(e.target.value))}
-                                                className="w-full pl-4 pr-10 py-2.5 rounded-xl border outline-none font-black transition-all text-sm focus:border-brand-lime"
-                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                            />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-dim uppercase">USD</div>
+                            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6 items-end">
+                                <div className="space-y-1.5 w-full">
+                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Deposit / Down Payment</label>
+                                    <div className="flex flex-col w-full">
+                                        <div className="flex gap-1.5 p-1 bg-white/5 rounded-xl border border-white/10 h-10 w-full">
+                                            <button 
+                                                onClick={() => setHasDeposit(true)}
+                                                className={`flex-1 rounded-lg font-black text-[10px] transition-all ${hasDeposit === true ? 'bg-brand-lime text-black shadow-lg shadow-brand-lime/10' : 'text-dim hover:text-white'}`}
+                                            >
+                                                YES
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    setHasDeposit(false);
+                                                    setDepositAmount(0);
+                                                }}
+                                                className={`flex-1 rounded-lg font-black text-[10px] transition-all ${hasDeposit === false ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
+                                            >
+                                                NO
+                                            </button>
                                         </div>
-                                    )}
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">Rent Frequency</label>
-                                    <div className="flex gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/10 w-fit">
-                                        <button 
-                                            onClick={() => setFrequency('MONTHLY')}
-                                            className={`px-3 py-1.5 rounded-xl font-black text-[9px] transition-all ${frequency === 'MONTHLY' ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
-                                        >
-                                            MONTHLY
-                                        </button>
-                                        <button 
-                                            onClick={() => setFrequency('WEEKLY')}
-                                            className={`px-3 py-1.5 rounded-xl font-black text-[9px] transition-all ${frequency === 'WEEKLY' ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
-                                        >
-                                            WEEKLY
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">
-                                        Duration ({frequency === 'MONTHLY' ? 'Months' : 'Weeks'})
-                                    </label>
-                                    <select
-                                        value={frequency === 'MONTHLY' ? durationMonths : durationWeeks}
-                                        onChange={(e) => frequency === 'MONTHLY' ? setDurationMonths(Number(e.target.value)) : setDurationWeeks(Number(e.target.value))}
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold transition-all appearance-none text-sm cursor-pointer"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        {frequency === 'MONTHLY' ? (
-                                            <>
-                                                <option value="1">1 Month</option>
-                                                <option value="3">3 Months</option>
-                                                <option value="6">6 Months</option>
-                                                <option value="12">12 Months (1 Year)</option>
-                                                <option value="24">24 Months (2 Years)</option>
-                                                <option value="36">36 Months (3 Years)</option>
-                                                <option value="48">48 Months (4 Years)</option>
-                                                <option value="60">60 Months (5 Years)</option>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="4">4 Weeks (~1 Month)</option>
-                                                <option value="12">12 Weeks (~3 Months)</option>
-                                                <option value="26">26 Weeks (6 Months)</option>
-                                                <option value="52">52 Weeks (1 Year)</option>
-                                                <option value="104">104 Weeks (2 Years)</option>
-                                                <option value="156">156 Weeks (3 Years)</option>
-                                                <option value="208">208 Weeks (4 Years)</option>
-                                                <option value="260">260 Weeks (5 Years)</option>
-                                            </>
+                                        {hasDeposit === true && (
+                                            <div className="relative animate-in fade-in slide-in-from-top-1 duration-200 mt-1.5 w-full">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Enter Amount"
+                                                    value={depositAmount || ''}
+                                                    onChange={(e) => setDepositAmount(Number(e.target.value))}
+                                                    className="w-full pl-4 pr-12 h-10 rounded-xl border outline-none font-black transition-all text-sm focus:border-brand-lime animate-none"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-dim uppercase">USD</div>
+                                            </div>
                                         )}
-                                    </select>
+                                    </div>
                                 </div>
-                                <div className="space-y-1 relative">
-                                    <label className="text-[11px] lg:text-[10px] font-black uppercase tracking-widest opacity-70">
-                                        {frequency === 'MONTHLY' ? 'Monthly Rent' : 'Weekly Rent'} (USD)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={frequency === 'MONTHLY' ? monthlyRent : weeklyRent}
-                                        readOnly
-                                        className="w-full px-3 py-2 rounded-xl border outline-none font-bold transition-all text-sm opacity-60 cursor-not-allowed"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    />
-                                    <p className="absolute -bottom-4 left-0 text-[8px] font-bold text-brand-lime uppercase tracking-tight">Auto-Calculated</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[11px] lg:text-[10px] font-black uppercase tracking-widest text-dim">Optional Notes</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Additional terms..."
-                                        value={notes}
-                                        onChange={(e) => setNotes(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all text-sm"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    />
-                                </div>
+                                {isStep1Done && (
+                                    <div className="space-y-1.5 w-full animate-in fade-in duration-300">
+                                        <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Rent Frequency</label>
+                                        <div className="flex gap-1.5 p-1 bg-white/5 rounded-xl border border-white/10 h-10 w-full">
+                                            <button 
+                                                onClick={() => setFrequency('MONTHLY')}
+                                                className={`flex-1 rounded-lg font-black text-[9px] transition-all ${frequency === 'MONTHLY' ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
+                                            >
+                                                MONTHLY
+                                            </button>
+                                            <button 
+                                                onClick={() => setFrequency('WEEKLY')}
+                                                className={`flex-1 rounded-lg font-black text-[9px] transition-all ${frequency === 'WEEKLY' ? 'bg-white/10 text-white' : 'text-dim hover:text-white'}`}
+                                            >
+                                                WEEKLY
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                {isStep2Done && (
+                                    <div className="space-y-1.5 w-full animate-in fade-in duration-300">
+                                        <label className="text-[10px] font-black uppercase tracking-widest opacity-70">
+                                            Duration ({frequency === 'MONTHLY' ? 'Months' : 'Weeks'})
+                                        </label>
+                                        <select
+                                            value={frequency === 'MONTHLY' ? durationMonths : durationWeeks}
+                                            onChange={(e) => frequency === 'MONTHLY' ? setDurationMonths(Number(e.target.value)) : setDurationWeeks(Number(e.target.value))}
+                                            className="w-full px-3 h-10 rounded-xl border outline-none font-bold transition-all appearance-none text-sm cursor-pointer"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="0">Select Duration</option>
+                                            {frequency === 'MONTHLY' ? (
+                                                <>
+                                                    <option value="1">1 Month</option>
+                                                    <option value="3">3 Months</option>
+                                                    <option value="6">6 Months</option>
+                                                    <option value="12">12 Months (1 Year)</option>
+                                                    <option value="24">24 Months (2 Years)</option>
+                                                    <option value="36">36 Months (3 Years)</option>
+                                                    <option value="48">48 Months (4 Years)</option>
+                                                    <option value="60">60 Months (5 Years)</option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="4">4 Weeks (~1 Month)</option>
+                                                    <option value="12">12 Weeks (~3 Months)</option>
+                                                    <option value="26">26 Weeks (6 Months)</option>
+                                                    <option value="52">52 Weeks (1 Year)</option>
+                                                    <option value="104">104 Weeks (2 Years)</option>
+                                                    <option value="156">156 Weeks (3 Years)</option>
+                                                    <option value="208">208 Weeks (4 Years)</option>
+                                                    <option value="260">260 Weeks (5 Years)</option>
+                                                </>
+                                            )}
+                                        </select>
+                                    </div>
+                                )}
+                                {isStep3Done && (
+                                    <div className="space-y-1.5 w-full relative animate-in fade-in duration-300">
+                                        <label className="text-[10px] font-black uppercase tracking-widest opacity-70">
+                                            {frequency === 'MONTHLY' ? 'Monthly Rent' : 'Weekly Rent'} (USD)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={frequency === 'MONTHLY' ? monthlyRent : weeklyRent}
+                                            readOnly
+                                            className="w-full px-3 h-10 rounded-xl border outline-none font-bold transition-all text-sm opacity-60 cursor-not-allowed"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                        <p className="absolute -bottom-4 left-0 text-[8px] font-bold text-brand-lime uppercase tracking-tight">Auto-Calculated</p>
+                                    </div>
+                                )}
+                                {isStep3Done && (
+                                    <div className="space-y-1.5 w-full animate-in fade-in duration-300">
+                                        <label className="text-[10px] font-black uppercase tracking-widest opacity-70">Optional Notes</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Additional terms..."
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
+                                            className="w-full px-4 h-10 rounded-xl border outline-none focus:ring-2 focus:ring-lime/50 transition-all text-sm"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="flex flex-wrap gap-2 lg:gap-3 w-full md:w-auto">
-                                <button
-                                    onClick={handlePreviewAgreement}
-                                    disabled={generatingPreview || !durationMonths}
-                                    className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border disabled:opacity-50 hover:bg-white/5"
-                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}
-                                >
-                                    {generatingPreview ? (
-                                        <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Generating...</>
-                                    ) : (
-                                        <><FileText size={16} /> Preview Agreement</>
-                                    )}
-                                </button>
+                                {isStep3Done && (
+                                    <button
+                                        onClick={handlePreviewAgreement}
+                                        disabled={generatingPreview}
+                                        className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border disabled:opacity-50 hover:bg-white/5 animate-in fade-in duration-300"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}
+                                    >
+                                        {generatingPreview ? (
+                                            <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Generating...</>
+                                        ) : (
+                                            <><FileText size={16} /> Preview Agreement</>
+                                        )}
+                                    </button>
+                                )}
 
-                                <label className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border cursor-pointer hover:border-brand-lime"
-                                    style={{ borderColor: uploadedContract ? 'var(--brand-lime)' : 'var(--border-main)', color: uploadedContract ? 'var(--brand-lime)' : 'var(--text-main)', background: uploadedContract ? 'rgba(200,230,0,0.05)' : 'var(--bg-input)' }}
-                                >
-                                    <Upload size={16} />
-                                    {uploadedContract ? 'Change File' : 'Upload Signed Contract'}
-                                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
-                                </label>
-                                {uploadedContract && (
-                                    <span className="text-[10px] lg:text-xs font-medium flex items-center px-2 truncate max-w-[120px] lg:max-w-[150px]" style={{ color: 'var(--text-dim)' }}>
+                                {hasPreviewed && (
+                                    <label className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-[11px] lg:text-xs font-bold transition-all border cursor-pointer hover:border-brand-lime animate-in fade-in duration-300"
+                                        style={{ borderColor: uploadedContract ? 'var(--brand-lime)' : 'var(--border-main)', color: uploadedContract ? 'var(--brand-lime)' : 'var(--text-main)', background: uploadedContract ? 'rgba(200,230,0,0.05)' : 'var(--bg-input)' }}
+                                    >
+                                        <Upload size={16} />
+                                        {uploadedContract ? 'Change File' : 'Upload Signed Contract'}
+                                        <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
+                                    </label>
+                                )}
+                                {hasPreviewed && uploadedContract && (
+                                    <span className="text-[10px] lg:text-xs font-medium flex items-center px-2 truncate max-w-[120px] lg:max-w-[150px] animate-in fade-in duration-300" style={{ color: 'var(--text-dim)' }}>
                                         {uploadedContract.name}
                                     </span>
                                 )}
@@ -503,18 +538,20 @@ const DriverVehicleAssignment = () => {
                                 >
                                     Cancel
                                 </button>
-                                <button
-                                    onClick={handleAssign}
-                                    disabled={assigning || !uploadedContract || !durationMonths || !monthlyRent}
-                                    className="flex-1 lg:flex-none px-6 lg:px-8 py-2.5 lg:py-3 rounded-xl font-black shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider text-[10px] lg:text-xs"
-                                    style={{ background: 'var(--brand-lime)', color: 'var(--brand-black, #000)' }}
-                                >
-                                    {assigning ? (
-                                        <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Processing...</>
-                                    ) : (
-                                        <><CheckCircle2 size={18} /> Confirm Assignment</>
-                                    )}
-                                </button>
+                                {uploadedContract && (
+                                    <button
+                                        onClick={handleAssign}
+                                        disabled={assigning}
+                                        className="flex-1 lg:flex-none px-6 lg:px-8 py-2.5 lg:py-3 rounded-xl font-black shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider text-[10px] lg:text-xs animate-in fade-in duration-300"
+                                        style={{ background: 'var(--brand-lime)', color: 'var(--brand-black, #000)' }}
+                                    >
+                                        {assigning ? (
+                                            <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Processing...</>
+                                        ) : (
+                                            <><CheckCircle2 size={18} /> Confirm Assignment</>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

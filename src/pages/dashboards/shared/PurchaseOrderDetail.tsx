@@ -6,14 +6,17 @@ import {
 } from '../../../services/purchaseOrderService';
 import systemSettingsService from '../../../services/systemSettingsService';
 import type { PurchaseOrder, POStatus } from '../../../services/purchaseOrderService';
-import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
+import { getDecodedToken, ROLE_LEVELS, getUserRole } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, UserCheck, History,
-    AlertCircle, Package, Receipt
+    AlertCircle, Package, Receipt, Trash2, ExternalLink
 } from 'lucide-react';
+import * as billService from '../../../services/billService';
+
 import ApproveRejectModal from './ApproveRejectModal';
 import PurchaseBillModal from './PurchaseBillModal';
+import ConvertPoToBillModal from './ConvertPoToBillModal';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -23,6 +26,7 @@ const PurchaseOrderDetail = () => {
     const [po, setPo] = useState<PurchaseOrder | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const userRole = getUserRole();
     const [actionLoading, setActionLoading] = useState(false);
     const [poThreshold, setPoThreshold] = useState<number>(1000); // Default fallback
 
@@ -33,12 +37,14 @@ const PurchaseOrderDetail = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalAction, setModalAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
     const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+    const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
 
     const fetchPO = useCallback(async () => {
         if (!id || id === 'create') return;
         setLoading(true);
         try {
             const data = await getPurchaseOrderById(id);
+            console.log('Fetched PO data:', data);
             setPo(data);
 
             const decoded = getDecodedToken();
@@ -90,6 +96,29 @@ const PurchaseOrderDetail = () => {
         }
     };
 
+    const handleConvertToBill = () => {
+        setIsConvertModalOpen(true);
+    };
+
+    const onConvertSuccess = (billId: string) => {
+        setIsConvertModalOpen(false);
+        navigate(`/admin/financial-admin/bills/${billId}`);
+    };
+
+    const handleDispose = async () => {
+        if (!id || !window.confirm('Are you sure you want to dispose of this Purchase Order?')) return;
+        setActionLoading(true);
+        try {
+            await billService.disposePO(id);
+            await fetchPO();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Disposal failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -128,7 +157,8 @@ const PurchaseOrderDetail = () => {
         MANAGER_APPROVED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         WAITING: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         APPROVED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
-        REJECTED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: <XCircle size={16} /> }
+        REJECTED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: <XCircle size={16} /> },
+        DISPOSED: { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', icon: <Trash2 size={16} /> }
     };
 
     const s = statusColors[po.status] || statusColors.WAITING;
@@ -188,15 +218,41 @@ const PurchaseOrderDetail = () => {
                     <div className="flex gap-3 w-full md:w-auto">
                         <HasPermission permission="PURCHASE_ORDER_EDIT">
                             <button
-                                onClick={() => setIsBillModalOpen(true)}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                style={{ background: '#C8E600', color: '#111' }}
+                                onClick={handleDispose}
+                                disabled={actionLoading}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5 transition-all disabled:opacity-50"
+                                style={{ color: 'var(--text-dim)' }}
                             >
-                                <Receipt size={18} /> Register Bill / Pay
+                                <Trash2 size={18} /> Dispose PO
                             </button>
                         </HasPermission>
+                        {userRole !== 'admin' && (
+                            <HasPermission permission="PURCHASE_ORDER_EDIT">
+                                <button
+                                    onClick={handleConvertToBill}
+                                    disabled={actionLoading}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                    style={{ background: '#C8E600', color: '#111' }}
+                                >
+                                    {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
+                                </button>
+                            </HasPermission>
+                        )}
                     </div>
                 )}
+
+                {po.isBilled && (
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={() => navigate(`/admin/financial-admin/bills`)} // Simplified for now, or fetch bill ID
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                            style={{ color: '#C8E600' }}
+                        >
+                            <ExternalLink size={18} /> View Bill
+                        </button>
+                    </div>
+                )}
+
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -289,11 +345,15 @@ const PurchaseOrderDetail = () => {
                                             {item.images && item.images.length > 0 && (
                                                 <div className="flex gap-2 mt-3">
                                                     {item.images.map((img, imgIdx) => {
-                                                        // Resolve image URL: local paths need backend base URL prepended
                                                         const resolveImageUrl = (url: string | File) => {
                                                             if (url instanceof File) return URL.createObjectURL(url);
-                                                            if (typeof url === 'string' && url.startsWith('/uploads/')) {
-                                                                return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${url}`;
+                                                            if (typeof url === 'string') {
+                                                                if (url.startsWith('http')) return url;
+                                                                const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+                                                                const s3Base = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                const base = s3Base || apiBase;
+                                                                return `${base}/${cleanPath}`;
                                                             }
                                                             return url;
                                                         };
@@ -404,6 +464,17 @@ const PurchaseOrderDetail = () => {
                 poId={po._id}
                 poNumber={po.purchaseOrderNumber}
                 totalAmount={po.totalAmount}
+            />
+
+            <ConvertPoToBillModal
+                isOpen={isConvertModalOpen}
+                onClose={() => setIsConvertModalOpen(false)}
+                onSuccess={onConvertSuccess}
+                poId={po._id}
+                poNumber={po.purchaseOrderNumber}
+                items={po.items}
+                initialSupplier={po.supplier}
+                initialDueDate={po.paymentDate}
             />
 
             <ApproveRejectModal

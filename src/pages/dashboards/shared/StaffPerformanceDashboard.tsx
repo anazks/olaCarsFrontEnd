@@ -2,14 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Clock3, MapPin, TrendingUp, Calendar, BarChart3,
-    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search
+    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search, Target
 } from 'lucide-react';
 import { 
-    ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
-    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend 
+    ResponsiveContainer, 
+    XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+    LineChart, Line, AreaChart, Area
 } from 'recharts';
 
-import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData } from '../../../services/staffPerformanceService';
+import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData, type TargetComparison } from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
 import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
@@ -27,6 +28,7 @@ const StaffPerformanceDashboard = () => {
     const [branchManagers, setBranchManagers] = useState<BranchManagerPerformanceData[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManagerPerformanceData[]>([]);
     const [globalAdmins, setGlobalAdmins] = useState<GlobalAdminPerformanceData[]>([]);
+    const [targetComparisons, setTargetComparisons] = useState<TargetComparison[]>([]);
     const [dateRange, setDateRange] = useState({
         startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
@@ -68,6 +70,7 @@ const StaffPerformanceDashboard = () => {
             setBranchManagers(data.data.branchManagers || []);
             setCountryManagers(data.data.countryManagers || []);
             setGlobalAdmins(data.data.globalAdmins || []);
+            setTargetComparisons(data.data.targetComparison || []);
         } catch (error) {
             console.error('Error fetching staff performance:', error);
         } finally {
@@ -139,61 +142,41 @@ const StaffPerformanceDashboard = () => {
 
     const chartData = useMemo(() => {
         const distribution: Record<string, number> = {};
-        let driversOutput = 0;
-        let vehiclesOutput = 0;
-        
-        let avgTimeArray: any[] = [];
-        let monthActions = 0;
-        let historicActions = 0;
 
         combinedList.forEach(s => {
             const roleName = s._listType.replace('-', ' ').toUpperCase();
             distribution[roleName] = (distribution[roleName] || 0) + 1;
-
-            if (s._listType === 'finance-admin' || s._listType === 'operation-admin') {
-                driversOutput += s.metrics.totalGlobalDrivers || 0;
-                vehiclesOutput += s.metrics.totalGlobalVehicles || 0;
-            } else if (s._listType === 'country-manager') {
-                driversOutput += s.metrics.totalCountryDrivers || 0;
-                vehiclesOutput += s.metrics.totalCountryVehicles || 0;
-            } else if (s._listType === 'branch-manager') {
-                driversOutput += s.metrics.totalBranchDrivers || 0;
-                vehiclesOutput += s.metrics.totalBranchVehicles || 0;
-            } else {
-                driversOutput += s.metrics.totalDriversOnboarded || 0;
-                vehiclesOutput += s.metrics.totalVehiclesOnboarded || 0;
-                
-                if (s.metrics.avgTimePerStageHours > 0) {
-                    avgTimeArray.push({
-                        name: s.fullName.split(' ')[0], 
-                        hours: s.metrics.avgTimePerStageHours,
-                        role: roleName
-                    });
-                }
-                
-                monthActions += s.metrics.actionsThisMonth || 0;
-                historicActions += s.metrics.totalStageActions || 0;
-            }
         });
 
-        avgTimeArray.sort((a,b) => b.hours - a.hours);
-        const topAvgTime = avgTimeArray.slice(0, 8);
+        const staffMomentum = combinedList
+            .map(s => ({
+                name: s.fullName.split(' ')[0],
+                thisMonth: s.metrics.actionsThisMonth || 0,
+                historical: s.metrics.totalStageActions || 0
+            }))
+            .slice(0, 8);
 
-        const COLORS = ['#C8E600', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+        const staffDeployment = combinedList
+            .map(s => ({
+                name: s.fullName.split(' ')[0],
+                drivers: s.metrics.totalDriversOnboarded ?? s.metrics.totalBranchDrivers ?? s.metrics.totalCountryDrivers ?? s.metrics.totalGlobalDrivers ?? 0,
+                vehicles: s.metrics.totalVehiclesOnboarded ?? s.metrics.totalBranchVehicles ?? s.metrics.totalCountryVehicles ?? s.metrics.totalGlobalVehicles ?? 0
+            }))
+            .slice(0, 8);
+
+        const targetData = targetComparisons.map(t => ({
+            name: t.category.replace('_', ' '),
+            Target: t.targetValue,
+            Actual: t.actualValue
+        }));
 
         return {
-            distribution: Object.keys(distribution).map((k, i) => ({ name: k, value: distribution[k], color: COLORS[i % COLORS.length] })),
-            output: [
-                { name: 'Drivers', value: driversOutput, fill: '#C8E600' },
-                { name: 'Vehicles', value: vehiclesOutput, fill: '#3b82f6' }
-            ].filter(x => x.value > 0),
-            velocity: topAvgTime,
-            frequency: [
-                { name: 'This Month', value: monthActions, fill: '#f59e0b' },
-                { name: 'Historical', value: Math.max(0, historicActions - monthActions), fill: '#6366f1' }
-            ].filter(x => x.value > 0)
+            distribution: Object.keys(distribution).map((k) => ({ name: k, value: distribution[k] })),
+            momentum: staffMomentum,
+            deployment: staffDeployment,
+            targets: targetData
         };
-    }, [combinedList]);
+    }, [combinedList, targetComparisons]);
 
     const getStatusColor = (status: string) => {
         return status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
@@ -325,7 +308,7 @@ const StaffPerformanceDashboard = () => {
                 {!loading && combinedList.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* 1. Distribution Matrix */}
-                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
@@ -333,84 +316,131 @@ const StaffPerformanceDashboard = () => {
                                     </div>
                                     <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Distribution Matrix</h2>
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-[var(--text-main)] px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-main)]">
-                                    FINANCE vs OPERATION
+                                <div className="flex items-center gap-2 text-[10px] font-black text-[#C8E600] px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-main)]">
+                                    HEADCOUNT BY ROLE
                                 </div>
                             </div>
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={chartData.distribution} innerRadius={65} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
-                                            {chartData.distribution.map((e, index) => <Cell key={`cell-${index}`} fill={e.color} />)}
-                                        </Pie>
+                                    <LineChart data={chartData.distribution} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
                                         <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)' }} />
-                                    </PieChart>
+                                        <Line type="monotone" dataKey="value" name="Headcount" stroke="#C8E600" strokeWidth={3} dot={{ r: 5, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+                                    </LineChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
                         {/* 2. Task Momentum */}
-                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
-                                    <TrendingUp size={20} />
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
+                                        <TrendingUp size={20} />
+                                    </div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Task Momentum</h2>
                                 </div>
-                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Task Momentum</h2>
+                                <div className="flex gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">This Month</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">Historical</span>
+                                    </div>
+                                </div>
                             </div>
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={chartData.frequency} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
-                                            {chartData.frequency.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                        </Pie>
+                                    <AreaChart data={chartData.momentum} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorMonth" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorHist" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
                                         <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)' }} />
-                                    </PieChart>
+                                        <Area type="monotone" dataKey="thisMonth" name="This Month" stroke="#C8E600" strokeWidth={2} fillOpacity={1} fill="url(#colorMonth)" />
+                                        <Area type="monotone" dataKey="historical" name="Historical" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorHist)" />
+                                    </AreaChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
                         {/* 3. Asset Deployment */}
-                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="p-3 rounded-2xl bg-lime/10 text-lime">
-                                    <BarChart3 size={20} />
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-lime/10 text-lime">
+                                        <BarChart3 size={20} />
+                                    </div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Asset Deployment</h2>
                                 </div>
-                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Asset Deployment</h2>
+                                <div className="flex gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">Drivers</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">Vehicles</span>
+                                    </div>
+                                </div>
                             </div>
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData.output} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                    <LineChart data={chartData.deployment} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
-                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <RechartsTooltip cursor={{fill: 'var(--bg-input)'}} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Bar dataKey="value" name="Total" radius={[10, 10, 2, 2]} maxBarSize={40}>
-                                            {chartData.output.map((e, index) => <Cell key={`cell-${index}`} fill={e.fill} />)}
-                                        </Bar>
-                                    </BarChart>
+                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
+                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
+                                        <Line type="monotone" dataKey="drivers" name="Drivers" stroke="#C8E600" strokeWidth={3} dot={{ r: 4, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+                                        <Line type="monotone" dataKey="vehicles" name="Vehicles" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, stroke: '#3b82f6', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+                                    </LineChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
-                        {/* 4. Process Bottlenecks */}
-                        <div className="rounded-[2rem] border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
-                                    <Clock3 size={20} />
+                        {/* 4. Target vs Actual Performance */}
+                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
+                                        <Target size={20} />
+                                    </div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Target Performance</h2>
                                 </div>
-                                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Process Bottlenecks</h2>
+                                <div className="flex gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">Target</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
+                                        <span className="text-[9px] font-black uppercase opacity-40">Actual</span>
+                                    </div>
+                                </div>
                             </div>
                             <div className="h-[240px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData.velocity} layout="vertical" margin={{ top: 0, right: 0, left: 20, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} opacity={0.2} />
-                                        <XAxis type="number" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
-                                        <YAxis dataKey="name" type="category" stroke="var(--text-main)" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} width={60} />
-                                        <RechartsTooltip cursor={{fill: 'var(--bg-input)'}} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Bar dataKey="hours" name="Avg Hours" radius={[0, 8, 8, 0]} maxBarSize={15} fill="#f97316" />
-                                    </BarChart>
+                                    <LineChart data={chartData.targets} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
+                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
+                                        <Line type="monotone" dataKey="Target" name="Target" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, stroke: '#3b82f6', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+                                        <Line type="monotone" dataKey="Actual" name="Actual" stroke="#C8E600" strokeWidth={3} dot={{ r: 5, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+                                    </LineChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
@@ -418,7 +448,7 @@ const StaffPerformanceDashboard = () => {
                 )}
 
                 {/* Staff Roster Table */}
-                <div className="rounded-[2.5rem] border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
+                <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                     <div className="p-8 border-b border-[var(--border-main)] flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--bg-card)]">
                         <div>
                             <h2 className="text-lg font-black text-[var(--text-main)]">Staff Telemetry Ledger</h2>
