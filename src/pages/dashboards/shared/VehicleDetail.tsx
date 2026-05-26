@@ -71,6 +71,16 @@ const InfoRow = ({ label, value }: { label: string; value?: string | number | nu
     </div>
 );
 
+const formatDateToDMY = (dateInput?: string | Date) => {
+    if (!dateInput) return undefined;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return undefined;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const VehicleDetail = () => {
     const { t } = useTranslation();
@@ -657,7 +667,7 @@ const VehicleDetail = () => {
                     <SectionHeader icon={<FileText size={16} />} title={t('management.vehicles.vehicleDetail.purchaseInformation')} />
                     <div className="space-y-4">
                         <InfoRow label={t('management.vehicles.vehicleDetail.labels.vendor')} value={vehicle.purchaseDetails?.vendorName} />
-                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.purchaseDate')} value={vehicle.purchaseDetails?.purchaseDate ? new Date(vehicle.purchaseDetails?.purchaseDate).toLocaleDateString() : undefined} />
+                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.purchaseDate')} value={formatDateToDMY(vehicle.purchaseDetails?.purchaseDate)} />
                         <div className="grid grid-cols-2 gap-4">
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.price')} value={`${vehicle.purchaseDetails?.currency || ""} ${(vehicle.purchaseDetails?.purchasePrice || 0).toLocaleString()}`} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.method')} value={vehicle.purchaseDetails?.paymentMethod} />
@@ -912,8 +922,8 @@ const VehicleDetail = () => {
                             <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.onboardingMeta')} />
                             <div className="grid grid-cols-2 gap-4">
                                 <InfoRow label={t('management.vehicles.vehicleDetail.labels.onboardedBy')} value={vehicle.creatorRole?.replace(/([A-Z])/g, ' $1')} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.createdDate')} value={vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : '—'} />
-                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.lastUpdate')} value={vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleDateString() : '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.createdDate')} value={formatDateToDMY(vehicle.createdAt) ?? '—'} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.lastUpdate')} value={formatDateToDMY(vehicle.updatedAt) ?? '—'} />
                                 <InfoRow label={t('management.vehicles.vehicleDetail.labels.imports')} value={vehicle.importationDetails?.isImported ? t('common.yes') : t('common.no')} />
                             </div>
                         </div>
