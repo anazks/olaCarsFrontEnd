@@ -502,13 +502,11 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
-              <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
-                <Route path="drivers" element={<DriverList />} />
-                <Route path="drivers/new" element={<CreateDriver />} />
-                <Route path="drivers/:id" element={<DriverDetail />} />
-                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
-                <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
-              </Route>
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />

@@ -228,7 +228,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                                             {new Date(agreement.updatedAt || agreement.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex justify-end gap-2 transition-opacity opacity-100">
                                                 <button
                                                     onClick={() => navigate(`edit/${agreement._id}`)}
                                                     className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"

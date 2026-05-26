@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
     TrendingUp, TrendingDown, Download, 
-    Calendar, Filter, FileText, Loader2, 
+    Filter, FileText, Loader2, 
     ArrowUpRight, ArrowDownRight, Activity, MapPin, Building2
 } from 'lucide-react';
 import { 
@@ -43,6 +43,13 @@ const Reports = () => {
         branch: isBM ? user?.branchId : '',
         country: isCM ? user?.country : ''
     });
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
 
     const [dailyFinance, setDailyFinance] = useState<DailyFinanceData[]>([]);
     const [driverPerformance, setDriverPerformance] = useState<DriverPerformanceData[]>([]);
@@ -204,7 +211,6 @@ const Reports = () => {
 
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                         <input 
                             type="date" 
                             value={filters.startDate}
@@ -217,7 +223,15 @@ const Reports = () => {
                     <input 
                         type="date" 
                         value={filters.endDate}
-                        onChange={e => setFilters({...filters, endDate: e.target.value})}
+                        min={filters.startDate}
+                        onChange={e => {
+                            const val = e.target.value;
+                            if (filters.startDate && val && val < filters.startDate) {
+                                setFilters({...filters, endDate: filters.startDate});
+                            } else {
+                                setFilters({...filters, endDate: val});
+                            }
+                        }}
                         className="bg-transparent outline-none text-sm font-medium"
                         style={{ color: 'var(--text-main)' }}
                     />
