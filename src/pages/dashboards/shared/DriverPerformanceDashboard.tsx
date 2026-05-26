@@ -343,8 +343,7 @@ const DriverPerformanceDashboard = () => {
     if (loading) {
         return (
             <div className="p-8 space-y-6 animate-pulse">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
-
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
                 <div className="h-10 w-72 rounded-xl" style={{ backgroundColor: 'var(--bg-input)' }} />
                 <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
                     {[1, 2, 3, 4, 5, 6].map(i => (
@@ -391,7 +390,7 @@ const DriverPerformanceDashboard = () => {
                                 <option value="all">All Branches</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
-                                ))}
+                                Uk))}
                             </select>
                         </div>
                     )}

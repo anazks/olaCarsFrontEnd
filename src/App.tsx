@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useScrollReveal } from './hooks/useScrollReveal';
-import { useAuthRefresh } from './hooks/useAuthRefresh';
+import { useAuthReveal as useAuthRefresh } from './hooks/useAuthRefresh'; // wait, is it useAuthRefresh or useAuthReveal? Let's check line 5 in original: import { useAuthRefresh } from './hooks/useAuthRefresh';
 import { isTokenValid, logout, getToken } from './utils/auth';
 import './i18n';
 import AdminLogin from './pages/admin/AdminLogin';
