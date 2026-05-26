@@ -118,6 +118,8 @@ export interface Voucher {
     createdBy: any;
     creatorRole: string;
     postedAt?: string;
+    postedBy?: any;
+    postedByRole?: string;
     createdAt: string;
 }
 

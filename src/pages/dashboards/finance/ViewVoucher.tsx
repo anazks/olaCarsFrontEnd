@@ -89,12 +89,6 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
     const borderStyle = { borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' };
     const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
 
-    // Calculate totals
-    const totals = voucher.lines.reduce((acc, line) => {
-        if (line.type === 'DEBIT') acc.debit += Number(line.amount || 0);
-        else acc.credit += Number(line.amount || 0);
-        return acc;
-    }, { debit: 0, credit: 0 });
 
     const handlePrint = () => {
         window.print();
