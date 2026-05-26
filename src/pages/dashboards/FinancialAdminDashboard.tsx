@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
@@ -97,7 +98,9 @@ const FinancialAdminDashboard = () => {
         } catch (error) {
             console.error('Error loading dashboard metrics', error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+            }, 900);
         }
     };
 
@@ -120,15 +123,8 @@ const FinancialAdminDashboard = () => {
         setFilters(prev => ({ ...prev, [key]: val }));
     };
 
-    if (loading && !dashboardData) {
-        return (
-            <div
-                className="h-screen w-full flex items-center justify-center transition-colors"
-                style={{ background: 'var(--bg-main)' }}
-            >
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
-            </div>
-        );
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
     }
 
     const { stats, alerts, fleetStatus, revenueOverview, overduePayments, vehicleMovement } = dashboardData || {};
@@ -320,7 +316,7 @@ const FinancialAdminDashboard = () => {
 
                     <div className="h-[280px]">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                            <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
@@ -329,7 +325,14 @@ const FinancialAdminDashboard = () => {
                                 </defs>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
                                 <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                                <YAxis 
+                                    stroke={chartColors.text} 
+                                    fontSize={10} 
+                                    tickLine={false} 
+                                    axisLine={false} 
+                                    tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} 
+                                    width={55}
+                                />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
                                     itemStyle={{ color: '#C8E600' }}
@@ -421,29 +424,29 @@ const FinancialAdminDashboard = () => {
                         </button>
                     </div>
 
-                    <div className="p-8 flex-1 flex flex-col justify-center transition-all duration-300">
+                    <div className="p-6 flex-1 flex flex-col justify-center transition-all duration-300">
 
                         {activeTab === 'overview' && (
                             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="pb-6 md:pb-0 md:pr-6">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={24} /></div>
+                                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={20} /></div>
                                         <div className="min-w-0">
-                                            <div className="text-2xl sm:text-3xl font-black truncate" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                            <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
                                             <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
                                         </div>
                                     </div>
                                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
                                 </div>
                                 <div className="py-6 md:py-0 md:px-6 text-center flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-4xl font-black text-[#C8E600] mb-2">{stats?.collectionCompliance || 94}%</div>
+                                    <div className="text-2xl font-black text-[#C8E600] mb-1">{stats?.collectionCompliance || 94}%</div>
                                     <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
                                     <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
                                         <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
                                     </div>
                                 </div>
                                 <div className="pt-6 md:pt-0 md:pl-6" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-2xl font-black mb-1 truncate" style={{ color: 'var(--text-main)' }}>${(stats?.outstandingBalance || 0).toLocaleString()}</div>
+                                    <div className="text-[17px] sm:text-[19px] font-black mb-1" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.outstandingBalance || 0).toLocaleString()}</div>
                                     <div className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Awaiting Settlement</div>
                                     <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Accumulated ledger deficit currently flagged for recovery pipeline tracking.</p>
                                 </div>
@@ -454,9 +457,9 @@ const FinancialAdminDashboard = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="pb-6 md:pb-0 md:pr-6">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0"><Car size={24} /></div>
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0"><Car size={20} /></div>
                                         <div className="min-w-0">
-                                            <div className="text-2xl sm:text-3xl font-black truncate" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
+                                            <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
                                             <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Total Global Fleet</div>
                                         </div>
                                     </div>
@@ -475,17 +478,17 @@ const FinancialAdminDashboard = () => {
                         {activeTab === 'collections' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="pb-6 md:pb-0 md:pr-6 flex items-center gap-4">
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0"><Wallet size={32} /></div>
+                                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0"><Wallet size={24} /></div>
                                     <div className="min-w-0">
-                                        <div className="text-xs sm:text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
-                                        <div className="text-3xl sm:text-4xl font-black truncate" style={{ color: 'var(--text-main)' }}>${(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                        <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
+                                        <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
                                 <div className="pt-6 md:pt-0 md:pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0"><ShieldAlert size={32} /></div>
+                                    <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0"><ShieldAlert size={24} /></div>
                                     <div className="min-w-0">
-                                        <div className="text-xs sm:text-sm uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
-                                        <div className="text-3xl sm:text-4xl font-black text-red-500 truncate">${(stats?.outstandingCollections || 0).toLocaleString()}</div>
+                                        <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
+                                        <div className="text-[17px] sm:text-[19px] font-black text-red-500">${Math.round(stats?.outstandingCollections || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
                             </div>
@@ -551,7 +554,13 @@ const FinancialAdminDashboard = () => {
                                     stroke={chartColors.text}
                                     axisLine={false}
                                 />
-                                <YAxis stroke={chartColors.text} fontSize={12} axisLine={false} tickLine={false} />
+                                <YAxis 
+                                    stroke={chartColors.text} 
+                                    fontSize={10} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    width={30}
+                                />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, color: chartColors.tooltipText, borderRadius: '8px' }}
                                     labelStyle={{ color: chartColors.text }}
@@ -586,36 +595,39 @@ const FinancialAdminDashboard = () => {
 
 const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) => (
     <div
-        className="rounded-3xl p-6 shadow-sm flex flex-col justify-between border transition-all hover:-translate-y-1 duration-300"
+        className="rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between border transition-all hover:-translate-y-1 duration-300"
         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
     >
         <div className="flex justify-between items-start">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${iconBg}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
                 {icon}
             </div>
-            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                {trendUp ? <ArrowUpRight size={12} /> : <div className="rotate-90"><ArrowUpRight size={12} /></div>} {trend}
+            <div className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                {trendUp ? <ArrowUpRight size={10} /> : <div className="rotate-90"><ArrowUpRight size={10} /></div>} {trend}
             </div>
         </div>
-        <div className="mt-8">
-            <div className="text-3xl font-black leading-none tracking-tight" style={{ color: 'var(--text-main)' }}>{value}</div>
-            <div className="text-sm font-bold mt-2 uppercase tracking-wider text-[11px]" style={{ color: 'var(--text-dim)' }}>{title}</div>
+        <div className="mt-5">
+            <div className="text-2xl font-extrabold leading-none tracking-tight" style={{ color: 'var(--text-main)' }}>{value}</div>
+            <div className="text-[10px] font-bold mt-1.5 uppercase tracking-wider opacity-85" style={{ color: 'var(--text-dim)' }}>{title}</div>
         </div>
     </div>
 );
 
-const AlertPill = ({ title, count, colorClass, desc }: any) => (
-    <div className={`${colorClass} text-white rounded-2xl p-4 flex items-center shadow-md relative overflow-hidden group`}>
+const AlertPill = ({ title, count, colorClass, desc, onClick }: any) => (
+    <div 
+        onClick={onClick}
+        className={`${colorClass} text-white rounded-xl py-2.5 px-4 flex items-center shadow-sm relative overflow-hidden group cursor-pointer hover:opacity-95 transition-all`}
+    >
         <div className="flex-1 relative z-10">
-            <div className="font-black text-xl leading-none">{count}</div>
-            <div className="text-xs font-bold uppercase tracking-wider opacity-90">{title} Notifications</div>
-            <div className="text-[10px] opacity-80 mt-0.5">{desc}</div>
+            <div className="font-extrabold text-lg leading-none">{count}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider opacity-90 mt-0.5">{title} Notifications</div>
+            <div className="text-[9px] opacity-75 mt-0.5">{desc}</div>
         </div>
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10">
-            <ChevronRight size={18} />
+        <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+            <ChevronRight size={14} />
         </div>
-        <div className="absolute right-[-10px] bottom-[-10px] text-white opacity-10 transform rotate-[-12deg]">
-            <ShieldAlert size={64} />
+        <div className="absolute right-[-8px] bottom-[-8px] text-white opacity-10 transform rotate-[-12deg]">
+            <ShieldAlert size={48} />
         </div>
     </div>
 );

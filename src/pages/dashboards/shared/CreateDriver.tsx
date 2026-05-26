@@ -8,6 +8,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 // ─── Country Codes ────────────────────────────────────────────────────
 const COUNTRY_CODES = [
+    { code: '+91', country: 'India', iso: 'IN', regex: /^[6789]\d{9}$/, placeholder: '9876543210', maxDigits: 10 },
     { code: '+254', country: 'Kenya', iso: 'KE', regex: /^[17]\d{8}$/, placeholder: '712 345678', maxDigits: 9 },
     { code: '+256', country: 'Uganda', iso: 'UG', regex: /^[2347]\d{8}$/, placeholder: '772 345678', maxDigits: 9 },
     { code: '+255', country: 'Tanzania', iso: 'TZ', regex: /^[67]\d{8}$/, placeholder: '712 345678', maxDigits: 9 },
@@ -15,7 +16,6 @@ const COUNTRY_CODES = [
     { code: '+234', country: 'Nigeria', iso: 'NG', regex: /^[789]\d{9}$/, placeholder: '803 123 4567', maxDigits: 10 },
     { code: '+233', country: 'Ghana', iso: 'GH', regex: /^[235]\d{8}$/, placeholder: '24 123 4567', maxDigits: 9 },
     { code: '+27', country: 'South Africa', iso: 'ZA', regex: /^[678]\d{8}$/, placeholder: '82 123 4567', maxDigits: 9 },
-    { code: '+91', country: 'India', iso: 'IN', regex: /^[6789]\d{9}$/, placeholder: '98765 43210', maxDigits: 10 },
     { code: '+971', country: 'UAE', iso: 'AE', regex: /^5\d{8}$/, placeholder: '50 123 4567', maxDigits: 9 },
     { code: '+966', country: 'Saudi Arabia', iso: 'SA', regex: /^5\d{8}$/, placeholder: '50 123 4567', maxDigits: 9 },
     { code: '+44', country: 'UK', iso: 'GB', regex: /^7\d{9}$/, placeholder: '7123 456789', maxDigits: 10 },
@@ -179,6 +179,10 @@ const PhoneInputField = ({ icon, label, name, codeName, required = true, formDat
     const country = COUNTRY_CODES.find(cc => cc.code === selectedCode);
     const maxDigits = country ? country.maxDigits : 15;
 
+    const displayPlaceholder = placeholder || (country 
+        ? `${country.placeholder}${required ? '' : ' (Optional)'}` 
+        : `700 000000${required ? '' : ' (Optional)'}`);
+
     return (
         <div className="space-y-1.5 flex-1 min-w-[280px]">
             <label className="text-xs font-bold uppercase tracking-widest ml-1" style={{ color: 'var(--text-dim)' }}>{label}</label>
@@ -197,7 +201,7 @@ const PhoneInputField = ({ icon, label, name, codeName, required = true, formDat
                         type="tel"
                         name={name}
                         required={required}
-                        placeholder={placeholder || (country ? country.placeholder : "700 000000")}
+                        placeholder={displayPlaceholder}
                         maxLength={maxDigits}
                         value={formData[name as keyof typeof formData]}
                         onChange={onChange}
@@ -224,14 +228,14 @@ const CreateDriver = () => {
         firstName: '',
         lastName: '',
         email: '',
-        phoneCode: '+254',
+        phoneCode: '+91',
         phoneNumber: '',
-        whatsappCode: '+254',
+        whatsappCode: '+91',
         whatsappNumber: '',
         dateOfBirth: '',
         nationality: '',
         emergencyContactName: '',
-        emergencyContactCode: '+254',
+        emergencyContactCode: '+91',
         emergencyContactPhone: '',
         emergencyContactRelationship: '',
         customRelationship: '',
@@ -381,6 +385,11 @@ const CreateDriver = () => {
             value = value.replace(/\D/g, '');
         }
 
+        // Disable numeric characters for first name, last name, and emergency contact name
+        if (name === 'firstName' || name === 'lastName' || name === 'emergencyContactName') {
+            value = value.replace(/[^a-zA-Z\s'-]/g, '');
+        }
+
         setFormData(prev => {
             const updated = { ...prev, [name]: value };
             
@@ -408,11 +417,9 @@ const CreateDriver = () => {
             return updated;
         });
 
-        if (touched[name]) {
-            validateField(name, value);
-        } else if (errors[name]) {
-            setErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
-        }
+        // Set touched to true on change to show validation in real-time
+        setTouched(prev => ({ ...prev, [name]: true }));
+        validateField(name, value);
     };
 
     // ─── Validation ───────────────────────────────────────────────────
@@ -539,7 +546,6 @@ const CreateDriver = () => {
                             onCodeChange={handleChange}
                             onBlur={handleBlur}
                             error={errors.phoneNumber}
-                            placeholder="700 000000"
                         />
                         <PhoneInputField
                             icon={<Phone size={18} />}
@@ -552,7 +558,6 @@ const CreateDriver = () => {
                             onCodeChange={handleChange}
                             onBlur={handleBlur}
                             error={errors.whatsappNumber}
-                            placeholder="700 000000 (Optional)"
                         />
                         <InputField icon={<Calendar size={18} />} label="Date of Birth" name="dateOfBirth" type="date" formData={formData} onChange={handleChange} onBlur={handleBlur} error={errors.dateOfBirth} maxDate={getMaxDOB()} />
                         <InputField icon={<Building2 size={18} />} label="Nationality" name="nationality" placeholder="e.g. Kenyan" formData={formData} onChange={handleChange} onBlur={handleBlur} error={errors.nationality} />
@@ -572,7 +577,6 @@ const CreateDriver = () => {
                                 onCodeChange={handleChange}
                                 onBlur={handleBlur}
                                 error={errors.emergencyContactPhone}
-                                placeholder="700 000000"
                             />
                             <InputField
                                 icon={<User size={18} />}

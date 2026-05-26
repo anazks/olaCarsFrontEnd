@@ -5,7 +5,7 @@ import type { Tax, CreateTaxPayload } from '../../../services/taxService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-const TaxManagement = () => {
+const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [taxes, setTaxes] = useState<Tax[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -62,8 +62,8 @@ const TaxManagement = () => {
     };
 
     return (
-        <div className="container-responsive space-y-6">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Tax Management', active: true }]} />
+        <div className={isEmbedded ? "space-y-6" : "container-responsive space-y-6"}>
+            {!isEmbedded && <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Tax Management', active: true }]} />}
 
             {/* Compact Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">

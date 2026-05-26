@@ -2,14 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
     ResponsiveContainer, AreaChart, Area, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-
+    BarChart, Bar, Cell
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import { getUserRole } from '../../../utils/auth';
 import {
-    Library, DollarSign, ShieldAlert,
+    Library, DollarSign, ShieldAlert, Calendar,
     MapPin, Building, Search, Filter,
     TrendingUp, Wallet, FileText, Clock, FilterX
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 
 // Services
 import { 
@@ -24,10 +26,36 @@ import {
 import { getAllBranches } from '../../../services/branchService';
 import { useTheme } from '../../../context/ThemeContext';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import OlaLoader from '../../../components/common/OlaLoader';
 
 const CollectionsDashboard = () => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const navigate = useNavigate();
+
+    const getRoutePrefix = () => {
+        const role = getUserRole();
+        switch (role) {
+            case 'admin':
+                return '/admin/admin';
+            case 'financeadmin':
+            case 'financialadmin':
+                return '/admin/financial-admin';
+            case 'operationadmin':
+            case 'operationaladmin':
+                return '/admin/operational-admin';
+            case 'countrymanager':
+                return '/admin/country-manager';
+            case 'branchmanager':
+                return '/admin/branch-manager';
+            case 'financestaff':
+                return '/admin/branch-fin-staff';
+            case 'operationstaff':
+                return '/admin/branch-op-staff';
+            default:
+                return '/admin/financial-admin';
+        }
+    };
 
     // Color map matching dashboard layout specs
     const chartColors = {
@@ -56,23 +84,36 @@ const CollectionsDashboard = () => {
     // Lookup collections
     const [allBranches, setAllBranches] = useState<any[]>([]);
 
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return format(d, 'yyyy-MM-dd');
-    };
-
-    const getToday = () => {
-        return format(new Date(), 'yyyy-MM-dd');
-    };
-
     // Filter presets
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: getOneMonthAgo(),
-        endDate: getToday()
+        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+        endDate: format(new Date(), 'yyyy-MM-dd')
     });
+
+    const efficiencyIndex = useMemo(() => {
+        if (!metrics || !metrics.totalInvoiced) return 0;
+        return (metrics.totalCollected / metrics.totalInvoiced) * 100;
+    }, [metrics]);
+
+    const statusCounts = useMemo(() => {
+        const counts = { PAID: 0, OVERDUE: 0, PARTIAL: 0, PENDING: 0 };
+        
+        listItems.forEach(item => {
+            const status = item.status as keyof typeof counts;
+            if (counts[status] !== undefined) {
+                counts[status] += 1;
+            }
+        });
+        
+        return [
+            { name: 'Settled', count: counts.PAID, fill: '#10B981' },
+            { name: 'Overdue', count: counts.OVERDUE, fill: '#EF4444' },
+            { name: 'Partial', count: counts.PARTIAL, fill: '#F59E0B' },
+            { name: 'Pending', count: counts.PENDING, fill: '#3B82F6' },
+        ];
+    }, [listItems]);
 
     // 1. Fetch Initial Setup (Branches)
     useEffect(() => {
@@ -167,36 +208,13 @@ const CollectionsDashboard = () => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
-    // Keep end date valid relative to start date
-    useEffect(() => {
-        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
-            setFilters(p => ({ ...p, endDate: filters.startDate }));
-        }
-    }, [filters.startDate, filters.endDate]);
-
-    const handleStartDateChange = (val: string) => {
-        setFilters(p => ({ ...p, startDate: val }));
-    };
-
-    const handleEndDateChange = (val: string) => {
-        if (filters.startDate && val && val < filters.startDate) {
-            setFilters(p => ({ ...p, endDate: filters.startDate }));
-            return;
-        }
-        setFilters(p => ({ ...p, endDate: val }));
-    };
-
     const clearDates = () => {
-        setFilters(p => ({ ...p, startDate: getOneMonthAgo(), endDate: getToday() }));
+        setFilters(p => ({ ...p, startDate: '', endDate: '' }));
     };
 
     // Inline Loading spinner component
     if (loading && !metrics) {
-        return (
-            <div className="h-screen w-full flex items-center justify-center transition-colors" style={{ background: 'var(--bg-main)' }}>
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#C8E600]"></div>
-            </div>
-        );
+        return <OlaLoader fullScreen size="lg" />;
     }
 
     return (
@@ -223,7 +241,7 @@ const CollectionsDashboard = () => {
             </div>
 
                 {/* CONTROL BOARD: FILTERS */}
-                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors mb-8"
+                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     
                     {/* Country Dropdown */}
@@ -257,14 +275,14 @@ const CollectionsDashboard = () => {
                     {/* Date Constraints */}
                     <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
                          style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                        <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
                         <input type="date" value={filters.startDate} 
-                               onChange={(e) => handleStartDateChange(e.target.value)}
+                               onChange={(e) => updateFilter('startDate', e.target.value)}
                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                         <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
                         <input type="date" value={filters.endDate} 
-                               min={filters.startDate}
-                               onChange={(e) => handleEndDateChange(e.target.value)}
+                               onChange={(e) => updateFilter('endDate', e.target.value)}
                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
                         {(filters.startDate || filters.endDate) && (
@@ -277,7 +295,7 @@ const CollectionsDashboard = () => {
 
 
             {/* STAT CARDS COMPACT GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
                 <MetricStatCard 
                     title="Total Billed" 
                     value={`$${(metrics?.totalInvoiced || 0).toLocaleString()}`} 
@@ -330,7 +348,7 @@ const CollectionsDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="h-[280px] w-full">
+                    <div className="h-[210px] w-full">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <AreaChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
@@ -365,14 +383,14 @@ const CollectionsDashboard = () => {
                             <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500">MTD Active</div>
                         </div>
                         <div className="mt-8">
-                            <div className="text-3xl font-black text-[#C8E600]">${(metrics?.mtdCollected || 0).toLocaleString()}</div>
-                            <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Month-To-Date Collected</p>
-                            <p className="text-xs opacity-40 mt-4">Consolidated total of settled receipts logged since first call of the current month cycle.</p>
+                            <div className="text-3xl font-black text-emerald-500">${(metrics?.mtdCollected || 0).toLocaleString()}</div>
+                            <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: 'var(--text-muted)' }}>Month-To-Date Collected</p>
+                            <p className="text-xs mt-4" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>Consolidated total of settled receipts logged since first call of the current month cycle.</p>
                         </div>
                     </div>
 
                     <div className="rounded-3xl p-6 border shadow-sm flex-1 flex flex-col justify-between transition-colors"
-                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex justify-between items-start">
                             <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center">
                                 <DollarSign size={24} className="text-[#C8E600]" />
@@ -380,9 +398,70 @@ const CollectionsDashboard = () => {
                             <div className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400">Forecast 30d</div>
                         </div>
                         <div className="mt-8">
-                            <div className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>${(metrics?.forecastAmount || 0).toLocaleString()}</div>
-                            <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-60">Projected Collections</p>
-                            <p className="text-xs opacity-40 mt-4">Calculated future billing inflows pending execution between today and the coming 30 days.</p>
+                            <div className="text-3xl font-black text-[var(--text-main)]">${(metrics?.forecastAmount || 0).toLocaleString()}</div>
+                            <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: 'var(--text-muted)' }}>Projected Collections</p>
+                            <p className="text-xs mt-4" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>Calculated future billing inflows pending execution between today and the coming 30 days.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* STATUS BREAKDOWN & DISTRIBUTION */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+                {/* BAR CHART BREAKDOWN */}
+                <div className="lg:col-span-8 rounded-3xl p-6 border shadow-sm flex flex-col justify-between transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div>
+                        <h3 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Ledger Distribution by Invoice State</h3>
+                        <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>Analysis of payment status and outstanding balances</p>
+                    </div>
+                    
+                    <div className="h-[250px] w-full mt-6">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={statusCounts}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
+                                <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} />
+                                <RechartsTooltip 
+                                    contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                />
+                                <Bar dataKey="count" radius={[8, 8, 0, 0]} name="Invoices Count">
+                                    {statusCounts.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* QUICK STATS / COLLECTION POLICY GUIDE */}
+                <div className="lg:col-span-4 rounded-3xl p-6 border shadow-sm flex flex-col justify-between transition-colors"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div>
+                        <h3 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Credit Risk Profile</h3>
+                        <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>System-wide collection guidelines & health indicators</p>
+                    </div>
+                    
+                    <div className="space-y-4 mt-6">
+                        <div className="p-3.5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="text-xs font-bold uppercase tracking-wider text-red-500">Overdue Risk Warning</div>
+                            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>Accounts exceeding 30+ days overdue are automatically flagged for direct fleet operations intervention.</p>
+                        </div>
+                        <div className="p-3.5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="text-xs font-bold uppercase tracking-wider text-emerald-500">Target Efficiency Goal</div>
+                            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>Maintain a system collection efficiency index of 95%+ monthly to ensure optimal branch liquidity.</p>
+                        </div>
+                        <div className="p-3.5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="flex justify-between items-center">
+                                <div className="text-xs font-bold uppercase tracking-wider text-indigo-500">Collection Efficiency Index</div>
+                                <span className="text-xs font-black text-indigo-500">{efficiencyIndex.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+                                <div className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, efficiencyIndex)}%` }}></div>
+                            </div>
+                            <p className="text-[10px] mt-1.5 opacity-70" style={{ color: 'var(--text-muted)' }}>Ratio of settled receipts against net total billing expected.</p>
                         </div>
                     </div>
                 </div>
@@ -418,8 +497,27 @@ const CollectionsDashboard = () => {
                                             <input type="checkbox" className="rounded border-gray-300" />
                                         </td>
                                         <td className="py-4 px-3">
-                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{entry.driverName}</div>
-                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                            <div 
+                                                className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
+                                            >
+                                                {entry.driverName}
+                                            </div>
+                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                                <span 
+                                                    className="cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => navigate(`${getRoutePrefix()}/invoices/${entry.id}`)}
+                                                >
+                                                    {entry.invoiceNumber}
+                                                </span>
+                                                {' • '}
+                                                <span 
+                                                    className="cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
+                                                >
+                                                    Fleet #{entry.fleetNumber}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
                                         <td className="py-4 px-3 text-right"><span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">{entry.daysOverdue} Days</span></td>
@@ -461,10 +559,29 @@ const CollectionsDashboard = () => {
                                             <input type="checkbox" className="rounded border-gray-300" />
                                         </td>
                                         <td className="py-4 px-3">
-                                            <div className="font-bold" style={{ color: 'var(--text-main)' }}>{entry.driverName}</div>
-                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>{entry.invoiceNumber} • Fleet #{entry.fleetNumber}</div>
+                                            <div 
+                                                className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
+                                            >
+                                                {entry.driverName}
+                                            </div>
+                                            <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                                <span 
+                                                    className="cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => navigate(`${getRoutePrefix()}/invoices/${entry.id}`)}
+                                                >
+                                                    {entry.invoiceNumber}
+                                                </span>
+                                                {' • '}
+                                                <span 
+                                                    className="cursor-pointer hover:underline hover:text-blue-500"
+                                                    onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
+                                                >
+                                                    Fleet #{entry.fleetNumber}
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td className="py-4 px-3 font-semibold text-[#D4F12E]">{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
                                         <td className="py-4 px-3 text-right font-bold" style={{ color: 'var(--text-muted)' }}>${entry.totalDue.toLocaleString()}</td>
                                         <td className="py-4 pr-4 pl-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${entry.balance.toLocaleString()}</td>
                                     </tr>
@@ -540,37 +657,57 @@ const CollectionsDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                            {listItems.map((item, index) => (
-                                <tr key={item.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
-                                    <td className="py-4 pl-4 pr-2">
-                                        <input type="checkbox" className="rounded border-gray-300" />
-                                    </td>
-                                    <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 10).toString().padStart(2, '0')}</td>
-                                    <td className="py-4 px-3 font-bold text-[#D4F12E]">{item.invoiceNumber}</td>
-                                    <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-main)' }}>{item.driverName}</td>
-                                    <td className="py-4 px-3">
-                                        <div className="font-semibold" style={{ color: 'var(--text-main)' }}>{item.vehicleNumber}</div>
-                                        <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Fleet #{item.fleetNumber}</div>
-                                    </td>
-                                    <td className="py-4 px-3">
-                                        <div className="font-medium" style={{ color: 'var(--text-main)' }}>{item.branch}</div>
-                                        <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
-                                    </td>
-                                    <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
-                                    <td className="py-4 px-3 text-right font-semibold" style={{ color: 'var(--text-muted)' }}>${item.totalAmountDue.toLocaleString()}</td>
-                                    <td className="py-4 px-3 text-right font-bold text-green-500">${item.amountPaid.toLocaleString()}</td>
-                                    <td className="py-4 px-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${item.balance.toLocaleString()}</td>
-                                    <td className="py-4 pr-4 pl-3 text-center">
-                                        <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
-                                            item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
-                                            item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
-                                            item.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-gray-500/10 text-gray-500'
-                                        }`}>
-                                            • {item.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
+                             {listItems.map((item, index) => (
+                                 <tr key={item.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                     <td className="py-4 pl-4 pr-2">
+                                         <input type="checkbox" className="rounded border-gray-300" />
+                                     </td>
+                                     <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1 + (pagination.page - 1) * 10).toString().padStart(2, '0')}</td>
+                                     <td 
+                                         className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                         onClick={() => navigate(`${getRoutePrefix()}/invoices/${item.id}`)}
+                                     >
+                                         {item.invoiceNumber}
+                                     </td>
+                                     <td 
+                                         className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
+                                         onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
+                                     >
+                                         {item.driverName}
+                                     </td>
+                                     <td className="py-4 px-3">
+                                         <div 
+                                             className="font-semibold cursor-pointer hover:underline hover:text-blue-500"
+                                             onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                         >
+                                             {item.vehicleNumber}
+                                         </div>
+                                         <div 
+                                             className="text-[10px] uppercase font-black tracking-widest mt-0.5 cursor-pointer hover:underline hover:text-blue-500"
+                                             onClick={() => item.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${item.vehicleId}`)}
+                                         >
+                                             Fleet #{item.fleetNumber}
+                                         </div>
+                                     </td>
+                                     <td className="py-4 px-3">
+                                         <div className="font-medium" style={{ color: 'var(--text-main)' }}>{item.branch}</div>
+                                         <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
+                                     </td>
+                                     <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
+                                     <td className="py-4 px-3 text-right font-semibold" style={{ color: 'var(--text-muted)' }}>${item.totalAmountDue.toLocaleString()}</td>
+                                     <td className="py-4 px-3 text-right font-bold text-green-500">${item.amountPaid.toLocaleString()}</td>
+                                     <td className="py-4 px-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${item.balance.toLocaleString()}</td>
+                                     <td className="py-4 pr-4 pl-3 text-center">
+                                         <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
+                                             item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
+                                             item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
+                                             item.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-gray-500/10 text-gray-500'
+                                         }`}>
+                                             • {item.status}
+                                         </span>
+                                     </td>
+                                 </tr>
+                             ))}
                             {listItems.length === 0 && !listLoading && (
                                 <tr><td colSpan={11} className="py-12 text-center text-sm font-bold opacity-50 uppercase tracking-widest">No collections invoices match chosen filter matrix. Try relaxing boundaries.</td></tr>
                             )}
@@ -629,17 +766,16 @@ const CollectionsDashboard = () => {
 // Helper Visual Components matching Dashboard specs
 const MetricStatCard = ({ title, value, description, icon, iconBg, highlight }: any) => (
     <div className={`rounded-3xl p-6 border shadow-sm flex flex-col justify-between hover:-translate-y-1 duration-300 transition-all`}
-         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
         <div className="flex justify-between items-start">
             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${iconBg}`}>
                 {icon}
             </div>
         </div>
         <div className="mt-6">
-            <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : ''}`}
-                 style={highlight ? {} : { color: 'var(--text-main)' }}>{value}</div>
-            <p className="text-[11px] font-black tracking-wider uppercase mt-2 opacity-40">{title}</p>
-            <p className="text-[10px] font-medium text-[#C8E600] mt-1">{description}</p>
+            <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : ''}`} style={{ color: highlight ? undefined : 'var(--text-main)' }}>{value}</div>
+            <p className="text-[11px] font-black tracking-wider uppercase mt-2" style={{ color: 'var(--text-muted)' }}>{title}</p>
+            <p className="text-[10px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>{description}</p>
         </div>
     </div>
 );

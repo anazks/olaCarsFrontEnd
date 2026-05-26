@@ -61,47 +61,48 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                 <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: textDimColor }} />
             </div>
 
-            {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 border rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                     style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}>
-                    <div className="p-3 border-b flex items-center gap-2"
-                         style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
-                        <Search size={14} style={{ color: textDimColor }} />
-                        <input
-                            autoFocus
-                            type="text"
-                            placeholder="Search code or name..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            onKeyDown={e => e.stopPropagation()}
-                            className="bg-transparent border-none text-xs focus:ring-0 outline-none w-full text-[color:var(--text-main)]"
-                        />
+                {isOpen && (
+    <div className="absolute top-full left-0 w-full mt-2 border rounded-xl shadow-2xl z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+         style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}>
+        <div className="p-3 border-b flex items-center gap-2"
+             style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+            <Search size={14} style={{ color: textDimColor }} />
+            <input
+                autoFocus
+                type="text"
+                placeholder="Search code or name..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.stopPropagation()}
+                className="bg-transparent border-none text-xs focus:ring-0 outline-none w-full text-[color:var(--text-main)]"
+            />
+        </div>
+        {/* Max height reduced to 110px. Scrollbar custom styled to use #C8E600 */}
+        <div className="max-h-[110px] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#C8E600] [&::-webkit-scrollbar-thumb]:rounded-full">
+            {filteredCodes.map(code => (
+                <div
+                    key={code._id}
+                    onClick={() => {
+                        onSelect(code._id);
+                        setIsOpen(false);
+                        setSearch('');
+                    }}
+                    className="px-4 py-3 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b last:border-0"
+                    style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}
+                >
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-[color:var(--text-main)] group-hover:text-black">{code.code}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider group-hover:bg-black text-[color:var(--text-muted)]"
+                              style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB' }}>
+                            {code.category}
+                        </span>
                     </div>
-                    <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                        {filteredCodes.map(code => (
-                            <div
-                                key={code._id}
-                                onClick={() => {
-                                    onSelect(code._id);
-                                    setIsOpen(false);
-                                    setSearch('');
-                                }}
-                                className="px-4 py-3 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b last:border-0"
-                                style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}
-                            >
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-[color:var(--text-main)] group-hover:text-black">{code.code}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider group-hover:bg-black/10 group-hover:text-black text-[color:var(--text-muted)]"
-                                          style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB' }}>
-                                        {code.category}
-                                    </span>
-                                </div>
-                                <p className="text-[11px] group-hover:text-black/80 mt-0.5 truncate text-[color:var(--text-muted)]">{code.name}</p>
-                            </div>
-                        ))}
-                    </div>
+                    <p className="text-[11px] group-hover:text-black/80 mt-0.5 truncate text-[color:var(--text-muted)]">{code.name}</p>
                 </div>
-            )}
+            ))}
+        </div>
+    </div>
+)}
         </div>
     );
 };
@@ -117,8 +118,11 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     const [error, setError] = useState<string | null>(null);
     const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
 
+    const today = new Date();
+    const localDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
     const [header, setHeader] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: localDateString,
         branch: '',
         narration: '',
         referenceInfo: {
@@ -158,7 +162,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         } else if (type === 'RECEIPT') {
             setHeader(h => ({ ...h, narration: 'Receipt from ' }));
         } else if (type === 'CONTRA') {
-            setHeader(h => ({ ...h, narration: 'Cash/Bank transfer' }));
+            setHeader(h => ({ ...h, narration: 'Cash-Bank transfer' }));
         }
     }, [type]);
 
@@ -287,6 +291,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                         <input
                             required
                             type="date"
+                            min={localDateString}
                             value={header.date}
                             onChange={e => setHeader({ ...header, date: e.target.value })}
                             className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
@@ -317,7 +322,10 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             type="text"
                             placeholder="Brief description..."
                             value={header.narration}
-                            onChange={e => setHeader({ ...header, narration: e.target.value })}
+                            onChange={e => {
+                                const sanitized = e.target.value.replace(/[^a-zA-Z0-9 _-]/g, '');
+                                setHeader({ ...header, narration: sanitized });
+                            }}
                             className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600] text-[color:var(--text-main)]"
                             style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                         />
@@ -377,16 +385,16 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                     </div>
                 </div>
 
-                <div className="rounded-2xl border overflow-hidden bg-transparent" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
-                    <div className={`${lines.length > 3 ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
+                <div className="rounded-2xl border bg-transparent" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                    <div>
                         <table className="w-full text-left border-collapse">
                             <thead className="border-b sticky top-0 z-10" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                                 <tr>
-                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Account</th>
+                                    <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest rounded-tl-2xl" style={{ color: textDimColor }}>Account</th>
                                     <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Description</th>
                                     <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>DR/CR</th>
                                     <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Amount</th>
-                                    <th className="px-5 py-4 text-right"></th>
+                                    <th className="px-5 py-4 text-right rounded-tr-2xl"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y" style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
@@ -451,7 +459,7 @@ const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                     <button
                         type="button"
                         onClick={handleAddLine}
-                        className="w-full py-4 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-t hover:bg-white/5"
+                        className="w-full py-4 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-t hover:bg-white/5 rounded-b-2xl"
                         style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB', color: textDimColor }}
                     >
                         <Plus size={14} /> Add Transaction Line

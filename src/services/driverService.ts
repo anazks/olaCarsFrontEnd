@@ -137,6 +137,8 @@ export interface Driver {
             note?: string;
         }>;
         relatedVehicle?: string;
+        invoiceRef?: string;
+        invoiceNumber?: string;
         notes?: string;
     }>;
     appliedAt: string;
@@ -206,9 +208,11 @@ export const progressDriver = async (id: string, targetStatus: string, data?: an
 };
 
 export const uploadDriverDocument = async (id: string, formData: FormData): Promise<any> => {
+    console.log(`[uploadDriverDocument] Uploading documents for driver ID: ${id}`);
     const response = await api.post(`/api/driver/${id}/upload-documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     });
+    console.log(`[uploadDriverDocument] API Response:`, response.data);
     return response.data.data;
 };
 
@@ -231,20 +235,24 @@ export const payAdditionalPayment = async (
 };
 
 export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promise<{ message: string; data: BulkUploadResult }> => {
+    console.log(`[bulkCreateDrivers] Uploading ${drivers.length} drivers${branch ? ` to branch: ${branch}` : ''}`);
     const payload: any = { drivers };
     if (branch) payload.branch = branch;
     const response = await api.post('/api/driver/bulk', payload);
+    console.log(`[bulkCreateDrivers] API Response:`, response.data);
     return response.data;
 };
 
 export const dataMigrateDrivers = async (
     drivers: any[], branch?: string, handlingStaff?: string, fleetNumber?: string
 ): Promise<{ message: string; data: DataMigrationResult }> => {
+    console.log(`[dataMigrateDrivers] Migrating ${drivers.length} drivers`, { branch, handlingStaff, fleetNumber });
     const payload: any = { drivers };
     if (branch) payload.branch = branch;
     if (handlingStaff) payload.handlingStaff = handlingStaff;
     if (fleetNumber) payload.fleetNumber = fleetNumber;
     const response = await api.post('/api/driver/data-migration', payload);
+    console.log(`[dataMigrateDrivers] API Response:`, response.data);
     return response.data;
 };
 

@@ -79,7 +79,7 @@ const BranchFinStaffDashboard = () => {
     const summaryCards = [
         {
             title: t('dashboards.branchFin.stats.cashOnHand'),
-            value: `₹${stats.cashOnHand.toLocaleString()}`,
+            value: `$${stats.cashOnHand.toLocaleString()}`,
             icon: Wallet,
             color: '#22c55e',
             bg: 'rgba(34,197,94,0.1)',
@@ -95,7 +95,7 @@ const BranchFinStaffDashboard = () => {
         },
         {
             title: 'Daily Collection',
-            value: `₹${stats.todaysRevenue.toLocaleString()}`,
+            value: `$${stats.todaysRevenue.toLocaleString()}`,
             icon: Calculator,
             color: '#3b82f6',
             bg: 'rgba(59,130,246,0.1)',
@@ -231,7 +231,7 @@ const BranchFinStaffDashboard = () => {
                                     </td>
                                         <td className="px-8 py-5 text-right">
                                             <div className={`text-sm font-black font-mono ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-                                                {isIncome ? '+' : '-'}₹{(tx.amount || 0).toLocaleString()}
+                                                {isIncome ? '+' : '-'}${(tx.amount || 0).toLocaleString()}
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 text-center">

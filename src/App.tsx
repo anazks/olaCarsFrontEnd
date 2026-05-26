@@ -40,6 +40,7 @@ import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff
 import ManageWorkshopManagers from './pages/dashboards/shared/ManageWorkshopManagers';
 import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
+import SupplierDetail from './pages/dashboards/shared/SupplierDetail';
 import Reports from './pages/dashboards/shared/Reports';
 import POThresholdPage from './pages/dashboards/admin/POThresholdPage';
 import ManageInsurances from './pages/dashboards/shared/ManageInsurances';
@@ -59,20 +60,27 @@ import TargetManagement from './pages/dashboards/shared/TargetManagement';
 // import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
+import BulkUploadsHub from './pages/dashboards/shared/BulkUploadsHub';
 import AlertsManagement from './pages/dashboards/shared/AlertsManagement';
 import InsuranceClaimsView from './pages/dashboards/financialAdmin/InsuranceClaimsView';
 import AccidentReports from './pages/dashboards/shared/AccidentReports';
+import AccidentReportDetail from './pages/dashboards/shared/AccidentReportDetail';
 
 // Purchase Order Pages
 import PurchaseOrderList from './pages/dashboards/shared/PurchaseOrderList';
+import WorkshopPurchaseRequestList from './pages/dashboards/shared/WorkshopPurchaseRequestList';
+import WorkshopPurchaseRequestDetail from './pages/dashboards/shared/WorkshopPurchaseRequestDetail';
 import CreatePurchaseOrder from './pages/dashboards/shared/CreatePurchaseOrder';
 import PurchaseOrderDetail from './pages/dashboards/shared/PurchaseOrderDetail';
-import PurchaseBillList from './pages/dashboards/shared/PurchaseBillList';
+import BillList from './pages/dashboards/finance/Bills/BillList';
+import BillDetail from './pages/dashboards/finance/Bills/BillDetail';
+
 
 // Vehicle Pages
 import VehicleList from './pages/dashboards/shared/VehicleList';
 import CreateVehicle from './pages/dashboards/shared/CreateVehicle';
 import VehicleDetail from './pages/dashboards/shared/VehicleDetail';
+import VehicleWorkshopHistory from './pages/dashboards/shared/VehicleWorkshopHistory';
 
 // Driver Pages
 import DriverList from './pages/dashboards/shared/DriverList';
@@ -83,6 +91,7 @@ import DriverVehicleAssignment from './pages/dashboards/shared/DriverVehicleAssi
 import DriverPerformanceDashboard from './pages/dashboards/shared/DriverPerformanceDashboard';
 import StaffPerformanceDashboard from './pages/dashboards/shared/StaffPerformanceDashboard';
 import StaffPerformanceDetails from './pages/dashboards/shared/StaffPerformanceDetails';
+import WGroupDashboard from './pages/dashboards/WGroupDashboard';
 import DriverDashboard from './pages/dashboards/driver/DriverDashboard';
 import AgreementSignPage from './pages/dashboards/driver/AgreementSignPage';
 import NotificationsPage from './pages/dashboards/shared/NotificationsPage';
@@ -98,6 +107,7 @@ import FinancialStatements from './pages/dashboards/finance/FinancialStatements'
 import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
 import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
+import ManualJournals from './pages/dashboards/finance/ManualJournals';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
 import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
 
@@ -110,6 +120,7 @@ import CreditNoteDetail from './pages/dashboards/finance/Sales/CreditNoteDetail'
 
 // Purchases Pages
 import Expenses from './pages/dashboards/finance/Purchases/Expenses';
+import ExpenseDetail from './pages/dashboards/finance/Purchases/ExpenseDetail';
 import PaymentsMade from './pages/dashboards/finance/Purchases/PaymentsMade';
 
 
@@ -117,18 +128,21 @@ function App() {
   // Wire up intersection-observer scroll reveals globally
   useScrollReveal();
 
-  // Background permission/profile refresh (every 2 minutes for faster updates)
-  useAuthRefresh(120000);
+  // Activity-aware background token & profile refresh (profile every 5 minutes)
+  useAuthRefresh(300000);
 
   useEffect(() => {
-    // Check token validity every 30 seconds
+    // Check token validity every 60 seconds — but only logout if there's
+    // truly no way to recover (no refresh token at all)
     const interval = setInterval(() => {
       const token = getToken();
       if (token && !isTokenValid()) {
-        console.warn('[App] Session expired - logging out');
+        // isTokenValid already returns true if a refreshToken exists,
+        // so reaching here means BOTH tokens are gone/expired
+        console.warn('[App] Session fully expired (no refresh token) — logging out');
         logout();
       }
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -164,6 +178,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/admin/*" element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}>
               <Route index element={<ExecutiveDashboard />} />
+              <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
               <Route element={<ProtectedRoute requiredPermission="STAFF_VIEW" />}>
@@ -186,6 +201,7 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route path="po-threshold" element={<POThresholdPage />} />
@@ -193,20 +209,30 @@ function App() {
               {/* Purchase Orders */}
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
+                <Route path="workshop-purchase-requests" element={<WorkshopPurchaseRequestList />} />
+                <Route path="workshop-purchase-requests/:id" element={<WorkshopPurchaseRequestDetail />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               {/* Vehicles */}
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
                 <Route path="insurances" element={<ManageInsurances />} />
+                <Route path="vehicle-policies" element={<VehiclePolicyList />} />
+                <Route path="vehicle-policies/:id" element={<VehiclePolicyDetail />} />
+                <Route path="insurance-claims" element={<InsuranceClaimsView />} />
+                <Route path="insurance-claims/new" element={<CreateInsuranceClaim />} />
+                <Route path="insurance-claims/:id" element={<InsuranceClaimDetail />} />
               </Route>
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
@@ -217,12 +243,14 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -234,10 +262,30 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
+
+              {/* Sales Routes */}
+              <Route path="customers" element={<Customers />} />
+              <Route path="customers/:id" element={<CustomerDetail />} />
+              <Route path="payments-received" element={<PaymentsReceived />} />
+              <Route path="credit-notes" element={<CreditNotes />} />
+              <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+
+              {/* Purchases Routes */}
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="expenses/:id" element={<ExpenseDetail />} />
+              <Route path="payments-made" element={<PaymentsMade />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -262,17 +310,22 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -294,17 +347,27 @@ function App() {
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['financialadmin', 'financeadmin']} />}>
             <Route path="/admin/financial-admin/*" element={<DashboardLayout SidebarComponent={FinancialAdminSidebar} />}>
               <Route index element={<FinancialAdminDashboard />} />
+              <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
@@ -330,19 +393,25 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
+                <Route path="workshop-purchase-requests" element={<WorkshopPurchaseRequestList />} />
+                <Route path="workshop-purchase-requests/:id" element={<WorkshopPurchaseRequestDetail />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -374,6 +443,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -384,6 +454,7 @@ function App() {
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
 
               {/* Sales Routes */}
@@ -395,6 +466,7 @@ function App() {
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
+              <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
               <Route path="payment-requests" element={<FinancialAdminPaymentRequests />} />
             </Route>
@@ -417,17 +489,21 @@ function App() {
               </Route>
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
               <Route path="drivers" element={<DriverList />} />
               <Route path="drivers/new" element={<CreateDriver />} />
@@ -449,6 +525,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -458,7 +535,14 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="target-management" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
-              <Route path="payment-requests" element={<PaymentRequestPage />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -476,19 +560,22 @@ function App() {
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
+                <Route path="manage-suppliers/:id" element={<SupplierDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
@@ -512,6 +599,14 @@ function App() {
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -525,8 +620,11 @@ function App() {
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
-                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="vehicles" element={<VehicleList mode="active" />} />
+                <Route path="pending-vehicles" element={<VehicleList mode="pending" />} />
+                <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -546,7 +644,15 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="target-management" element={<TargetManagement />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 
@@ -557,12 +663,14 @@ function App() {
               <Route element={<ProtectedRoute requiredPermission="PURCHASE_ORDER_VIEW" />}>
                 <Route path="purchase-orders" element={<PurchaseOrderList />} />
                 <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
-                <Route path="purchase-bills" element={<PurchaseBillList />} />
+                <Route path="bills" element={<BillList />} />
+                <Route path="bills/:id" element={<BillDetail />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}>
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
+                <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="INSURANCE_VIEW" />}>
@@ -584,6 +692,7 @@ function App() {
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -593,7 +702,15 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
+              <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="target-management" element={<TargetManagement />} />
+
+              {/* Nested Collections Routing Hub */}
+              <Route path="collections" element={<Navigate to="dashboard" replace />} />
+              <Route path="collections/dashboard" element={<CollectionsDashboard />} />
+              <Route path="collections/overdue" element={<CollectionsLedgerView type="OVERDUE" />} />
+              <Route path="collections/upcoming" element={<CollectionsLedgerView type="UPCOMING" />} />
+              <Route path="collections/invoices" element={<CollectionsLedgerView type="GENERAL" />} />
             </Route>
           </Route>
 

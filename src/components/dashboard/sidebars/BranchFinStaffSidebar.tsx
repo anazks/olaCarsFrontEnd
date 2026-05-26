@@ -8,7 +8,8 @@ import {
     ChevronUp,
     User,
     X,
-    Calculator
+    Calculator,
+    Library
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -45,9 +46,8 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     const userRole = 'Finance Staff';
 
     useEffect(() => {
-        const currentPath = location.pathname;
         const activeItem = menuItems.find(item =>
-            item.subItems?.some(sub => currentPath.startsWith(sub.path))
+            item.subItems?.some(sub => isActive(sub.path))
         );
         if (activeItem) {
             setOpenSection(activeItem.id);
@@ -56,8 +56,8 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
 
     const isActive = (path: string) => {
         if (!path) return false;
-        if (path === '/admin/branch-fin-staff') {
-            return location.pathname === '/admin/branch-fin-staff';
+        if (path === '/admin/admin' || path === '/admin/financial-admin' || path === '/admin/branch-fin-staff') {
+            return location.pathname === path;
         }
         return location.pathname.startsWith(path);
     };
@@ -83,7 +83,23 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             id: 'dashboard',
             label: t('sidebar.items.finOverview', 'Finance Overview'),
             icon: <LayoutGrid size={22} />,
-            path: '/admin/branch-fin-staff'
+            subItems: [
+                { label: 'Executive Dashboard', path: '/admin/branch-fin-staff' },
+                { label: 'Collections Dashboard', path: '/admin/branch-fin-staff/collections/dashboard' },
+                { label: 'Fleet Dashboard', path: '/admin/branch-fin-staff/driver-performance' },
+                { label: 'Finance Dashboard', path: '/admin/branch-fin-staff/finance-dashboard' },
+            ]
+        },
+        {
+            id: 'collections',
+            label: 'Collections',
+            icon: <Library size={22} />,
+            subItems: [
+                { label: 'Collections Dashboard', path: '/admin/branch-fin-staff/collections/dashboard' },
+                { label: 'Overdue Payments', path: '/admin/branch-fin-staff/collections/overdue' },
+                { label: 'Upcoming Payments', path: '/admin/branch-fin-staff/collections/upcoming' },
+                { label: 'Invoices Ledger', path: '/admin/branch-fin-staff/collections/invoices' },
+            ]
         },
         {
             id: 'finance',
@@ -115,6 +131,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-fin-staff/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/branch-fin-staff/bulk-uploads' },
             ]
         },
     ];

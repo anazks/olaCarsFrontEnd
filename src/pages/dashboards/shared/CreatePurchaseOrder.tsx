@@ -7,11 +7,19 @@ import { getAllSuppliers } from '../../../services/supplierService';
 import type { Branch } from '../../../services/branchService';
 import { getAllBranches } from '../../../services/branchService';
 import { getDecodedToken, ROLE_LEVELS } from '../../../utils/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
+import { SearchableSelect } from '../../../components/common/SearchableSelect';
+import { QuickAddSupplierModal } from '../../../components/common/QuickAddSupplierModal';
+import { QuickAddAccountModal } from '../../../components/common/QuickAddAccountModal';
+
+
+
 
 const CreatePurchaseOrder = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -19,7 +27,13 @@ const CreatePurchaseOrder = () => {
     // Data for dropdowns
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
+    const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [userLevel, setUserLevel] = useState<number>(0);
+    const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+
+    const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+
 
     // Form state
     const [formData, setFormData] = useState<CreatePurchaseOrderPayload>({
@@ -52,6 +66,10 @@ const CreatePurchaseOrder = () => {
                 const branchesRes = await getAllBranches();
                 setBranches(branchesRes.data || []);
             }
+
+            const codes = await getAllAccountingCodes();
+            setAccountingCodes(codes);
+
         } catch (err) {
             console.error('Failed to fetch initial data:', err);
             setError('Failed to load initial data. Please refresh.');
@@ -147,7 +165,8 @@ const CreatePurchaseOrder = () => {
             };
             await createPurchaseOrder(formattedData);
             setSuccess(true);
-            setTimeout(() => navigate('..'), 2000);
+            const basePath = location.pathname.split('/purchase-orders')[0];
+            setTimeout(() => navigate(`${basePath}/purchase-orders`), 2000);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to create purchase order');
         } finally {
@@ -205,18 +224,15 @@ const CreatePurchaseOrder = () => {
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                 Supplier <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                required
+                            <SearchableSelect
+                                options={suppliers.map(s => ({ value: s._id, label: `${s.name} (${s.category})` }))}
                                 value={formData.supplier}
-                                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all"
-                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="">Select a supplier</option>
-                                {suppliers.map(s => (
-                                    <option key={s._id} value={s._id}>{s.name} ({s.category})</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData(prev => ({ ...prev, supplier: val }))}
+                                placeholder="Select Supplier"
+                                onAddNew={() => setIsAddSupplierOpen(true)}
+                                addNewText="Add New Supplier"
+                                required
+                            />
                         </div>
 
                         {/* Purpose */}
@@ -243,18 +259,13 @@ const CreatePurchaseOrder = () => {
                                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                     Target Branch <span className="text-red-500">*</span>
                                 </label>
-                                <select
+                                <SearchableSelect
+                                    options={branches.map(b => ({ value: b._id, label: `${b.name} - ${b.city}` }))}
+                                    value={formData.branch || ''}
+                                    onChange={(val) => setFormData(prev => ({ ...prev, branch: val }))}
+                                    placeholder="Select Branch"
                                     required
-                                    value={formData.branch}
-                                    onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">Select a branch</option>
-                                    {branches.map(b => (
-                                        <option key={b._id} value={b._id}>{b.name} - {b.city}</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
                         ) : (
                             <div className="space-y-1.5 opacity-50">
@@ -350,7 +361,26 @@ const CreatePurchaseOrder = () => {
                                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Accounting Code <span className="text-red-500">*</span></label>
+                                        <SearchableSelect 
+                                            options={accountingCodes.map(code => ({
+                                                value: code._id,
+                                                label: `${code.code} - ${code.name} (${code.category})`
+                                            }))}
+                                            value={item.accountId || ''}
+                                            onChange={(val) => updateItem(index, 'accountId', val)}
+                                            placeholder="Select Account"
+                                            onAddNew={() => {
+                                                setActiveItemIndex(index);
+                                                setIsAddAccountOpen(true);
+                                            }}
+                                            addNewText="Add New Account"
+                                            required
+                                        />
+                                    </div>
                                 </div>
+
                                 <div className="md:col-span-2 space-y-1.5">
                                     <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Quantity <span className="text-red-500">*</span></label>
                                     <input
@@ -500,6 +530,42 @@ const CreatePurchaseOrder = () => {
                     </div>
                 )}
             </form>
+
+            <QuickAddSupplierModal
+                isOpen={isAddSupplierOpen}
+                onClose={() => setIsAddSupplierOpen(false)}
+                onSuccess={async (newSup) => {
+                    try {
+                        const suppliersRes = await getAllSuppliers();
+                        setSuppliers(suppliersRes.data || []);
+                        setFormData(prev => ({ ...prev, supplier: newSup._id }));
+                    } catch (err) {
+                        console.error('Failed to reload suppliers', err);
+                    }
+                }}
+            />
+
+            <QuickAddAccountModal
+                isOpen={isAddAccountOpen}
+                onClose={() => {
+                    setIsAddAccountOpen(false);
+                    setActiveItemIndex(null);
+                }}
+                defaultCategory="EXPENSE"
+                onSuccess={async (newAcc) => {
+                    try {
+                        const codes = await getAllAccountingCodes();
+                        setAccountingCodes(codes);
+                        if (activeItemIndex !== null) {
+                            updateItem(activeItemIndex, 'accountId', newAcc._id);
+                        }
+                    } catch (err) {
+                        console.error('Failed to reload accounts', err);
+                    }
+                    setIsAddAccountOpen(false);
+                    setActiveItemIndex(null);
+                }}
+            />
         </div>
     );
 };

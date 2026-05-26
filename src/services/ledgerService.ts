@@ -74,11 +74,24 @@ export const createManualJournal = async (payload: CreateJournalPayload): Promis
     return response.data.data;
 };
 
-export const getManualJournals = async (filters: Record<string, any> = {}): Promise<ManualJournal[]> => {
+export interface ManualJournalsResponse {
+    data: ManualJournal[];
+    pagination?: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export const getManualJournals = async (filters: Record<string, any> = {}): Promise<ManualJournalsResponse> => {
     const params = new URLSearchParams(filters).toString();
     const url = `/api/ledger/journals${params ? `?${params}` : ''}`;
     const response = await api.get(url);
-    return response.data.data;
+    return {
+        data: response.data.data,
+        pagination: response.data.pagination
+    };
 };
 
 // --- Voucher System ---

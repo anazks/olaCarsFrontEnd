@@ -457,7 +457,7 @@ const AlertsManagement = () => {
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>VIN:</span>
+                                                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Plate No:</span>
                                                         <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                                                             {vehicle.basicDetails?.vin}
                                                         </span>

@@ -19,7 +19,7 @@ export interface InvoicePayment {
 export interface Invoice {
     _id: string;
     invoiceNumber: string;
-    invoiceType: 'RENTAL' | 'WORKSHOP' | 'MANUAL';
+    invoiceType: 'RENTAL' | 'WORKSHOP' | 'MANUAL' | 'DEPOSIT';
     driver: string | any;
     vehicle: string | any;
     serviceBill?: string | any;
@@ -49,6 +49,11 @@ export interface Invoice {
 
 export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
     const response = await api.get(`/api/invoices?driver=${driverId}&limit=100`);
+    return response.data.data || [];
+};
+
+export const getDepositInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
+    const response = await api.get(`/api/invoices?driver=${driverId}&invoiceType=DEPOSIT&limit=100`);
     return response.data.data || [];
 };
 

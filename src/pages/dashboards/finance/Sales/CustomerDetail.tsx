@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
-    RefreshCw, Calendar, ShieldCheck, FileSpreadsheet,
+    RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Edit2, Zap, Briefcase
 } from 'lucide-react';
@@ -74,6 +74,16 @@ const CustomerDetail = () => {
         );
     }
 
+    const totalInvoiced = invoices.reduce((sum, inv) => sum + (inv.totalAmountDue || 0), 0);
+    const totalPaymentsReceived = payments.reduce((sum, p) => p.status === 'VOID' ? sum : sum + (p.amountReceived || 0), 0);
+    const totalApplied = payments.reduce((sum, p) => {
+        if (p.status === 'VOID') return sum;
+        const applied = p.invoices?.reduce((invSum: number, inv: any) => invSum + (inv.amountApplied || 0), 0) || 0;
+        return sum + applied;
+    }, 0);
+    const prepaymentBalance = Math.max(0, totalPaymentsReceived - totalApplied);
+    const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
+
     return (
         <div className="container-responsive space-y-6 pb-20 animate-in fade-in duration-500">
             <Breadcrumbs 
@@ -131,7 +141,7 @@ const CustomerDetail = () => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <QuickStatCard 
                     label="Account Status" 
                     value={driver.status} 
@@ -140,13 +150,20 @@ const CustomerDetail = () => {
                 />
                 <QuickStatCard 
                     label="Current Balance" 
-                    value={`$${invoices.reduce((s, i) => s + (i.balance || 0), 0).toLocaleString()}`} 
+                    value={`$${outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
                     icon={<DollarSign size={16} />} 
+                    color={outstandingBalance > 0 ? 'rose' : 'emerald'}
                 />
                 <QuickStatCard 
-                    label="Total Invoiced" 
-                    value={`$${invoices.reduce((s, i) => s + (i.totalAmountDue || 0), 0).toLocaleString()}`} 
-                    icon={<FileText size={16} />} 
+                    label="Prepayment Credit (Extra)" 
+                    value={`$${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+                    icon={<CheckCircle2 size={16} />} 
+                    color={prepaymentBalance > 0 ? 'emerald' : undefined}
+                />
+                <QuickStatCard 
+                    label="Total Received" 
+                    value={`$${totalPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+                    icon={<DollarSign size={16} />} 
                 />
                 <QuickStatCard 
                     label="Branch" 
@@ -182,7 +199,15 @@ const CustomerDetail = () => {
 
             {/* Tab Content Section */}
             <div className="min-h-[400px]">
-                {activeTab === 'overview' && <OverviewTab driver={driver} />}
+                {activeTab === 'overview' && (
+                    <OverviewTab 
+                        driver={driver} 
+                        prepaymentBalance={prepaymentBalance}
+                        totalPaymentsReceived={totalPaymentsReceived}
+                        totalApplied={totalApplied}
+                        totalInvoiced={totalInvoiced}
+                    />
+                )}
                 {activeTab === 'emi' && <EMITab driver={driver} invoices={invoices} />}
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
@@ -196,49 +221,83 @@ const CustomerDetail = () => {
    SUB-COMPONENTS (TABS)
    ───────────────────────────────────────────────────────────────────────────── */
 
-const OverviewTab = ({ driver }: { driver: Driver }) => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
-        {/* Personal Details */}
-        <SectionCard title="Contact Information" icon={<Phone size={18} />}>
-            <div className="space-y-4 pt-2">
-                <InfoRow label="Email Address" value={driver.personalInfo.email} icon={<Mail size={14} />} />
-                <InfoRow label="Phone Number" value={driver.personalInfo.phone} icon={<Phone size={14} />} />
-                <InfoRow label="WhatsApp" value={driver.personalInfo.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
-                <InfoRow label="Nationality" value={driver.personalInfo.nationality || 'N/A'} icon={<MapPin size={14} />} />
-            </div>
-        </SectionCard>
+const OverviewTab = ({ 
+    driver, 
+    prepaymentBalance, 
+    totalPaymentsReceived, 
+    totalApplied,
+    totalInvoiced
+}: { 
+    driver: Driver;
+    prepaymentBalance: number;
+    totalPaymentsReceived: number;
+    totalApplied: number;
+    totalInvoiced: number;
+}) => (
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
+            {/* Personal Details */}
+            <SectionCard title="Contact Information" icon={<Phone size={18} />}>
+                <div className="space-y-4 pt-2">
+                    <InfoRow label="Email Address" value={driver.personalInfo.email} icon={<Mail size={14} />} />
+                    <InfoRow label="Phone Number" value={driver.personalInfo.phone} icon={<Phone size={14} />} />
+                    <InfoRow label="WhatsApp" value={driver.personalInfo.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
+                    <InfoRow label="Nationality" value={driver.personalInfo.nationality || 'N/A'} icon={<MapPin size={14} />} />
+                </div>
+            </SectionCard>
 
-        {/* Address & Identity */}
-        <SectionCard title="Identity & Address" icon={<ShieldCheck size={18} />}>
-            <div className="space-y-4 pt-2">
-                <InfoRow label="ID Type" value={driver.identityDocs?.idType || 'N/A'} />
-                <InfoRow label="ID Number" value={driver.identityDocs?.idNumber || 'N/A'} />
-                <InfoRow label="License" value={driver.drivingLicense?.licenseNumber || 'N/A'} />
-                <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
-                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Address Proof Status</span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${driver.addressProof?.document ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
-                        {driver.addressProof?.document ? 'UPLOADED' : 'PENDING'}
+            {/* Double-Entry Ledger Summary Card */}
+            <SectionCard title="Balance Reconciliation" icon={<CreditCard size={18} />}>
+                <div className="space-y-4 pt-2">
+                    <InfoRow label="Total Invoiced" value={`$${totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                    <InfoRow label="Total Payments Applied" value={`$${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                    <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Credit (Extra)</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${prepaymentBalance > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-dim border-white/10'}`}>
+                            ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                </div>
+            </SectionCard>
+
+            {/* Emergency & Bank details */}
+            <SectionCard title="Account Details" icon={<User size={18} />}>
+                <div className="space-y-4 pt-2">
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
+                        <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{driver.emergencyContact?.name || 'N/A'}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{driver.emergencyContact?.phone || 'N/A'} ({driver.emergencyContact?.relationship || 'Other'})</p>
+                    </div>
+                    <div className="space-y-1 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
+                        <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                            {(driver.assignedVehicle as any)?.basicDetails?.make} {(driver.assignedVehicle as any)?.basicDetails?.model || 'No vehicle assigned'}
+                        </p>
+                    </div>
+                </div>
+            </SectionCard>
+        </div>
+
+        {/* Extra Payment Tally Alert */}
+        {prepaymentBalance > 0 ? (
+            <div className="p-5 rounded-[2rem] border flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ background: 'rgba(200, 230, 0, 0.04)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
+                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center shrink-0 border border-brand-lime/20">
+                    <CheckCircle2 className="text-brand-lime" size={18} />
+                </div>
+                <div className="space-y-1">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-brand-lime">Extra Prepayment Advance Detected</h4>
+                    <p className="text-[10px] font-semibold text-white/90 leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                        Tally Complete: The total payment received from this customer (${totalPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}) exceeds the total amounts applied to their invoices (${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}).
+                    </p>
+                    <p className="text-[11px] font-black text-[#C8E600] mt-1.5">
+                        Current Customer Prepayment Credit Balance (Extra): ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                    <span className="text-[9px] font-bold text-dim block italic mt-1">
+                        * This advance balance is stored securely as a prepayment credit and is automatically applied to future invoices generated for this driver.
                     </span>
                 </div>
             </div>
-        </SectionCard>
-
-        {/* Emergency & Bank */}
-        <SectionCard title="Account Details" icon={<CreditCard size={18} />}>
-            <div className="space-y-4 pt-2">
-                <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
-                    <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{driver.emergencyContact?.name || 'N/A'}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{driver.emergencyContact?.phone || 'N/A'} ({driver.emergencyContact?.relationship || 'Other'})</p>
-                </div>
-                <div className="space-y-1 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
-                    <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                        {(driver.assignedVehicle as any)?.basicDetails?.make} {(driver.assignedVehicle as any)?.basicDetails?.model || 'No vehicle assigned'}
-                    </p>
-                </div>
-            </div>
-        </SectionCard>
+        ) : null}
     </div>
 );
 
@@ -354,27 +413,37 @@ const PaymentsTab = ({ payments }: { payments: any[] }) => (
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>PR #</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Method</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Received</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount Applied</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Extra</th>
                         <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                     {payments.length === 0 ? (
-                        <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No payment records found for this customer.</td></tr>
+                        <tr><td colSpan={7} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No payment records found for this customer.</td></tr>
                     ) : (
-                        payments.map((pmt) => (
-                            <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</td>
-                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 text-xs font-bold text-brand-lime uppercase" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentMethod}</td>
-                                <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>+ ${pmt.amountReceived.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
-                                        {pmt.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))
+                        payments.map((pmt) => {
+                            const applied = pmt.invoices?.reduce((s: number, i: any) => s + (i.amountApplied || 0), 0) || 0;
+                            const extra = Math.max(0, pmt.amountReceived - applied);
+                            return (
+                                <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                    <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</td>
+                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-xs font-bold text-brand-lime uppercase" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentMethod}</td>
+                                    <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>+ ${pmt.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="px-6 py-4 text-right text-xs font-bold text-white">${applied.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className={`px-6 py-4 text-right text-xs font-black ${extra > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
+                                        {extra > 0 ? `$${extra.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                                            {pmt.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            );
+                        })
                     )}
                 </tbody>
             </table>

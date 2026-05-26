@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { REFRESH_ENDPOINTS } from './authService';
 
 
 // Create an Axios instance with base URL from environment variables
@@ -27,6 +26,21 @@ api.interceptors.request.use(
 import { logout } from '../utils/auth';
 import toast from 'react-hot-toast';
 
+// Variables to handle token refresh queueing
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 // Response Interceptor: Handle global success and error notifications
 api.interceptors.response.use(
     (response) => {
@@ -41,7 +55,7 @@ api.interceptors.response.use(
         // Show success toast for mutations (excluding common non-CRUD POSTs if needed, like login)
         if (isMutation && !skipToast) {
             const url = config.url || '';
-            const isAuthAction = url.includes('login') || url.includes('logout') || url.includes('change-password');
+            const isAuthAction = url.includes('login') || url.includes('logout') || url.includes('change-password') || url.includes('refresh');
             
             // Determine a descriptive fallback based on the URL if no message is provided
             let defaultMessage = 'Action completed successfully';
@@ -50,6 +64,8 @@ api.interceptors.response.use(
                 if (url.includes('login')) defaultMessage = 'Logged in successfully';
                 if (url.includes('logout')) defaultMessage = 'Logged out successfully';
                 if (url.includes('change-password')) defaultMessage = 'Password changed successfully';
+                // Don't show toast for refresh
+                if (url.includes('refresh')) defaultMessage = '';
             } else if (url.includes('admin') || url.includes('manager') || url.includes('staff')) {
                 const action = method === 'post' ? 'created' : method === 'put' || method === 'patch' ? 'updated' : 'deleted';
                 defaultMessage = `Role ${action} successfully`;
@@ -62,12 +78,14 @@ api.interceptors.response.use(
                           (typeof response.data?.status === 'string' ? response.data.status : null) ||
                           defaultMessage;
             
-            toast.success(message);
+            if (message) {
+                toast.success(message);
+            }
         }
 
         return response;
     },
-    (error) => {
+    async (error) => {
         const { config } = error;
         // @ts-ignore
         const skipToast = config?.skipToast || config?.headers?.['X-Skip-Toast'];
@@ -82,51 +100,64 @@ api.interceptors.response.use(
 
         // 1. Handle Authentication Errors (always show toast and logout)
         if (status === 401 || (status === 403 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN'))) {
+            const originalRequest = config;
+            
+            // If the retried request itself fails, we must force logout to avoid infinite loops
+            if (originalRequest._retry) {
+                toast.error('Session expired. Please login again.');
+                logout();
+                return Promise.reject(error);
+            }
+
             const refreshToken = localStorage.getItem('refreshToken');
             const apiRole = localStorage.getItem('apiRole');
 
-            if (refreshToken && apiRole && !config._retry) {
-                config._retry = true;
-
-                return new Promise((resolve, reject) => {
-                    const endpoint = REFRESH_ENDPOINTS[apiRole];
-                    if (!endpoint) {
-                         toast.error('Session expired. Please login again.');
-                         logout();
-                         return reject(error);
-                    }
-
-                    // Try to refresh the token
-                    axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/${endpoint}`, { refreshToken })
-                        .then((res) => {
-                            const { accessToken, refreshToken: newRefreshToken } = res.data;
-                            
-                            localStorage.setItem('token', accessToken);
-                            if (newRefreshToken) {
-                                localStorage.setItem('refreshToken', newRefreshToken);
-                            }
-
-                            // Retry the original request
-                            config.headers.Authorization = `Bearer ${accessToken}`;
-                            resolve(api(config));
+            if (refreshToken && apiRole) {
+                if (isRefreshing) {
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    })
+                        .then((token) => {
+                            originalRequest.headers.Authorization = `Bearer ${token}`;
+                            return api(originalRequest);
                         })
                         .catch((err) => {
-                            toast.error('Session expired. Please login again.');
-                            logout();
-                            reject(err);
+                            return Promise.reject(err);
                         });
-                });
+                }
+
+                originalRequest._retry = true;
+                isRefreshing = true;
+
+                try {
+                    // Use the centralized refresh function to avoid race conditions
+                    const { performTokenRefresh } = await import('../hooks/useAuthRefresh');
+                    const result = await performTokenRefresh();
+
+                    if (result && result.accessToken) {
+                        originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+                        processQueue(null, result.accessToken);
+                        return api(originalRequest);
+                    } else {
+                        throw new Error('No tokens returned from refresh');
+                    }
+                } catch (err) {
+                    processQueue(err, null);
+                    toast.error('Session expired. Please login again.');
+                    logout();
+                    return Promise.reject(err);
+                } finally {
+                    isRefreshing = false;
+                }
             }
 
-            if (!config._retry) {
-                toast.error('Session expired or unauthorized. Please login again.');
-                logout();
-            }
+            // No refresh token or role stored, force logout
+            toast.error('Session expired or unauthorized. Please login again.');
+            logout();
             return Promise.reject(error);
         }
 
         // 2. Handle Other Errors (if not explicitly skipped)
-
         if (!skipToast) {
             toast.error(errorMessage);
         }

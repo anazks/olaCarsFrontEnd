@@ -15,7 +15,7 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
 
 const CATEGORIES: AccountingCategory[] = ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
 
-const ChartOfAccounts = () => {
+const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [codes, setCodes] = useState<AccountingCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -119,8 +119,8 @@ const ChartOfAccounts = () => {
     const filteredCodes = codes.filter(c => activeCategoryFilter === 'ALL' || c.category === activeCategoryFilter);
 
     return (
-        <div className="container-responsive space-y-6">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Chart Of Accounts', active: true }]} />
+        <div className={isEmbedded ? "space-y-6" : "container-responsive space-y-6"}>
+            {!isEmbedded && <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Chart Of Accounts', active: true }]} />}
 
             {/* Compact Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">

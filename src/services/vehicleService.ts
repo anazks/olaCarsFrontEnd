@@ -63,6 +63,7 @@ export interface BasicDetails {
     fuelType: FuelType;
     transmission: Transmission;
     weeklyRent?: number;
+    sellingValue?: number;
     monthlyRent?: number;
     engineCapacity?: number;
     colour?: string;
@@ -302,15 +303,37 @@ export interface VehicleFilters {
 
 // GET all vehicles
 export const getAllVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
+    const params = { ...filters } as Record<string, unknown>;
+
+    if (filters.category) {
+        params['basicDetails.category'] = filters.category;
+        delete params.category;
+    }
+    if (filters.fuelType) {
+        params['basicDetails.fuelType'] = filters.fuelType;
+        delete params.fuelType;
+    }
+
     const response = await api.get('/api/vehicle/', {
-        params: filters
+        params
     });
     return response.data;
 };
 
 // GET all available vehicles for rental
 export const getAvailableVehicles = async (filters: VehicleFilters = {}): Promise<PaginatedResponse<Vehicle>> => {
-    const response = await api.get('/api/vehicle/available', { params: filters });
+    const params = { ...filters } as Record<string, unknown>;
+
+    if (filters.category) {
+        params['basicDetails.category'] = filters.category;
+        delete params.category;
+    }
+    if (filters.fuelType) {
+        params['basicDetails.fuelType'] = filters.fuelType;
+        delete params.fuelType;
+    }
+
+    const response = await api.get('/api/vehicle/available', { params });
     return response.data;
 };
 
@@ -382,7 +405,7 @@ export const progressVehicle = async (id: string, payload: ProgressVehiclePayloa
 // PUT update vehicle lease settings
 export const updateVehicleLeaseSettings = async (
     id: string, 
-    payload: { durationWeeks: number, weeklyRent: number }
+    payload: { durationWeeks: number; weeklyRent?: number; sellingValue?: number }
 ): Promise<Vehicle> => {
     const response = await api.put(`/api/vehicle/${id}/lease-settings`, payload);
     return response.data.data;
@@ -400,4 +423,17 @@ export const updateMaintenanceSettings = async (
 export const editVehicle = async (id: string, payload: Partial<Vehicle>): Promise<Vehicle> => {
     const response = await api.put(`/api/vehicle/${id}`, payload);
     return response.data.data;
+};
+
+export interface BulkVehicleUploadResult {
+    created: Array<{ row: number; id: string; vin: string; make: string; model: string }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
+// POST bulk create vehicles
+export const bulkCreateVehicles = async (vehicles: any[], branch?: string): Promise<{ message: string; data: BulkVehicleUploadResult }> => {
+    const payload: any = { vehicles };
+    if (branch) payload.branch = branch;
+    const response = await api.post('/api/vehicle/bulk', payload);
+    return response.data;
 };

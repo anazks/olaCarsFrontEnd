@@ -214,7 +214,7 @@ const CreateVehicle = () => {
         try {
             await createVehicle(formData as CreateVehiclePayload);
             setSuccess(true);
-            setTimeout(() => navigate('/admin/country-manager'), 1500);
+            setTimeout(() => navigate('../pending-vehicles'), 1500);
         } catch (err: any) {
             const serverMsg = err.response?.data?.message;
             const errType = err.response?.data?.errorType;
@@ -264,7 +264,7 @@ const CreateVehicle = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/admin/country-manager')}
+                    onClick={() => navigate('../pending-vehicles')}
                     className="p-2.5 rounded-xl transition-all border hover:bg-white/5 cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                 >
