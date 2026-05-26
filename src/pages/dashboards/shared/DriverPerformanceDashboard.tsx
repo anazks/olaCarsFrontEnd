@@ -341,7 +341,6 @@ const DriverPerformanceDashboard = () => {
     };
 
     if (loading) {
-<<<<<<< HEAD
         return (
             <div className="p-8 space-y-6 animate-pulse">
                 <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
@@ -354,9 +353,6 @@ const DriverPerformanceDashboard = () => {
                 <div className="h-96 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
             </div>
         );
-=======
-        return <OlaLoader fullScreen size="lg" />;
->>>>>>> 70bbfa02d0c390d75474fd7b7b8f337ad62a1d9b
     }
 
     return (
@@ -394,7 +390,7 @@ const DriverPerformanceDashboard = () => {
                                 <option value="all">All Branches</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
-                                Uk))}
+                                ))}
                             </select>
                         </div>
                     )}
