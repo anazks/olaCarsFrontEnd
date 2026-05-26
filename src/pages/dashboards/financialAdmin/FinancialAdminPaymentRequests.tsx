@@ -179,12 +179,11 @@ const StatusUpdateModal = ({ request, onClose, onSuccess }: StatusModalProps) =>
                                             onClick={() => { setSelectedStatus(s); setError(''); }}
                                             className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border transition-all font-semibold text-sm
                                                 ${isSelected
-                                                    ? `${cfg.bgColor} ${cfg.color} ring-2 ring-offset-1 ring-offset-[var(--bg-card)]`
+                                                    ? `${cfg.bgColor} ${cfg.color} ring-2 ring-current ring-offset-1 ring-offset-[var(--bg-card)]`
                                                     : 'hover:bg-white/5'
                                                 }`}
                                             style={{
                                                 borderColor: isSelected ? undefined : 'var(--border-main)',
-                                                ringColor: isSelected ? 'currentColor' : undefined,
                                             }}
                                         >
                                             <span className={cfg.color}>{cfg.icon}</span>
