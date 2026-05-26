@@ -44,6 +44,7 @@ const PurchaseOrderDetail = () => {
         setLoading(true);
         try {
             const data = await getPurchaseOrderById(id);
+            console.log('Fetched PO data:', data);
             setPo(data);
 
             const decoded = getDecodedToken();
@@ -344,11 +345,15 @@ const PurchaseOrderDetail = () => {
                                             {item.images && item.images.length > 0 && (
                                                 <div className="flex gap-2 mt-3">
                                                     {item.images.map((img, imgIdx) => {
-                                                        // Resolve image URL: local paths need backend base URL prepended
                                                         const resolveImageUrl = (url: string | File) => {
                                                             if (url instanceof File) return URL.createObjectURL(url);
-                                                            if (typeof url === 'string' && url.startsWith('/uploads/')) {
-                                                                return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${url}`;
+                                                            if (typeof url === 'string') {
+                                                                if (url.startsWith('http')) return url;
+                                                                const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+                                                                const s3Base = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                const base = s3Base || apiBase;
+                                                                return `${base}/${cleanPath}`;
                                                             }
                                                             return url;
                                                         };
