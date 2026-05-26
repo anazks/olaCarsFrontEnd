@@ -48,6 +48,8 @@ import VehiclePolicyList from './pages/dashboards/shared/VehiclePolicyList';
 import VehiclePolicyDetail from './pages/dashboards/shared/VehiclePolicyDetail';
 import InsuranceClaimDetail from './pages/dashboards/financialAdmin/InsuranceClaimDetail';
 import CreateInsuranceClaim from './pages/dashboards/financialAdmin/CreateInsuranceClaim';
+import PaymentRequestPage from './pages/dashboards/shared/PaymentRequestPage';
+import FinancialAdminPaymentRequests from './pages/dashboards/financialAdmin/FinancialAdminPaymentRequests';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
@@ -466,6 +468,7 @@ function App() {
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="payment-requests" element={<FinancialAdminPaymentRequests />} />
             </Route>
           </Route>
 

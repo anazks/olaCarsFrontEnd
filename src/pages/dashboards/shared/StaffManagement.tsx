@@ -36,58 +36,72 @@ const StaffManagement = () => {
 
     const basePath = getBasePath();
 
-    const managementItems = [
-
+    const allManagementItems = [
         {
             icon: <DollarSign size={24} />,
             label: t('sidebar.items.financialAdmins', 'Financial Admins'),
             path: `${basePath}/manage-financial-admins`,
             permission: 'STAFF_VIEW',
-            description: 'Manage financial administrators responsible for accounting and audits.'
+            description: 'Manage financial administrators responsible for accounting and audits.',
+            // Only admin and operationadmin can manage financial admins
+            allowedRoles: ['admin', 'operationadmin'],
         },
         {
             icon: <Globe size={24} />,
             label: t('sidebar.items.countryManagers', 'Country Managers'),
             path: `${basePath}/manage-country-managers`,
             permission: 'STAFF_VIEW',
-            description: 'Regional management and country-wide operational oversight.'
+            description: 'Regional management and country-wide operational oversight.',
+            // Only admin and operationadmin can manage country managers
+            allowedRoles: ['admin', 'operationadmin'],
         },
         {
             icon: <UserCheck size={24} />,
             label: t('sidebar.items.branchManagers', 'Branch Managers'),
             path: `${basePath}/manage-branch-managers`,
             permission: 'STAFF_VIEW',
-            description: 'Local branch supervisors and facility managers.'
+            description: 'Local branch supervisors and facility managers.',
+            allowedRoles: null, // available to all roles that have STAFF_VIEW
         },
         {
             icon: <ShieldCheck size={24} />,
             label: t('sidebar.items.financeStaff', 'Finance Staff'),
             path: `${basePath}/manage-finance-staff`,
             permission: 'STAFF_VIEW',
-            description: 'Branch-level accounting and financial operations staff.'
+            description: 'Branch-level accounting and financial operations staff.',
+            allowedRoles: null,
         },
         {
             icon: <ShieldCheck size={24} />,
             label: t('sidebar.items.groundOpsStaff', 'Ground Ops Staff'),
             path: `${basePath}/manage-operation-staff`,
             permission: 'STAFF_VIEW',
-            description: 'Day-to-sync field operations and ground support team.'
+            description: 'Day-to-sync field operations and ground support team.',
+            allowedRoles: null,
         },
         {
             icon: <UserCog size={24} />,
             label: t('sidebar.items.workshopManagers', 'Workshop Managers'),
             path: `${basePath}/manage-workshop-managers`,
             permission: 'STAFF_VIEW',
-            description: 'Maintenance facility supervisors and technical leads.'
+            description: 'Maintenance facility supervisors and technical leads.',
+            allowedRoles: null,
         },
         {
             icon: <Wrench size={24} />,
             label: t('sidebar.items.workshopStaff', 'Workshop Staff'),
             path: `${basePath}/manage-workshop-staff`,
             permission: 'STAFF_VIEW',
-            description: 'Technicians, mechanics, and workshop support personnel.'
+            description: 'Technicians, mechanics, and workshop support personnel.',
+            allowedRoles: null,
         }
     ];
+
+    // Filter out items that the current role is not permitted to access
+    const managementItems = allManagementItems.filter(item => {
+        if (!item.allowedRoles) return true; // no role restriction
+        return item.allowedRoles.includes(userRole ?? '');
+    });
 
     const performanceItems = [
         {
