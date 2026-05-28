@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Upload } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
@@ -444,7 +444,12 @@ const GeneralLedger = () => {
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr key={entry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
+                                        <tr 
+                                            key={entry._id}
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                            onClick={() => navigate(`../ledger/${entry._id}`)}
+                                        >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>

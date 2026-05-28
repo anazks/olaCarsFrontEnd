@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
     MapPin, Users,
-    User, ArrowRight, TrendingUp, Activity, Search, Building2, CheckCircle2, Clock, AlertCircle,
-    ChevronDown, ChevronUp, BarChart3
+    User, ArrowRight, Shield, Activity, Search, Building2, CheckCircle2, Clock, AlertCircle,
+    ChevronDown, ChevronUp, FileText, TrendingUp
 } from 'lucide-react';
-import { assignTarget, getTargets, updateTargetStatus } from '../../../services/targetService';
+import { delegateTask, getTasks, updateTaskStatus as updateTaskStatusService } from '../../../services/taskService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser, ROLE_LEVELS } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-const TargetManagement = () => {
+const TaskManagement = () => {
     const userRole = (getUserRole() || '').toLowerCase().replace(/[\s-_]/g, '');
     const userId = getUserId() || '';
     const user = getUser();
@@ -19,25 +19,23 @@ const TargetManagement = () => {
     const [fetching, setFetching] = useState(true);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [staff, setStaff] = useState<any[]>([]);
-    const [existingTargets, setExistingTargets] = useState<any[]>([]);
+    const [existingTasks, setExistingTasks] = useState<any[]>([]);
 
-    const [targetFormData, setTargetFormData] = useState({
+    const [taskFormData, setTaskFormData] = useState({
+        title: '',
+        description: '',
         targetType: 'BRANCH' as 'COUNTRY' | 'BRANCH' | 'STAFF',
         targetId: '',
-        category: 'DRIVER_ACQUISITION' as 'DRIVER_ACQUISITION' | 'RENTAL' | 'VEHICLE_ACQUISITION',
-        targetValue: 0,
-        period: 'MONTHLY' as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
         notes: ''
     });
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [isTargetAssignmentOpen, setIsTargetAssignmentOpen] = useState(true);
+    const [isTaskAssignmentOpen, setIsTaskAssignmentOpen] = useState(true);
     const [isAssignedListOpen, setIsAssignedListOpen] = useState(true);
     const [isDelegatedListOpen, setIsDelegatedListOpen] = useState(true);
 
-    const [targetFilters, setTargetFilters] = useState({
+    const [taskFilters, setTaskFilters] = useState({
         country: '',
         branchId: '',
         role: ''
@@ -90,8 +88,8 @@ const TargetManagement = () => {
 
             setStaff(allStaff);
 
-            const tData = await getTargets({});
-            setExistingTargets(tData.data || []);
+            const taskData = await getTasks({});
+            setExistingTasks(taskData.data || []);
         } catch (error) {
             console.error('Error fetching initial data:', error);
         } finally {
@@ -117,31 +115,31 @@ const TargetManagement = () => {
     useEffect(() => {
         fetchInitialData();
         const defaultType = userRole === 'branchmanager' ? 'STAFF' : userRole === 'countrymanager' ? 'BRANCH' : 'COUNTRY';
-        setTargetFormData(prev => ({ ...prev, targetType: defaultType as any }));
+        setTaskFormData(prev => ({ ...prev, targetType: defaultType as any }));
     }, [userRole]);
 
-    const handleTargetSubmit = async (e: React.FormEvent) => {
+    const handleTaskSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await assignTarget(targetFormData as any);
+            await delegateTask(taskFormData as any);
             fetchInitialData();
-            setTargetFormData(prev => ({ ...prev, targetValue: 0, notes: '' }));
-            setTargetFilters({ country: '', branchId: '', role: '' });
-            setIsTargetAssignmentOpen(false);
+            setTaskFormData(prev => ({ ...prev, title: '', description: '', notes: '' }));
+            setTaskFilters({ country: '', branchId: '', role: '' });
+            setIsTaskAssignmentOpen(false);
         } catch (error) {
-            console.error('Error assigning target:', error);
+            console.error('Error delegating task:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleUpdateTargetStatus = async (targetId: string, status: string) => {
+    const handleUpdateTaskStatus = async (taskId: string, status: string) => {
         try {
-            await updateTargetStatus(targetId, status);
+            await updateTaskStatusService(taskId, status);
             fetchInitialData();
         } catch (error) {
-            console.error('Error updating status:', error);
+            console.error('Error updating task status:', error);
         }
     };
 
@@ -163,61 +161,61 @@ const TargetManagement = () => {
         return t.targetId;
     };
 
-    const filteredTargets = useMemo(() => {
-        let list = existingTargets;
+    const filteredTasks = useMemo(() => {
+        let list = existingTasks;
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             list = list.filter(t =>
+                t.title.toLowerCase().includes(q) ||
                 getTargetName(t).toLowerCase().includes(q) ||
-                t.category.toLowerCase().includes(q) ||
                 (t.assignedBy?.fullName || '').toLowerCase().includes(q)
             );
         }
         return list;
-    }, [existingTargets, searchQuery, branches, staff]);
+    }, [existingTasks, searchQuery, branches, staff]);
 
-    const assignedToMe = filteredTargets.filter(t => {
+    const assignedToMe = filteredTasks.filter(t => {
         if (t.targetType === 'STAFF') return t.targetId === userId || t.targetId === user?.staffId;
         if (t.targetType === 'BRANCH') return t.targetId === user?.branchId;
         if (t.targetType === 'COUNTRY') return t.targetId === user?.country;
         return false;
     });
 
-    const delegatedByMe = filteredTargets.filter(t => (t.assignedBy?._id || t.assignedBy) === userId);
+    const delegatedByMe = filteredTasks.filter(t => (t.assignedBy?._id || t.assignedBy) === userId);
 
     useEffect(() => {
         if (!fetching) {
             setIsAssignedListOpen(assignedToMe.length > 0);
             setIsDelegatedListOpen(delegatedByMe.length > 0);
         }
-    }, [fetching, existingTargets]);
+    }, [fetching, existingTasks]);
 
     return (
         <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
             <Breadcrumbs items={[
                 { label: 'Directives', path: '/admin/admin/directives' }, 
-                { label: 'Target Management', active: true }
+                { label: 'Task Management', active: true }
             ]} />
 
             <div className="p-6 md:p-8 max-w-[1600px] mx-auto pb-0 space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                     <div>
                         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                            <BarChart3 size={20} className="text-brand-lime" />
-                            Target Management
+                            <FileText size={20} className="text-blue-500" />
+                            Task Management
                         </h1>
-                        <p className="text-xs font-semibold text-dim mt-0.5">Strategic benchmarking and quantitative objectives.</p>
+                        <p className="text-xs font-semibold text-dim mt-0.5">Deploy and track qualitative directives and action items.</p>
                     </div>
 
                     <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-main)]">
                         <div className="text-right">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Active</p>
-                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTargets.length}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Active Tasks</p>
+                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTasks.filter(t => t.status !== 'COMPLETED').length}</p>
                         </div>
                         <div className="w-px h-6 bg-[var(--border-main)] mx-2" />
                         <div className="text-right">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Volume</p>
-                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTargets.reduce((acc, t) => acc + t.targetValue, 0)}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-dim">Completed</p>
+                            <p className="text-sm font-bold text-[var(--text-main)] leading-none">{existingTasks.filter(t => t.status === 'COMPLETED').length}</p>
                         </div>
                     </div>
                 </div>
@@ -228,38 +226,50 @@ const TargetManagement = () => {
                 {canAssign && (
                     <div className="space-y-6">
                         <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden relative group">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-lime/30 to-transparent" />
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
                             <div
                                 className="p-6 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
-                                onClick={() => setIsTargetAssignmentOpen(!isTargetAssignmentOpen)}
+                                onClick={() => setIsTaskAssignmentOpen(!isTaskAssignmentOpen)}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime">
-                                        <TrendingUp size={20} />
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                        <FileText size={20} />
                                     </div>
                                     <div>
-                                        <h2 className="text-base font-bold text-[var(--text-main)]">Deploy New Target</h2>
-                                        <p className="text-xs font-semibold text-dim">Assign quantitative objectives to countries, branches, or staff</p>
+                                        <h2 className="text-base font-bold text-[var(--text-main)]">Deploy New Task</h2>
+                                        <p className="text-xs font-semibold text-dim">Assign qualitative directives to countries, branches, or staff</p>
                                     </div>
                                 </div>
                                 <div className="text-dim">
-                                    {isTargetAssignmentOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    {isTaskAssignmentOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </div>
                             </div>
 
-                            {isTargetAssignmentOpen && (
-                                <form onSubmit={handleTargetSubmit} className="p-6 transition-all duration-300">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {isTaskAssignmentOpen && (
+                                <form onSubmit={handleTaskSubmit} className="p-6 transition-all duration-300">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Task Title</label>
+                                            <input
+                                                type="text"
+                                                value={taskFormData.title}
+                                                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                                                placeholder="Enter task title..."
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
+                                                required
+                                            />
+                                        </div>
+
                                         <div className="space-y-2">
                                             <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Scope</label>
                                             <select
-                                                value={targetFormData.targetType}
+                                                value={taskFormData.targetType}
                                                 onChange={(e) => {
                                                     const newType = e.target.value as any;
-                                                    setTargetFormData({ ...targetFormData, targetType: newType, targetId: '' });
-                                                    setTargetFilters({ country: '', branchId: '', role: '' });
+                                                    setTaskFormData({ ...taskFormData, targetType: newType, targetId: '' });
+                                                    setTaskFilters({ country: '', branchId: '', role: '' });
                                                 }}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
                                             >
                                                 {canAssignCountry && <option value="COUNTRY">National Country</option>}
                                                 {canAssignBranch && <option value="BRANCH">Regional Branch</option>}
@@ -269,19 +279,19 @@ const TargetManagement = () => {
 
                                         <div className="space-y-2">
                                             <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">
-                                                {targetFormData.targetType === 'COUNTRY' ? 'Select Country Manager' : 
-                                                 targetFormData.targetType === 'BRANCH' ? 'Select Branch' : 'Select Role & Staff'}
+                                                {taskFormData.targetType === 'COUNTRY' ? 'Select Country Manager' : 
+                                                 taskFormData.targetType === 'BRANCH' ? 'Select Branch' : 'Select Role & Staff'}
                                             </label>
                                             
                                             <div className="flex flex-col gap-3">
-                                                {targetFormData.targetType === 'STAFF' && (
+                                                {taskFormData.targetType === 'STAFF' && (
                                                     <select
-                                                        value={targetFilters.role}
+                                                        value={taskFilters.role}
                                                         onChange={(e) => {
-                                                            setTargetFilters({ ...targetFilters, role: e.target.value, branchId: '', country: '' });
-                                                            setTargetFormData({ ...targetFormData, targetId: '' });
+                                                            setTaskFilters({ ...taskFilters, role: e.target.value, branchId: '', country: '' });
+                                                            setTaskFormData({ ...taskFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">1. Select Role Type</option>
@@ -291,14 +301,14 @@ const TargetManagement = () => {
                                                     </select>
                                                 )}
 
-                                                {(targetFormData.targetType === 'BRANCH') && canAssignCountry && (
+                                                {(taskFormData.targetType === 'BRANCH') && canAssignCountry && (
                                                     <select
-                                                        value={targetFilters.country}
+                                                        value={taskFilters.country}
                                                         onChange={(e) => {
-                                                            setTargetFilters({ ...targetFilters, country: e.target.value, branchId: '' });
-                                                            setTargetFormData({ ...targetFormData, targetId: '' });
+                                                            setTaskFilters({ ...taskFilters, country: e.target.value, branchId: '' });
+                                                            setTaskFormData({ ...taskFormData, targetId: '' });
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                         required
                                                     >
                                                         <option value="">2. Select Country Manager</option>
@@ -313,32 +323,32 @@ const TargetManagement = () => {
                                                     </select>
                                                 )}
 
-                                                {(targetFormData.targetType === 'BRANCH' || (targetFormData.targetType === 'STAFF' && targetFilters.role && !['Country Manager', 'Finance Admin'].includes(targetFilters.role))) && canAssignBranch && (
+                                                {(taskFormData.targetType === 'BRANCH' || (taskFormData.targetType === 'STAFF' && taskFilters.role && !['Country Manager', 'Finance Admin'].includes(taskFilters.role))) && canAssignBranch && (
                                                     <select
-                                                        value={targetFormData.targetType === 'BRANCH' ? targetFormData.targetId : targetFilters.branchId}
+                                                        value={taskFormData.targetType === 'BRANCH' ? taskFormData.targetId : taskFilters.branchId}
                                                         onChange={(e) => {
-                                                            if (targetFormData.targetType === 'BRANCH') {
-                                                                setTargetFilters({ ...targetFilters, branchId: e.target.value });
-                                                                setTargetFormData({ ...targetFormData, targetId: e.target.value });
+                                                            if (taskFormData.targetType === 'BRANCH') {
+                                                                setTaskFilters({ ...taskFilters, branchId: e.target.value });
+                                                                setTaskFormData({ ...taskFormData, targetId: e.target.value });
                                                             } else {
-                                                                setTargetFilters({ ...targetFilters, branchId: e.target.value });
-                                                                setTargetFormData({ ...targetFormData, targetId: '' });
+                                                                setTaskFilters({ ...taskFilters, branchId: e.target.value });
+                                                                setTaskFormData({ ...taskFormData, targetId: '' });
                                                             }
                                                         }}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] disabled:opacity-50"
-                                                        required={targetFormData.targetType === 'BRANCH' || (targetFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(targetFilters.role))}
-                                                        disabled={targetFormData.targetType === 'BRANCH' && canAssignCountry && !targetFilters.country}
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                        required={taskFormData.targetType === 'BRANCH' || (taskFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(taskFilters.role))}
+                                                        disabled={taskFormData.targetType === 'BRANCH' && canAssignCountry && !taskFilters.country}
                                                     >
-                                                        <option value="">{targetFormData.targetType === 'BRANCH' ? '3. Select Target Branch' : '2. Select Branch'}</option>
+                                                        <option value="">{taskFormData.targetType === 'BRANCH' ? '3. Select Target Branch' : '2. Select Branch'}</option>
                                                         {branches
                                                             .filter(b => {
-                                                                if (targetFormData.targetType === 'BRANCH' && canAssignCountry && targetFilters.country && b.country !== targetFilters.country) return false;
+                                                                if (taskFormData.targetType === 'BRANCH' && canAssignCountry && taskFilters.country && b.country !== taskFilters.country) return false;
                                                                 if (userRole === 'countrymanager') {
                                                                     const managerId = typeof b.countryManager === 'object' ? (b.countryManager as any)?._id : b.countryManager;
                                                                     return managerId === userId;
                                                                 }
                                                                 return true;
-                                                            })
+                                                             })
                                                             .map(b => (
                                                                 <option key={b._id} value={b._id}>{b.name}</option>
                                                             ))
@@ -346,16 +356,16 @@ const TargetManagement = () => {
                                                     </select>
                                                 )}
 
-                                                {targetFormData.targetType !== 'BRANCH' && (
+                                                {taskFormData.targetType !== 'BRANCH' && (
                                                     <select
-                                                        value={targetFormData.targetId}
-                                                        onChange={(e) => setTargetFormData({ ...targetFormData, targetId: e.target.value })}
-                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] disabled:opacity-50"
+                                                        value={taskFormData.targetId}
+                                                        onChange={(e) => setTaskFormData({ ...taskFormData, targetId: e.target.value })}
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] disabled:opacity-50"
                                                         required
-                                                        disabled={targetFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(targetFilters.role) && !targetFilters.branchId}
+                                                        disabled={taskFormData.targetType === 'STAFF' && !['Country Manager', 'Finance Admin'].includes(taskFilters.role) && !taskFilters.branchId}
                                                     >
-                                                        <option value="">{`Final ${targetFormData.targetType === 'COUNTRY' ? 'Country' : 'Staff'} Selection`}</option>
-                                                        {targetFormData.targetType === 'COUNTRY' && staff
+                                                        <option value="">{`Final ${taskFormData.targetType === 'COUNTRY' ? 'Country' : 'Staff'} Selection`}</option>
+                                                        {taskFormData.targetType === 'COUNTRY' && staff
                                                             .filter(s => s.role === 'Country Manager' && s.country)
                                                             .map(s => (
                                                                 <option key={s._id || s.staffId} value={s.country}>
@@ -364,7 +374,7 @@ const TargetManagement = () => {
                                                             ))
                                                         }
 
-                                                    {targetFormData.targetType === 'STAFF' && targetFilters.role === 'Country Manager' && staff
+                                                    {taskFormData.targetType === 'STAFF' && taskFilters.role === 'Country Manager' && staff
                                                         .filter(s => s.role === 'Country Manager')
                                                         .map(s => (
                                                             <option key={s.staffId || s._id} value={s.staffId || s._id}>
@@ -372,7 +382,7 @@ const TargetManagement = () => {
                                                             </option>
                                                         ))
                                                     }
-                                                    {targetFormData.targetType === 'STAFF' && targetFilters.role === 'Finance Admin' && staff
+                                                    {taskFormData.targetType === 'STAFF' && taskFilters.role === 'Finance Admin' && staff
                                                         .filter(s => s.role === 'Finance Admin')
                                                         .map(s => (
                                                             <option key={s.staffId || s._id} value={s.staffId || s._id}>
@@ -380,10 +390,10 @@ const TargetManagement = () => {
                                                             </option>
                                                         ))
                                                     }
-                                                    {targetFormData.targetType === 'STAFF' && targetFilters.role && !['Country Manager', 'Finance Admin'].includes(targetFilters.role) && staff
+                                                    {taskFormData.targetType === 'STAFF' && taskFilters.role && !['Country Manager', 'Finance Admin'].includes(taskFilters.role) && staff
                                                         .filter(s => {
-                                                            if (s.role !== targetFilters.role) return false;
-                                                            if (targetFilters.branchId && s.branchId !== targetFilters.branchId) return false;
+                                                            if (s.role !== taskFilters.role) return false;
+                                                            if (taskFilters.branchId && s.branchId !== taskFilters.branchId) return false;
                                                             if (userRole === 'branchmanager') return s.branchId === user?.branchId;
                                                             return true;
                                                         })
@@ -397,64 +407,38 @@ const TargetManagement = () => {
                                                 )}
                                             </div>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Category</label>
-                                            <select
-                                                value={targetFormData.category}
-                                                onChange={(e) => setTargetFormData({ ...targetFormData, category: e.target.value as any })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)] appearance-none cursor-pointer"
-                                            >
-                                                <option value="DRIVER_ACQUISITION">Driver Acquisition</option>
-                                                <option value="RENTAL">Rental (New Leases)</option>
-                                                <option value="VEHICLE_ACQUISITION">Vehicle Acquisition</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Target Value</label>
-                                            <input
-                                                type="number"
-                                                value={targetFormData.targetValue}
-                                                onChange={(e) => setTargetFormData({ ...targetFormData, targetValue: parseInt(e.target.value) })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-base font-bold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
-                                                min="0"
-                                                required
-                                            />
-                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                                         <div className="lg:col-span-2 space-y-2">
-                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Target Note / Description</label>
-                                            <input
-                                                type="text"
-                                                value={targetFormData.notes}
-                                                onChange={(e) => setTargetFormData({ ...targetFormData, notes: e.target.value })}
-                                                placeholder="Specific instructions for this objective..."
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all text-[var(--text-main)]"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Due Date</label>
-                                            <input
-                                                type="date"
-                                                value={targetFormData.endDate}
-                                                onChange={(e) => setTargetFormData({ ...targetFormData, endDate: e.target.value })}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold text-[var(--text-main)] uppercase focus:outline-none focus:ring-2 focus:ring-lime/20 focus:border-brand-lime/85 transition-all"
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Description</label>
+                                            <textarea
+                                                value={taskFormData.description}
+                                                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                                                placeholder="Detailed instructions for this task..."
+                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)] min-h-[100px]"
                                                 required
                                             />
                                         </div>
-                                    </div>
-
-                                    <div className="mt-8 flex justify-end">
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="px-8 py-3 rounded-xl bg-lime text-black font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(200,230,0,0.15)] hover:scale-[1.01] active:scale-[0.98] flex items-center gap-3"
-                                        >
-                                            {loading ? <Activity className="animate-spin" size={18} /> : <>Deploy Target <ArrowRight size={18} /></>}
-                                        </button>
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-semibold uppercase tracking-wider text-dim ml-1">Due Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={taskFormData.dueDate}
+                                                    onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold text-[var(--text-main)] uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all"
+                                                    required
+                                                />
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={loading}
+                                                className="w-full py-3 px-8 rounded-xl bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-3"
+                                            >
+                                                {loading ? <Activity className="animate-spin" size={18} /> : <>Deploy Task <ArrowRight size={18} /></>}
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             )}
@@ -462,43 +446,43 @@ const TargetManagement = () => {
                     </div>
                 )}
 
-                {/* 2. Assigned Targets List */}
+                {/* 2. Assigned Tasks List */}
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-1">
                             <h2 className="text-lg font-bold text-[var(--text-main)]">Operational Pulse</h2>
-                            <p className="text-xs font-semibold text-dim uppercase tracking-wider">Active objectives tracking</p>
+                            <p className="text-xs font-semibold text-dim uppercase tracking-wider">Active tasks tracking</p>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row items-center gap-4">
                             <div className="relative group min-w-[250px]">
-                                <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-lime transition-colors" />
+                                <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-blue-500 transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="Filter targets..."
+                                    placeholder="Filter tasks..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl pl-12 pr-6 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all text-[var(--text-main)]"
+                                    className="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl pl-12 pr-6 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-[var(--text-main)]"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Authority Targets (Assigned to User) */}
+                    {/* Authority Tasks (Assigned to User) */}
                     <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                         <div
                             className="p-5 border-b border-[var(--border-main)] flex items-center justify-between bg-[var(--bg-input)] cursor-pointer hover:bg-[var(--bg-main)] transition-colors"
                             onClick={() => setIsAssignedListOpen(!isAssignedListOpen)}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-lime/10 text-lime">
-                                    <BarChart3 size={20} />
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
+                                    <Shield size={20} />
                                 </div>
-                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Targets Assigned to You</h3>
+                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Tasks Assigned to You</h3>
                             </div>
                             <div className="flex items-center gap-4">
                                 <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-bold text-dim border border-[var(--border-main)]">
-                                    {assignedToMe.length} Targets
+                                    {assignedToMe.length} Tasks
                                 </span>
                                 <div className="text-dim">
                                     {isAssignedListOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -512,52 +496,52 @@ const TargetManagement = () => {
                                     <thead>
                                         <tr className="bg-[var(--bg-input)]">
                                             <th className="p-4 pl-8 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Source / Recipient</th>
-                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Objective Details</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Task Details</th>
                                             <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Timeline</th>
-                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">Magnitude</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">Type</th>
                                             <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-center pr-8">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--border-main)]">
                                         {fetching ? (
-                                            <tr><td colSpan={5} className="p-20 text-center animate-pulse text-dim">Fetching targets...</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center animate-pulse text-dim">Fetching tasks...</td></tr>
                                         ) : assignedToMe.length === 0 ? (
-                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No active targets</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No active tasks</td></tr>
                                         ) : (
                                             assignedToMe.map((t) => (
                                                 <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
                                                     <td className="p-4 pl-8">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-lime transition-colors">
+                                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-blue-400 transition-colors">
                                                                 {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-bold text-[var(--text-main)]">{getTargetName(t)}</p>
                                                                 <p className="text-[10px] font-semibold text-dim flex items-center gap-1 mt-0.5 uppercase tracking-wide">
-                                                                    <User size={10} className="text-lime" /> By {t.assignedBy?.fullName || 'System'}
+                                                                    <User size={10} className="text-blue-400" /> By {t.assignedBy?.fullName || 'System'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="space-y-1">
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border bg-lime/10 border-lime/20 text-lime">
-                                                                {t.category.replace('_', ' ')}
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border bg-blue-500/10 border-blue-500/20 text-blue-400">
+                                                                {t.title}
                                                             </span>
-                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{t.notes || 'No specific instructions'}</p>
+                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{t.description}</p>
                                                         </div>
                                                     </td>
                                                     <td className="p-4">
-                                                        <div className={`flex flex-col ${new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'text-rose-500' : 'text-dim'}`}>
-                                                            <span className="text-[11px] font-semibold">{new Date(t.endDate).toLocaleDateString()}</span>
+                                                        <div className={`flex flex-col ${new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? 'text-rose-500' : 'text-dim'}`}>
+                                                            <span className="text-[11px] font-semibold">{new Date(t.dueDate).toLocaleDateString()}</span>
                                                             <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
-                                                                {new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? <AlertCircle size={10} /> : <Clock size={10} />}
-                                                                {new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'Overdue' : 'Remaining'}
+                                                                {new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? <AlertCircle size={10} /> : <Clock size={10} />}
+                                                                {new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? 'Overdue' : 'Remaining'}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td className="p-4 text-right">
-                                                        <span className="inline-block font-mono text-sm font-bold text-lime bg-lime/10 px-3 py-1 rounded-lg">{t.targetValue}</span>
+                                                        <span className="text-[10px] font-bold text-dim uppercase tracking-wider italic opacity-50">Qualitative</span>
                                                     </td>
                                                     <td className="p-4 text-center pr-8">
                                                         {t.status === 'COMPLETED' ? (
@@ -567,8 +551,8 @@ const TargetManagement = () => {
                                                             </div>
                                                         ) : (
                                                             <button
-                                                                onClick={() => handleUpdateTargetStatus(t._id!, 'COMPLETED')}
-                                                                className="px-4 py-2 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider bg-lime/10 text-lime border border-lime/20 hover:bg-lime hover:text-black"
+                                                                onClick={() => handleUpdateTaskStatus(t._id!, 'COMPLETED')}
+                                                                className="px-4 py-2 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white"
                                                             >
                                                                 Complete
                                                             </button>
@@ -583,7 +567,7 @@ const TargetManagement = () => {
                         )}
                     </div>
 
-                    {/* Delegated Targets (Assigned BY User) - Hidden for staff roles */}
+                    {/* Delegated Tasks (Assigned BY User) - Hidden for staff roles */}
                     {canAssign && (
                     <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
                         <div
@@ -591,14 +575,14 @@ const TargetManagement = () => {
                             onClick={() => setIsDelegatedListOpen(!isDelegatedListOpen)}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-lime/10 text-lime">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
                                     <TrendingUp size={20} />
                                 </div>
-                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Targets You Delegated</h3>
+                                <h3 className="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider">Tasks You Delegated</h3>
                             </div>
                             <div className="flex items-center gap-4">
                                 <span className="px-3 py-1 rounded-full bg-[var(--bg-main)] text-[10px] font-bold text-dim border border-[var(--border-main)]">
-                                    {delegatedByMe.length} Targets
+                                    {delegatedByMe.length} Tasks
                                 </span>
                                 <div className="text-dim">
                                     {isDelegatedListOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -614,7 +598,7 @@ const TargetManagement = () => {
                                             <th className="p-4 pl-8 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Recipient</th>
                                             <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Type & Title</th>
                                             <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)]">Status</th>
-                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">Magnitude</th>
+                                            <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-right">Timeline</th>
                                             <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-dim border-b border-[var(--border-main)] text-center pr-8">Progress</th>
                                         </tr>
                                     </thead>
@@ -622,13 +606,13 @@ const TargetManagement = () => {
                                         {fetching ? (
                                             <tr><td colSpan={5} className="p-20 text-center text-dim animate-pulse">Fetching...</td></tr>
                                         ) : delegatedByMe.length === 0 ? (
-                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No targets delegated</td></tr>
+                                            <tr><td colSpan={5} className="p-20 text-center text-dim font-semibold uppercase tracking-wider italic opacity-35">No tasks delegated</td></tr>
                                         ) : (
                                             delegatedByMe.map((t) => (
                                                 <tr key={t._id} className="hover:bg-[var(--bg-input)] transition-colors group/row">
                                                     <td className="p-4 pl-8">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-lime transition-colors">
+                                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-input)] flex items-center justify-center text-dim group-hover/row:text-blue-400 transition-colors">
                                                                 {t.targetType === 'COUNTRY' ? <MapPin size={18} /> : t.targetType === 'BRANCH' ? <Building2 size={18} /> : <Users size={18} />}
                                                             </div>
                                                             <div>
@@ -639,10 +623,10 @@ const TargetManagement = () => {
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="space-y-1">
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border bg-lime/5 border-lime/10 text-lime">
-                                                                {t.category.replace('_', ' ')}
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border bg-blue-500/5 border-blue-500/10 text-blue-400">
+                                                                Directive
                                                             </span>
-                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{t.notes || 'Standard Objective'}</p>
+                                                            <p className="text-xs font-semibold text-dim line-clamp-1">{t.title}</p>
                                                         </div>
                                                     </td>
                                                     <td className="p-4">
@@ -654,7 +638,7 @@ const TargetManagement = () => {
                                                         </div>
                                                     </td>
                                                     <td className="p-4 text-right">
-                                                        <span className="inline-block font-mono text-sm font-bold text-lime bg-lime/10 px-3 py-1 rounded-lg">{t.targetValue}</span>
+                                                        <span className="text-xs font-semibold text-dim">{new Date(t.dueDate).toLocaleDateString()}</span>
                                                     </td>
                                                     <td className="p-4 text-center pr-8">
                                                         <div className="w-full bg-[var(--bg-input)] h-1 rounded-full overflow-hidden">
@@ -681,4 +665,4 @@ const TargetManagement = () => {
     );
 };
 
-export default TargetManagement;
+export default TaskManagement;

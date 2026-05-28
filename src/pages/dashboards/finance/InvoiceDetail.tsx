@@ -429,7 +429,11 @@ const InvoiceDetail = () => {
                                         const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
 
                                         return (
-                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                            <tr 
+                                                key={idx} 
+                                                className="hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`../ledger/${entry._id}`)}
+                                            >
                                                 <td className="px-6 py-4" style={{ color: 'var(--text-dim)' }}>{formattedDate}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="font-bold" style={{ color: 'var(--text-main)' }}>

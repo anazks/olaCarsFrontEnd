@@ -93,7 +93,7 @@ const BranchManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             subItems: [
                 { label: 'Staff Management', path: '/admin/branch-manager/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/branch-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Target Management', path: '/admin/branch-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Directives & Delegation', path: '/admin/branch-manager/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
                 // { label: 'Task Delegation', path: '/admin/branch-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },

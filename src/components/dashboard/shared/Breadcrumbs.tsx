@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronRight, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getUserRole } from '../../../utils/auth';
 
 interface BreadcrumbItem {
     label: string;
@@ -13,10 +14,27 @@ interface BreadcrumbsProps {
 }
 
 const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
+    const role = getUserRole();
+    
+    const getDashboardPath = () => {
+        switch (role) {
+            case 'admin': return '/admin/admin';
+            case 'operationadmin': return '/admin/operational-admin';
+            case 'financeadmin':
+            case 'financialadmin': return '/admin/financial-admin';
+            case 'countrymanager': return '/admin/country-manager';
+            case 'branchmanager': return '/admin/branch-manager';
+            case 'operationstaff': return '/admin/branch-op-staff';
+            case 'financestaff': return '/admin/branch-fin-staff';
+            case 'driver': return '/admin/driver';
+            default: return '/admin';
+        }
+    };
+
     return (
         <nav className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar py-1">
             <Link 
-                to="/admin" 
+                to={getDashboardPath()} 
                 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-dim hover:text-brand-lime transition-colors"
             >
                 <Home size={12} />

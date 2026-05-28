@@ -55,6 +55,8 @@ import CollectionsDashboard from './pages/dashboards/financialAdmin/CollectionsD
 import CollectionsLedgerView from './pages/dashboards/financialAdmin/CollectionsLedgerView';
 import ManageBankAccounts from './pages/dashboards/finance/ManageBankAccounts';
 import TargetManagement from './pages/dashboards/shared/TargetManagement';
+import TaskManagement from './pages/dashboards/shared/TaskManagement';
+import DirectivesHub from './pages/dashboards/shared/DirectivesHub';
 // import TaskDelegation from './pages/dashboards/shared/TaskDelegation';
 import StaffManagement from './pages/dashboards/shared/StaffManagement';
 import DashboardSettings from './pages/dashboards/shared/DashboardSettings';
@@ -99,7 +101,9 @@ import MyTasks from './pages/dashboards/shared/MyTasks';
 // Finance Pages
 import TaxManagement from './pages/dashboards/finance/TaxManagement';
 import ChartOfAccounts from './pages/dashboards/finance/ChartOfAccounts';
+import AccountingCodeDetails from './pages/dashboards/finance/AccountingCodeDetails';
 import GeneralLedger from './pages/dashboards/finance/GeneralLedger';
+import LedgerEntryDetailPage from './pages/dashboards/finance/LedgerEntryDetailPage';
 import FinanceDashboard from './pages/dashboards/finance/FinanceDashboard';
 import FinancialStatements from './pages/dashboards/finance/FinancialStatements';
 import BalanceSheet from './pages/dashboards/finance/BalanceSheet';
@@ -138,7 +142,7 @@ function App() {
         // isTokenValid already returns true if a refreshToken exists,
         // so reaching here means BOTH tokens are gone/expired
         console.warn('[App] Session fully expired (no refresh token) — logging out');
-        logout();
+        logout('expired');
       }
     }, 60000);
 
@@ -247,7 +251,9 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="chart-of-accounts/:id" element={<AccountingCodeDetails />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
@@ -258,7 +264,9 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
@@ -342,9 +350,13 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
@@ -435,12 +447,15 @@ function App() {
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="chart-of-accounts/:id" element={<AccountingCodeDetails />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
@@ -450,7 +465,9 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
               <Route path="alerts" element={<AlertsManagement />} />
@@ -514,6 +531,7 @@ function App() {
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
@@ -523,7 +541,9 @@ function App() {
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="chart-of-accounts/:id" element={<AccountingCodeDetails />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
@@ -532,7 +552,9 @@ function App() {
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
 
@@ -590,10 +612,13 @@ function App() {
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
               <Route path="insurances" element={<ManageInsurances />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="reports" element={<Reports />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="alerts" element={<AlertsManagement />} />
               <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
@@ -639,12 +664,15 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />
@@ -686,11 +714,14 @@ function App() {
 
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="dashboard-settings" element={<DashboardSettings />} />
+              <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="profile" element={<Navigate to="dashboard-settings" replace />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+              <Route path="chart-of-accounts/:id" element={<AccountingCodeDetails />} />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
@@ -702,7 +733,9 @@ function App() {
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
-              <Route path="target-management" element={<TargetManagement />} />
+              <Route path="directives" element={<DirectivesHub />} />
+              <Route path="directives/tasks" element={<TaskManagement />} />
+              <Route path="directives/targets" element={<TargetManagement />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />

@@ -1218,23 +1218,6 @@ const FinanceDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Navigation Shortcuts */}
-            {userRole !== 'admin' && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div 
-                        onClick={() => navigate('../invoices')}
-                        className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
-                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
-                    >
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors group-hover:bg-brand-lime/20 text-brand-lime" style={{ background: 'rgba(200,230,0,0.1)' }}>
-                            <FileText size={16} />
-                        </div>
-                        <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Invoices</h4>
-                        <p className="text-[9px] mt-1 text-dim">Manage financial invoices</p>
-                    </div>
-                </div>
-            )}
-
             {/* Bottom Deck: Assigned Tasks & Recent Transactions */}
             <div className={`grid grid-cols-1 ${userRole !== 'admin' ? 'xl:grid-cols-3' : ''} gap-6`}>
                 {/* Global Transaction Ledger */}
@@ -1283,7 +1266,11 @@ const FinanceDashboard = () => {
                                             const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
                                             return (
-                                                <tr key={entry._id} className="hover:bg-white/[0.01] transition-colors">
+                                                <tr 
+                                                    key={entry._id} 
+                                                    className="hover:bg-white/[0.05] transition-colors cursor-pointer"
+                                                    onClick={() => navigate(`../ledger/${entry._id}`)}
+                                                >
                                                     <td className="px-6 py-4 font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</td>
                                                     <td className="px-6 py-4 text-dim max-w-xs truncate font-medium">{entry.description}</td>
                                                     <td className="px-6 py-4">

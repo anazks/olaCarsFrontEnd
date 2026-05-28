@@ -16,11 +16,11 @@ const BulkUploadsHub = () => {
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
 
-    // Check accessibility for each operation
-    const hasDriverAccess = ['admin', 'operationadmin', 'countrymanager', 'branchmanager', 'operationstaff'].includes(userRole);
-    const hasVehicleAccess = ['admin', 'operationadmin', 'countrymanager', 'branchmanager', 'operationstaff', 'workshopmanager', 'workshopstaff', 'financestaff', 'financeadmin'].includes(userRole);
-    const hasMigrationAccess = ['admin', 'operationadmin'].includes(userRole);
-    const hasJournalAccess = ['admin', 'financeadmin', 'financestaff'].includes(userRole);
+    const allRoles = ['admin', 'operationadmin', 'financialadmin', 'financeadmin', 'countrymanager', 'branchmanager', 'operationstaff', 'financestaff', 'workshopmanager', 'workshopstaff'];
+    const hasDriverAccess = allRoles.includes(userRole);
+    const hasVehicleAccess = allRoles.includes(userRole);
+    const hasMigrationAccess = allRoles.includes(userRole);
+    const hasJournalAccess = allRoles.includes(userRole);
 
     const handleDownloadTemplate = (type: 'driver' | 'vehicle' | 'migration' | 'journal', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity

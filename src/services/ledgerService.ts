@@ -69,6 +69,11 @@ export const getLedgerEntries = async (filters: Record<string, any> = {}): Promi
     };
 };
 
+export const getLedgerEntryById = async (id: string): Promise<LedgerEntry> => {
+    const response = await api.get(`/api/ledger/${id}`);
+    return response.data.data;
+};
+
 export const createManualJournal = async (payload: CreateJournalPayload): Promise<any> => {
     const response = await api.post('/api/ledger/journals', payload);
     return response.data.data;
