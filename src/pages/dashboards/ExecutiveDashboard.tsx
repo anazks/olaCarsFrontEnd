@@ -439,6 +439,13 @@ const ExecutiveDashboard = () => {
         }
     };
 
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (globalStartDate && globalEndDate && globalEndDate < globalStartDate) {
+            setGlobalEndDate(globalStartDate);
+        }
+    }, [globalStartDate, globalEndDate]);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -511,8 +518,12 @@ const ExecutiveDashboard = () => {
                             max={todayStr}
                             onChange={(e) => {
                                 const val = e.target.value;
-                                if (val && val <= todayStr && (!globalStartDate || val >= globalStartDate)) {
-                                    setGlobalEndDate(val);
+                                if (val && val <= todayStr) {
+                                    if (globalStartDate && val < globalStartDate) {
+                                        setGlobalEndDate(globalStartDate);
+                                    } else {
+                                        setGlobalEndDate(val);
+                                    }
                                 } else if (!val) {
                                     setGlobalEndDate('');
                                 }

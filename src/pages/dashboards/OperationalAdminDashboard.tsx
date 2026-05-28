@@ -56,16 +56,27 @@ const OperationalAdminDashboard = () => {
     const [data, setData] = useState<any>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     
-    // Filter states - Default to last 30 days
-    const [branchId, setBranchId] = useState('');
-    const [startDate, setStartDate] = useState(() => {
+    const getOneMonthAgo = () => {
         const d = new Date();
         d.setMonth(d.getMonth() - 1);
         return d.toISOString().split('T')[0];
-    });
-    const [endDate, setEndDate] = useState(() => {
+    };
+
+    const getToday = () => {
         return new Date().toISOString().split('T')[0];
-    });
+    };
+
+    // Filter states - Default to last 30 days
+    const [branchId, setBranchId] = useState('');
+    const [startDate, setStartDate] = useState(getOneMonthAgo());
+    const [endDate, setEndDate] = useState(getToday());
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
 
     const fetchBranches = async () => {
         try {
@@ -187,7 +198,15 @@ const OperationalAdminDashboard = () => {
                         <input 
                             type="date"
                             value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
+                            min={startDate}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (startDate && val && val < startDate) {
+                                    setEndDate(startDate);
+                                } else {
+                                    setEndDate(val);
+                                }
+                            }}
                             className="w-full pl-8 sm:pl-11 pr-2 sm:pr-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border bg-transparent text-[10px] sm:text-sm font-bold focus:ring-2 focus:ring-[#148F85]/50 outline-none transition-all"
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         />

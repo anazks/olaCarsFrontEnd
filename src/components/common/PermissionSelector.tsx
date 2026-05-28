@@ -77,7 +77,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
                 />
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {filteredCategories.length === 0 ? (
                     <div className="text-center py-8 text-dim text-sm italic">
                         No permissions found matching your search or access level.
@@ -91,7 +91,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 
                         return (
                             <div key={cat.category} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-1 ring-lime/20 shadow-lg shadow-lime/5' : 'hover:border-lime/30'}`} style={{ borderColor: isExpanded ? 'var(--brand-lime)' : 'var(--border-main)', background: isExpanded ? 'rgba(200,230,0,0.03)' : 'rgba(255,255,255,0.01)' }}>
-                                <div className={`flex items-center justify-between px-5 py-4 cursor-pointer transition-colors ${isExpanded ? 'bg-lime/5' : 'hover:bg-white/5'}`} onClick={() => toggleExpand(cat.category)}>
+                                <div className={`flex items-center justify-between px-5 py-4 cursor-pointer transition-colors ${isExpanded ? 'bg-lime/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`} onClick={() => toggleExpand(cat.category)}>
                                     <div className="flex items-center gap-3">
                                         <button 
                                             type="button"
@@ -110,7 +110,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
                                                     <Minus size={14} strokeWidth={3} />
                                                 </div>
                                             ) : (
-                                                <div className="w-5 h-5 rounded-md border border-white/10 bg-white/5" />
+                                                <div className="w-5 h-5 rounded-md border border-black/20 dark:border-white/10 bg-black/5 dark:bg-white/5" />
                                             )}
                                         </button>
                                         <div>
@@ -130,7 +130,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
                                             return (
                                                 <label 
                                                     key={perm} 
-                                                    className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border border-transparent ${isChecked ? 'bg-lime/5 border-lime/10' : 'hover:bg-white/5 hover:translate-x-1'}`}
+                                                    className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border border-transparent ${isChecked ? 'bg-lime/5 border-lime/10' : 'hover:bg-black/5 dark:hover:bg-white/5 hover:translate-x-1'}`}
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -138,7 +138,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
                                                         checked={isChecked}
                                                         onChange={() => togglePermission(perm)}
                                                     />
-                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isChecked ? 'bg-lime border-lime shadow-[0_0_8px_rgba(200,230,0,0.2)]' : 'border-white/20'}`}>
+                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isChecked ? 'bg-lime border-lime shadow-[0_0_8px_rgba(200,230,0,0.2)]' : 'border-black/20 dark:border-white/20'}`}>
                                                         {isChecked && <Check size={14} className="text-black font-black" strokeWidth={3} />}
                                                     </div>
                                                     <span className={`text-xs font-bold transition-colors ${isChecked ? 'text-lime' : 'text-dim'}`}>

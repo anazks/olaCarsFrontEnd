@@ -341,11 +341,23 @@ const DriverPerformanceDashboard = () => {
     };
 
     if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+        return (
+            <div className="p-8 space-y-6 animate-pulse">
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
+                <div className="h-10 w-72 rounded-xl" style={{ backgroundColor: 'var(--bg-input)' }} />
+                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="h-32 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
+                    ))}
+                </div>
+                <div className="h-96 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
+            </div>
+        );
     }
 
     return (
         <div className="p-6 container-responsive space-y-8">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
             {/* ── Header ──────────────────────────────────────────────── */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronRight, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getUserRole } from '../../../utils/auth';
+import { API_ROLE_TO_ROUTE } from '../../../services/authService';
 
 interface BreadcrumbItem {
     label: string;
@@ -30,11 +31,13 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
             default: return '/admin';
         }
     };
+    const homePath = (role && API_ROLE_TO_ROUTE[role]) || '/admin/login';
 
     return (
         <nav className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar py-1">
             <Link 
                 to={getDashboardPath()} 
+                to={homePath} 
                 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-dim hover:text-brand-lime transition-colors"
             >
                 <Home size={12} />

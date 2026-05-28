@@ -58,6 +58,13 @@ const ManageOperationalAdmins = () => {
     const currentUser = getUser();
     const userRole = getUserRole();
     const isAdmin = userRole === 'admin';
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
     const userPermissions = currentUser?.permissions || [];
 
     // Delete confirmation
@@ -300,7 +307,16 @@ const ManageOperationalAdmins = () => {
                             <input
                                 type="date"
                                 value={endDate}
-                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                min={startDate}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (startDate && val && val < startDate) {
+                                        setEndDate(startDate);
+                                    } else {
+                                        setEndDate(val);
+                                    }
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />

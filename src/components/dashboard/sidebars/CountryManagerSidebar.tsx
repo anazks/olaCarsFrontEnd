@@ -140,6 +140,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             label: 'Finance',
             icon: <Calculator size={22} />,
             subItems: [
+                { label: 'Payment Requests', path: '/admin/country-manager/payment-requests' },
                 { label: 'General Ledger', path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Finance Dashboard', path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: 'Tax Management', path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },

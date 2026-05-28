@@ -162,6 +162,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: 'Payment Requests', path: '/admin/financial-admin/payment-requests' },
                 { label: 'General Ledger', path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },

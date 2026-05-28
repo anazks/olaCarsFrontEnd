@@ -48,6 +48,8 @@ import VehiclePolicyList from './pages/dashboards/shared/VehiclePolicyList';
 import VehiclePolicyDetail from './pages/dashboards/shared/VehiclePolicyDetail';
 import InsuranceClaimDetail from './pages/dashboards/financialAdmin/InsuranceClaimDetail';
 import CreateInsuranceClaim from './pages/dashboards/financialAdmin/CreateInsuranceClaim';
+import PaymentRequestPage from './pages/dashboards/shared/PaymentRequestPage';
+import FinancialAdminPaymentRequests from './pages/dashboards/financialAdmin/FinancialAdminPaymentRequests';
 import ManageAgreements from './pages/dashboards/shared/ManageAgreements';
 import EditAgreement from './pages/dashboards/shared/EditAgreement';
 import VehicleLeaseSettings from './pages/dashboards/financialAdmin/VehicleLeaseSettings';
@@ -483,6 +485,7 @@ function App() {
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="payment-requests" element={<FinancialAdminPaymentRequests />} />
             </Route>
           </Route>
 
@@ -519,13 +522,11 @@ function App() {
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route path="vehicles/:id/workshop-history" element={<VehicleWorkshopHistory />} />
               </Route>
-              <Route element={<ProtectedRoute requiredPermission="DRIVER_VIEW" />}>
-                <Route path="drivers" element={<DriverList />} />
-                <Route path="drivers/new" element={<CreateDriver />} />
-                <Route path="drivers/:id" element={<DriverDetail />} />
-                <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
-                <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
-              </Route>
+              <Route path="drivers" element={<DriverList />} />
+              <Route path="drivers/new" element={<CreateDriver />} />
+              <Route path="drivers/:id" element={<DriverDetail />} />
+              <Route path="drivers/:id/rent-plan" element={<DriverRentPlan />} />
+              <Route path="drivers/:id/assign-vehicle" element={<DriverVehicleAssignment />} />
               <Route path="driver-performance" element={<DriverPerformanceDashboard />} />
               <Route path="staff-performance" element={<StaffPerformanceDashboard />} />
               <Route path="staff-performance/:id" element={<StaffPerformanceDetails />} />
@@ -557,6 +558,7 @@ function App() {
               <Route path="directives/targets" element={<TargetManagement />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route path="accident-reports/:id" element={<AccidentReportDetail />} />
+              <Route path="payment-requests" element={<PaymentRequestPage />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />

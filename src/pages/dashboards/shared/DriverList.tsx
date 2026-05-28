@@ -34,6 +34,16 @@ const DriverList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [limit] = useState(10);
 
+    const formatDriverDate = (date?: string | null): string => {
+        if (!date) return 'N/A';
+        const parsed = new Date(date);
+        if (Number.isNaN(parsed.getTime())) return 'N/A';
+        const day = String(parsed.getDate()).padStart(2, '0');
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const year = parsed.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchDrivers();
@@ -44,8 +54,9 @@ const DriverList = () => {
     useEffect(() => {
         const fetchBranchesData = async () => {
             try {
-                const data = await getAllBranches();
-                setBranches(Array.isArray(data) ? data : []);
+                const response = await getAllBranches();
+                const branchData = Array.isArray(response) ? response : Array.isArray(response.data) ? response.data : [];
+                setBranches(branchData);
             } catch (error) {
                 console.error('Error fetching branches:', error);
             }
@@ -233,7 +244,7 @@ const DriverList = () => {
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">{t('management.common.modal.selectBranch')}</option>
+                                <option value="ALL">All Branches</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id}>{b.name}</option>
                                 ))}
@@ -349,12 +360,12 @@ const DriverList = () => {
                                                  <FileText size={14} />
                                                  {driver.drivingLicense?.licenseNumber || 'N/A'}
                                              </div>
-                                             <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.expiry')}: {driver.drivingLicense?.expiryDate ? new Date(driver.drivingLicense.expiryDate).toLocaleDateString() : 'N/A'}</div>
+                                             <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.expiry')}: {formatDriverDate(driver.drivingLicense?.expiryDate)}</div>
                                          </td>
                                          <td className="px-6 py-4">
                                              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
                                                  <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                                                 {new Date(driver.appliedAt).toLocaleDateString()}
+                                                 {formatDriverDate(driver.appliedAt || driver.createdAt)}
                                              </div>
                                          </td>
                                         <td className="px-6 py-4 text-right">

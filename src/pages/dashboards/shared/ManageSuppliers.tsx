@@ -581,6 +581,14 @@ const ManageSuppliers = () => {
                                             border: "1px solid var(--border-main)",
                                             borderRadius: "12px 0 0 12px"
                                         }}
+                                        dropdownStyle={{
+                                            background: "var(--bg-card)",
+                                            color: "var(--text-main)",
+                                            border: "1px solid var(--border-main)",
+                                            borderRadius: "12px",
+                                            marginTop: "4px",
+                                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
+                                        }}
                                     />
                                 </div>
 
