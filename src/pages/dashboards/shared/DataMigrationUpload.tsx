@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { dataMigrateDrivers, type DataMigrationResult } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
+import { getAllFinanceStaff, createFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 
@@ -73,6 +73,48 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [nextFleetLoading, setNextFleetLoading] = useState(false);
     const [fleetError, setFleetError] = useState<string | null>(null);
     const [isCheckingFleet, setIsCheckingFleet] = useState(false);
+
+    const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+    const [newStaffForm, setNewStaffForm] = useState({ fullName: '', email: '', phone: '', password: '' });
+    const [creatingStaffLoader, setCreatingStaffLoader] = useState(false);
+
+    const handleCreateStaff = async () => {
+        try {
+            if (!newStaffForm.fullName || !newStaffForm.email || !newStaffForm.phone || !newStaffForm.password) {
+                toast.error("Please fill all staff fields");
+                return;
+            }
+            const branchToUse = needsBranchSelection ? selectedBranch : decoded?.branchId;
+            if (!branchToUse) {
+                toast.error("Please select a branch first");
+                return;
+            }
+            setCreatingStaffLoader(true);
+            const newStaff = await createFinanceStaff({
+                ...newStaffForm,
+                branchId: branchToUse,
+                status: 'ACTIVE'
+            });
+            toast.success("Finance staff created");
+            
+            // Refresh list
+            const res = await getAllFinanceStaff({ branchId: branchToUse, limit: 200 });
+            const updatedStaff = res.data || [];
+            setFinanceStaff(updatedStaff);
+            
+            // Auto select
+            setSelectedStaff(newStaff._id);
+            const staffObj = updatedStaff.find(s => s._id === newStaff._id) || newStaff;
+            setSelectedStaffObj(staffObj as any);
+            
+            setIsCreatingStaff(false);
+            setNewStaffForm({ fullName: '', email: '', phone: '', password: '' });
+        } catch(err: any) {
+            toast.error(err?.response?.data?.message || "Failed to create staff");
+        } finally {
+            setCreatingStaffLoader(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
@@ -270,8 +312,29 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     {/* Handling Staff Selector */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
-                            {staffLoading ? (
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
+                                {(!needsBranchSelection || selectedBranch) && !isCreatingStaff && (
+                                    <button onClick={() => setIsCreatingStaff(true)} className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400">
+                                        + New Staff
+                                    </button>
+                                )}
+                            </div>
+
+                            {isCreatingStaff ? (
+                                <div className="space-y-3 mt-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                    <input type="text" placeholder="Full Name" value={newStaffForm.fullName} onChange={e => setNewStaffForm({...newStaffForm, fullName: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="email" placeholder="Email Address" value={newStaffForm.email} onChange={e => setNewStaffForm({...newStaffForm, email: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="tel" placeholder="Phone Number" value={newStaffForm.phone} onChange={e => setNewStaffForm({...newStaffForm, phone: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="password" placeholder="Password" value={newStaffForm.password} onChange={e => setNewStaffForm({...newStaffForm, password: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <div className="flex gap-2 justify-end pt-1">
+                                        <button onClick={() => setIsCreatingStaff(false)} className="text-[10px] px-3 py-1.5 rounded uppercase font-black tracking-wider text-red-400 hover:bg-red-400/10 transition-colors">Cancel</button>
+                                        <button onClick={handleCreateStaff} disabled={creatingStaffLoader} className="text-[10px] px-3 py-1.5 rounded bg-amber-500 text-black uppercase font-black tracking-wider flex items-center gap-1 hover:opacity-90 transition-opacity">
+                                            {creatingStaffLoader ? <Loader2 size={12} className="animate-spin"/> : null} Create & Select
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : staffLoading ? (
                                 <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
                             ) : financeStaff.length === 0 ? (
                                 <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
