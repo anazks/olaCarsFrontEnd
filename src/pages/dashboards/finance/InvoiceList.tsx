@@ -176,7 +176,7 @@ const InvoiceList = () => {
                         </button>
                     )}
                     
-                    {userRole !== 'admin' && (
+                  
                         <button 
                             onClick={() => setShowCreateModal(true)} 
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
@@ -185,7 +185,7 @@ const InvoiceList = () => {
                             <Plus size={14} strokeWidth={3} />
                             New Invoice
                         </button>
-                    )}
+                    
                     </div>
                 </div>
 

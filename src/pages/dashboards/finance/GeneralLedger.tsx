@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Upload } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';

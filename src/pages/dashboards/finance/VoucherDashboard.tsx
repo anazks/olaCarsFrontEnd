@@ -10,7 +10,6 @@ import {
     FileText,
     Calendar,
     Building2,
-    MoreVertical,
     Download,
     Eye,
     CheckCircle2,
@@ -449,7 +448,6 @@ const VoucherDashboard = () => {
                                 setShowCreateModal(false);
                                 fetchVouchers();
                             }} 
-                            type="PAYMENT"
                         />
                     </div>
                 </div>

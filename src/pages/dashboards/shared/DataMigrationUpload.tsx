@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown } from 'lucide-react';
+import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -58,6 +58,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [updateExisting, setUpdateExisting] = useState(true);
     const [result, setResult] = useState<DataMigrationResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -122,10 +123,8 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         if (!row.fullName?.trim()) errors.push('Missing fullName');
-        if (!row.email?.trim()) errors.push('Missing email');
-        if (!row.phone?.trim()) errors.push('Missing phone');
         if (!row.vehicleNumber?.trim()) errors.push('Missing vehicleNumber');
-        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
+        if (row.email && row.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
         return errors;
     }, []);
 
@@ -183,7 +182,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
         try {
             const payload = valid.map(({ _rowErrors, ...rest }) => rest);
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined);
+            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) onSuccess();
@@ -403,6 +402,22 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                         </div>
                     </div>
 
+                    {/* Update Existing Option */}
+                    <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <input
+                            type="checkbox"
+                            id="updateExisting"
+                            checked={updateExisting}
+                            onChange={(e) => setUpdateExisting(e.target.checked)}
+                            className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500/20 cursor-pointer"
+                            style={{ accentColor: '#f59e0b' }}
+                        />
+                        <label htmlFor="updateExisting" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                            Update existing records if found
+                        </label>
+                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>(Matches by Vehicle VIN & Driver Phone/Name)</span>
+                    </div>
+
                     {/* Template Downloads */}
                     <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                         <Info size={16} style={{ color: '#f59e0b' }} />
@@ -468,6 +483,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Phone</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Vehicle #</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                                <th className="px-3 py-2 font-bold text-center" style={{ color: 'var(--text-dim)' }}>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -481,8 +497,24 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                     <td className="px-3 py-2">
                                                         {row._rowErrors.length === 0
                                                             ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
-                                                            : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} title={row._rowErrors.join(', ')}>{row._rowErrors.length} error(s)</span>
+                                                            : (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block w-fit" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                                                        {row._rowErrors.length} error(s)
+                                                                    </span>
+                                                                    <span className="text-[9px] text-red-400 break-words max-w-[150px]">{row._rowErrors.join(', ')}</span>
+                                                                </div>
+                                                            )
                                                         }
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        <button 
+                                                            onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
+                                                            className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
+                                                            title="Remove Entry"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}

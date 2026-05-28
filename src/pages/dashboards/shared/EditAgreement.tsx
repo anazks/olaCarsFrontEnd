@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    Save, ArrowLeft, Info, AlertTriangle, ShieldCheck, 
+    Save, Info, AlertTriangle, ShieldCheck, 
     Globe, FileText, Hash, User, Car, ChevronDown 
 } from 'lucide-react';
 import agreementService from '../../../services/agreementService';

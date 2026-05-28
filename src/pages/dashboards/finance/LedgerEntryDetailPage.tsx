@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     FileText, 
@@ -9,13 +9,12 @@ import {
     CreditCard, 
     Info, 
     Receipt, 
-    Car,
     Repeat,
-    ArrowRight
+    ArrowRight,
+    AlertTriangle
 } from 'lucide-react';
 import { getLedgerEntryById, getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
-import { getInvoiceById } from '../../../services/invoiceService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -52,14 +51,15 @@ const LedgerEntryDetailPage = () => {
                 let baseDocType = null;
                 let refId = null;
 
-                if (fetchedEntry.transaction) {
-                    filters.transaction = fetchedEntry.transaction._id;
-                    baseDocType = fetchedEntry.transaction.referenceModel;
-                    refId = fetchedEntry.referenceId || fetchedEntry.transaction.referenceId;
-                } else if (fetchedEntry.manualJournal) {
-                    filters.manualJournal = typeof fetchedEntry.manualJournal === 'string' ? fetchedEntry.manualJournal : fetchedEntry.manualJournal._id;
-                } else if (fetchedEntry.voucher) {
-                    filters.voucher = typeof fetchedEntry.voucher === 'string' ? fetchedEntry.voucher : fetchedEntry.voucher._id;
+                const entryAny = fetchedEntry as any;
+                if (entryAny.transaction) {
+                    filters.transaction = entryAny.transaction._id;
+                    baseDocType = entryAny.transaction.referenceModel;
+                    refId = fetchedEntry.referenceId || entryAny.transaction.referenceId;
+                } else if (entryAny.manualJournal) {
+                    filters.manualJournal = typeof entryAny.manualJournal === 'string' ? entryAny.manualJournal : entryAny.manualJournal._id;
+                } else if (entryAny.voucher) {
+                    filters.voucher = typeof entryAny.voucher === 'string' ? entryAny.voucher : entryAny.voucher._id;
                 } else if (fetchedEntry.referenceId) {
                     filters.search = fetchedEntry.referenceId;
                     refId = fetchedEntry.referenceId;
@@ -153,7 +153,7 @@ const LedgerEntryDetailPage = () => {
     const creditVal = entry.amount !== undefined ? (entry.type === 'CREDIT' ? entry.amount : 0) : (entry.credit || 0);
     const displayAmount = Math.max(debitVal, creditVal);
 
-    const sourceDocType = entry.transaction ? 'Payment Transaction' : entry.manualJournal ? 'Manual Journal' : entry.voucher ? 'Voucher' : 'System Entry';
+    const sourceDocType = (entry as any).transaction ? 'Payment Transaction' : (entry as any).manualJournal ? 'Manual Journal' : (entry as any).voucher ? 'Voucher' : 'System Entry';
 
     return (
         <div className="container-responsive space-y-6 animate-fade-in pb-20">
@@ -299,24 +299,24 @@ const LedgerEntryDetailPage = () => {
                                 <span className="font-bold">{sourceDocType}</span>
                             </div>
                             
-                            {entry.transaction && typeof entry.transaction === 'object' && (
+                            {(entry as any).transaction && typeof (entry as any).transaction === 'object' && (
                                 <>
                                     <div className="flex justify-between items-center pb-3 border-b border-white/5">
                                         <span className="text-white/60">Payment Method</span>
                                         <div className="flex items-center gap-1.5 font-mono">
                                             <CreditCard size={14} className="text-white/40" />
-                                            {entry.transaction.paymentMethod || 'N/A'}
+                                            {(entry as any).transaction.paymentMethod || 'N/A'}
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center pb-3 border-b border-white/5">
                                         <span className="text-white/60">Trx Status</span>
                                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10">
-                                            {entry.transaction.status || 'N/A'}
+                                            {(entry as any).transaction.status || 'N/A'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center pb-3 border-b border-white/5">
                                         <span className="text-white/60">Trx Category</span>
-                                        <span className="font-medium">{entry.transaction.transactionCategory || 'N/A'}</span>
+                                        <span className="font-medium">{(entry as any).transaction.transactionCategory || 'N/A'}</span>
                                     </div>
                                 </>
                             )}
