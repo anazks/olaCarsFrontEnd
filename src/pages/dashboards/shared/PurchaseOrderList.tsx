@@ -102,7 +102,7 @@ const PurchaseOrderList = () => {
     const [endDate, setEndDate] = useState('');
 
     // Sorting State
-    const [sortBy, setSortBy] = useState<PurchaseOrderFilters['sortBy']>('createdAt');
+    const [sortBy, setSortBy] = useState<any>('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const [currentUserId, setCurrentUserId] = useState('');
@@ -178,7 +178,7 @@ const PurchaseOrderList = () => {
         }
     };
 
-    const handleSort = (field: PurchaseOrderFilters['sortBy']) => {
+    const handleSort = (field: any) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -198,7 +198,7 @@ const PurchaseOrderList = () => {
         }
     };
 
-    const SortIcon = ({ field }: { field: PurchaseOrderFilters['sortBy'] }) => {
+    const SortIcon = ({ field }: { field: any }) => {
         if (sortBy !== field) return <RefreshCw size={10} className="opacity-20" />;
         return <div className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: '#C8E600' }} /></div>;
     };
@@ -424,12 +424,12 @@ const PurchaseOrderList = () => {
                             <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
                                     <th className="py-4 px-3 text-left w-10">Sl No.</th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderNumber')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('purchaseOrderNumber' as any)}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.purchaseOrders.table.poDetails')} <SortIcon field="purchaseOrderNumber" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('status')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('status' as any)}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.common.table.status')} <SortIcon field="status" />
                                         </div>

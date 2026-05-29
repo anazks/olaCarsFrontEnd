@@ -118,7 +118,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Assigned Missions', path: '/admin/branch-fin-staff/my-tasks' },
-                { label: 'Task & Target Management', path: '/admin/branch-fin-staff/target-management' },
+                { label: 'Directives & Delegation', path: '/admin/branch-fin-staff/directives' },
                 { label: 'Accident Reports', path: '/admin/branch-fin-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-fin-staff/vehicles' },
                 { label: 'Manage Drivers', path: '/admin/branch-fin-staff/drivers' },
@@ -131,6 +131,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-fin-staff/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/branch-fin-staff/bulk-uploads' },
             ]
         },
     ];

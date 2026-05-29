@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    Save, ArrowLeft, Info, AlertTriangle, ShieldCheck, 
+    Save, Info, AlertTriangle, ShieldCheck, 
     Globe, FileText, Hash, User, Car, ChevronDown 
 } from 'lucide-react';
 import agreementService from '../../../services/agreementService';
@@ -85,8 +85,7 @@ const EditAgreement = () => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Edit Agreement', active: true }]} />
-
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Edit Agreement', active: true }]} />
                 <div className="w-12 h-12 border-4 border-lime border-t-transparent rounded-full animate-spin" />
                 <p className="text-dim animate-pulse">Loading Agreement...</p>
             </div>
@@ -305,7 +304,6 @@ const EditAgreement = () => {
                         </div>
                     </div>
                 </div>
-
 
                 {/* Bottom Section: Document Content (Full Width) */}
                 <div className="rounded-3xl border p-1 min-h-[700px] flex flex-col" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>

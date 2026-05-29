@@ -162,6 +162,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: 'Payment Requests', path: '/admin/financial-admin/payment-requests' },
                 { label: 'General Ledger', path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
@@ -175,7 +176,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: 'All Insurance', path: '/admin/financial-admin/vehicle-policies' },
                 { label: 'Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
-                { label: 'Settings', path: '/admin/financial-admin/insurances' },
+                { label: 'Providers', path: '/admin/financial-admin/insurances' },
             ]
         },
         {
@@ -185,7 +186,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             subItems: [
                 { label: 'Staff Management', path: '/admin/financial-admin/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Target Management', path: '/admin/financial-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Directives & Delegation', path: '/admin/financial-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
                 // { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Accident Reports', path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
@@ -210,6 +211,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Branch Management', path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
                 { label: 'Manage Suppliers', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
                 { label: 'Settings', path: '/admin/financial-admin/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/financial-admin/bulk-uploads' },
             ]
         },
     ];

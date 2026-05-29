@@ -91,7 +91,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             icon: <Car size={22} />,
             subItems: [
                 { label: 'Assigned Missions', path: '/admin/branch-op-staff/my-tasks' },
-                { label: 'Task & Target Management', path: '/admin/branch-op-staff/target-management' },
+                { label: 'Directives & Delegation', path: '/admin/branch-op-staff/directives' },
                 { label: 'Accident Reports', path: '/admin/branch-op-staff/accident-reports' },
                 { label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
                 { label: 'Pending Entry Vehicles', path: '/admin/branch-op-staff/pending-vehicles' },
@@ -117,6 +117,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/branch-op-staff/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/branch-op-staff/bulk-uploads' },
             ]
         },
     ];

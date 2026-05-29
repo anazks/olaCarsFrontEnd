@@ -94,7 +94,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             subItems: [
                 { label: 'Staff Management', path: '/admin/country-manager/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Target Management', path: '/admin/country-manager/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Directives & Delegation', path: '/admin/country-manager/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
                 // { label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
@@ -140,6 +140,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             label: 'Finance',
             icon: <Calculator size={22} />,
             subItems: [
+                { label: 'Payment Requests', path: '/admin/country-manager/payment-requests' },
                 { label: 'General Ledger', path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Finance Dashboard', path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: 'Tax Management', path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
@@ -152,6 +153,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/country-manager/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/country-manager/bulk-uploads' },
             ]
         },
     ];

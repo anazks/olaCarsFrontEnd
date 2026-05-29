@@ -5,7 +5,7 @@ import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } fro
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
-import { getDepositInvoicesByDriver } from '../../../services/invoiceService';
+import { getInvoicesByDriver } from '../../../services/invoiceService';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
@@ -26,6 +26,7 @@ const DriverDetail = () => {
     const [invoices, setInvoices] = useState<any[]>([]);
 
     const [expandedPayments, setExpandedPayments] = useState<Record<string, boolean>>({});
+    const [isDocsExpanded, setIsDocsExpanded] = useState(false);
     const currentUser = getUser();
     const userRole = getUserRole();
     const isManager = ['branchmanager', 'countrymanager', 'admin', 'financeadmin', 'operationadmin'].includes(userRole || '');
@@ -45,10 +46,10 @@ const DriverDetail = () => {
             if (data.creditCheck?.reviewNotes) setReviewNotes(data.creditCheck.reviewNotes);
 
             try {
-                const invoiceData = await getDepositInvoicesByDriver(id!);
+                const invoiceData = await getInvoicesByDriver(id!);
                 setInvoices(invoiceData);
             } catch (invErr) {
-                console.error('Error fetching driver deposit invoices:', invErr);
+                console.error('Error fetching driver invoices:', invErr);
             }
 
             if (data.currentVehicle) {
@@ -282,6 +283,25 @@ const DriverDetail = () => {
         }
     };
 
+    const handleUpdatePersonalInfo = async (email: string, phone: string) => {
+        try {
+            setLoading(true);
+            await updateDriver(id!, {
+                personalInfo: {
+                    ...driver?.personalInfo,
+                    email,
+                    phone
+                }
+            });
+            await fetchDriver();
+        } catch (error: any) {
+            console.error('Error updating driver:', error);
+            setActionError(error.response?.data?.message || 'Failed to update personal info');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateCreditCheck = async (data: any) => {
         try {
             setLoading(true);
@@ -407,7 +427,7 @@ const DriverDetail = () => {
                     {reqs.map((r, i) => (
                         <div key={i} className="flex items-center gap-1.5">
                             {r.met ? <CheckCircle2 size={10} className="text-brand-lime" /> : <AlertCircle size={10} className="text-yellow-500" />}
-                            <span className={`text-[8px] font-bold uppercase tracking-tight ${r.met ? 'text-brand-lime' : 'text-dim'}`}>{r.label}</span>
+                            <span className={`text-[10px] font-bold uppercase tracking-tight ${r.met ? 'text-brand-lime' : 'text-dim'}`}>{r.label}</span>
                         </div>
                     ))}
                 </div>
@@ -425,10 +445,10 @@ const DriverDetail = () => {
                                 <Clock size={14} />
                             </div>
                             <div>
-                                <h2 className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                <h2 className="text-[12px] font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
                                     Current Stage: {driver.status.replace(/_/g, ' ')}
                                 </h2>
-                                <p className="text-[8px] font-bold text-dim uppercase tracking-wider">Complete the tasks below to progress the application.</p>
+                                <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Complete the tasks below to progress the application.</p>
                             </div>
                         </div>
                         {renderRequirements()}
@@ -441,7 +461,7 @@ const DriverDetail = () => {
                                 <button
                                     onClick={() => handleProgress('PENDING REVIEW', { notes: 'Automated: Draft submission' })}
                                     disabled={!canProgress()}
-                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[8px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[10px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
                                 >
                                     <PlayCircle size={10} />
                                     Submit for Review
@@ -454,7 +474,7 @@ const DriverDetail = () => {
                                 <button
                                     onClick={() => handleProgress('VERIFICATION', { notes: 'Finance/Manager Review Completed' })}
                                     disabled={!canProgress()}
-                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[8px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[10px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
                                 >
                                     <ShieldCheck size={10} />
                                     Complete Verification
@@ -474,7 +494,7 @@ const DriverDetail = () => {
                                         });
                                     }}
                                     disabled={!canProgress()}
-                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[8px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
+                                    className={`px-2.5 py-1 rounded-lg font-black uppercase tracking-wider text-[10px] transition-all flex items-center gap-2 shadow-md active:scale-95 ${canProgress() ? 'bg-brand-lime text-black hover:scale-105' : 'bg-white/5 text-dim cursor-not-allowed grayscale'}`}
                                 >
                                     <FileCheck size={10} />
                                     Start Credit Assessment
@@ -485,7 +505,7 @@ const DriverDetail = () => {
                         {driver.status === 'CREDIT CHECK' && (
                             <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
                                 <Clock size={10} className="text-yellow-500 animate-spin" />
-                                <span className="text-[8px] font-black text-yellow-500 uppercase">Assessment in Progress</span>
+                                <span className="text-[10px] font-black text-yellow-500 uppercase">Assessment in Progress</span>
                             </div>
                         )}
 
@@ -501,7 +521,7 @@ const DriverDetail = () => {
                                             notes: 'Manager Final Approval'
                                         })}
                                         disabled={driver.status === 'MANAGER REVIEW' && !reviewNotes}
-                                        className="px-2.5 py-1 bg-brand-lime text-black rounded-lg font-black uppercase tracking-wider text-[8px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                                        className="px-2.5 py-1 bg-brand-lime text-black rounded-lg font-black uppercase tracking-wider text-[10px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-1.5"
                                     >
                                         <CheckCircle2 size={10} />
                                         Approve
@@ -513,7 +533,7 @@ const DriverDetail = () => {
                                         onClick={() => handleProgress('REJECTED', {
                                             updateData: { rejection: { reason: rejectionReason, notes: reviewNotes } }
                                         })}
-                                        className="px-2.5 py-1 bg-red-600 text-white rounded-lg font-black uppercase tracking-wider text-[8px] hover:bg-red-700 transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                                        className="px-2.5 py-1 bg-red-600 text-white rounded-lg font-black uppercase tracking-wider text-[10px] hover:bg-red-700 transition-all shadow-md active:scale-95 flex items-center gap-1.5"
                                     >
                                         <XCircle size={10} />
                                         Reject
@@ -526,7 +546,7 @@ const DriverDetail = () => {
                             <HasPermission permission="DRIVER_ONBOARD">
                                 <button
                                     onClick={() => handleProgress('ACTIVE', { notes: 'Activated after Policy Approval' })}
-                                    className="px-2.5 py-1 bg-brand-lime text-black rounded-lg font-black uppercase tracking-wider text-[8px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-2"
+                                    className="px-2.5 py-1 bg-brand-lime text-black rounded-lg font-black uppercase tracking-wider text-[10px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-2"
                                 >
                                     <CheckCircle2 size={10} />
                                     Activate Application
@@ -540,7 +560,7 @@ const DriverDetail = () => {
                             <HasPermission permission="DRIVER_ASSIGN_VEHICLE">
                                 <button
                                     onClick={() => navigate('assign-vehicle')}
-                                    className="px-2.5 py-1 bg-black dark:bg-white text-white dark:text-black rounded-lg font-black uppercase tracking-wider text-[8px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-2"
+                                    className="px-2.5 py-1 bg-black dark:bg-white text-white dark:text-black rounded-lg font-black uppercase tracking-wider text-[10px] hover:scale-105 transition-all shadow-md active:scale-95 flex items-center gap-2"
                                 >
                                     <Car size={10} />
                                     Assign Vehicle
@@ -552,7 +572,7 @@ const DriverDetail = () => {
                         {(driver.status === 'CREDIT CHECK' || driver.status === 'MANAGER REVIEW') && (
                             <div className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center gap-2">
                                 <Clock size={10} className="text-blue-500" />
-                                <span className="text-[8px] font-black text-blue-500 uppercase">Awaiting Approval</span>
+                                <span className="text-[10px] font-black text-blue-500 uppercase">Awaiting Approval</span>
                             </div>
                         )}
                     </div>
@@ -563,8 +583,8 @@ const DriverDetail = () => {
 
     const CompactInfo = ({ label, value, icon }: { label: string; value: any; icon?: React.ReactNode }) => (
         <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[8px] font-black uppercase tracking-wider opacity-40">{label}</span>
-            <span className="text-[11px] font-bold truncate flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-40">{label}</span>
+            <span className="text-[13px] font-bold truncate flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
                 {icon && <span className="opacity-60">{icon}</span>}
                 {value || 'N/A'}
             </span>
@@ -585,19 +605,19 @@ const DriverDetail = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
+                            <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
                             <div className="flex flex-col">
-                                <span className="px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-wider w-fit" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
+                                <span className="px-3 py-1 text-sm font-bold rounded-full border uppercase tracking-wider w-fit" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
                                     {driver.status.replace(/_/g, ' ')}
                                 </span>
                                 {driver.approvedBy && (
-                                    <span className="text-[10px] mt-1 opacity-60 font-medium">
+                                    <span className="text-[12px] mt-1 opacity-60 font-medium">
                                         Approved by {driver.approvedBy.name} ({driver.approvedBy.role})
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <p className="flex items-center gap-2 text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                        <p className="flex items-center gap-2 text-base mt-1" style={{ color: 'var(--text-muted)' }}>
                             <FileText size={14} />
                             License: <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.drivingLicense?.licenseNumber || 'N/A'}</span>
                         </p>
@@ -625,8 +645,8 @@ const DriverDetail = () => {
                 <div className="p-4 rounded-xl border flex items-start gap-3 animate-in fade-in slide-in-from-top-2" style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.3)' }}>
                     <XCircle size={20} className="text-red-500 shrink-0" />
                     <div>
-                        <h4 className="text-sm font-bold text-red-500 uppercase tracking-wide">Action Failed</h4>
-                        <p className="text-xs text-red-400 mt-1">{actionError}</p>
+                        <h4 className="text-base font-bold text-red-500 uppercase tracking-wide">Action Failed</h4>
+                        <p className="text-sm text-red-400 mt-1">{actionError}</p>
                     </div>
                 </div>
             )}
@@ -651,12 +671,12 @@ const DriverDetail = () => {
                                             }`}
                                         style={{ borderColor: !isCompleted && !isCurrent ? 'var(--border-main)' : '' }}
                                     >
-                                        {isCompleted ? <CheckCircle2 size={24} /> : <span className="font-bold text-sm">{index + 1}</span>}
+                                        {isCompleted ? <CheckCircle2 size={24} /> : <span className="font-bold text-base">{index + 1}</span>}
                                     </div>
                                     <div className="mt-3 text-center">
-                                        <div className={`text-xs font-bold uppercase tracking-wider ${isCurrent ? 'text-brand-lime' : ''}`} style={{ color: isCurrent ? 'var(--brand-lime)' : 'var(--text-dim)' }}>{step.label}</div>
-                                        {!isCurrent && <div className="text-[10px] font-medium uppercase mt-0.5" style={{ color: 'var(--text-dim)' }}>{step.sub}</div>}
-                                        {isCurrent && <div className="text-[10px] font-bold uppercase mt-0.5 animate-pulse" style={{ color: 'var(--brand-lime)' }}>In Progress</div>}
+                                        <div className={`text-sm font-bold uppercase tracking-wider ${isCurrent ? 'text-brand-lime' : ''}`} style={{ color: isCurrent ? 'var(--brand-lime)' : 'var(--text-dim)' }}>{step.label}</div>
+                                        {!isCurrent && <div className="text-[12px] font-medium uppercase mt-0.5" style={{ color: 'var(--text-dim)' }}>{step.sub}</div>}
+                                        {isCurrent && <div className="text-[12px] font-bold uppercase mt-0.5 animate-pulse" style={{ color: 'var(--brand-lime)' }}>In Progress</div>}
                                     </div>
                                 </div>
                             );
@@ -687,8 +707,8 @@ const DriverDetail = () => {
                                         <User size={14} />
                                     </div>
                                     <div>
-                                        <h2 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Driver Profile & Contacts</h2>
-                                        <p className="text-[8px] font-bold text-dim uppercase tracking-wider">Personal & Emergency Details</p>
+                                        <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Driver Profile & Contacts</h2>
+                                        <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Personal & Emergency Details</p>
                                     </div>
                                 </div>
                                 {driver.personalInfo?.photograph && (
@@ -702,7 +722,25 @@ const DriverDetail = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
                                 {/* Column 1: Contact & Personal Info */}
                                 <div className="space-y-3 pr-0 md:pr-4 border-r-0 md:border-r border-white/5">
-                                    <div className="text-[9px] font-black uppercase tracking-widest text-brand-lime mb-1">Personal Details</div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="text-[11px] font-black uppercase tracking-widest text-brand-lime">Personal Details</div>
+                                        <HasPermission permission="DRIVER_EDIT">
+                                            <button
+                                                onClick={() => {
+                                                    const email = prompt("Enter Email Address", driver.personalInfo?.email || "");
+                                                    if (email !== null) {
+                                                        const phone = prompt("Enter Phone Number", driver.personalInfo?.phone || "");
+                                                        if (phone !== null) {
+                                                            handleUpdatePersonalInfo(email, phone);
+                                                        }
+                                                    }
+                                                }}
+                                                className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline"
+                                            >
+                                                Edit
+                                            </button>
+                                        </HasPermission>
+                                    </div>
                                     <CompactInfo label="Email Address" value={driver.personalInfo?.email} />
                                     <CompactInfo label="Phone Number" value={driver.personalInfo?.phone} />
                                     <CompactInfo label="WhatsApp" value={driver.personalInfo?.whatsappNumber || 'N/A'} />
@@ -711,13 +749,13 @@ const DriverDetail = () => {
 
                                 {/* Column 2: Application & ID */}
                                 <div className="space-y-3 pr-0 md:pr-4 border-r-0 md:border-r border-white/5">
-                                    <div className="text-[9px] font-black uppercase tracking-widest text-brand-lime mb-1">Application & ID</div>
+                                    <div className="text-[11px] font-black uppercase tracking-widest text-brand-lime mb-1">Application & ID</div>
                                     <CompactInfo label="Branch" value={typeof driver.branch === 'object' ? driver.branch.name : driver.branch} icon={<Building2 size={10} />} />
                                     <CompactInfo label="Applied Date" value={new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()} icon={<Calendar size={10} />} />
                                     <CompactInfo label="Nationality" value={driver.personalInfo?.nationality || 'N/A'} />
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[8px] font-black uppercase tracking-wider opacity-40">Identity Documentation</span>
-                                        <span className="text-[11px] font-bold text-white">
+                                        <span className="text-[10px] font-black uppercase tracking-wider opacity-40">Identity Documentation</span>
+                                        <span className="text-[13px] font-bold text-white">
                                             {driver.identityDocs?.idType || 'ID'}: <span className="font-medium text-dim">{driver.identityDocs?.idNumber || 'N/A'}</span>
                                         </span>
                                     </div>
@@ -727,7 +765,7 @@ const DriverDetail = () => {
                                 <div className="space-y-3 bg-red-500/[0.02] p-3 rounded-lg border border-red-500/10 flex flex-col justify-between">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-[9px] font-black uppercase tracking-widest text-red-400">Emergency Contact</div>
+                                            <div className="text-[11px] font-black uppercase tracking-widest text-red-400">Emergency Contact</div>
                                             <HasPermission permission="DRIVER_EDIT">
                                                 <button
                                                     onClick={() => {
@@ -739,7 +777,7 @@ const DriverDetail = () => {
                                                             }
                                                         }
                                                     }}
-                                                    className="text-[8px] font-black uppercase tracking-widest text-brand-lime hover:underline"
+                                                    className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline"
                                                 >
                                                     Edit
                                                 </button>
@@ -758,7 +796,7 @@ const DriverDetail = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="text-[8px] font-bold text-dim leading-normal flex items-center gap-1.5 border-t border-white/5 pt-1.5">
+                                    <div className="text-[10px] font-bold text-dim leading-normal flex items-center gap-1.5 border-t border-white/5 pt-1.5">
                                         <ShieldCheck size={10} className="text-red-400 shrink-0" />
                                         <span>Used for safety events.</span>
                                     </div>
@@ -778,11 +816,11 @@ const DriverDetail = () => {
                                             <ShieldCheck size={14} />
                                         </div>
                                         <div>
-                                            <h2 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Background Check</h2>
-                                            <p className="text-[8px] font-bold text-dim uppercase tracking-wider">Verification Status</p>
+                                            <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Background Check</h2>
+                                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Verification Status</p>
                                         </div>
                                     </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                                         driver.backgroundCheck?.status === 'CLEARED' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                         driver.backgroundCheck?.status === 'FAILED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                         'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
@@ -805,7 +843,7 @@ const DriverDetail = () => {
                                 </div>
                             </div>
 
-                            <div className="text-[8px] font-bold text-dim leading-normal flex items-center gap-1.5 border-t border-white/5 pt-2 mt-4">
+                            <div className="text-[10px] font-bold text-dim leading-normal flex items-center gap-1.5 border-t border-white/5 pt-2 mt-4">
                                 <Clock size={10} className="text-blue-400 shrink-0" />
                                 <span>Subject to periodic verification.</span>
                             </div>
@@ -822,12 +860,12 @@ const DriverDetail = () => {
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: 'var(--brand-danger, #ef4444)' }}>
                                     <ShieldCheck size={20} />
                                 </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Verification Panel</h2>
+                                <h2 className="font-bold uppercase tracking-widest text-base" style={{ color: 'var(--text-main)' }}>Verification Panel</h2>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-50">Driving License Verification</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-wider opacity-50">Driving License Verification</h3>
                                     <div className="flex gap-4 p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         {driver.drivingLicense?.frontImage && (
                                             <div className="w-16 h-16 rounded-lg overflow-hidden border shrink-0 bg-white">
@@ -840,19 +878,19 @@ const DriverDetail = () => {
                                         )}
                                         <div className="flex-1 flex flex-col justify-between">
                                             <div>
-                                                <p className="font-bold text-sm">{driver.drivingLicense?.licenseNumber || 'N/A'}</p>
-                                                <p className="text-[10px] opacity-60 font-medium italic">Status: {driver.drivingLicense?.verificationStatus}</p>
+                                                <p className="font-bold text-base">{driver.drivingLicense?.licenseNumber || 'N/A'}</p>
+                                                <p className="text-[12px] opacity-60 font-medium italic">Status: {driver.drivingLicense?.verificationStatus}</p>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleVerifyField('drivingLicense.verificationStatus', 'VERIFIED')}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'VERIFIED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'VERIFIED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Mark Verified
                                                 </button>
                                                 <button
                                                     onClick={() => handleVerifyField('drivingLicense.verificationStatus', 'REJECTED')}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'REJECTED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${driver.drivingLicense?.verificationStatus === 'REJECTED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Fail
                                                 </button>
@@ -862,7 +900,7 @@ const DriverDetail = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-50">Background Check Verification</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-wider opacity-50">Background Check Verification</h3>
                                     <div className="p-4 rounded-xl border bg-black/5 space-y-4" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="flex items-center gap-4">
                                             {driver.backgroundCheck?.document && (
@@ -875,8 +913,8 @@ const DriverDetail = () => {
                                                 </div>
                                             )}
                                             <div className="flex-1">
-                                                <p className="font-bold text-sm">{driver.backgroundCheck?.status || 'PENDING'}</p>
-                                                <p className="text-[10px] opacity-60 font-medium italic">
+                                                <p className="font-bold text-base">{driver.backgroundCheck?.status || 'PENDING'}</p>
+                                                <p className="text-[12px] opacity-60 font-medium italic">
                                                     {driver.backgroundCheck?.issuedDate ? `Issued: ${new Date(driver.backgroundCheck.issuedDate).toLocaleDateString()}` : 'Date Not Recorded'}
                                                 </p>
                                             </div>
@@ -884,13 +922,13 @@ const DriverDetail = () => {
                                             <div className="flex gap-2 shrink-0">
                                                 <button
                                                     onClick={() => handleVerifyField('backgroundCheck.status', 'CLEARED')}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.backgroundCheck?.status === 'CLEARED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${driver.backgroundCheck?.status === 'CLEARED' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Clear
                                                 </button>
                                                 <button
                                                     onClick={() => handleVerifyField('backgroundCheck.status', 'FAILED')}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${driver.backgroundCheck?.status === 'FAILED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${driver.backgroundCheck?.status === 'FAILED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                                 >
                                                     Fail
                                                 </button>
@@ -898,7 +936,7 @@ const DriverDetail = () => {
                                         </div>
 
                                         <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                            <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all">
+                                            <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[12px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all">
                                                 <Upload size={12} className={uploading === 'backgroundCheckDocument' ? 'animate-bounce' : ''} />
                                                 {uploading === 'backgroundCheckDocument' ? 'Uploading...' : driver.backgroundCheck?.document ? 'Update Document' : 'Upload Scan'}
                                                 <input
@@ -922,16 +960,16 @@ const DriverDetail = () => {
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.1)', color: 'var(--text-main)' }}>
                                     <AlertCircle size={20} />
                                 </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Experian Credit Check Result</h2>
+                                <h2 className="font-bold uppercase tracking-widest text-base" style={{ color: 'var(--text-main)' }}>Experian Credit Check Result</h2>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <div className="p-4 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-1">Experian Score</p>
+                                        <p className="text-[12px] font-black uppercase tracking-widest text-dim mb-1">Experian Score</p>
                                         <div className="flex items-center gap-4">
                                             <div className="px-4 py-2 rounded-xl bg-brand-lime/10 border border-brand-lime/20">
-                                                <p className="text-[10px] font-black text-brand-lime uppercase tracking-widest">Policy: Auto-Approve Enabled</p>
+                                                <p className="text-[12px] font-black text-brand-lime uppercase tracking-widest">Policy: Auto-Approve Enabled</p>
                                             </div>
                                             <button
                                                 onClick={() => {
@@ -945,7 +983,7 @@ const DriverDetail = () => {
                                                         handleUpdateCreditCheck({ score: 700, decision: 'AUTO_APPROVED' });
                                                     }
                                                 }}
-                                                className="px-3 py-1 bg-brand-lime text-black text-[10px] font-black uppercase rounded-lg hover:scale-105 active:scale-95 transition-all"
+                                                className="px-3 py-1 bg-brand-lime text-black text-[12px] font-black uppercase rounded-lg hover:scale-105 active:scale-95 transition-all"
                                             >
                                                 {driver.status === 'VERIFICATION' ? 'Start Assessment' : 'Refresh Assessment'}
                                             </button>
@@ -953,20 +991,20 @@ const DriverDetail = () => {
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-3 pt-2">
-                                        <label className="flex items-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[10px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all w-fit">
+                                        <label className="flex items-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-lg text-[12px] font-bold text-white cursor-pointer hover:bg-gray-900 transition-all w-fit">
                                             <Upload size={12} className={uploading === 'consentForm' ? 'animate-bounce' : ''} />
                                             {uploading === 'consentForm' ? 'Uploading...' : driver.creditCheck?.consentForm ? 'Update Consent Form' : 'Upload Consent Form'}
                                             <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'consentForm')} />
                                         </label>
 
                                         <div className="flex flex-col gap-2 p-3 rounded-xl border bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-dim">Manual Decision (Testing)</p>
+                                            <p className="text-[12px] font-black uppercase tracking-widest text-dim">Manual Decision (Testing)</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {['AUTO_APPROVED', 'MANUAL_REVIEW', 'DECLINED'].map(decision => (
                                                     <button
                                                         key={decision}
                                                         onClick={() => handleVerifyField('creditCheck.decision', decision)}
-                                                        className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border transition-all ${driver.creditCheck?.decision === decision ? 'bg-brand-lime border-brand-lime text-black' : 'border-white/10 text-dim hover:border-white/30'}`}
+                                                        className={`px-2 py-1 rounded-md text-[11px] font-black uppercase border transition-all ${driver.creditCheck?.decision === decision ? 'bg-brand-lime border-brand-lime text-black' : 'border-white/10 text-dim hover:border-white/30'}`}
                                                     >
                                                         {decision.replace('_', ' ')}
                                                     </button>
@@ -979,23 +1017,23 @@ const DriverDetail = () => {
                                             className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${driver.creditCheck?.fraudAlert ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-black/5 border-white/10 text-dim'}`}
                                         >
                                             <AlertCircle size={14} />
-                                            <span className="text-[10px] font-black uppercase">Fraud Alert: {driver.creditCheck?.fraudAlert ? 'ON' : 'OFF'}</span>
+                                            <span className="text-[12px] font-black uppercase">Fraud Alert: {driver.creditCheck?.fraudAlert ? 'ON' : 'OFF'}</span>
                                         </button>
 
                                         {driver.creditCheck?.fraudAlert && (
                                             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 italic">
                                                 <AlertCircle size={14} className="text-red-600" />
-                                                <span className="text-[10px] font-bold text-red-600">FRAUD ALERT DETECTED</span>
+                                                <span className="text-[12px] font-bold text-red-600">FRAUD ALERT DETECTED</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                                 <div className="flex flex-col justify-center p-6 rounded-2xl border bg-brand-lime/5 border-brand-lime/20">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-lime mb-2">Policy Outcome</p>
+                                    <p className="text-sm font-bold uppercase tracking-widest text-brand-lime mb-2">Policy Outcome</p>
                                     {driver.creditCheck?.decision ? (
                                         <>
-                                            <p className="text-2xl font-black">{driver.creditCheck.decision.replace(/_/g, ' ')}</p>
-                                            <p className="text-xs opacity-60 mt-2">Based on auto-approval policy</p>
+                                            <p className="text-[26px] font-black">{driver.creditCheck.decision.replace(/_/g, ' ')}</p>
+                                            <p className="text-sm opacity-60 mt-2">Based on auto-approval policy</p>
                                         </>
                                     ) : (
                                         <p className="font-bold opacity-40 italic">Waiting for system assessment...</p>
@@ -1012,11 +1050,11 @@ const DriverDetail = () => {
                                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: 'var(--brand-danger)' }}>
                                     <AlertCircle size={20} />
                                 </div>
-                                <h2 className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--text-main)' }}>Manager Evaluation</h2>
+                                <h2 className="font-bold uppercase tracking-widest text-base" style={{ color: 'var(--text-main)' }}>Manager Evaluation</h2>
                             </div>
 
                             <div className="space-y-4">
-                                <label className="text-xs font-bold uppercase tracking-wider opacity-50 block">Review / Rejection Notes</label>
+                                <label className="text-sm font-bold uppercase tracking-wider opacity-50 block">Review / Rejection Notes</label>
                                 <textarea
                                     value={reviewNotes}
                                     onChange={(e) => setReviewNotes(e.target.value)}
@@ -1029,7 +1067,7 @@ const DriverDetail = () => {
                                         <select
                                             value={rejectionReason}
                                             onChange={(e) => setRejectionReason(e.target.value)}
-                                            className="bg-black/5 border p-2 rounded-lg text-xs font-bold outline-none"
+                                            className="bg-black/5 border p-2 rounded-lg text-sm font-bold outline-none"
                                             style={{ borderColor: 'var(--border-main)' }}
                                         >
                                             <option value="CREDIT DECLINED">Credit Declined</option>
@@ -1037,13 +1075,13 @@ const DriverDetail = () => {
                                             <option value="DOCUMENT FRAUD">Document Fraud</option>
                                             <option value="OTHER">Other Reason</option>
                                         </select>
-                                        <p className="text-[10px] opacity-50 font-medium italic">Select reason only if declining</p>
+                                        <p className="text-[12px] opacity-50 font-medium italic">Select reason only if declining</p>
                                     </div>
                                 )}
                                 {driver.rejection && (
                                     <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700">
-                                        <p className="text-xs font-black uppercase mb-1">Rejection Reason: {driver.rejection.reason}</p>
-                                        <p className="text-sm">{driver.rejection.notes}</p>
+                                        <p className="text-sm font-black uppercase mb-1">Rejection Reason: {driver.rejection.reason}</p>
+                                        <p className="text-base">{driver.rejection.notes}</p>
                                     </div>
                                 )}
                             </div>
@@ -1088,32 +1126,63 @@ const DriverDetail = () => {
                 const totalContractValue = Math.round(rent * duration);
                 const contractYears = Math.round((isWeekly ? (duration / 52) : (duration / 12)) * 10) / 10;
 
+                // Calculate KPI metrics
+                const totalInvoices = invoices.length;
+                const totalPaid = invoices.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
+                const totalOverdue = invoices.filter(inv => inv.status === 'OVERDUE').reduce((sum, inv) => sum + (inv.balance || 0), 0);
+
                 return (
                     <div className="p-4 rounded-xl border shadow-sm relative overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'rgba(200, 230, 0, 0.1)' }}>
                         {/* Decorative background glow */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-lime/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
 
                         {/* Section Header */}
-                        <div className="flex items-center justify-between mb-4 border-b pb-2 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b pb-3 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                            {/* Left: Title & Subtitle */}
                             <div className="flex items-center gap-2.5">
                                 <div className="p-2 rounded-lg bg-brand-lime/10 text-brand-lime">
                                     <Car size={14} />
                                 </div>
                                 <div>
-                                    <h2 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Assigned Vehicle & Contract</h2>
-                                    <p className="text-[8px] font-bold text-dim uppercase tracking-wider">Physical Asset & Rent Terms</p>
+                                    <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Assigned Vehicle & Contract</h2>
+                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Physical Asset & Rent Terms</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="px-2 py-0.5 rounded-full bg-brand-lime/10 text-brand-lime text-[8px] font-black uppercase tracking-wider border border-brand-lime/20 shadow-sm animate-pulse">
-                                    Active Rental
+
+                            {/* Right: KPIs and Action Controls */}
+                            <div className="flex flex-wrap items-center gap-4 sm:justify-end w-full sm:w-auto">
+                                {/* KPI Panel */}
+                                <div className="flex items-center gap-4 px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/5">
+                                    <div className="text-center px-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Invoices</p>
+                                        <p className="text-sm font-black text-white">{totalInvoices}</p>
+                                    </div>
+                                    <div className="w-px h-6 bg-white/10 shrink-0" />
+                                    <div className="text-center px-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Total Paid</p>
+                                        <p className="text-sm font-black text-brand-lime">${totalPaid.toLocaleString()}</p>
+                                    </div>
+                                    <div className="w-px h-6 bg-white/10 shrink-0" />
+                                    <div className="text-center px-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Overdue</p>
+                                        <p className={`text-sm font-black ${totalOverdue > 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                                            ${totalOverdue.toLocaleString()}
+                                        </p>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
-                                    className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-brand-lime/30 text-white text-[8px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    View Vehicle
-                                </button>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2">
+                                    <div className="px-2 py-0.5 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-wider border border-brand-lime/20 shadow-sm animate-pulse">
+                                        Active Rental
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
+                                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-brand-lime/30 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                        View Vehicle
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1134,11 +1203,11 @@ const DriverDetail = () => {
                                         )}
                                     </div>
                                     <div className="space-y-1 flex-grow">
-                                        <div className="text-[8px] font-black uppercase tracking-widest text-brand-lime">Asset Details</div>
-                                        <h3 className="text-xs font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Asset Details</div>
+                                        <h3 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                                             {assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}
                                         </h3>
-                                        <div className="flex flex-wrap items-center gap-1.5 text-[9px]">
+                                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                                             <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-bold text-dim">
                                                 Reg: {assignedVehicle.legalDocs?.registrationNumber || 'N/A'}
                                             </span>
@@ -1148,20 +1217,20 @@ const DriverDetail = () => {
 
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Make / Model</p>
-                                        <p className="text-xs font-bold truncate text-white">{assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Make / Model</p>
+                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}</p>
                                     </div>
                                     <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Registration</p>
-                                        <p className="text-xs font-bold truncate text-white">{assignedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Registration</p>
+                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
                                     </div>
                                     <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Plate No</p>
-                                        <p className="text-xs font-bold truncate text-white">{assignedVehicle.basicDetails.vin}</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Plate No</p>
+                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.vin}</p>
                                     </div>
                                     <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Color / Year</p>
-                                        <p className="text-xs font-bold truncate text-white">{assignedVehicle.basicDetails.colour || 'N/A'} ({assignedVehicle.basicDetails.year || 'N/A'})</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Color / Year</p>
+                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.colour || 'N/A'} ({assignedVehicle.basicDetails.year || 'N/A'})</p>
                                     </div>
                                 </div>
                             </div>
@@ -1177,17 +1246,17 @@ const DriverDetail = () => {
                                                         <CreditCard size={12} />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Contract Pricing Plan</h3>
-                                                        <p className="text-[7.5px] font-bold text-dim uppercase tracking-wider">{isWeekly ? 'Weekly' : 'Monthly'} Rent Model</p>
+                                                        <h3 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Contract Pricing Plan</h3>
+                                                        <p className="text-[9.5px] font-bold text-dim uppercase tracking-wider">{isWeekly ? 'Weekly' : 'Monthly'} Rent Model</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="px-2 py-0.5 rounded-full text-[7.5px] font-black uppercase tracking-wider border border-blue-500/20 bg-blue-500/10 text-blue-400">
+                                                    <div className="px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border border-blue-500/20 bg-blue-500/10 text-blue-400">
                                                         {contractYears} Year Term
                                                     </div>
                                                     <button
                                                         onClick={() => navigate('rent-plan')}
-                                                        className="px-2.5 py-1 rounded-lg bg-brand-lime text-black text-[7.5px] font-black uppercase tracking-wider"
+                                                        className="px-2.5 py-1 rounded-lg bg-brand-lime text-black text-[9.5px] font-black uppercase tracking-wider"
                                                     >
                                                         View Plan
                                                     </button>
@@ -1196,20 +1265,20 @@ const DriverDetail = () => {
 
                                             <div className="grid grid-cols-3 gap-2 mb-3">
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Selling Price</p>
-                                                    <p className="text-sm font-black tracking-tight text-white">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Selling Price</p>
+                                                    <p className="text-base font-black tracking-tight text-white">
                                                         {assignedVehicle.purchaseDetails?.currency || '$'}{sellingPrice.toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Down Payment</p>
-                                                    <p className="text-sm font-black tracking-tight text-blue-400">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Down Payment</p>
+                                                    <p className="text-base font-black tracking-tight text-blue-400">
                                                         {assignedVehicle.purchaseDetails?.currency || '$'}{depositAmount.toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div className="p-2.5 rounded-lg bg-brand-lime/5 border border-brand-lime/10">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest text-brand-lime/60 mb-0.5">{isWeekly ? 'Weekly Rent' : 'Monthly Rent'}</p>
-                                                    <p className="text-sm font-black tracking-tight text-brand-lime">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-brand-lime/60 mb-0.5">{isWeekly ? 'Weekly Rent' : 'Monthly Rent'}</p>
+                                                    <p className="text-base font-black tracking-tight text-brand-lime">
                                                         ${rent.toLocaleString()}
                                                     </p>
                                                 </div>
@@ -1217,51 +1286,51 @@ const DriverDetail = () => {
 
                                             <div className="grid grid-cols-2 gap-2 mb-3">
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Duration</p>
-                                                    <p className="text-xs font-black tracking-tight text-white">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Duration</p>
+                                                    <p className="text-sm font-black tracking-tight text-white">
                                                         {duration} {isWeekly ? 'Weeks' : 'Months'}
                                                     </p>
                                                 </div>
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-0.5">Total Lease Value</p>
-                                                    <p className="text-xs font-black tracking-tight text-white">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Total Lease Value</p>
+                                                    <p className="text-sm font-black tracking-tight text-white">
                                                         ${totalContractValue.toLocaleString()}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="p-2.5 rounded-lg bg-black/20 border border-white/5 mt-auto">
-                                            <p className="text-[7px] font-black uppercase tracking-widest text-dim mb-1.5">Rent Calculation Formula</p>
-                                            <div className="flex items-center gap-1 flex-wrap text-[8px] font-bold text-white">
+                                        {/* <div className="p-2.5 rounded-lg bg-black/20 border border-white/5 mt-auto">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-1.5">Rent Calculation Formula</p>
+                                            <div className="flex items-center gap-1 flex-wrap text-[10px] font-bold text-white">
                                                 <span className="text-dim">(</span>
                                                 <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
                                                     ${sellingPrice.toLocaleString()}
-                                                    <span className="text-[6px] opacity-40 ml-1 font-normal">Price</span>
+                                                    <span className="text-[8px] opacity-40 ml-1 font-normal">Price</span>
                                                 </span>
                                                 <span className="text-dim">-</span>
                                                 <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-blue-400">
                                                     ${depositAmount.toLocaleString()}
-                                                    <span className="text-[6px] opacity-40 ml-1 font-normal text-blue-400">Deposit</span>
+                                                    <span className="text-[8px] opacity-40 ml-1 font-normal text-blue-400">Deposit</span>
                                                 </span>
                                                 <span className="text-dim">) ÷</span>
                                                 <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
                                                     {duration}
-                                                    <span className="text-[6px] opacity-40 ml-1 font-normal">{isWeekly ? 'Wk' : 'Mo'}</span>
+                                                    <span className="text-[8px] opacity-40 ml-1 font-normal">{isWeekly ? 'Wk' : 'Mo'}</span>
                                                 </span>
                                                 <span className="text-dim">=</span>
                                                 <span className="px-1.5 py-0.5 rounded bg-brand-lime/10 border border-brand-lime/20 text-brand-lime font-black">
                                                     ${rent.toLocaleString()} / {isWeekly ? 'wk' : 'mo'}
                                                 </span>
                                             </div>
-                                        </div>
+                                        </div> */}
                                         
                                     </div>
                                 ) : (
                                     <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 relative h-full flex flex-col items-center justify-center text-center py-6">
                                         <CreditCard size={20} className="text-dim opacity-30 mb-2" />
-                                        <h3 className="font-bold text-xs text-white mb-0.5">Contract Pending Activation</h3>
-                                        <p className="text-[10px] text-dim max-w-[220px]">Rent details and pricing breakdown will become visible once the driver is activated.</p>
+                                        <h3 className="font-bold text-sm text-white mb-0.5">Contract Pending Activation</h3>
+                                        <p className="text-[12px] text-dim max-w-[220px]">Rent details and pricing breakdown will become visible once the driver is activated.</p>
                                     </div>
                                 )}
                             </div>
@@ -1274,7 +1343,7 @@ const DriverDetail = () => {
                             <div className="p-1.5 rounded-md bg-brand-lime/10 text-brand-lime">
                                 <History size={14} />
                             </div>
-                            <h2 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Additional Payments & Deposits</h2>
+                            <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Additional Payments & Deposits</h2>
                         </div>
                     </div>
 
@@ -1313,32 +1382,32 @@ const DriverDetail = () => {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50">{payment.type}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{payment.type}</p>
                                                     {payment.invoiceNumber && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[7px] font-bold text-dim">
+                                                        <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-dim">
                                                             {payment.invoiceNumber}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <h3 className="font-bold text-xs" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
-                                                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
+                                                <h3 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
+                                                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
                                             </div>
                                         </div>
 
                                         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
                                             <div className="grid grid-cols-2 md:flex gap-4">
                                                 <div className="text-center md:text-left">
-                                                    <p className="text-[8px] font-bold uppercase tracking-tighter opacity-50">Amount</p>
-                                                    <p className="font-black text-xs" style={{ color: 'var(--text-main)' }}>${amount.toLocaleString()}</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Amount</p>
+                                                    <p className="font-black text-sm" style={{ color: 'var(--text-main)' }}>${amount.toLocaleString()}</p>
                                                 </div>
                                                 <div className="text-center md:text-left">
-                                                    <p className="text-[8px] font-bold uppercase tracking-tighter opacity-50">Balance</p>
-                                                    <p className="font-black text-xs" style={{ color: balance > 0 ? 'var(--brand-lime)' : 'var(--text-main)' }}>${balance.toLocaleString()}</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-tighter opacity-50">Balance</p>
+                                                    <p className="font-black text-sm" style={{ color: balance > 0 ? 'var(--brand-lime)' : 'var(--text-main)' }}>${balance.toLocaleString()}</p>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-start">
-                                                <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                                     status === 'PARTIAL' ? 'bg-brand-lime/10 text-brand-lime border-brand-lime/20' :
                                                         status === 'OVERDUE' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                                             'bg-white/5 text-dim border-white/10'
@@ -1358,18 +1427,18 @@ const DriverDetail = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                                 {/* Left details */}
                                                 <div className="space-y-1.5">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest text-dim">Payment Details</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-dim">Payment Details</p>
                                                     {notes && (
-                                                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                                        <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
                                                             <span className="font-semibold text-dim">Notes:</span> {notes}
                                                         </p>
                                                     )}
                                                     {paidAt && (
-                                                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                                        <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
                                                             <span className="font-semibold text-dim">Last Payment Date:</span> {new Date(paidAt).toLocaleDateString()}
                                                         </p>
                                                     )}
-                                                    <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                                    <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
                                                         <span className="font-semibold text-dim">Total Paid:</span> ${amountPaid.toLocaleString()}
                                                     </p>
                                                 </div>
@@ -1377,13 +1446,13 @@ const DriverDetail = () => {
                                                 {/* Right details / Invoice action */}
                                                 <div className="flex flex-col justify-between items-start md:items-end">
                                                     <div className="space-y-1 md:text-right">
-                                                        <p className="text-[8px] font-black uppercase tracking-widest text-dim">Invoice Association</p>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-dim">Invoice Association</p>
                                                         {payment.invoiceNumber ? (
-                                                            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                                            <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
                                                                 Linked Invoice: <span className="font-bold text-white">{payment.invoiceNumber}</span>
                                                             </p>
                                                         ) : (
-                                                            <p className="text-[10px] text-dim italic">No direct invoice linked</p>
+                                                            <p className="text-[12px] text-dim italic">No direct invoice linked</p>
                                                         )}
                                                     </div>
                                                     {payment.invoiceRef && (
@@ -1392,7 +1461,7 @@ const DriverDetail = () => {
                                                                 e.stopPropagation();
                                                                 navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/invoices/${payment.invoiceRef}`);
                                                             }}
-                                                            className="mt-3 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-wider text-white transition-all flex items-center gap-1.5"
+                                                            className="mt-3 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[12px] font-black uppercase tracking-wider text-white transition-all flex items-center gap-1.5"
                                                         >
                                                             <FileText size={12} /> View Invoice
                                                         </button>
@@ -1402,23 +1471,23 @@ const DriverDetail = () => {
 
                                             {/* Transaction History Breakdown */}
                                             <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.03)' }}>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-dim mb-2">Payment History Breakdown</p>
+                                                <p className="text-[12px] font-black uppercase tracking-widest text-dim mb-2">Payment History Breakdown</p>
                                                 {!paymentsList || paymentsList.length === 0 ? (
-                                                    <p className="text-xs text-dim italic py-2">No payments recorded yet.</p>
+                                                    <p className="text-sm text-dim italic py-2">No payments recorded yet.</p>
                                                 ) : (
                                                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                                         {paymentsList.map((p: any, index: number) => (
-                                                            <div key={index} className="p-3 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
+                                                            <div key={index} className="p-3 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between text-sm">
                                                                 <div className="space-y-1">
                                                                     <p className="font-bold" style={{ color: 'var(--text-main)' }}>
                                                                         ${p.amount.toLocaleString()} ({p.paymentMethod || 'Cash'})
                                                                     </p>
-                                                                    {p.note && <p className="text-[10px] text-dim">{p.note}</p>}
+                                                                    {p.note && <p className="text-[12px] text-dim">{p.note}</p>}
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <p className="text-[10px] text-dim">{new Date(p.paidAt).toLocaleString()}</p>
+                                                                    <p className="text-[12px] text-dim">{new Date(p.paidAt).toLocaleString()}</p>
                                                                     {p.transactionId && (
-                                                                        <p className="text-[9px] font-mono text-brand-lime">TXID: {p.transactionId}</p>
+                                                                        <p className="text-[11px] font-mono text-brand-lime">TXID: {p.transactionId}</p>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -1442,91 +1511,106 @@ const DriverDetail = () => {
 
             {/* Documents Section */}
             <div className="space-y-4">
-                <div className="p-4 rounded-xl shadow-sm border h-full" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between mb-3 border-b pb-2" style={{ borderColor: 'rgba(255,255,255,0.02)' }}>
+                <div className="p-4 rounded-xl shadow-sm border h-full transition-all duration-300" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div 
+                        onClick={() => setIsDocsExpanded(!isDocsExpanded)}
+                        className={`flex items-center justify-between cursor-pointer select-none group transition-all duration-200 ${isDocsExpanded ? 'mb-3 border-b pb-2' : ''}`}
+                        style={{ borderColor: 'rgba(255,255,255,0.02)' }}
+                    >
                         <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-md bg-brand-lime/10 text-brand-lime">
+                            <div className="p-1.5 rounded-md bg-brand-lime/10 text-brand-lime group-hover:scale-105 transition-transform duration-200">
                                 <FileText size={14} />
                             </div>
-                            <h2 className="font-black uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-main)' }}>Required Documents</h2>
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Required Documents</h2>
+                                <div className="text-dim opacity-60 group-hover:text-brand-lime group-hover:opacity-100 transition-all duration-200">
+                                    {isDocsExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </div>
+                            </div>
                         </div>
 
-
-                        <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-lime/10 border border-brand-lime/20 cursor-pointer hover:bg-brand-lime/20 transition-all">
-                            <Upload size={10} className={uploading === 'bulk' ? 'animate-bounce text-brand-lime' : 'text-brand-lime'} />
-                            <span className="text-[8px] font-black uppercase tracking-widest text-brand-lime">
-                                {uploading === 'bulk' ? 'Uploading All...' : 'Bulk Upload (Testing)'}
-                            </span>
-                            <input
-                                type="file"
-                                className="hidden"
-                                onChange={handleBulkUpload}
-                                disabled={!!uploading}
-                            />
-                        </label>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <DocUploadRow
-                            label="Photograph"
-                            status="PENDING"
-                            url={driver.personalInfo?.photograph}
-                            uploading={uploading === 'photograph'}
-                            onUpload={(e) => handleFileUpload(e, 'photograph')}
-                        />
-                        <DocUploadRow
-                            label="License Front"
-                            status={driver.drivingLicense?.verificationStatus}
-                            url={driver.drivingLicense?.frontImage}
-                            uploading={uploading === 'licenseFront'}
-                            onUpload={(e) => handleFileUpload(e, 'licenseFront')}
-                        />
-                        <DocUploadRow
-                            label="License Back"
-                            status={driver.drivingLicense?.verificationStatus}
-                            url={driver.drivingLicense?.backImage}
-                            uploading={uploading === 'licenseBack'}
-                            onUpload={(e) => handleFileUpload(e, 'licenseBack')}
-                        />
-                        <DocUploadRow
-                            label="ID Front"
-                            status="PENDING"
-                            url={driver.identityDocs?.idFrontImage}
-                            fieldName="idFrontImage"
-                            uploading={uploading === 'idFrontImage'}
-                            onUpload={(e) => handleFileUpload(e, 'idFrontImage')}
-                        />
-                        <DocUploadRow
-                            label="ID Back"
-                            status="PENDING"
-                            url={driver.identityDocs?.idBackImage}
-                            fieldName="idBackImage"
-                            uploading={uploading === 'idBackImage'}
-                            onUpload={(e) => handleFileUpload(e, 'idBackImage')}
-                        />
-                        <DocUploadRow
-                            label="Address Proof"
-                            status="PENDING"
-                            url={driver.addressProof?.document}
-                            fieldName="addressProofDocument"
-                            uploading={uploading === 'addressProofDocument'}
-                            onUpload={(e) => handleFileUpload(e, 'addressProofDocument')}
-                        />
-                        <DocUploadRow
-                            label="Medical Cert"
-                            status={driver.medicalFitness?.isRequired ? "REQUIRED" : undefined}
-                            url={driver.medicalFitness?.certificate}
-                            fieldName="medicalCertificate"
-                            uploading={uploading === 'medicalCertificate'}
-                            onUpload={(e) => handleFileUpload(e, 'medicalCertificate')}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-lime/10 border border-brand-lime/20 cursor-pointer hover:bg-brand-lime/20 transition-all">
+                                <Upload size={10} className={uploading === 'bulk' ? 'animate-bounce text-brand-lime' : 'text-brand-lime'} />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">
+                                    {uploading === 'bulk' ? 'Uploading All...' : 'Bulk Upload (Testing)'}
+                                </span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleBulkUpload}
+                                    disabled={!!uploading}
+                                />
+                            </label>
+                        </div>
                     </div>
 
-                    <div className="mt-4 p-2.5 rounded-lg border flex items-start gap-2" style={{ backgroundColor: 'rgba(255,255,255,0.01)', borderColor: 'var(--border-main)' }}>
-                        <Clock size={12} className="shrink-0 mt-0.5" style={{ color: 'var(--text-dim)' }} />
-                        <p className="text-[9px] leading-relaxed font-medium" style={{ color: 'var(--text-muted)' }}>
-                            Document verification takes 24-48 hours. Staff will be notified once complete.
-                        </p>
-                    </div>
+                    {isDocsExpanded && (
+                        <div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <DocUploadRow
+                                    label="Photograph"
+                                    status="PENDING"
+                                    url={driver.personalInfo?.photograph}
+                                    uploading={uploading === 'photograph'}
+                                    onUpload={(e) => handleFileUpload(e, 'photograph')}
+                                />
+                                <DocUploadRow
+                                    label="License Front"
+                                    status={driver.drivingLicense?.verificationStatus}
+                                    url={driver.drivingLicense?.frontImage}
+                                    uploading={uploading === 'licenseFront'}
+                                    onUpload={(e) => handleFileUpload(e, 'licenseFront')}
+                                />
+                                <DocUploadRow
+                                    label="License Back"
+                                    status={driver.drivingLicense?.verificationStatus}
+                                    url={driver.drivingLicense?.backImage}
+                                    uploading={uploading === 'licenseBack'}
+                                    onUpload={(e) => handleFileUpload(e, 'licenseBack')}
+                                />
+                                <DocUploadRow
+                                    label="ID Front"
+                                    status="PENDING"
+                                    url={driver.identityDocs?.idFrontImage}
+                                    fieldName="idFrontImage"
+                                    uploading={uploading === 'idFrontImage'}
+                                    onUpload={(e) => handleFileUpload(e, 'idFrontImage')}
+                                />
+                                <DocUploadRow
+                                    label="ID Back"
+                                    status="PENDING"
+                                    url={driver.identityDocs?.idBackImage}
+                                    fieldName="idBackImage"
+                                    uploading={uploading === 'idBackImage'}
+                                    onUpload={(e) => handleFileUpload(e, 'idBackImage')}
+                                />
+                                <DocUploadRow
+                                    label="Address Proof"
+                                    status="PENDING"
+                                    url={driver.addressProof?.document}
+                                    fieldName="addressProofDocument"
+                                    uploading={uploading === 'addressProofDocument'}
+                                    onUpload={(e) => handleFileUpload(e, 'addressProofDocument')}
+                                />
+                                <DocUploadRow
+                                    label="Medical Cert"
+                                    status={driver.medicalFitness?.isRequired ? "REQUIRED" : undefined}
+                                    url={driver.medicalFitness?.certificate}
+                                    fieldName="medicalCertificate"
+                                    uploading={uploading === 'medicalCertificate'}
+                                    onUpload={(e) => handleFileUpload(e, 'medicalCertificate')}
+                                />
+                            </div>
+
+                            <div className="mt-4 p-2.5 rounded-lg border flex items-start gap-2" style={{ backgroundColor: 'rgba(255,255,255,0.01)', borderColor: 'var(--border-main)' }}>
+                                <Clock size={12} className="shrink-0 mt-0.5" style={{ color: 'var(--text-dim)' }} />
+                                <p className="text-[11px] leading-relaxed font-medium" style={{ color: 'var(--text-muted)' }}>
+                                    Document verification takes 24-48 hours. Staff will be notified once complete.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1537,7 +1621,7 @@ const DriverDetail = () => {
                         <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-3">
                                 <FileText className="text-brand-lime" size={24} />
-                                <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Contract Preview</h2>
+                                <h2 className="text-[22px] font-bold" style={{ color: 'var(--text-main)' }}>Contract Preview</h2>
                             </div>
                             <button onClick={() => setContractPreviewHTML(null)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
                                 <XCircle size={24} style={{ color: 'var(--text-dim)' }} />
@@ -1592,7 +1676,7 @@ const DocUploadRow = ({ label, status, url, uploading, onUpload, fieldName }: {
     return (
         <div className="p-2.5 border rounded-lg group hover:border-brand-lime/30 transition-all flex flex-col h-full" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
             <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>{label}</span>
+                <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>{label}</span>
                 {status === 'VERIFIED' ? (
                     <CheckCircle2 size={12} className="text-green-500" />
                 ) : status === 'REJECTED' ? (
@@ -1609,14 +1693,14 @@ const DocUploadRow = ({ label, status, url, uploading, onUpload, fieldName }: {
                             {fileUrl.match(/\.(pdf)$/i) ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50/5 text-gray-400 gap-1.5">
                                     <FileText size={24} />
-                                    <span className="text-[9px] uppercase tracking-widest font-bold">PDF Document</span>
+                                    <span className="text-[11px] uppercase tracking-widest font-bold">PDF Document</span>
                                 </div>
                             ) : (
                                 <img src={fileUrl} alt={label} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                             )}
                         </div>
                         <div className="flex items-center justify-between mt-auto pt-1.5 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            <a href={fileUrl} target="_blank" rel="noreferrer" className="text-[8px] font-bold text-brand-lime uppercase hover:underline">View File</a>
+                            <a href={fileUrl} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-lime uppercase hover:underline">View File</a>
                             <label className="cursor-pointer group/upload">
                                 <input type="file" className="hidden" onChange={onUpload} disabled={uploading} />
                                 <Upload size={10} className="text-gray-400 group-hover/upload:text-brand-lime transition-colors" />
@@ -1633,7 +1717,7 @@ const DocUploadRow = ({ label, status, url, uploading, onUpload, fieldName }: {
                         />
                         <button
                             disabled={uploading}
-                            className="w-full h-full flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-dashed rounded-lg text-[10px] font-bold transition-all relative overflow-hidden"
+                            className="w-full h-full flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-dashed rounded-lg text-[12px] font-bold transition-all relative overflow-hidden"
                             style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--brand-lime)'; e.currentTarget.style.color = 'var(--brand-lime)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-main)'; e.currentTarget.style.color = 'var(--text-dim)'; }}

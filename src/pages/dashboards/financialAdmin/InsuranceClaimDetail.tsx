@@ -12,10 +12,21 @@ import { getClaimById, progressClaim } from '../../../services/insuranceClaimSer
 import type { InsuranceClaim, ProgressClaimPayload, ClaimStatus } from '../../../services/insuranceClaimService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
+import { getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-const STATUS_ORDER: ClaimStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAYMENT_RECEIVED', 'CLOSED'];
+// const STATUS_ORDER: ClaimStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAYMENT_RECEIVED', 'CLOSED'];
+
+const ALLOWED_TRANSITIONS: Record<ClaimStatus, ClaimStatus[]> = {
+    DRAFT: ['SUBMITTED'],
+    SUBMITTED: ['UNDER_REVIEW'],
+    UNDER_REVIEW: ['APPROVED', 'REJECTED'],
+    APPROVED: ['PAYMENT_RECEIVED'],
+    PAYMENT_RECEIVED: ['CLOSED'],
+    REJECTED: ['CLOSED'],
+    CLOSED: [],
+};
 
 const InsuranceClaimDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -23,6 +34,7 @@ const InsuranceClaimDetail = () => {
     
     const [claim, setClaim] = useState<InsuranceClaim | null>(null);
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+    const [activePolicy, setActivePolicy] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Progression Form State
@@ -45,26 +57,34 @@ const InsuranceClaimDetail = () => {
             const claimData = await getClaimById(id);
             setClaim(claimData);
             
-            // Set next logical status
-            const currentIndex = STATUS_ORDER.indexOf(claimData.status);
-            if (currentIndex < STATUS_ORDER.length - 1 && claimData.status !== 'REJECTED') {
-                if (claimData.status === 'UNDER_REVIEW') {
-                    setTargetStatus('APPROVED'); // Default to approved, user can change to rejected
-                } else {
-                    setTargetStatus(STATUS_ORDER[currentIndex + 1]);
-                }
+            // Set next logical status based on state machine rules
+            const nextAllowed = ALLOWED_TRANSITIONS[claimData.status] || [];
+            if (nextAllowed.length > 0) {
+                setTargetStatus(nextAllowed[0]);
             }
 
             if (claimData.vehicleId) {
                 try {
-                    const vehicleData = await getVehicleById(claimData.vehicleId);
+                    const vehicleIdStr = typeof claimData.vehicleId === 'object' && claimData.vehicleId !== null
+                        ? (claimData.vehicleId._id || claimData.vehicleId)
+                        : claimData.vehicleId;
+                    const vehicleData = await getVehicleById(vehicleIdStr);
                     setVehicle(vehicleData);
+
+                    // Fetch active vehicle policy if claim insurer details are Unknown
+                    if (claimData.insurerName === 'Unknown' || claimData.policyNumber === 'Unknown') {
+                        const policies = await getVehiclePoliciesByVehicleId(vehicleIdStr);
+                        const active = policies.find(p => p.status === 'ACTIVE') || policies[0];
+                        if (active) {
+                            setActivePolicy(active);
+                        }
+                    }
                 } catch (vErr) {
-                    console.error("Failed to load vehicle:", vErr);
+                    console.error("Failed to load vehicle or policies:", vErr);
                 }
             }
         } catch (error: any) {
-            toast.error(error.message || 'Failed to load claim details');
+            toast.error(error.response?.data?.message || error.message || 'Failed to load claim details');
         } finally {
             setLoading(false);
         }
@@ -107,7 +127,7 @@ const InsuranceClaimDetail = () => {
             
             fetchClaimDetails();
         } catch (error: any) {
-            toast.error(error.message || error.response?.data?.message || 'Failed to update claim');
+            toast.error(error.response?.data?.message || error.message || 'Failed to update claim');
         } finally {
             setIsUpdating(false);
         }
@@ -124,8 +144,8 @@ const InsuranceClaimDetail = () => {
         );
     }
 
-    const currentStatusIndex = STATUS_ORDER.indexOf(claim.status);
-    const isTerminal = claim.status === 'CLOSED' || claim.status === 'REJECTED';
+    // const currentStatusIndex = STATUS_ORDER.indexOf(claim.status);
+    const isTerminal = claim.status === 'CLOSED';
 
     return (
         <div className="p-6 max-w-[1200px] mx-auto space-y-6">
@@ -170,18 +190,32 @@ const InsuranceClaimDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Provider</p>
-                                <p className="font-medium">{claim.insurerName}</p>
+                                <p className="font-medium">
+                                    {claim.insurerName && claim.insurerName !== 'Unknown' 
+                                        ? claim.insurerName 
+                                        : (activePolicy?.insurance?.supplier && typeof activePolicy.insurance.supplier === 'object'
+                                            ? activePolicy.insurance.supplier.name
+                                            : activePolicy?.insurance?.provider || 'Unknown')}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Policy Number</p>
-                                <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">{claim.policyNumber}</p>
+                                <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">
+                                    {claim.policyNumber && claim.policyNumber !== 'Unknown' 
+                                        ? claim.policyNumber 
+                                        : (activePolicy?.policyNumber || activePolicy?.insurance?.policyNumber || 'Unknown')}
+                                </p>
                             </div>
                             {vehicle && (
                                 <div className="md:col-span-2 bg-white/5 rounded-xl p-4 flex items-center gap-4 mt-2">
                                     <div className="p-3 bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
                                     <div>
-                                        <p className="font-bold text-sm">{vehicle.basicDetails.make} {vehicle.basicDetails.model} ({vehicle.basicDetails.year})</p>
-                                        <p className="text-xs text-gray-400 font-mono mt-1">Plate No: {vehicle.basicDetails.vin} | REG: {vehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                        <p className="font-bold text-sm">
+                                            {vehicle?.basicDetails?.make || 'Unknown Make'} {vehicle?.basicDetails?.model || 'Unknown Model'} {vehicle?.basicDetails?.year ? `(${vehicle.basicDetails.year})` : ''}
+                                        </p>
+                                        <p className="text-xs text-gray-400 font-mono mt-1">
+                                            Plate No: {vehicle?.basicDetails?.vin || 'N/A'} | REG: {vehicle?.legalDocs?.registrationNumber || 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -272,27 +306,27 @@ const InsuranceClaimDetail = () => {
                 {/* Right Column - Status Progression */}
                 <div className="space-y-6">
                     {!isTerminal && (
-                        <div className="bg-[#1A1A1A] border border-gray-800 rounded-2xl p-6 shadow-xl sticky top-6">
-                            <h3 className="font-black uppercase tracking-widest text-sm mb-4">Progress Claim</h3>
+                        <div className="bg-glass border rounded-2xl p-6 shadow-xl sticky top-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <h3 className="font-black uppercase tracking-widest text-sm mb-4" style={{ color: 'var(--text-main)' }}>Progress Claim</h3>
                             
                             <form onSubmit={handleProgress} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Next Status</label>
+                                    <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Next Status</label>
                                     <select 
                                         value={targetStatus}
                                         onChange={(e) => setTargetStatus(e.target.value as ClaimStatus)}
-                                        className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                        className="w-full border rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        {STATUS_ORDER.slice(currentStatusIndex + 1).map(s => (
+                                        {(ALLOWED_TRANSITIONS[claim.status] || []).map(s => (
                                             <option key={s} value={s}>{s.replace('_', ' ')}</option>
                                         ))}
-                                        {claim.status === 'UNDER_REVIEW' && <option value="REJECTED">REJECTED</option>}
                                     </select>
                                 </div>
 
                                 {targetStatus === 'APPROVED' && (
                                     <div className="animate-in slide-in-from-top-2">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Approved Amount</label>
+                                        <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Approved Amount</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                                             <input 
@@ -300,7 +334,8 @@ const InsuranceClaimDetail = () => {
                                                 required
                                                 value={approvedAmount}
                                                 onChange={(e) => setApprovedAmount(e.target.value)}
-                                                className="w-full bg-black border border-gray-800 rounded-xl pl-8 pr-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                className="w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                             />
                                         </div>
                                     </div>
@@ -308,13 +343,14 @@ const InsuranceClaimDetail = () => {
 
                                 {targetStatus === 'REJECTED' && (
                                     <div className="animate-in slide-in-from-top-2">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Rejection Reason</label>
+                                        <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Rejection Reason</label>
                                         <textarea 
                                             required
                                             value={rejectionReason}
                                             onChange={(e) => setRejectionReason(e.target.value)}
                                             rows={3}
-                                            className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-red-500 outline-none resize-none"
+                                            className="w-full border rounded-xl px-4 py-3 text-sm focus:border-red-500 outline-none resize-none"
+                                            style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                         />
                                     </div>
                                 )}
@@ -322,17 +358,18 @@ const InsuranceClaimDetail = () => {
                                 {targetStatus === 'PAYMENT_RECEIVED' && (
                                     <div className="space-y-4 animate-in slide-in-from-top-2">
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Payment Reference</label>
+                                            <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Payment Reference</label>
                                             <input 
                                                 type="text" 
                                                 required
                                                 value={paymentReference}
                                                 onChange={(e) => setPaymentReference(e.target.value)}
-                                                className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                className="w-full border rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Actual Amount Received</label>
+                                            <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Actual Amount Received</label>
                                             <div className="relative">
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                                                 <input 
@@ -340,7 +377,8 @@ const InsuranceClaimDetail = () => {
                                                     required
                                                     value={paymentAmount}
                                                     onChange={(e) => setPaymentAmount(e.target.value)}
-                                                    className="w-full bg-black border border-gray-800 rounded-xl pl-8 pr-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                    className="w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:border-[#D4F12E] outline-none"
+                                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                             </div>
                                         </div>
@@ -348,12 +386,13 @@ const InsuranceClaimDetail = () => {
                                 )}
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Admin Notes (Optional)</label>
+                                    <label className="block text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Admin Notes (Optional)</label>
                                     <textarea 
                                         value={progressNotes}
                                         onChange={(e) => setProgressNotes(e.target.value)}
                                         rows={2}
-                                        className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none resize-none"
+                                        className="w-full border rounded-xl px-4 py-3 text-sm focus:border-[#D4F12E] outline-none resize-none"
+                                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode, updateAccountingCode, deleteAccountingCode } from '../../../services/accountingService';
 import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } from '../../../services/accountingService';
 import { getUserRole } from '../../../utils/auth';
@@ -20,6 +21,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAddRouteActive, setIsAddRouteActive] = useState(false);
+    const navigate = useNavigate();
     
     // Filters
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
@@ -365,7 +367,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Code</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Name</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
-                                    {canManageCodes && <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>}
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -386,29 +388,39 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                                     {c.category}
                                                 </div>
                                             </td>
-                                            {canManageCodes && (
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button 
-                                                            onClick={() => handleEditClick(c)}
-                                                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                                                            style={{ color: 'var(--text-dim)' }}
-                                                            title="Edit Code"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteClick(codeId)}
-                                                            disabled={deletingId === codeId}
-                                                            className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                                            style={{ color: '#ef4444' }}
-                                                            title="Delete Code"
-                                                        >
-                                                            {deletingId === codeId && isDeleting ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            )}
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => navigate(`../chart-of-accounts/${codeId}`)}
+                                                        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                                                        style={{ color: 'var(--text-dim)' }}
+                                                        title="View Transactions"
+                                                    >
+                                                        <List size={16} />
+                                                    </button>
+                                                    {canManageCodes && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleEditClick(c)}
+                                                                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                                                                style={{ color: 'var(--text-dim)' }}
+                                                                title="Edit Code"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDeleteClick(codeId)}
+                                                                disabled={deletingId === codeId}
+                                                                className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                                                style={{ color: '#ef4444' }}
+                                                                title="Delete Code"
+                                                            >
+                                                                {deletingId === codeId && isDeleting ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}

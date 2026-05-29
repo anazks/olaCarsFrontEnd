@@ -99,7 +99,7 @@ const AdminLogin = () => {
                 className="absolute top-0 left-0 w-full h-full object-cover z-0"
             >
                 <source src={loginBgVideo} type="video/mp4" />
-                Your browser does not support the video tag.
+                Your browser does not support the video tag.... Please update browser
             </video>
 
             {/* Theme-reactive Overlay for Readability */}

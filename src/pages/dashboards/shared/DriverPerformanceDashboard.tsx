@@ -8,8 +8,6 @@ import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import OlaLoader from '../../../components/common/OlaLoader';
-
 // ─── Types ────────────────────────────────────────────────────────────
 type SortKey = 'name' | 'drivingScore' | 'avgSpeed' | 'totalDistance' | 'fuelEfficiency' | 'safetyTotal' | 'outstanding' | 'weeklyRent';
 type SortDir = 'asc' | 'desc';
@@ -342,7 +340,18 @@ const DriverPerformanceDashboard = () => {
     };
 
     if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+        return (
+            <div className="p-8 space-y-6 animate-pulse">
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Performance Dashboard', active: true }]} />
+                <div className="h-10 w-72 rounded-xl" style={{ backgroundColor: 'var(--bg-input)' }} />
+                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="h-32 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
+                    ))}
+                </div>
+                <div className="h-96 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)' }} />
+            </div>
+        );
     }
 
     return (

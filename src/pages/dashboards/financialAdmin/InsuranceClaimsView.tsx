@@ -5,9 +5,12 @@ import type { InsuranceClaim } from '../../../services/insuranceClaimService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getUserRole } from '../../../utils/auth';
 
 const InsuranceClaimsView = () => {
     const navigate = useNavigate();
+    const role = getUserRole();
+    const basePath = role === 'admin' ? 'admin' : 'financial-admin';
     const [claims, setClaims] = useState<InsuranceClaim[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +25,7 @@ const InsuranceClaimsView = () => {
             const claimsRes = await getClaims();
             setClaims(claimsRes.data || []);
         } catch (error: any) {
-            toast.error(error.message || 'Failed to fetch claims');
+            toast.error(error.response?.data?.message || error.message || 'Failed to fetch claims');
         } finally {
             setLoading(false);
         }
@@ -59,7 +62,7 @@ const InsuranceClaimsView = () => {
                 </div>
                 
                 <button
-                    onClick={() => navigate('/admin/financial-admin/insurance-claims/new')}
+                    onClick={() => navigate(`/admin/${basePath}/insurance-claims/new`)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     style={{ backgroundColor: 'var(--brand-lime)' }}
                 >
@@ -107,7 +110,7 @@ const InsuranceClaimsView = () => {
                     </thead>
                     <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                         {filteredClaims.map((claim) => (
-                            <tr key={claim._id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`/admin/financial-admin/insurance-claims/${claim._id}`)}>
+                            <tr key={claim._id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`/admin/${basePath}/insurance-claims/${claim._id}`)}>
                                 <td className="py-4 px-6 font-bold text-[#D4F12E]">{claim.claimNumber}</td>
                                 <td className="py-4 px-6">
                                     <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
@@ -125,7 +128,7 @@ const InsuranceClaimsView = () => {
                                 <td className="py-4 px-6 font-medium opacity-80 text-right">{new Date(claim.incidentDate).toLocaleDateString()}</td>
                                 <td className="py-4 px-6 flex items-center justify-end gap-2">
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/insurance-claims/${claim._id}`); }}
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/${basePath}/insurance-claims/${claim._id}`); }}
                                         className="px-3 py-1.5 rounded bg-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-colors flex items-center gap-1"
                                     >
                                         <Eye size={12} /> View

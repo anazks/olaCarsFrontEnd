@@ -104,7 +104,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             subItems: [
                 { label: 'Staff Management', path: '/admin/admin/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Target Management', path: '/admin/admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Directives & Delegation', path: '/admin/admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
@@ -124,7 +124,6 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'Manage Vehicles', path: '/admin/admin/vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Pending Entry Vehicles', path: '/admin/admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
                 { label: 'Manage Drivers', path: '/admin/admin/drivers', permission: 'DRIVER_VIEW' },
-                { label: 'Fleet Performance', path: '/admin/admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Legal Agreements', path: '/admin/admin/agreements', permission: 'AGREEMENT_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
 
@@ -171,11 +170,8 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Calculator size={22} />,
             subItems: [
                 { label: 'General Ledger', path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
-                { label: 'Finance Dashboard', path: '/admin/admin/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Financial Statements', path: '/admin/admin/financial-statements', permission: 'REPORTS_VIEW' },
-                { label: 'Staff Payrolls', path: '/admin/admin/staff-salaries', permission: 'REPORTS_VIEW' },
-                { label: 'Chart of Accounts', path: '/admin/admin/chart-of-accounts' },
                 { label: 'Taxes', path: '/admin/admin/taxes' },
             ]
         },
@@ -186,7 +182,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             subItems: [
                 { label: 'All Insurance', path: '/admin/admin/vehicle-policies' },
                 { label: 'Claims', path: '/admin/admin/insurance-claims' },
-                { label: 'Settings', path: '/admin/admin/insurances' },
+                { label: 'Providers', path: '/admin/admin/insurances' },
             ]
         },
         {
@@ -201,6 +197,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/admin/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/admin/bulk-uploads' },
             ]
         },
     ];

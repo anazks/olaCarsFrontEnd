@@ -424,3 +424,16 @@ export const editVehicle = async (id: string, payload: Partial<Vehicle>): Promis
     const response = await api.put(`/api/vehicle/${id}`, payload);
     return response.data.data;
 };
+
+export interface BulkVehicleUploadResult {
+    created: Array<{ row: number; id: string; vin: string; make: string; model: string }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
+// POST bulk create vehicles
+export const bulkCreateVehicles = async (vehicles: any[], branch?: string): Promise<{ message: string; data: BulkVehicleUploadResult }> => {
+    const payload: any = { vehicles };
+    if (branch) payload.branch = branch;
+    const response = await api.post('/api/vehicle/bulk', payload);
+    return response.data;
+};

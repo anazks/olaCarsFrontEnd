@@ -97,7 +97,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             subItems: [
                 { label: 'Staff Management', path: '/admin/operational-admin/staff-management', permission: 'STAFF_VIEW' },
                 { label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Target Management', path: '/admin/operational-admin/target-management', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: 'Directives & Delegation', path: '/admin/operational-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
                 // { label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
@@ -142,6 +142,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
             icon: <Settings size={22} />,
             subItems: [
                 { label: 'System Preferences', path: '/admin/operational-admin/dashboard-settings' },
+                { label: 'System Bulk Uploads', path: '/admin/operational-admin/bulk-uploads' },
             ]
         },
     ];

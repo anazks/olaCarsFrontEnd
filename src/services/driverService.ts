@@ -244,9 +244,8 @@ export const bulkCreateDrivers = async (drivers: any[], branch?: string): Promis
 };
 
 export const dataMigrateDrivers = async (
-    drivers: any[], branch?: string, handlingStaff?: string, fleetNumber?: string
+    drivers: any[], branch?: string, handlingStaff?: string, fleetNumber?: string, updateExisting: boolean = false
 ): Promise<{ message: string; data: DataMigrationResult }> => {
-    console.log(`[dataMigrateDrivers] Migrating ${drivers.length} drivers`, { branch, handlingStaff, fleetNumber });
     const payload: any = { drivers };
     if (branch) payload.branch = branch;
     if (handlingStaff) payload.handlingStaff = handlingStaff;

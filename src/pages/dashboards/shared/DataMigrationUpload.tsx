@@ -1,14 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown } from 'lucide-react';
+import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { dataMigrateDrivers, type DataMigrationResult } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
+import { getAllFinanceStaff, createFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedRow {
     fullName: string; email: string; phone: string;
@@ -59,6 +58,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [updateExisting, setUpdateExisting] = useState(true);
     const [result, setResult] = useState<DataMigrationResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -73,6 +73,48 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [nextFleetLoading, setNextFleetLoading] = useState(false);
     const [fleetError, setFleetError] = useState<string | null>(null);
     const [isCheckingFleet, setIsCheckingFleet] = useState(false);
+
+    const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+    const [newStaffForm, setNewStaffForm] = useState({ fullName: '', email: '', phone: '', password: '' });
+    const [creatingStaffLoader, setCreatingStaffLoader] = useState(false);
+
+    const handleCreateStaff = async () => {
+        try {
+            if (!newStaffForm.fullName || !newStaffForm.email || !newStaffForm.phone || !newStaffForm.password) {
+                toast.error("Please fill all staff fields");
+                return;
+            }
+            const branchToUse = needsBranchSelection ? selectedBranch : decoded?.branchId;
+            if (!branchToUse) {
+                toast.error("Please select a branch first");
+                return;
+            }
+            setCreatingStaffLoader(true);
+            const newStaff = await createFinanceStaff({
+                ...newStaffForm,
+                branchId: branchToUse,
+                status: 'ACTIVE'
+            });
+            toast.success("Finance staff created");
+            
+            // Refresh list
+            const res = await getAllFinanceStaff({ branchId: branchToUse, limit: 200 });
+            const updatedStaff = res.data || [];
+            setFinanceStaff(updatedStaff);
+            
+            // Auto select
+            setSelectedStaff(newStaff._id);
+            const staffObj = updatedStaff.find(s => s._id === newStaff._id) || newStaff;
+            setSelectedStaffObj(staffObj as any);
+            
+            setIsCreatingStaff(false);
+            setNewStaffForm({ fullName: '', email: '', phone: '', password: '' });
+        } catch(err: any) {
+            toast.error(err?.response?.data?.message || "Failed to create staff");
+        } finally {
+            setCreatingStaffLoader(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
@@ -123,10 +165,8 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         if (!row.fullName?.trim()) errors.push('Missing fullName');
-        if (!row.email?.trim()) errors.push('Missing email');
-        if (!row.phone?.trim()) errors.push('Missing phone');
         if (!row.vehicleNumber?.trim()) errors.push('Missing vehicleNumber');
-        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
+        if (row.email && row.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
         return errors;
     }, []);
 
@@ -184,7 +224,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
         try {
             const payload = valid.map(({ _rowErrors, ...rest }) => rest);
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined);
+            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) onSuccess();
@@ -224,8 +264,6 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Data Migration Upload', active: true }]} />
-
             <div className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -274,8 +312,29 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     {/* Handling Staff Selector */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
-                            {staffLoading ? (
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
+                                {(!needsBranchSelection || selectedBranch) && !isCreatingStaff && (
+                                    <button onClick={() => setIsCreatingStaff(true)} className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400">
+                                        + New Staff
+                                    </button>
+                                )}
+                            </div>
+
+                            {isCreatingStaff ? (
+                                <div className="space-y-3 mt-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                    <input type="text" placeholder="Full Name" value={newStaffForm.fullName} onChange={e => setNewStaffForm({...newStaffForm, fullName: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="email" placeholder="Email Address" value={newStaffForm.email} onChange={e => setNewStaffForm({...newStaffForm, email: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="tel" placeholder="Phone Number" value={newStaffForm.phone} onChange={e => setNewStaffForm({...newStaffForm, phone: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="password" placeholder="Password" value={newStaffForm.password} onChange={e => setNewStaffForm({...newStaffForm, password: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <div className="flex gap-2 justify-end pt-1">
+                                        <button onClick={() => setIsCreatingStaff(false)} className="text-[10px] px-3 py-1.5 rounded uppercase font-black tracking-wider text-red-400 hover:bg-red-400/10 transition-colors">Cancel</button>
+                                        <button onClick={handleCreateStaff} disabled={creatingStaffLoader} className="text-[10px] px-3 py-1.5 rounded bg-amber-500 text-black uppercase font-black tracking-wider flex items-center gap-1 hover:opacity-90 transition-opacity">
+                                            {creatingStaffLoader ? <Loader2 size={12} className="animate-spin"/> : null} Create & Select
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : staffLoading ? (
                                 <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
                             ) : financeStaff.length === 0 ? (
                                 <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
@@ -406,6 +465,22 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                         </div>
                     </div>
 
+                    {/* Update Existing Option */}
+                    <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <input
+                            type="checkbox"
+                            id="updateExisting"
+                            checked={updateExisting}
+                            onChange={(e) => setUpdateExisting(e.target.checked)}
+                            className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500/20 cursor-pointer"
+                            style={{ accentColor: '#f59e0b' }}
+                        />
+                        <label htmlFor="updateExisting" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                            Update existing records if found
+                        </label>
+                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>(Matches by Vehicle VIN & Driver Phone/Name)</span>
+                    </div>
+
                     {/* Template Downloads */}
                     <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                         <Info size={16} style={{ color: '#f59e0b' }} />
@@ -471,6 +546,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Phone</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Vehicle #</th>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                                <th className="px-3 py-2 font-bold text-center" style={{ color: 'var(--text-dim)' }}>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -484,8 +560,24 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                     <td className="px-3 py-2">
                                                         {row._rowErrors.length === 0
                                                             ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
-                                                            : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} title={row._rowErrors.join(', ')}>{row._rowErrors.length} error(s)</span>
+                                                            : (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block w-fit" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                                                        {row._rowErrors.length} error(s)
+                                                                    </span>
+                                                                    <span className="text-[9px] text-red-400 break-words max-w-[150px]">{row._rowErrors.join(', ')}</span>
+                                                                </div>
+                                                            )
                                                         }
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        <button 
+                                                            onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
+                                                            className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
+                                                            title="Remove Entry"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}

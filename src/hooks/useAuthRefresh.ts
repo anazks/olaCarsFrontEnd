@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { getToken, getDecodedToken, getRefreshToken, setToken, setRefreshToken, setUser } from '../utils/auth';
 import { getProfile, REFRESH_ENDPOINTS } from '../services/authService';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 /**
  * Activity-aware auth refresh hook.
@@ -10,6 +11,69 @@ import axios from 'axios';
  * - Silently refreshes the user profile to keep permissions up to date
  * - Only logs out if the user is truly idle AND the refresh token is also expired
  */
+
+// Module-level lock shared across all instances to prevent race conditions
+// between proactive refresh and interceptor refresh
+let isRefreshingGlobal = false;
+let refreshPromiseGlobal: Promise<{ accessToken: string; refreshToken: string }> | null = null;
+
+/**
+ * Centralized refresh function. Ensures only one refresh request is in-flight at a time.
+ * If a refresh is already in progress, returns the existing promise.
+ */
+export const performTokenRefresh = async (): Promise<{ accessToken: string; refreshToken: string } | null> => {
+    // If a refresh is already in-flight, piggyback on it
+    if (isRefreshingGlobal && refreshPromiseGlobal) {
+        console.log('[AuthRefresh] Refresh already in-flight, waiting for it...');
+        return refreshPromiseGlobal;
+    }
+
+    const refreshToken = getRefreshToken();
+    const apiRole = localStorage.getItem('apiRole');
+
+    if (!refreshToken || !apiRole) {
+        console.warn('[AuthRefresh] No refresh token or apiRole, cannot refresh');
+        return null;
+    }
+
+    const endpoint = REFRESH_ENDPOINTS[apiRole];
+    if (!endpoint) {
+        console.warn(`[AuthRefresh] No refresh endpoint for role: ${apiRole}`);
+        return null;
+    }
+
+    isRefreshingGlobal = true;
+
+    refreshPromiseGlobal = (async () => {
+        try {
+            console.log('[AuthRefresh] Sending refresh request...');
+            const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+            const res = await axios.post(`${baseURL}/${endpoint}`, { refreshToken });
+
+            const { accessToken, refreshToken: newRefreshToken } = res.data;
+
+            if (accessToken) {
+                setToken(accessToken);
+            }
+            if (newRefreshToken) {
+                setRefreshToken(newRefreshToken);
+            }
+
+            toast.success('Session secured: Token refreshed automatically', { id: 'token-refresh' });
+            console.log('[AuthRefresh] ✅ Tokens refreshed successfully');
+            return { accessToken, refreshToken: newRefreshToken };
+        } catch (error) {
+            console.error('[AuthRefresh] Token refresh failed:', error);
+            throw error;
+        } finally {
+            isRefreshingGlobal = false;
+            refreshPromiseGlobal = null;
+        }
+    })();
+
+    return refreshPromiseGlobal;
+};
+
 export const useAuthRefresh = (profileRefreshMs: number = 300000) => { // Profile refresh every 5 min
     const lastActivityRef = useRef<number>(Date.now());
     const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,10 +101,25 @@ export const useAuthRefresh = (profileRefreshMs: number = 300000) => { // Profil
         const now = Date.now() / 1000;
         const timeUntilExpiry = decoded.exp - now;
 
-        // Refresh 5 minutes before expiry (or immediately if less than 5 min left)
-        const refreshIn = Math.max((timeUntilExpiry - 300) * 1000, 0);
+        // If token is already expired on load, refresh immediately
+        if (timeUntilExpiry <= 0) {
+            console.log('[AuthRefresh] Token already expired on load, triggering immediate refresh');
+            performTokenRefresh().then(() => {
+                scheduleTokenRefresh();
+            }).catch(err => {
+                console.error('[AuthRefresh] Immediate refresh failed:', err);
+            });
+            return;
+        }
 
-        console.log(`[AuthRefresh] Token expires in ${Math.round(timeUntilExpiry / 60)}min. Scheduling refresh in ${Math.round(refreshIn / 60000)}min.`);
+        // If iat is present, determine lifetime. Otherwise fallback to 15m (900s).
+        const lifetime = decoded.iat ? (decoded.exp - decoded.iat) : 900;
+        // Schedule proactive refresh at 75% of token lifetime
+        const refreshAtSeconds = lifetime * 0.75;
+        const timeElapsed = now - (decoded.iat || (decoded.exp - 900));
+        const refreshIn = Math.max((refreshAtSeconds - timeElapsed) * 1000, 5000); // minimum 5 seconds
+
+        console.log(`[AuthRefresh] Token lifetime=${lifetime}s, expires in ${Math.round(timeUntilExpiry)}s. Scheduling refresh in ${Math.round(refreshIn / 1000)}s.`);
 
         refreshTimerRef.current = setTimeout(async () => {
             // Only refresh if user has been active in the last 30 minutes
@@ -52,34 +131,28 @@ export const useAuthRefresh = (profileRefreshMs: number = 300000) => { // Profil
                 return;
             }
 
-            const refreshToken = getRefreshToken();
-            const apiRole = localStorage.getItem('apiRole');
+            // Check if the current token in localStorage is already newer/fresh
+            // (the interceptor may have already refreshed it)
+            const currentToken = getToken();
+            if (!currentToken) return;
 
-            if (!refreshToken || !apiRole) {
-                console.warn('[AuthRefresh] No refresh token or apiRole, cannot refresh');
-                return;
-            }
+            const currentDecoded = getDecodedToken();
+            if (!currentDecoded?.exp) return;
 
-            const endpoint = REFRESH_ENDPOINTS[apiRole];
-            if (!endpoint) {
-                console.warn(`[AuthRefresh] No refresh endpoint for role: ${apiRole}`);
+            const currentNow = Date.now() / 1000;
+            const currentLifetime = currentDecoded.iat ? (currentDecoded.exp - currentDecoded.iat) : 900;
+            const currentRemaining = currentDecoded.exp - currentNow;
+
+            // If remaining time is more than 50% of lifetime, it was already refreshed
+            if (currentRemaining > currentLifetime * 0.5) {
+                console.log(`[AuthRefresh] Token was already refreshed (${Math.round(currentRemaining)}s left), rescheduling.`);
+                scheduleTokenRefresh();
                 return;
             }
 
             try {
                 console.log('[AuthRefresh] Proactively refreshing token...');
-                const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-                const res = await axios.post(`${baseURL}/${endpoint}`, { refreshToken });
-
-                const { accessToken, refreshToken: newRefreshToken } = res.data;
-
-                if (accessToken) {
-                    setToken(accessToken);
-                    console.log('[AuthRefresh] ✅ Token refreshed proactively');
-                }
-                if (newRefreshToken) {
-                    setRefreshToken(newRefreshToken);
-                }
+                await performTokenRefresh();
 
                 // Schedule the next refresh based on the new token
                 scheduleTokenRefresh();
