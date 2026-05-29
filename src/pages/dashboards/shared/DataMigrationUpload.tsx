@@ -17,8 +17,10 @@ interface ParsedRow {
     emergencyName?: string; emergencyRelationship?: string; emergencyPhone?: string;
     vehicleNumber: string;
     vehicleMake?: string; vehicleModel?: string; vehicleYear?: string;
-    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string; vehicleSellingValue?: string;
-    activationDate?: string; deactivationDate?: string; remarks?: string;
+    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string;
+    activationDate?: string; deactivationDate?: string; 
+    weeklyRent?: string | number; durationWeeks?: string | number;
+    remarks?: string;
     _rowErrors: string[];
 }
 
@@ -31,8 +33,8 @@ const MIGRATION_COLUMNS = [
     'idType','idNumber','licenseNumber','licenseCountry','licenseExpiry',
     'emergencyName','emergencyRelationship','emergencyPhone',
     'vehicleNumber','vehicleMake','vehicleModel','vehicleYear',
-    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','vehicleSellingValue',
-    'activationDate','deactivationDate','remarks'
+    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin',
+    'activationDate','deactivationDate','weeklyRent','durationWeeks','remarks'
 ];
 
 const SAMPLE_DATA = [{
@@ -43,8 +45,8 @@ const SAMPLE_DATA = [{
     emergencyName:'Jane Smith', emergencyRelationship:'Spouse', emergencyPhone:'+254700000002',
     vehicleNumber:'KAA 123A',
     vehicleMake:'Toyota', vehicleModel:'Corolla', vehicleYear:'2022',
-    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'', vehicleSellingValue:'15000',
-    activationDate:'2024-01-15', deactivationDate:'', remarks:'Migrated from old system'
+    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'', 
+    activationDate:'15/01/24', deactivationDate:'', weeklyRent: 1500, durationWeeks: 60, remarks:'Migrated from old system'
 }];
 
 const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
@@ -164,9 +166,69 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        if (!row.fullName?.trim()) errors.push('Missing fullName');
-        if (!row.vehicleNumber?.trim()) errors.push('Missing vehicleNumber');
-        if (row.email && row.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
+        const nameVal = String(row.fullName || '').trim();
+        if (!nameVal) errors.push('Missing fullName');
+        else if (/^\d+$/.test(nameVal)) errors.push('Name cannot be just numbers');
+
+        if (!row.vehicleNumber || !String(row.vehicleNumber).trim()) errors.push('Missing vehicleNumber');
+        
+        const emailVal = String(row.email || '').trim();
+        if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) errors.push('Invalid email');
+        
+        const phoneVal = String(row.phone || '').trim();
+        if (phoneVal && /[a-zA-Z]/.test(phoneVal)) errors.push('Phone cannot contain alphabets');
+
+        if (!row.weeklyRent) errors.push('Missing weekly rent');
+        else if (isNaN(Number(row.weeklyRent))) errors.push('Weekly rent must be a number');
+
+        if (!row.durationWeeks) errors.push('Missing duration weeks');
+        else if (isNaN(Number(row.durationWeeks))) errors.push('Duration weeks must be a number');
+
+        if (!row.activationDate) {
+            errors.push('Missing activation date');
+        } else {
+            if (typeof row.activationDate === 'string' && !/^\d{2}\/\d{2}\/\d{2,4}$/.test(row.activationDate)) {
+                errors.push('Activation date must be in DD/MM/YY or DD/MM/YYYY format');
+            }
+        }
+
+        if (row.activationDate && row.durationWeeks) {
+            let parsedDate = null;
+            if (typeof row.activationDate === 'number') {
+                const utcDays = Math.floor(row.activationDate - 25569);
+                parsedDate = new Date(utcDays * 86400 * 1000);
+            } else if (typeof row.activationDate === 'string') {
+                const parts = row.activationDate.split('/');
+                if (parts.length === 3) {
+                    let year = parts[2];
+                    if (year.length === 2) year = `20${year}`;
+                    parsedDate = new Date(`${year}-${parts[1]}-${parts[0]}`);
+                } else {
+                    const dashParts = row.activationDate.split('-');
+                    if (dashParts.length === 3 && dashParts[2].length === 4) {
+                        parsedDate = new Date(`${dashParts[2]}-${dashParts[1]}-${dashParts[0]}`);
+                    } else if (dashParts.length === 3 && dashParts[0].length === 4) {
+                        parsedDate = new Date(`${dashParts[0]}-${dashParts[1]}-${dashParts[2]}`);
+                    } else {
+                        parsedDate = new Date(row.activationDate);
+                    }
+                }
+            }
+
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
+                const duration = Number(row.durationWeeks);
+                const endDate = new Date(parsedDate);
+                endDate.setDate(endDate.getDate() + (duration * 7));
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                if (endDate < today) {
+                    errors.push('Activation date is too far in the past for this duration (all weeks have elapsed)');
+                }
+            }
+        }
+
         return errors;
     }, []);
 
@@ -222,7 +284,42 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
         setUploading(true);
         try {
-            const payload = valid.map(({ _rowErrors, ...rest }) => rest);
+            const normalizeDate = (val: any): string | undefined => {
+                if (!val) return undefined;
+                if (typeof val === 'number') {
+                    const utcDays = Math.floor(val - 25569);
+                    const d = new Date(utcDays * 86400 * 1000);
+                    return d.toISOString().split('T')[0];
+                }
+                if (typeof val === 'string') {
+                    if (val.includes('/')) {
+                        const parts = val.split('/');
+                        if (parts.length === 3) {
+                            let year = parts[2];
+                            if (year.length === 2) year = `20${year}`;
+                            return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                    }
+                    if (val.includes('-')) {
+                        const parts = val.split('-');
+                        if (parts.length === 3) {
+                            if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            if (parts[0].length === 4) return val;
+                        }
+                    }
+                    return val;
+                }
+                return undefined;
+            };
+
+            const payload = valid.map(({ _rowErrors, ...rest }) => ({
+                ...rest,
+                activationDate: normalizeDate(rest.activationDate),
+                deactivationDate: normalizeDate(rest.deactivationDate),
+                dateOfBirth: normalizeDate(rest.dateOfBirth),
+                licenseExpiry: normalizeDate(rest.licenseExpiry),
+            }));
+
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
             const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
             setResult(res.data);
@@ -541,10 +638,11 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                         <thead className="sticky top-0" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
                                             <tr>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>#</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Name</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Email</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Phone</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Vehicle #</th>
+                                                {MIGRATION_COLUMNS.map(key => (
+                                                        <th key={key} className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                            {key}
+                                                        </th>
+                                                    ))}
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Status</th>
                                                 <th className="px-3 py-2 font-bold text-center" style={{ color: 'var(--text-dim)' }}>Action</th>
                                             </tr>
@@ -553,19 +651,39 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                             {parsedRows.map((row, i) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
                                                     <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-main)' }}>{row.fullName || '—'}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.email || '—'}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.phone || '—'}</td>
-                                                    <td className="px-3 py-2 font-bold" style={{ color: '#f59e0b' }}>{row.vehicleNumber || '—'}</td>
+                                                    {MIGRATION_COLUMNS.map(key => {
+                                                            let val = row[key as keyof ParsedRow];
+                                                            
+                                                            if (typeof val === 'number' && val > 40000 && val < 60000 && key.toLowerCase().includes('date')) {
+                                                                const utcDays = Math.floor(val - 25569);
+                                                                const d = new Date(utcDays * 86400 * 1000);
+                                                                const day = d.getUTCDate().toString().padStart(2, '0');
+                                                                const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+                                                                const year = d.getUTCFullYear();
+                                                                val = `${day}-${month}-${year}`;
+                                                            }
+
+                                                            return (
+                                                                <td key={key} className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
+                                                                    {String(val || '—')}
+                                                                </td>
+                                                            );
+                                                        })}
                                                     <td className="px-3 py-2">
                                                         {row._rowErrors.length === 0
                                                             ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
                                                             : (
-                                                                <div className="flex flex-col gap-1">
-                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block w-fit" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                                                <div className="flex items-center gap-2 group relative w-fit cursor-help">
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
                                                                         {row._rowErrors.length} error(s)
                                                                     </span>
-                                                                    <span className="text-[9px] text-red-400 break-words max-w-[150px]">{row._rowErrors.join(', ')}</span>
+                                                                    <div className="text-red-400">
+                                                                        <Info size={14} />
+                                                                    </div>
+                                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 rounded-lg bg-red-950/90 border border-red-500/30 backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-[9999] shadow-xl">
+                                                                        <p className="text-[10px] font-medium text-red-200 m-0 break-words leading-relaxed">{row._rowErrors.join(', ')}</p>
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-[5px] border-transparent border-t-red-500/30"></div>
+                                                                    </div>
                                                                 </div>
                                                             )
                                                         }
@@ -617,6 +735,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                             )}
                         </div>
                     )}
+                    
                 </div>
 
                 {/* Footer */}
@@ -640,3 +759,4 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 };
 
 export default DataMigrationUpload;
+

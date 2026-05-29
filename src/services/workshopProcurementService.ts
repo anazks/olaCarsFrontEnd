@@ -28,7 +28,7 @@ export interface ProcurementRequest {
     requestNumber: string;
     part: ProcurementRequestPart;
     quantity: number;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO';
+    status: 'PENDING' | 'PENDING_FINANCE_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO';
     branch: ProcurementRequestBranch;
     requestedBy: ProcurementRequestUser;
     requestedByRole: string;
@@ -76,4 +76,12 @@ export const getWorkshopProcurementRequestById = async (
 ): Promise<ProcurementRequest> => {
     const response = await api.get(`/api/workshop-procurement/${id}`);
     return response.data.data;
+};
+
+export const approveProcurementRequest = async (
+    id: string, 
+    data: { status: 'APPROVED' | 'REJECTED', supplier?: string, rejectionReason?: string, quantity?: number }
+) => {
+    const response = await api.put(`/api/workshop-procurement/${id}/approve`, data);
+    return response.data.data || response.data;
 };

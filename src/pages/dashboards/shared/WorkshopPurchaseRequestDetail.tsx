@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWorkshopProcurementRequestById, type ProcurementRequest } from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, approveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { 
     ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
-    User, Calendar, Landmark, AlertCircle, Package, Receipt 
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
@@ -13,6 +15,12 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
+            icon: <Clock size={14} />
+        },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(234, 88, 12, 0.1)',
+            text: '#ea580c',
+            border: 'rgba(234, 88, 12, 0.3)',
             icon: <Clock size={14} />
         },
         APPROVED: {
@@ -49,7 +57,9 @@ const WorkshopPurchaseRequestDetail = () => {
     const navigate = useNavigate();
     const [request, setRequest] = useState<ProcurementRequest | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const role = getUserRole();
 
     const fetchRequestDetails = useCallback(async () => {
         if (!id) return;
@@ -68,6 +78,20 @@ const WorkshopPurchaseRequestDetail = () => {
     useEffect(() => {
         fetchRequestDetails();
     }, [fetchRequestDetails]);
+
+    const handleAction = async (status: 'APPROVED' | 'REJECTED') => {
+        if (!request) return;
+        setActionLoading(status);
+        try {
+            await approveProcurementRequest(request._id, { status });
+            toast.success(status === 'APPROVED' ? 'Request Approved' : 'Request Rejected');
+            fetchRequestDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to update request');
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -244,6 +268,36 @@ const WorkshopPurchaseRequestDetail = () => {
                             <p className="text-xs leading-relaxed italic" style={{ color: 'var(--text-main)' }}>
                                 "{request.notes}"
                             </p>
+                        </div>
+                    )}
+
+                    {/* Action Buttons for Finance Admin */}
+                    {request.status === 'PENDING_FINANCE_APPROVAL' && (role === 'financeadmin' || role === 'admin') && (
+                        <div className="rounded-2xl border p-5 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#C8E600]">
+                                <AlertCircle size={14} /> Pending Finance Approval
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                                Review the requested parts and cost. Once approved, the workshop can proceed with the procurement.
+                            </p>
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => handleAction('REJECTED')}
+                                    disabled={!!actionLoading}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
+                                >
+                                    {actionLoading === 'REJECTED' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                                    Reject
+                                </button>
+                                <button 
+                                    onClick={() => handleAction('APPROVED')}
+                                    disabled={!!actionLoading}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                                >
+                                    {actionLoading === 'APPROVED' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                    Approve Request
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

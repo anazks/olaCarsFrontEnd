@@ -58,7 +58,7 @@ const DriverRentPlan = () => {
             container.style.width = '550pt';
             container.style.background = 'white';
             document.body.appendChild(container);
-            
+
             await doc.html(container, {
                 callback: function (doc) {
                     doc.save(`Invoice_Month_${invoice.weekNumber}.pdf`);
@@ -90,7 +90,7 @@ const DriverRentPlan = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <button 
+                    <button
                         onClick={() => navigate(-1)}
                         className="p-3 rounded-2xl bg-white/5 border border-white/10 text-dim hover:text-white transition-all"
                     >
@@ -142,9 +142,9 @@ const DriverRentPlan = () => {
                             {rentTracking.map((item) => {
                                 const periodNum = item.weekNumber;
                                 const invoice = invoices.find(inv => inv.weekNumber === periodNum);
-                                
+
                                 return (
-                                    <ScheduleRow 
+                                    <ScheduleRow
                                         key={periodNum}
                                         period={periodNum}
                                         label={item.weekLabel}
@@ -194,17 +194,16 @@ const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload }: any) =>
             <td className="p-6 text-xs font-bold text-brand-lime">${paid.toLocaleString()}</td>
             <td className="p-6 text-xs font-bold text-orange-400">${balance.toLocaleString()}</td>
             <td className="p-6">
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                    status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                    status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                    'bg-white/5 text-dim border-white/10'
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                        status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                            'bg-white/5 text-dim border-white/10'
+                    }`}>
                     {status}
                 </span>
             </td>
             <td className="p-6 text-right">
                 {invoice && (
-                    <button 
+                    <button
                         onClick={onDownload}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-dim hover:text-white transition-all border border-white/5 ml-auto"
                     >
