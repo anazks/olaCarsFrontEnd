@@ -9,6 +9,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser, ROLE_LEVELS } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import toast from 'react-hot-toast';
 
 const TaskManagement = () => {
     const userRole = (getUserRole() || '').toLowerCase().replace(/[\s-_]/g, '');
@@ -120,15 +121,39 @@ const TaskManagement = () => {
 
     const handleTaskSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 1. Only allow alphabets and spaces on task title
+        const titleTrimmed = taskFormData.title.trim();
+        if (!titleTrimmed) {
+            toast.error('Task title is required.');
+            return;
+        }
+        const titleRegex = /^[a-zA-Z\s]+$/;
+        if (!titleRegex.test(titleTrimmed)) {
+            toast.error('Task title can only contain alphabets and spaces.');
+            return;
+        }
+
+        // 2. Do not allow past due dates
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        const selectedDueDate = new Date(taskFormData.dueDate);
+        if (selectedDueDate < today) {
+            toast.error('Due date cannot be in the past.');
+            return;
+        }
+
         setLoading(true);
         try {
             await delegateTask(taskFormData as any);
+            toast.success('Task deployed successfully!');
             fetchInitialData();
             setTaskFormData(prev => ({ ...prev, title: '', description: '', notes: '' }));
             setTaskFilters({ country: '', branchId: '', role: '' });
             setIsTaskAssignmentOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error delegating task:', error);
+            toast.error(error.response?.data?.message || 'Error delegating task.');
         } finally {
             setLoading(false);
         }
@@ -253,7 +278,7 @@ const TaskManagement = () => {
                                             <input
                                                 type="text"
                                                 value={taskFormData.title}
-                                                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                                                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                                                 placeholder="Enter task title..."
                                                 className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all text-[var(--text-main)]"
                                                 required
@@ -426,6 +451,7 @@ const TaskManagement = () => {
                                                 <input
                                                     type="date"
                                                     value={taskFormData.dueDate}
+                                                    min={new Date().toISOString().split('T')[0]}
                                                     onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
                                                     className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl p-3.5 text-sm font-semibold text-[var(--text-main)] uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/80 transition-all"
                                                     required

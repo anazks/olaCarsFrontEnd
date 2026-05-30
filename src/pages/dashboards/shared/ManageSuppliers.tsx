@@ -154,6 +154,38 @@ const ManageSuppliers = () => {
         setFormLoading(true);
         setFormError(null);
 
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.suppliers.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            setFormLoading(false);
+            return;
+        }
+
+        // Validate phone number format and limit
+        const cleanPhone = formData.phone.replace(/\D/g, '');
+        if (!cleanPhone) {
+            setFormError(t('management.suppliers.form.phoneRequired', { defaultValue: 'Phone number is required.' }));
+            setFormLoading(false);
+            return;
+        }
+
+        // Extract local phone number by matching common dial codes
+        const DIAL_CODES = ["971", "966", "254", "256", "255", "251", "234", "233", "49", "44", "33", "27", "91", "86", "61", "1"];
+        const matchCode = DIAL_CODES.find(code => cleanPhone.startsWith(code));
+        const localNumber = matchCode ? cleanPhone.slice(matchCode.length) : cleanPhone;
+
+        if (localNumber.length < 6 || localNumber.length > 12) {
+            setFormError(t('management.suppliers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number (6-12 digits excluding country code).' }));
+            setFormLoading(false);
+            return;
+        }
+        if (/(\d)\1{5,}/.test(cleanPhone)) {
+            setFormError(t('management.suppliers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' }));
+            setFormLoading(false);
+            return;
+        }
+
         const finalCategory = formData.category === t('management.suppliers.categories.Other') ? formData.customCategory : formData.category;
 
         if (!finalCategory) {
