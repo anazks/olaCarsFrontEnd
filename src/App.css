@@ -557,3 +557,35 @@
   box-shadow: 0 0 4px #C8E600 !important;
   box-sizing: border-box !important;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   REACT-PHONE-INPUT-2 DROPDOWN THEME STYLING
+   ══════════════════════════════════════════════════════════════ */
+.react-tel-input .country-list {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-main) !important;
+}
+
+.react-tel-input .country-list .country {
+  color: var(--text-main) !important;
+}
+
+.react-tel-input .country-list .country .country-name {
+  color: var(--text-main) !important;
+}
+
+.react-tel-input .country-list .country .dial-code {
+  color: var(--text-muted) !important;
+}
+
+.react-tel-input .country-list .country:hover,
+.react-tel-input .country-list .country.highlight {
+  background-color: var(--sidebar-hover) !important;
+}
+
+.react-tel-input .country-list .search {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-main) !important;
+}

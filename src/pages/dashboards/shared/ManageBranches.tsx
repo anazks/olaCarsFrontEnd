@@ -126,6 +126,21 @@ const ManageBranches = () => {
             setCmFormError('All fields are required.');
             return;
         }
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(cmForm.email.trim())) {
+            setCmFormError(t('management.branches.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            return;
+        }
+
+        // Prevent phone number consisting of repeated digits (e.g. 0000000000)
+        const cleanCMPhone = cmForm.phone.replace(/\D/g, '');
+        if (/(\d)\1{5,}/.test(cleanCMPhone)) {
+            setCmFormError(t('management.branches.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits (e.g., 0000000000).' }));
+            return;
+        }
+
         setAddingCM(true);
         setCmFormError(null);
         try {
@@ -207,6 +222,21 @@ const ManageBranches = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.branches.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            return;
+        }
+
+        // Prevent phone number consisting of repeated digits (e.g. 0000000000)
+        const cleanPhone = formData.phone.replace(/\D/g, '');
+        if (/(\d)\1{5,}/.test(cleanPhone)) {
+            setFormError(t('management.branches.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits (e.g., 0000000000).' }));
+            return;
+        }
+
         setFormLoading(true);
         setFormError(null);
 
@@ -214,6 +244,7 @@ const ManageBranches = () => {
             if (modalMode === 'create') {
                 const payload: CreateBranchPayload = {
                     ...formData,
+                    email: formData.email.trim(),
                     status: formData.status as any
                 };
                 await createBranch(payload);
@@ -221,6 +252,7 @@ const ManageBranches = () => {
                 const payload: UpdateBranchPayload = {
                     id: selectedBranch._id,
                     ...formData,
+                    email: formData.email.trim(),
                     status: formData.status as any
                 };
                 await updateBranch(payload);
