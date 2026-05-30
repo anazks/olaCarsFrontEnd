@@ -45,7 +45,7 @@ const SAMPLE_DATA = [{
     emergencyName:'Jane Smith', emergencyRelationship:'Spouse', emergencyPhone:'+254700000002',
     vehicleNumber:'KAA 123A',
     vehicleMake:'Toyota', vehicleModel:'Corolla', vehicleYear:'2022',
-    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'', 
+    vehicleCategory:'Sedan', vehicleFuelType:'GASOLINE', vehicleColour:'White', vehicleVin:'', 
     activationDate:'15/01/24', deactivationDate:'', weeklyRent: 1500, durationWeeks: 60, remarks:'Migrated from old system'
 }];
 
