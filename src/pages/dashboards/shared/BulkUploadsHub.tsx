@@ -106,7 +106,7 @@ const BulkUploadsHub = () => {
             </div>
 
             {/* Bento Grid layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 
                 {/* CARD 1: DRIVERS */}
                 <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
