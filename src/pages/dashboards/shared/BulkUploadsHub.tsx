@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock } from 'lucide-react';
+import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -8,8 +8,9 @@ import DataMigrationUpload from './DataMigrationUpload';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import BulkUploadJournal from '../finance/BulkUploadJournal';
+import BulkInvoiceUpload from './BulkInvoiceUpload';
 
-type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | null;
+type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | 'invoice' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -94,7 +95,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">4</p>
+                        <p className="text-base font-black text-main">5</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -361,6 +362,47 @@ const BulkUploadsHub = () => {
                         </button>
                     </div>
                 </div>
+                {/* CARD 5: INVOICES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+                                <FileText size={20} className="text-blue-500" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Invoice Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload multiple invoices for Rent, Workshop, or Deposits. Auto-calculates payment status based on amounts and dynamically generates prefix codes.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Status:</span>
+                            <span className="text-[11px] font-bold text-emerald-500">Active</span>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('invoice')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
 
             </div>
 
@@ -420,6 +462,12 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
             )}
+
+            <BulkInvoiceUpload 
+                isOpen={activeModal === 'invoice'} 
+                onClose={() => setActiveModal(null)} 
+                onSuccess={() => setActiveModal(null)} 
+            />
         </div>
     );
 };
