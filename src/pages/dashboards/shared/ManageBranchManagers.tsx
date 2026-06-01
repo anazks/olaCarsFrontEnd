@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, UserCheck, Eye, Unlock } from 'lucide-react';
 import {
     getAllBranchManagers,
     createBranchManager,
@@ -204,6 +204,18 @@ const ManageBranchManagers = () => {
             setDeleteTarget(null);
         } finally {
             setDeleteLoading(false);
+        }
+    };
+
+    const handleUnblock = async (manager: BranchManager) => {
+        try {
+            await updateBranchManager({
+                id: manager._id,
+                status: 'ACTIVE'
+            } as UpdateBranchManagerPayload);
+            fetchManagers();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         }
     };
 
@@ -465,6 +477,18 @@ const ManageBranchManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {manager.status === 'LOCKED' && (
+                                                        <HasPermission permission="STAFF_EDIT">
+                                                            <button
+                                                                onClick={() => handleUnblock(manager)}
+                                                                className="p-2 rounded-lg hover:bg-[#C8E600]/10 transition-colors"
+                                                                style={{ color: '#C8E600' }}
+                                                                title={t('common.unblock', { defaultValue: 'Unblock' })}
+                                                            >
+                                                                <Unlock size={15} />
+                                                            </button>
+                                                        </HasPermission>
+                                                    )}
                                                     <button
                                                         onClick={() => {
                                                             const currentPath = window.location.pathname;

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -649,55 +649,64 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                         </thead>
                                         <tbody>
                                             {parsedRows.map((row, i) => (
-                                                <tr key={i} style={{ borderBottom: '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
-                                                    <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
-                                                    {MIGRATION_COLUMNS.map(key => {
-                                                            let val = row[key as keyof ParsedRow];
-                                                            
-                                                            if (typeof val === 'number' && val > 40000 && val < 60000 && key.toLowerCase().includes('date')) {
-                                                                const utcDays = Math.floor(val - 25569);
-                                                                const d = new Date(utcDays * 86400 * 1000);
-                                                                const day = d.getUTCDate().toString().padStart(2, '0');
-                                                                const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
-                                                                const year = d.getUTCFullYear();
-                                                                val = `${day}-${month}-${year}`;
-                                                            }
+                                                <Fragment key={i}>
+                                                    <tr style={{ borderBottom: row._rowErrors.length > 0 ? 'none' : '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                                                        <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
+                                                        {MIGRATION_COLUMNS.map(key => {
+                                                                let val = row[key as keyof ParsedRow];
+                                                                
+                                                                if (typeof val === 'number' && val > 40000 && val < 60000 && key.toLowerCase().includes('date')) {
+                                                                    const utcDays = Math.floor(val - 25569);
+                                                                    const d = new Date(utcDays * 86400 * 1000);
+                                                                    const day = d.getUTCDate().toString().padStart(2, '0');
+                                                                    const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+                                                                    const year = d.getUTCFullYear();
+                                                                    val = `${day}-${month}-${year}`;
+                                                                }
 
-                                                            return (
-                                                                <td key={key} className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
-                                                                    {String(val || '—')}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    <td className="px-3 py-2">
-                                                        {row._rowErrors.length === 0
-                                                            ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
-                                                            : (
-                                                                <div className="flex items-center gap-2 group relative w-fit cursor-help">
+                                                                return (
+                                                                    <td key={key} className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
+                                                                        {String(val || '—')}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        <td className="px-3 py-2">
+                                                            {row._rowErrors.length === 0
+                                                                ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
+                                                                : (
                                                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
                                                                         {row._rowErrors.length} error(s)
                                                                     </span>
-                                                                    <div className="text-red-400">
-                                                                        <Info size={14} />
-                                                                    </div>
-                                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 rounded-lg bg-red-950/90 border border-red-500/30 backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-[9999] shadow-xl">
-                                                                        <p className="text-[10px] font-medium text-red-200 m-0 break-words leading-relaxed">{row._rowErrors.join(', ')}</p>
-                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-[5px] border-transparent border-t-red-500/30"></div>
+                                                                )
+                                                            }
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            <button 
+                                                                onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
+                                                                className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
+                                                                title="Remove Entry"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {row._rowErrors.length > 0 && (
+                                                        <tr style={{ borderBottom: '1px solid var(--border-main)', background: 'rgba(239,68,68,0.04)' }}>
+                                                            <td colSpan={MIGRATION_COLUMNS.length + 3} className="px-4 py-2 pt-0 pb-3">
+                                                                <div className="flex items-start gap-2 p-2.5 rounded-lg border border-red-500/20 bg-red-500/5">
+                                                                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {row._rowErrors.map((err, errIdx) => (
+                                                                            <span key={errIdx} className="text-[11px] font-medium text-red-400">
+                                                                                • {err}
+                                                                            </span>
+                                                                        ))}
                                                                     </div>
                                                                 </div>
-                                                            )
-                                                        }
-                                                    </td>
-                                                    <td className="px-3 py-2 text-center">
-                                                        <button 
-                                                            onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
-                                                            className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
-                                                            title="Remove Entry"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </Fragment>
                                             ))}
                                         </tbody>
                                     </table>

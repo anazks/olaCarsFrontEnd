@@ -25,7 +25,8 @@
     "edit": "Edit",
     "view": "View",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "unblock": "Unblock"
   },
   "roles": {
     "admin": "Admin",
@@ -395,7 +396,7 @@
       "status": {
         "active": "Active",
         "suspended": "Suspended",
-        "locked": "Locked",
+        "locked": "Blocked",
         "enabled": "Enabled",
         "disabled": "Disabled",
         "inactive": "Inactive",
