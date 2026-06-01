@@ -465,10 +465,10 @@ const ManageWorkshopManagers = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {staff.status === 'LOCKED' && (
+                                                {manager.status === 'LOCKED' && (
                                                     <HasPermission permission="STAFF_EDIT">
                                                         <button
-                                                            onClick={() => handleUnblock(staff)}
+                                                            onClick={() => handleUnblock(manager)}
                                                             className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
                                                             style={{ color: 'var(--brand-lime)' }}
                                                             title={t('common.unblock', { defaultValue: 'Unblock' })}

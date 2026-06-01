@@ -477,7 +477,7 @@ const ManageBranchManagers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {manager.status === 'LOCKED' && (
+                                                    {(manager.status as string) === 'LOCKED' && (
                                                         <HasPermission permission="STAFF_EDIT">
                                                             <button
                                                                 onClick={() => handleUnblock(manager)}
