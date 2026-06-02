@@ -1219,9 +1219,9 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Bottom Deck: Assigned Tasks & Recent Transactions */}
-            <div className={`grid grid-cols-1 ${userRole !== 'admin' ? 'xl:grid-cols-3' : ''} gap-6`}>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Global Transaction Ledger */}
-                <div className={`${userRole !== 'admin' ? 'xl:col-span-2' : ''} rounded-2xl border overflow-hidden flex flex-col justify-between`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="xl:col-span-2 rounded-2xl border overflow-hidden flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-6 bg-brand-lime rounded-full" />
@@ -1297,7 +1297,6 @@ const FinanceDashboard = () => {
                 </div>
 
                 {/* Assigned Operational Missions */}
-                {userRole !== 'admin' && (
                     <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center justify-between mb-6">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
@@ -1353,7 +1352,6 @@ const FinanceDashboard = () => {
                             </div>
                         </div>
                     </div>
-                )}
             </div>
         </div>
     );

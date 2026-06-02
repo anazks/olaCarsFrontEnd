@@ -226,8 +226,7 @@ const PurchaseOrderDetail = () => {
                                 <Trash2 size={18} /> Dispose PO
                             </button>
                         </HasPermission>
-                        {userRole !== 'admin' && (
-                            <HasPermission permission="PURCHASE_ORDER_EDIT">
+                        <HasPermission permission="PURCHASE_ORDER_EDIT">
                                 <button
                                     onClick={handleConvertToBill}
                                     disabled={actionLoading}
@@ -237,7 +236,6 @@ const PurchaseOrderDetail = () => {
                                     {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
                                 </button>
                             </HasPermission>
-                        )}
                     </div>
                 )}
 

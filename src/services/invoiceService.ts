@@ -141,6 +141,6 @@ export const updateGenerationSettings = async (generationDay: number): Promise<v
 
 export const bulkUploadInvoices = async (data: { rows: any[], invoiceType: string }): Promise<any> => {
     const response = await api.post('/api/invoices/bulk-upload', data);
-    return response.data;
+    return response.data.data;
 };
 
