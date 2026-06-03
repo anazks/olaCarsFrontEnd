@@ -4,7 +4,6 @@ import {
     Search,
     Filter,
     Calendar,
-    User,
     CheckCircle,
     AlertCircle,
     ChevronDown,
@@ -21,7 +20,7 @@ import { getWriteOffs, approveWriteOff, rejectWriteOff, type WriteOff } from '..
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const FinancialAdminWriteOffs = () => {
-    const { t } = useTranslation();
+    useTranslation();
     const [writeOffs, setWriteOffs] = useState<WriteOff[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');

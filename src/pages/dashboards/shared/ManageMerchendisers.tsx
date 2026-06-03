@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, ShieldCheck, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import {
     getAllMerchendisers,
@@ -37,10 +36,9 @@ const phoneInputStyles = `
 
 const ManageMerchendisers = () => {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const [merchendisers, setMerchendisers] = useState<MerchendiseUser[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');

@@ -4,7 +4,6 @@ import {
     Search,
     Filter,
     Trash2,
-    Calendar,
     User,
     CheckCircle,
     AlertCircle,
@@ -20,7 +19,7 @@ import { getScrapItems, updateScrapItem, deleteScrapItem, type ScrapItem } from 
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const FinancialAdminScraps = () => {
-    const { t } = useTranslation();
+    useTranslation();
     const [scrapItems, setScrapItems] = useState<ScrapItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');

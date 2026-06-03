@@ -45,6 +45,7 @@ export interface PurchaseOrder {
     purpose: POPurpose;
     items: PurchaseOrderItem[];
     totalAmount: number;
+    originalTotalAmount?: number;
     merchandiserTotalAmount?: number;
     documents?: string[];
     rejectionNote?: string;

@@ -145,7 +145,7 @@ const WorkshopPurchaseRequestDetail = () => {
                        request.requestedBy?._id !== userId && 
                        (userRole === 'admin' || userRole === 'financeadmin');
 
-    const totalCost = (request.quantity || 0) * (request.part?.unitCost || 0);
+
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-20">
