@@ -85,7 +85,8 @@ const PurchaseOrderDetail = () => {
         try {
             await approveRejectPurchaseOrder(id, {
                 status: modalAction === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-                rejectionReason: reason // Backend should handle this in history/status
+                rejectionNote: reason,
+                rejectionReason: reason
             });
             setIsModalOpen(false);
             await fetchPO(); // Refresh data
@@ -144,11 +145,13 @@ const PurchaseOrderDetail = () => {
     }
 
     const creatorLevel = ROLE_LEVELS[po.creatorRole.toLowerCase()] || 0;
-    const canApprove =
-        po.status === 'WAITING' &&
-        po.createdBy !== userId &&
-        userLevel > creatorLevel &&
-        (po.totalAmount <= poThreshold || userLevel >= 5);
+    const isFinanceApproval = po.status === 'PENDING_FINANCE_APPROVAL';
+    const canApprove = isFinanceApproval
+        ? (po.createdBy !== userId && (userRole === 'admin' || userRole === 'financeadmin'))
+        : (po.status === 'WAITING' &&
+           po.createdBy !== userId &&
+           userLevel > creatorLevel &&
+           (po.totalAmount <= poThreshold || userLevel >= 5));
 
     const canPay = po.status === 'APPROVED' && !po.isBilled;
 
@@ -158,7 +161,8 @@ const PurchaseOrderDetail = () => {
         WAITING: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         APPROVED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
         REJECTED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: <XCircle size={16} /> },
-        DISPOSED: { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', icon: <Trash2 size={16} /> }
+        DISPOSED: { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', icon: <Trash2 size={16} /> },
+        PENDING_FINANCE_APPROVAL: { bg: 'rgba(236, 72, 153, 0.1)', text: '#ec4899', icon: <Clock size={16} /> }
     };
 
     const s = statusColors[po.status] || statusColors.WAITING;
@@ -321,6 +325,68 @@ const PurchaseOrderDetail = () => {
                         </div>
                     </div>
 
+                    {/* Merchandiser Audit Review */}
+                    {po.merchandiserTotalAmount !== undefined && po.merchandiserTotalAmount !== null && (
+                        <div className="rounded-2xl border p-6 space-y-5 animate-fadeIn mb-6" style={{ background: 'rgba(200, 230, 0, 0.02)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-[#C8E600] flex items-center gap-2">
+                                <FileText size={16} />
+                                Merchandiser Audit Review
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                                <div>
+                                    <span className="text-[10px] text-muted block uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Original Amount</span>
+                                    <span className="text-lg font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                        ${(po.status === 'APPROVED' && po.originalTotalAmount !== undefined && po.originalTotalAmount !== null ? po.originalTotalAmount : po.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] block uppercase font-bold mb-1" style={{ color: '#C8E600' }}>Proposed Merchandiser Amount</span>
+                                    <span className="text-xl font-black text-[#C8E600]">
+                                        ${(po.status === 'APPROVED' ? po.totalAmount : po.merchandiserTotalAmount ?? po.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {po.documents && po.documents.length > 0 && (
+                                <div className="space-y-2">
+                                    <span className="text-[10px] block uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Supporting Documents</span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {po.documents.map((doc, idx) => {
+                                            const docLabels = ['Supplier Quotation', 'Commercial Invoice', 'Compliance Certificate'];
+                                            const docUrl = doc.startsWith('http') ? doc : `${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/['"]/g, '').replace(/\/$/, '')}${doc}`;
+                                            const getDocName = (path: string) => {
+                                                const filePart = path.split('/').pop() || '';
+                                                const underscoreIdx = filePart.indexOf('_');
+                                                if (underscoreIdx !== -1 && underscoreIdx < 15) {
+                                                    return filePart.substring(underscoreIdx + 1);
+                                                }
+                                                return filePart;
+                                            };
+                                            return (
+                                                <a 
+                                                    key={idx}
+                                                    href={docUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-3 bg-white/5 hover:bg-[#C8E600]/10 border border-white/10 hover:border-[#C8E600] rounded-xl flex items-center gap-2.5 transition-all text-xs font-semibold text-main cursor-pointer"
+                                                    style={{ color: 'var(--text-main)' }}
+                                                    title={`Open ${docLabels[idx] || `Document ${idx+1}`}`}
+                                                >
+                                                    <FileText size={16} className="text-[#C8E600]" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="block text-[9px] text-muted text-dim" style={{ color: 'var(--text-dim)' }}>{docLabels[idx] || `Document ${idx+1}`}</span>
+                                                        <span className="block truncate text-xs font-mono">{getDocName(doc)}</span>
+                                                    </div>
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Items Table */}
                     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
@@ -331,58 +397,71 @@ const PurchaseOrderDetail = () => {
                             <thead className="bg-white/5">
                                 <tr>
                                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Item</th>
-                                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Price</th>
+                                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Original Price</th>
+                                    {po.merchandiserTotalAmount !== undefined && po.merchandiserTotalAmount !== null && (
+                                        <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-[#C8E600]" style={{ color: '#C8E600' }}>Proposed Price</th>
+                                    )}
                                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Qty</th>
                                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {po.items.map((item, i) => (
-                                    <tr key={i} className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{item.itemName}</div>
-                                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>{item.description}</div>
-                                            {item.images && item.images.length > 0 && (
-                                                <div className="flex gap-2 mt-3">
-                                                    {item.images.map((img, imgIdx) => {
-                                                        const resolveImageUrl = (url: string | File) => {
-                                                            if (url instanceof File) return URL.createObjectURL(url);
-                                                            if (typeof url === 'string') {
-                                                                if (url.startsWith('http')) return url;
-                                                                const cleanPath = url.startsWith('/') ? url.slice(1) : url;
-                                                                const s3Base = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
-                                                                const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['"]/g, '').replace(/\/$/, '');
-                                                                const base = s3Base || apiBase;
-                                                                return `${base}/${cleanPath}`;
-                                                            }
-                                                            return url;
-                                                        };
-                                                        const resolvedUrl = resolveImageUrl(img);
-                                                        return (
-                                                            <div key={imgIdx} className="relative group cursor-pointer">
-                                                                <a href={resolvedUrl} target="_blank" rel="noopener noreferrer">
-                                                                    <img 
-                                                                        src={resolvedUrl} 
-                                                                        alt={`Item image ${imgIdx + 1}`}
-                                                                        className="w-12 h-12 object-cover rounded-lg border transition-all group-hover:scale-110" 
-                                                                        style={{ borderColor: 'var(--border-main)' }}
-                                                                    />
-                                                                </a>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
+                                {po.items.map((item, i) => {
+                                    const hasProposed = po.merchandiserTotalAmount !== undefined && po.merchandiserTotalAmount !== null;
+                                    const proposedPrice = item.merchandiserPrice !== undefined && item.merchandiserPrice !== null ? item.merchandiserPrice : item.unitPrice;
+                                    const priceToShow = (po.status === 'APPROVED' || !hasProposed) ? item.unitPrice : proposedPrice;
+                                    return (
+                                        <tr key={i} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{item.itemName}</div>
+                                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>{item.description}</div>
+                                                {item.images && item.images.length > 0 && (
+                                                    <div className="flex gap-2 mt-3">
+                                                        {item.images.map((img, imgIdx) => {
+                                                            const resolveImageUrl = (url: string | File) => {
+                                                                if (url instanceof File) return URL.createObjectURL(url);
+                                                                if (typeof url === 'string') {
+                                                                    if (url.startsWith('http')) return url;
+                                                                    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+                                                                    const s3Base = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                    const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/['"]/g, '').replace(/\/$/, '');
+                                                                    const base = s3Base || apiBase;
+                                                                    return `${base}/${cleanPath}`;
+                                                                }
+                                                                return url;
+                                                            };
+                                                            const resolvedUrl = resolveImageUrl(img);
+                                                            return (
+                                                                <div key={imgIdx} className="relative group cursor-pointer">
+                                                                    <a href={resolvedUrl} target="_blank" rel="noopener noreferrer">
+                                                                        <img 
+                                                                            src={resolvedUrl} 
+                                                                            alt={`Item image ${imgIdx + 1}`}
+                                                                            className="w-12 h-12 object-cover rounded-lg border transition-all group-hover:scale-110" 
+                                                                            style={{ borderColor: 'var(--border-main)' }}
+                                                                        />
+                                                                    </a>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>${item.unitPrice.toFixed(2)}</td>
+                                            {hasProposed && (
+                                                <td className="px-6 py-4 text-sm font-bold text-[#C8E600]" style={{ color: '#C8E600' }}>
+                                                    {item.merchandiserPrice !== undefined && item.merchandiserPrice !== null ? `$${item.merchandiserPrice.toFixed(2)}` : '—'}
+                                                </td>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>${item.unitPrice.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>{item.quantity}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-right" style={{ color: 'var(--text-main)' }}>
-                                            ${(item.unitPrice * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>{item.quantity}</td>
+                                            <td className="px-6 py-4 text-sm font-bold text-right" style={{ color: 'var(--text-main)' }}>
+                                                ${(priceToShow * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 <tr className="bg-white/5">
-                                    <td colSpan={3} className="px-6 py-6 text-right font-bold" style={{ color: 'var(--text-dim)' }}>Total Amount</td>
+                                    <td colSpan={po.merchandiserTotalAmount !== undefined && po.merchandiserTotalAmount !== null ? 4 : 3} className="px-6 py-6 text-right font-bold" style={{ color: 'var(--text-dim)' }}>Total Amount</td>
                                     <td className="px-6 py-6 text-right text-2xl font-black text-[#C8E600]">
                                         ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
@@ -395,7 +474,7 @@ const PurchaseOrderDetail = () => {
                 {/* Right Column: Alerts & History */}
                 <div className="space-y-6">
                     {/* Approval Context Alert */}
-                    {po.status === 'WAITING' && (
+                    {(po.status === 'WAITING' || po.status === 'PENDING_FINANCE_APPROVAL') && (
                         <div className="p-5 rounded-2xl border flex flex-col gap-3"
                             style={{
                                 background: po.totalAmount > 1000 ? 'rgba(245,158,11,0.05)' : 'rgba(200,230,0,0.05)',
@@ -406,15 +485,33 @@ const PurchaseOrderDetail = () => {
                                 {po.totalAmount > 1000 ? 'Admin Approval Required' : 'Approval Information'}
                             </div>
                             <p className="text-xs leading-relaxed" style={{ color: 'var(--text-main)' }}>
-                                {po.totalAmount > poThreshold
-                                    ? `This order exceeds the $${poThreshold.toLocaleString()} threshold and requires a Super Admin (Level 5) to approve.`
-                                    : `Requires approval from a role higher than ${po.creatorRole} (Level ${creatorLevel}+).`}
+                                {isFinanceApproval
+                                    ? 'Requires Admin or Financial Admin approval for the proposed merchandiser amount.'
+                                    : po.totalAmount > poThreshold
+                                        ? `This order exceeds the $${poThreshold.toLocaleString()} threshold and requires a Super Admin (Level 5) to approve.`
+                                        : `Requires approval from a role higher than ${po.creatorRole} (Level ${creatorLevel}+).`}
                             </p>
-                            {!canApprove && po.status === 'WAITING' && (
+                            {!canApprove && (po.status === 'WAITING' || po.status === 'PENDING_FINANCE_APPROVAL') && (
                                 <div className="text-[10px] font-bold italic opacity-60" style={{ color: 'var(--text-dim)' }}>
-                                    {po.createdBy === userId ? 'You cannot approve your own order.' : 'Your role level is insufficient to approve this.'}
+                                    {po.createdBy === userId
+                                        ? 'You cannot approve your own order.'
+                                        : isFinanceApproval
+                                            ? 'Only Admin and Financial Admin roles are allowed to approve or reject audited amounts.'
+                                            : 'Your role level is insufficient to approve this.'}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Rejection Note Alert */}
+                    {po.status === 'REJECTED' && po.rejectionNote && (
+                        <div className="rounded-2xl border p-5 space-y-3 bg-red-500/5 border-red-500/20 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-red-500">
+                                <AlertCircle size={14} /> Rejection Note
+                            </div>
+                            <p className="text-sm italic text-main font-mono" style={{ color: 'var(--text-main)' }}>
+                                "{po.rejectionNote}"
+                            </p>
                         </div>
                     )}
 
@@ -445,10 +542,12 @@ const PurchaseOrderDetail = () => {
                                             <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                         )}
                                         <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(entry.updatedAt).toLocaleDateString()} at {new Date(entry.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(entry.updatedAt || entry.editedAt || '').toLocaleDateString()} at {new Date(entry.updatedAt || entry.editedAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
-                                        <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>{entry.updatedBy}</p>
-                                        <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changeSummary}"</p>
+                                        <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {typeof entry.editedBy === 'object' ? (entry.editedBy as any)?.name : (entry.editedBy || entry.updatedBy)}
+                                        </p>
+                                        <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary || entry.changeSummary}"</p>
                                     </div>
                                 ))}
                             </div>

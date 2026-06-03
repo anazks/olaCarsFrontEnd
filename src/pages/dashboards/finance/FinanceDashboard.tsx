@@ -5,7 +5,7 @@ import {
     List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2, FileText
+    Building2, FileText, Eye, CheckCircle
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -25,12 +25,15 @@ import type { StaffTask } from '../../../services/taskService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { toast } from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../../services/purchaseOrderService';
+import type { PurchaseOrder } from '../../../services/purchaseOrderService';
 
 const FinanceDashboard = () => {
     // Basic States
     const [tasks, setTasks] = useState<StaffTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [pendingPOs, setPendingPOs] = useState<PurchaseOrder[]>([]);
     const navigate = useNavigate();
     const user = getUser();
     const userRole = getUserRole();
@@ -65,13 +68,18 @@ const FinanceDashboard = () => {
         setError(null);
         try {
             // Safe aggregation: catch individual failures so the UI never crashes
-            const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes] = await Promise.all([
+            const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes, poRes] = await Promise.all([
                 getLedgerEntries().catch(() => ({ data: [] as LedgerEntry[] })),
                 getTasks({ assignedTo: user?.id || user?._id }).catch(() => [] as StaffTask[]),
                 getInvoices({ limit: 1000 }).catch(() => ({ data: [] as Invoice[] })),
                 getAllBills({ limit: 1000 }).catch(() => ({ data: [] as Bill[] })),
-                getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] as Expense[] }))
+                getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] as Expense[] })),
+                getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
+                    console.error("FinanceDashboard: Fetch POs failed:", err);
+                    return { data: [] as PurchaseOrder[] };
+                })
             ]);
+            console.log("FinanceDashboard: PENDING_FINANCE_APPROVAL POs response:", poRes);
 
             const resolvedLedger = Array.isArray(ledgerRes) ? ledgerRes : (ledgerRes && 'data' in ledgerRes && Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
             const resolvedTasks = Array.isArray(taskRes) ? taskRes : (taskRes && 'data' in taskRes && Array.isArray(taskRes.data) ? taskRes.data : []);
@@ -93,12 +101,21 @@ const FinanceDashboard = () => {
                 resolvedExpenses = expenseRes;
             }
 
+            let resolvedPOs: PurchaseOrder[] = [];
+            if (poRes && 'data' in poRes && Array.isArray(poRes.data)) {
+                resolvedPOs = poRes.data;
+            } else if (Array.isArray(poRes)) {
+                resolvedPOs = poRes as any;
+            }
+
             setLiveData({
                 invoices: resolvedInvoices,
                 bills: resolvedBills,
                 expenses: resolvedExpenses,
                 ledger: resolvedLedger
             });
+
+            setPendingPOs(resolvedPOs);
 
             setTasks(resolvedTasks.slice(0, 5));
 
@@ -125,6 +142,17 @@ const FinanceDashboard = () => {
             fetchDashboardData();
         } catch (err) {
             toast.error('Synchronization failed');
+        }
+    };
+
+    const handleQuickApprovePO = async (poId: string) => {
+        if (!window.confirm('Are you sure you want to approve this purchase order?')) return;
+        try {
+            await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
+            toast.success('Purchase order approved successfully');
+            fetchDashboardData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Approval failed');
         }
     };
 
@@ -1231,6 +1259,67 @@ const FinanceDashboard = () => {
                         </div>
                         <h4 className="text-xs font-bold group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>Invoices</h4>
                         <p className="text-[9px] mt-1 text-dim">Manage financial invoices</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Purchase Orders Pending Finance Approval */}
+            {pendingPOs.length > 0 && (
+                <div className="rounded-2xl border overflow-hidden flex flex-col mb-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-6 bg-brand-lime rounded-full" />
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-main)' }}>POs Awaiting Finance Approval</h3>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim">PO Number</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim">Supplier</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim">Date</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim text-right">Amount</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                {pendingPOs.map((po) => (
+                                    <tr key={po._id} className="hover:bg-white/[0.01] transition-colors">
+                                        <td className="px-6 py-4 font-black text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`../purchase-orders/${po._id}`)}>
+                                            {po.purchaseOrderNumber}
+                                        </td>
+                                        <td className="px-6 py-4 text-dim font-medium">
+                                            {typeof po.supplier === 'object' ? (po.supplier as any).name : 'Unknown Supplier'}
+                                        </td>
+                                        <td className="px-6 py-4 text-dim font-medium">
+                                            {new Date(po.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-black" style={{ color: 'var(--text-main)' }}>
+                                            {formatCurrency(po.totalAmount)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => navigate(`../purchase-orders/${po._id}`)}
+                                                    className="p-1.5 bg-white/5 border border-white/10 text-dim hover:text-brand-lime rounded-lg transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickApprovePO(po._id)}
+                                                    className="p-1.5 bg-white/5 border border-white/10 text-dim hover:text-emerald-400 rounded-lg transition-all"
+                                                    title="Approve PO"
+                                                >
+                                                    <CheckCircle size={12} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
