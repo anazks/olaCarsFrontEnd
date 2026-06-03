@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar,
-    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX
+    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX, Eye, CheckCircle
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { format } from 'date-fns';
@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 // import { useTheme } from '../../context/ThemeContext';
 import { getFinancialDashboardSummary } from '../../services/dashboardService';
 import { getAllBranches } from '../../services/branchService';
+import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../services/purchaseOrderService';
 
 // import { useTheme } from '../../context/ThemeContext';
 
@@ -35,9 +36,10 @@ const FinancialAdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [allBranches, setAllBranches] = useState<any[]>([]);
+    const [pendingPOs, setPendingPOs] = useState<any[]>([]);
 
     // New Tabs State
-    const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections' | 'pos'>('overview');
 
     const getOneMonthAgo = () => {
         const d = new Date();
@@ -93,14 +95,32 @@ const FinancialAdminDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const data = await getFinancialDashboardSummary(filters);
+            const [data, poRes] = await Promise.all([
+                getFinancialDashboardSummary(filters),
+                getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
+                    console.error("FinancialAdminDashboard: Fetch POs failed:", err);
+                    return { data: [] };
+                })
+            ]);
+            console.log("FinancialAdminDashboard: PENDING_FINANCE_APPROVAL POs response:", poRes);
             setDashboardData(data);
+            setPendingPOs(poRes.data || []);
         } catch (error) {
             console.error('Error loading dashboard metrics', error);
         } finally {
             setTimeout(() => {
                 setLoading(false);
             }, 900);
+        }
+    };
+
+    const handleQuickApprovePO = async (poId: string) => {
+        if (!window.confirm('Are you sure you want to approve this purchase order?')) return;
+        try {
+            await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
+            fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Approval failed');
         }
     };
 
@@ -422,6 +442,18 @@ const FinancialAdminDashboard = () => {
                         >
                             Collections
                         </button>
+                        <button
+                            onClick={() => setActiveTab('pos')}
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'pos' ? 'border-[#C8E600] text-[#C8E600]' : 'border-transparent hover:text-[#C8E600]'}`}
+                            style={{ color: activeTab === 'pos' ? '#C8E600' : 'var(--text-dim)' }}
+                        >
+                            Pending POs
+                            {pendingPOs.length > 0 && (
+                                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[9px] font-black leading-none">
+                                    {pendingPOs.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
 
                     <div className="p-6 flex-1 flex flex-col justify-center transition-all duration-300">
@@ -491,6 +523,61 @@ const FinancialAdminDashboard = () => {
                                         <div className="text-[17px] sm:text-[19px] font-black text-red-500">${Math.round(stats?.outstandingCollections || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'pos' && (
+                            <div className="overflow-x-auto w-full animate-fadeIn max-h-[220px] custom-scrollbar">
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                            <th className="pb-3">PO Number</th>
+                                            <th className="pb-3">Supplier</th>
+                                            <th className="pb-3 text-right">Amount</th>
+                                            <th className="pb-3 text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                        {pendingPOs.map((po) => (
+                                            <tr key={po._id} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                                <td className="py-3 font-black text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`purchase-orders/${po._id}`)}>
+                                                    {po.purchaseOrderNumber}
+                                                </td>
+                                                <td className="py-3 text-dim font-medium truncate max-w-[120px]">
+                                                    {typeof po.supplier === 'object' ? po.supplier.name : 'Unknown'}
+                                                </td>
+                                                <td className="py-3 text-right font-black">
+                                                    ${po.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="py-3 text-center">
+                                                    <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={() => navigate(`purchase-orders/${po._id}`)}
+                                                            className="p-1 bg-white/5 border border-white/10 text-dim hover:text-brand-lime rounded transition-all"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye size={10} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleQuickApprovePO(po._id)}
+                                                            className="p-1 bg-white/5 border border-white/10 text-dim hover:text-emerald-400 rounded transition-all"
+                                                            title="Quick Approve"
+                                                        >
+                                                            <CheckCircle size={10} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {pendingPOs.length === 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>
+                                                    No purchase orders awaiting finance approval.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
 

@@ -15,7 +15,8 @@ import {
     X,
     Shield,
     ShoppingCart,
-    ShoppingBag
+    ShoppingBag,
+    Wrench
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -189,6 +190,15 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: 'Directives & Delegation', path: '/admin/financial-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
                 // { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
                 { label: 'Accident Reports', path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
+            ]
+        },
+        {
+            id: 'workshop-management',
+            label: 'Workshop Management',
+            icon: <Wrench size={22} />,
+            subItems: [
+                { label: 'Scraps', path: '/admin/financial-admin/scraps' },
+                { label: 'Write Offs', path: '/admin/financial-admin/write-offs' }
             ]
         },
         {

@@ -94,6 +94,14 @@ const StaffManagement = () => {
             permission: 'STAFF_VIEW',
             description: 'Technicians, mechanics, and workshop support personnel.',
             allowedRoles: null,
+        },
+        {
+            icon: <ShieldCheck size={24} />,
+            label: t('sidebar.items.merchendisers', 'Merchendisers'),
+            path: `${basePath}/manage-merchendisers`,
+            permission: 'STAFF_VIEW',
+            description: 'Manage merchandisers responsible for purchase orders and vendor audits.',
+            allowedRoles: ['admin', 'operationadmin', 'countrymanager', 'branchmanager'],
         }
     ];
 
