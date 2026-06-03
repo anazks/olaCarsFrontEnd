@@ -66,6 +66,41 @@ const PaymentsReceived = () => {
     const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
+    const getPageNumbers = () => {
+        const totalPages = pagination.pages;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) {
+            end = 4;
+        }
+        if (page >= totalPages - 2) {
+            start = totalPages - 3;
+        }
+
+        if (start > 2) {
+            pages.push('...');
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+
+        pages.push(totalPages);
+        return pages;
+    };
+
     // Sorting
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -326,20 +361,29 @@ const PaymentsReceived = () => {
                                 <ChevronLeft size={18} />
                             </button>
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: pagination.pages }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        onClick={() => setPage(i + 1)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70'}`}
-                                        style={{ 
-                                            background: page === i + 1 ? 'var(--brand-lime)' : 'transparent',
-                                            color: page === i + 1 ? '#000' : 'var(--text-main)',
-                                            border: page === i + 1 ? 'none' : '1px solid var(--border-main)'
-                                        }}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+                                {getPageNumbers().map((p, index) => {
+                                    if (p === '...') {
+                                        return (
+                                            <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPage(Number(p))}
+                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70'}`}
+                                            style={{ 
+                                                background: page === p ? 'var(--brand-lime)' : 'transparent',
+                                                color: page === p ? '#000' : 'var(--text-main)',
+                                                border: page === p ? 'none' : '1px solid var(--border-main)'
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
                             </div>
                             <button
                                 onClick={() => setPage(page + 1)}

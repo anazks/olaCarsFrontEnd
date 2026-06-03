@@ -47,7 +47,7 @@ const DOC_FIELDS = [
     { key: 'transferOfOwnership', label: 'Transfer of Ownership' },
 ];
 
-const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
+const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial', 'MUV'];
 const FUEL_TYPES: FuelType[] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const TRANSMISSIONS: Transmission[] = ['Automatic', 'Manual'];
 const BODY_TYPES: BodyType[] = ['Hatchback', 'Saloon', 'Coupe', 'Convertible', 'Truck'];

@@ -30,7 +30,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }
     'PRE-BOOKED': { bg: 'rgba(14,165,233,0.1)', text: '#0ea5e9', border: 'rgba(14,165,233,0.3)' },
 };
 
-const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
+const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial', 'MUV'];
 const FUEL_TYPES = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const VEHICLE_STATUSES = [
     "PENDING ENTRY",
@@ -79,7 +79,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
     // Server-side filtering & pagination state
     const [filters, setFilters] = useState({
         page: 1,
-        limit: 10,
+        limit: 25,
         search: '',
         status: '' as VehicleStatus | string,
         branch: '',
@@ -92,9 +92,45 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
     const [pagination, setPagination] = useState({
         total: 0,
         page: 1,
-        limit: 10,
+        limit: 25,
         totalPages: 0
     });
+
+    const getPageNumbers = () => {
+        const totalPages = pagination.totalPages;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        const page = filters.page;
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) {
+            end = 4;
+        }
+        if (page >= totalPages - 2) {
+            start = totalPages - 3;
+        }
+
+        if (start > 2) {
+            pages.push('...');
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+
+        pages.push(totalPages);
+        return pages;
+    };
     
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -156,7 +192,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
             fetchVehicles();
         }, 300);
         return () => clearTimeout(debounceId);
-    }, [fetchVehicles, filters.search, filters.page, filters.status, filters.branch, filters.category, filters.fuelType]);
+    }, [fetchVehicles, filters.search, filters.page, filters.limit, filters.status, filters.branch, filters.category, filters.fuelType]);
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters(prev => ({
@@ -257,30 +293,30 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
             )}
 
             {/* Search and Filters Bar */}
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-2.5">
                     {/* Primary Search */}
                     <div className="relative flex-1 group">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#C8E600] transition-colors" />
+                        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#C8E600] transition-colors" />
                         <input
                             type="text"
                             placeholder={t('management.vehicles.searchPlaceholder', 'Search by Make, Model, Plate No, or Fleet #...')}
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
-                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl outline-none text-sm font-medium transition-all duration-300 focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)] placeholder:opacity-50"
+                            className="w-full pl-10 pr-4 py-2 rounded-xl outline-none text-sm font-medium transition-all duration-300 focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)] placeholder:opacity-50"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         />
                     </div>
                     
                     {/* Status Dropdown (Primary Filter) */}
                     <div className="sm:w-72 relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                            <Filter size={16} />
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                            <Filter size={14} />
                         </div>
                         <select
                             value={filters.status}
                             onChange={(e) => handleFilterChange('status', e.target.value)}
-                            className="w-full pl-11 pr-10 py-3.5 rounded-2xl text-sm font-semibold outline-none appearance-none transition-all duration-300 cursor-pointer focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)]"
+                            className="w-full pl-9 pr-8 py-2 rounded-xl text-sm font-semibold outline-none appearance-none transition-all duration-300 cursor-pointer focus:shadow-[0_0_0_2px_rgba(200,230,0,0.3)]"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
                             <option value="">{mode === 'active' ? 'All Active Statuses' : 'All Pending Statuses'}</option>
@@ -288,38 +324,38 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                 <option key={status} value={status}>{status}</option>
                             ))}
                         </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
                             <ChevronDownIcon />
                         </div>
                     </div>
 
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold transition-all duration-300 hover:bg-white/5 active:scale-95 whitespace-nowrap shadow-sm"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 hover:bg-white/5 active:scale-95 whitespace-nowrap shadow-sm"
                         style={{ 
                             background: showAdvancedFilters ? 'rgba(200, 230, 0, 0.1)' : 'var(--bg-card)', 
                             border: '1px solid var(--border-main)', 
                             color: showAdvancedFilters ? '#C8E600' : 'var(--text-main)' 
                         }}
                     >
-                        <SlidersHorizontal size={18} />
+                        <SlidersHorizontal size={15} />
                         {t('management.vehicles.advancedFilters', 'More Filters')}
                     </button>
                 </div>
 
                 {/* Advanced Filters Panel */}
                 {showAdvancedFilters && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-6 rounded-3xl animate-in slide-in-from-top-4 fade-in duration-300 shadow-xl border relative overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 p-4 rounded-2xl animate-in slide-in-from-top-4 fade-in duration-300 shadow-xl border relative overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         {/* Decorative glow */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-[#C8E600] rounded-full blur-[100px] opacity-5 pointer-events-none" />
                         
-                        <div className="space-y-2 relative z-10">
+                        <div className="space-y-1 relative z-10">
                             <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.category', 'Category')}</label>
                             <div className="relative">
                                 <select
                                     value={filters.category}
                                     onChange={(e) => handleFilterChange('category', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-3 py-2 rounded-xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allCategories', 'All Categories')}</option>
@@ -327,17 +363,17 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                         <option key={cat} value={cat}>{t(`management.vehicles.categories.${cat}`, cat)}</option>
                                     ))}
                                 </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
                             </div>
                         </div>
                         
-                        <div className="space-y-2 relative z-10">
+                        <div className="space-y-1 relative z-10">
                             <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.table.fuelType', 'Fuel Type')}</label>
                             <div className="relative">
                                 <select
                                     value={filters.fuelType}
                                     onChange={(e) => handleFilterChange('fuelType', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-3 py-2 rounded-xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allFuelTypes', 'All Fuel Types')}</option>
@@ -345,17 +381,17 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                         <option key={fuel} value={fuel}>{t(`management.vehicles.fuelTypes.${fuel}`, fuel)}</option>
                                     ))}
                                 </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
                             </div>
                         </div>
 
-                        <div className="space-y-2 relative z-10">
+                        <div className="space-y-1 relative z-10">
                             <label className="text-[11px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--text-dim)' }}>{t('management.common.modal.branchName', 'Branch')}</label>
                             <div className="relative">
                                 <select
                                     value={filters.branch}
                                     onChange={(e) => handleFilterChange('branch', e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
+                                    className="w-full px-3 py-2 rounded-xl text-sm font-medium outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-2 focus:ring-[#C8E600]/30 hover:shadow-md"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">{t('management.vehicles.filters.allBranches', 'All Branches')}</option>
@@ -363,7 +399,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                         <option key={branch._id} value={branch._id}>{branch.name}</option>
                                     ))}
                                 </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"><ChevronDownIcon /></div>
                             </div>
                         </div>
 
@@ -378,7 +414,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                     fuelType: '',
                                     page: 1
                                 })}
-                                className="w-full py-3.5 rounded-2xl text-sm font-bold uppercase tracking-wide transition-all duration-300 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
+                                className="w-full py-2 rounded-xl text-sm font-bold uppercase tracking-wide transition-all duration-300 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
                                 {t('management.common.resetFilters', 'Clear All Filters')}
@@ -419,32 +455,32 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                         <table className="w-full text-left border-collapse whitespace-nowrap">
                             <thead>
                                 <tr className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.make')}>
+                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('basicDetails.make')}>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.vehicles.table.vehicle', 'Vehicle Details')} <SortIcon field="basicDetails.make" />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.fleetNumber')}>
+                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('basicDetails.fleetNumber')}>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Fleet & Staff <SortIcon field="basicDetails.fleetNumber" />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('basicDetails.vin')}>
+                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('basicDetails.vin')}>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('management.vehicles.table.vin', 'Plate No / Reg')} <SortIcon field="basicDetails.vin" />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4">
+                                    <th className="px-4 py-2.5">
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             Specs
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('status')}>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             {t('common.status', 'Status')} <SortIcon field="status" />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>
+                                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>
                                         {t('management.vehicles.table.price', 'Value')}
                                     </th>
                                 </tr>
@@ -461,17 +497,17 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm" 
+                                            <td className="px-4 py-2.5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm" 
                                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                                        <Car size={24} style={{ color: v.basicDetails?.colour?.toLowerCase() || 'var(--text-dim)' }} />
+                                                        <Car size={20} style={{ color: v.basicDetails?.colour?.toLowerCase() || 'var(--text-dim)' }} />
                                                     </div>
                                                     <div>
                                                         <div className="text-sm font-black tracking-wide" style={{ color: 'var(--text-main)' }}>
                                                             {v.basicDetails?.make || 'Unknown'} {v.basicDetails?.model || ''}
                                                         </div>
-                                                        <div className="text-xs font-medium mt-1.5 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                                        <div className="text-xs font-medium mt-1 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
                                                             <span className="px-2 py-0.5 rounded-md border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                                                 {v.basicDetails?.year || 'N/A'}
                                                             </span>
@@ -483,49 +519,46 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                                 </div>
                                             </td>
                                             
-                                            <td className="px-6 py-5">
+                                            <td className="px-4 py-2.5">
                                                 <div className="text-sm font-mono font-black" style={{ color: '#C8E600' }}>
                                                     {v.basicDetails?.fleetNumber || 'UNASSIGNED'}
                                                 </div>
-                                                <div className="text-xs font-semibold mt-1.5 opacity-80" style={{ color: 'var(--text-dim)' }}>
+                                                <div className="text-xs font-semibold mt-1 opacity-80" style={{ color: 'var(--text-dim)' }}>
                                                     {v.handlingStaff ? (typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`) : 'No Staff'}
                                                 </div>
                                             </td>
                                             
-                                            <td className="px-6 py-5">
+                                            <td className="px-4 py-2.5">
                                                 <div className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
                                                     {v.basicDetails?.vin || 'NO PLATE NO'}
                                                 </div>
-                                                {/* <div className="text-xs mt-1.5 font-bold tracking-widest uppercase opacity-70" style={{ color: 'var(--text-main)' }}>
-                                                    {v.legalDocs?.registrationNumber || 'UNREGISTERED'}
-                                                </div> */}
                                             </td>
                                             
-                                            <td className="px-6 py-5">
+                                            <td className="px-4 py-2.5">
                                                 <div className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
                                                     {v.basicDetails?.category || 'General'}
                                                 </div>
-                                                <div className="text-xs mt-1.5 flex items-center gap-1.5 font-medium" style={{ color: 'var(--text-dim)' }}>
+                                                <div className="text-xs mt-1 flex items-center gap-1.5 font-medium" style={{ color: 'var(--text-dim)' }}>
                                                     {v.basicDetails?.fuelType || 'N/A'} <span className="opacity-50">•</span> {v.basicDetails?.transmission || 'N/A'}
                                                 </div>
                                             </td>
                                             
-                                            <td className="px-6 py-5">
+                                            <td className="px-4 py-2.5">
                                                 <StatusBadge status={v.status} />
                                             </td>
                                             
-                                            <td className="px-6 py-5 text-right">
+                                            <td className="px-4 py-2.5 text-right">
                                                 <div className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
                                                     {v.purchaseDetails?.currency || "AED"} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
                                                 </div>
-                                                <div className="mt-2 flex justify-end">
+                                                <div className="mt-1 flex justify-end">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); navigate(detailPath, { state: { from: location.pathname } }); }}
-                                                        className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
+                                                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
                                                         style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
                                                         title="View Details"
                                                     >
-                                                        <Eye size={14} strokeWidth={2.5} />
+                                                        <Eye size={12} strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -540,43 +573,69 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                 {/* Modern Pagination Footer */}
                 {!loading && vehicles.length > 0 && pagination && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing {vehicles.length} of {pagination.total} vehicles
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => handlePageChange(filters.page - 1)}
-                                disabled={filters.page === 1 || loading}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <div className="flex items-center gap-1">
-                                {[...Array(pagination.totalPages)].map((_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        onClick={() => handlePageChange(i + 1)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${filters.page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                        style={{ 
-                                            background: filters.page === i + 1 ? 'var(--brand-lime)' : 'transparent',
-                                            color: filters.page === i + 1 ? '#000' : 'var(--text-main)',
-                                            border: filters.page === i + 1 ? 'none' : '1px solid var(--border-main)'
-                                        }}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+                        <div className="flex flex-wrap items-center gap-4">
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                Showing {vehicles.length} of {pagination.total} vehicles
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Rows per page:</span>
+                                <select
+                                    value={filters.limit}
+                                    onChange={(e) => handleFilterChange('limit', Number(e.target.value))}
+                                    className="px-2 py-1 rounded bg-[var(--bg-input)] border border-[var(--border-main)] text-xs font-bold outline-none cursor-pointer focus:ring-1 focus:ring-lime"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    {[25, 50, 100].map(val => (
+                                        <option key={val} value={val} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{val}</option>
+                                    ))}
+                                </select>
                             </div>
-                            <button
-                                onClick={() => handlePageChange(filters.page + 1)}
-                                disabled={filters.page === pagination.totalPages || loading}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronRight size={18} />
-                            </button>
                         </div>
+                        {pagination.totalPages > 1 && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(filters.page - 1)}
+                                    disabled={filters.page === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={p}
+                                                onClick={() => handlePageChange(Number(p))}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${filters.page === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: filters.page === p ? 'var(--brand-lime)' : 'transparent',
+                                                    color: filters.page === p ? '#000' : 'var(--text-main)',
+                                                    border: filters.page === p ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => handlePageChange(filters.page + 1)}
+                                    disabled={filters.page === pagination.totalPages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

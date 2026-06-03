@@ -780,7 +780,8 @@
         "Pickup": "Pickup",
         "Van": "Camioneta",
         "Luxury": "Lujo",
-        "Commercial": "Comercial"
+        "Commercial": "Comercial",
+        "MUV": "MUV"
       },
       "fuelTypes": {
         "Petrol": "Gasolina",
@@ -1028,7 +1029,7 @@
       "title": "Gestión de Conductores",
       "subtitle": "Monitorear y gestionar las solicitudes de incorporación de conductores",
       "newBtn": "Nueva Solicitud",
-      "searchPlaceholder": "Buscar por nombre o correo...",
+      "searchPlaceholder": "Buscar por nombre, número de licencia, estado o ID...",
       "filters": {
         "status": "Estado de Incorporación",
         "branch": "Sucursal Asignada",

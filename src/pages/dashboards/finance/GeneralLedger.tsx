@@ -26,6 +26,7 @@ const GeneralLedger = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
+    const [summaryStats, setSummaryStats] = useState({ totalDebit: 0, totalCredit: 0 });
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const location = useLocation();
@@ -82,6 +83,11 @@ const GeneralLedger = () => {
             if (ledgerResponse.pagination) {
                 setPagination(ledgerResponse.pagination);
             }
+            if (ledgerResponse.summary) {
+                setSummaryStats(ledgerResponse.summary);
+            } else {
+                setSummaryStats({ totalDebit: 0, totalCredit: 0 });
+            }
             setAccountingCodes(Array.isArray(codesData) ? codesData : []);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch ledger entries');
@@ -109,15 +115,8 @@ const GeneralLedger = () => {
     }, [location.search, canCreateEntry, navigate, location.pathname]);
 
     // Derived statistics
-    const totalDebit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
-        return sum + (entry.debit || 0);
-    }, 0);
-
-    const totalCredit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'CREDIT') return sum + entry.amount;
-        return sum + (entry.credit || 0);
-    }, 0);
+    const totalDebit = summaryStats.totalDebit;
+    const totalCredit = summaryStats.totalCredit;
 
     const handleInvoiceClick = async (invoiceNumber: string) => {
         try {
@@ -381,11 +380,11 @@ const GeneralLedger = () => {
             {/* Quick Stats Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Total Debit (Displayed)</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Total Debit</p>
                     <h3 className="text-2xl font-bold text-red-400">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
                 <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Total Credit (Displayed)</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Total Credit</p>
                     <h3 className="text-2xl font-bold text-green-400">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                 </div>
                 <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>

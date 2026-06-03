@@ -32,7 +32,43 @@ const DriverList = () => {
     // Pagination State
     const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [limit] = useState(10);
+    const [limit, setLimit] = useState(25);
+
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        const page = currentPage;
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) {
+            end = 4;
+        }
+        if (page >= totalPages - 2) {
+            start = totalPages - 3;
+        }
+
+        if (start > 2) {
+            pages.push('...');
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+
+        pages.push(totalPages);
+        return pages;
+    };
 
     const formatDriverDate = (date?: string | null): string => {
         if (!date) return 'N/A';
@@ -49,7 +85,7 @@ const DriverList = () => {
             fetchDrivers();
         }, searchTerm ? 500 : 0);
         return () => clearTimeout(timer);
-    }, [currentPage, statusFilter, branchFilter, startDate, endDate, sortBy, sortOrder, searchTerm]);
+    }, [currentPage, limit, statusFilter, branchFilter, startDate, endDate, sortBy, sortOrder, searchTerm]);
 
     useEffect(() => {
         const fetchBranchesData = async () => {
@@ -202,14 +238,14 @@ const DriverList = () => {
             </div>
 
             {/* Toolbar / Filters */}
-            <div className="p-6 rounded-2xl border mb-8 space-y-4 transition-colors shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="p-4 rounded-xl border mb-6 space-y-3 transition-colors shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Search Bar */}
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={20} style={{ color: 'var(--text-dim)' }} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" size={16} style={{ color: 'var(--text-dim)' }} />
                     <input
                         type="text"
                         placeholder={t('management.drivers.searchPlaceholder')}
-                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
+                        className="w-full pl-10 pr-4 py-2 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-bold shadow-sm"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         value={searchTerm}
                         onChange={(e) => {
@@ -221,13 +257,13 @@ const DriverList = () => {
 
                 {/* Advanced Filters */}
                 {showAdvancedFilters && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t transition-all animate-in slide-in-from-top-2 duration-300" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t transition-all animate-in slide-in-from-top-2 duration-300" style={{ borderColor: 'var(--border-main)' }}>
                         <div>
                             <FilterLabel label={t('management.drivers.filters.status')} />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                className="w-full px-3 py-2 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="ALL">{t('management.drivers.filters.allStatuses')}</option>
@@ -241,7 +277,7 @@ const DriverList = () => {
                             <select
                                 value={branchFilter}
                                 onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                className="w-full px-3 py-2 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="ALL">All Branches</option>
@@ -256,7 +292,7 @@ const DriverList = () => {
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                className="w-full px-3 py-2 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />
                         </div>
@@ -266,7 +302,7 @@ const DriverList = () => {
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                className="w-full px-3 py-2 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />
                         </div>
@@ -280,30 +316,30 @@ const DriverList = () => {
                     <table className="w-full text-left border-collapse">
                         <thead className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <tr>
-                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('personalInfo.fullName')}>
+                                <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('personalInfo.fullName')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                         {t('management.drivers.table.driver')} <SortIcon field="personalInfo.fullName" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('driverId')}>
+                                <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('driverId')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                         ID <SortIcon field="driverId" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('status')}>
+                                <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('status')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                         {t('common.status')} <SortIcon field="status" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4">
+                                <th className="px-4 py-2.5">
                                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.license')}</span>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer group" onClick={() => handleSort('createdAt')}>
+                                <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('createdAt')}>
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                         {t('management.drivers.table.applied')} <SortIcon field="createdAt" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
+                                <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>{t('common.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
@@ -332,45 +368,45 @@ const DriverList = () => {
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         onClick={() => navigate(driver._id)}
                                     >
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-2.5">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all group-hover:scale-110" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all group-hover:scale-110" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                     {(driver.personalInfo?.fullName?.[0] || 'D')}
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold transition-colors" style={{ color: 'var(--text-main)' }}>
+                                                    <div className="font-semibold text-sm transition-colors" style={{ color: 'var(--text-main)' }}>
                                                         {driver.personalInfo?.fullName}
                                                     </div>
                                                     <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{driver.personalInfo?.email}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-2.5">
                                             <div className="font-mono text-xs font-bold" style={{ color: 'var(--brand-lime)' }}>
                                                 {driver.driverId || '—'}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(driver.status)}`}>
+                                        <td className="px-4 py-2.5">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(driver.status)}`}>
                                                 {t(`management.drivers.statusLabels.${driver.status}`)}
                                             </span>
                                         </td>
-                                         <td className="px-6 py-4">
-                                             <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                                                 <FileText size={14} />
+                                         <td className="px-4 py-2.5">
+                                             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                 <FileText size={12} />
                                                  {driver.drivingLicense?.licenseNumber || 'N/A'}
                                              </div>
                                              <div className="text-[10px] uppercase tracking-wider font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.drivers.table.expiry')}: {formatDriverDate(driver.drivingLicense?.expiryDate)}</div>
                                          </td>
-                                         <td className="px-6 py-4">
-                                             <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                                                 <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
+                                         <td className="px-4 py-2.5">
+                                             <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                                                 <Calendar size={12} style={{ color: 'var(--text-dim)' }} />
                                                  {formatDriverDate(driver.appliedAt || driver.createdAt)}
                                              </div>
                                          </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 rounded-lg transition-all" style={{ color: 'var(--text-dim)' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-dim)'}>
-                                                <ChevronRight size={20} />
+                                        <td className="px-4 py-2.5 text-right">
+                                            <button className="p-1 rounded-lg transition-all" style={{ color: 'var(--text-dim)' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-dim)'}>
+                                                <ChevronRight size={18} />
                                             </button>
                                         </td>
                                     </tr>
@@ -381,45 +417,74 @@ const DriverList = () => {
                 </div>
 
                 {/* Pagination */}
-                {pagination && pagination.totalPages > 1 && (
+                {pagination && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            {t('management.drivers.pagination.showing', { count: drivers.length, total: pagination.total })}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1 || loading}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <div className="flex items-center gap-1">
-                                {[...Array(pagination.totalPages)].map((_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        onClick={() => handlePageChange(i + 1)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${currentPage === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                        style={{ 
-                                            background: currentPage === i + 1 ? 'var(--brand-lime)' : 'transparent',
-                                            color: currentPage === i + 1 ? '#000' : 'var(--text-main)',
-                                            border: currentPage === i + 1 ? 'none' : '1px solid var(--border-main)'
-                                        }}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+                        <div className="flex flex-wrap items-center gap-4">
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                {t('management.drivers.pagination.showing', { count: drivers.length, total: pagination.total })}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Rows per page:</span>
+                                <select
+                                    value={limit}
+                                    onChange={(e) => {
+                                        setLimit(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2 py-1 rounded bg-[var(--bg-input)] border border-[var(--border-main)] text-xs font-bold outline-none cursor-pointer focus:ring-1 focus:ring-lime"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    {[25, 50, 100].map(val => (
+                                        <option key={val} value={val} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{val}</option>
+                                    ))}
+                                </select>
                             </div>
-                            <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === pagination.totalPages || loading}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <ChevronRight size={18} />
-                            </button>
                         </div>
+                        {pagination.totalPages > 1 && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={p}
+                                                onClick={() => handlePageChange(Number(p))}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${currentPage === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: currentPage === p ? 'var(--brand-lime)' : 'transparent',
+                                                    color: currentPage === p ? '#000' : 'var(--text-main)',
+                                                    border: currentPage === p ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === pagination.totalPages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

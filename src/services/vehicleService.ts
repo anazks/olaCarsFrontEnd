@@ -20,7 +20,7 @@ export type VehicleStatus =
     | 'RETIRED';
 
 export type PaymentMethod = 'Cash' | 'Bank Transfer' | 'Finance';
-export type VehicleCategory = 'Sedan' | 'SUV' | 'Pickup' | 'Van' | 'Luxury' | 'Commercial';
+export type VehicleCategory = 'Sedan' | 'SUV' | 'Pickup' | 'Van' | 'Luxury' | 'Commercial' | 'MUV';
 export type FuelType = 'Petrol' | 'Diesel' | 'Hybrid' | 'Electric';
 export type Transmission = 'Automatic' | 'Manual';
 export type BodyType = 'Hatchback' | 'Saloon' | 'Coupe' | 'Convertible' | 'Truck';

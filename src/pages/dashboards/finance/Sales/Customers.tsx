@@ -34,6 +34,41 @@ const Customers = () => {
     const [limit] = useState(25);
     const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
 
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) {
+            end = 4;
+        }
+        if (page >= totalPages - 2) {
+            start = totalPages - 3;
+        }
+
+        if (start > 2) {
+            pages.push('...');
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+
+        pages.push(totalPages);
+        return pages;
+    };
+
     // Debounce Search
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -383,19 +418,21 @@ const Customers = () => {
                                     <ChevronLeft size={18} />
                                 </button>
                                 <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                        let pageNum: number;
-                                        if (pagination.totalPages <= 5) pageNum = i + 1;
-                                        else if (page <= 3) pageNum = i + 1;
-                                        else if (page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
-                                        else pageNum = page - 2 + i;
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pageNum}
-                                                onClick={() => setPage(pageNum)}
-                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'bg-brand-lime text-black shadow-lg scale-110' : 'text-dim hover:bg-white/5 border border-white/5'}`}
+                                                key={p}
+                                                onClick={() => setPage(Number(p))}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === p ? 'bg-brand-lime text-black shadow-lg scale-110' : 'text-dim hover:bg-white/5 border border-white/5'}`}
                                             >
-                                                {pageNum}
+                                                {p}
                                             </button>
                                         );
                                     })}

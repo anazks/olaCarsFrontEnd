@@ -782,7 +782,8 @@
         "Pickup": "Pickup",
         "Van": "Van",
         "Luxury": "Luxury",
-        "Commercial": "Commercial"
+        "Commercial": "Commercial",
+        "MUV": "MUV"
       },
       "fuelTypes": {
         "Petrol": "Petrol",
@@ -1027,7 +1028,7 @@
       "title": "Driver Management",
       "subtitle": "Monitor and manage driver onboarding applications",
       "newBtn": "New Application",
-      "searchPlaceholder": "Search by name or email...",
+      "searchPlaceholder": "Search by name, license number, status or ID...",
       "filters": {
         "status": "Onboarding Status",
         "branch": "Assigned Branch",

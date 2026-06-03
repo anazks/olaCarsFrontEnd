@@ -59,12 +59,23 @@ export interface CreateJournalPayload {
     lines: JournalLine[];
 }
 
-export const getLedgerEntries = async (filters: Record<string, any> = {}): Promise<{ data: LedgerEntry[], pagination?: any }> => {
+export interface LedgerEntriesResponse {
+    data: LedgerEntry[];
+    summary?: {
+        totalDebit: number;
+        totalCredit: number;
+        netMovement: number;
+    };
+    pagination?: any;
+}
+
+export const getLedgerEntries = async (filters: Record<string, any> = {}): Promise<LedgerEntriesResponse> => {
     const params = new URLSearchParams(filters).toString();
     const url = `/api/ledger${params ? `?${params}` : ''}`;
     const response = await api.get(url);
     return {
         data: response.data.data,
+        summary: response.data.summary,
         pagination: response.data.pagination
     };
 };

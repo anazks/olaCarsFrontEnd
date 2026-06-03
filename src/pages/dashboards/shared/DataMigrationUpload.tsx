@@ -22,7 +22,47 @@ interface ParsedRow {
     weeklyRent?: string | number; durationWeeks?: string | number;
     remarks?: string;
     _rowErrors: string[];
+    migrationStatus?: 'MIGRATED' | 'FAILED';
+    serverError?: string;
+    driverId?: string;
 }
+
+const detectDuplicates = (rows: ParsedRow[]) => {
+    const vins = new Map<string, number[]>();
+    const regs = new Map<string, number[]>();
+
+    rows.forEach((row, idx) => {
+        const vin = String(row.vehicleVin || '').trim().toUpperCase();
+        if (vin) {
+            if (!vins.has(vin)) vins.set(vin, []);
+            vins.get(vin)!.push(idx);
+        }
+
+        const reg = String(row.vehicleNumber || '').trim().toUpperCase();
+        if (reg) {
+            if (!regs.has(reg)) regs.set(reg, []);
+            regs.get(reg)!.push(idx);
+        }
+    });
+
+    vins.forEach((indices, vin) => {
+        if (indices.length > 1) {
+            indices.forEach(idx => {
+                const otherRows = indices.map(i => i + 1).filter(r => r !== idx + 1);
+                rows[idx]._rowErrors.push(`Duplicate VIN '${vin}' in this file (also on row(s) ${otherRows.join(', ')})`);
+            });
+        }
+    });
+
+    regs.forEach((indices, reg) => {
+        if (indices.length > 1) {
+            indices.forEach(idx => {
+                const otherRows = indices.map(i => i + 1).filter(r => r !== idx + 1);
+                rows[idx]._rowErrors.push(`Duplicate Vehicle Number '${reg}' in this file (also on row(s) ${otherRows.join(', ')})`);
+            });
+        }
+    });
+};
 
 interface Props { isOpen: boolean; onClose: () => void; onSuccess: () => void; }
 
@@ -243,6 +283,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     const wb = XLSX.read(data, { type: 'array' });
                     const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
                     const rows: ParsedRow[] = (json as any[]).map(r => ({ ...r, _rowErrors: validateRow(r) }));
+                    detectDuplicates(rows);
                     setParsedRows(rows);
                     rows.length === 0 ? toast.error('No data rows found.') : toast.success(`Parsed ${rows.length} row(s)`);
                 } catch { toast.error('Failed to parse Excel file.'); }
@@ -254,6 +295,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                 transformHeader: (h: string) => h.trim(),
                 complete: (results) => {
                     const rows: ParsedRow[] = (results.data as any[]).map(r => ({ ...r, _rowErrors: validateRow(r) }));
+                    detectDuplicates(rows);
                     setParsedRows(rows);
                     rows.length === 0 ? toast.error('No data rows found.') : toast.success(`Parsed ${rows.length} row(s)`);
                 },
@@ -312,8 +354,9 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                 return undefined;
             };
 
-            const payload = valid.map(({ _rowErrors, ...rest }) => ({
+            const payload = valid.map(({ _rowErrors, migrationStatus, serverError, driverId, ...rest }, index) => ({
                 ...rest,
+                originalRow: parsedRows.indexOf(valid[index]) + 1,
                 activationDate: normalizeDate(rest.activationDate),
                 deactivationDate: normalizeDate(rest.deactivationDate),
                 dateOfBirth: normalizeDate(rest.dateOfBirth),
@@ -322,6 +365,37 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
             const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
+            
+            // Map successes and errors
+            const createdMap = new Map<number, any>();
+            if (res.data?.created) {
+                res.data.created.forEach((c: any) => createdMap.set(c.row, c));
+            }
+            const errorMap = new Map<number, string>();
+            if (res.data?.errors) {
+                res.data.errors.forEach((e: any) => errorMap.set(e.row, e.message));
+            }
+
+            const updatedRows = parsedRows.map((row, index) => {
+                const rowNum = index + 1;
+                if (createdMap.has(rowNum)) {
+                    const cInfo = createdMap.get(rowNum);
+                    return {
+                        ...row,
+                        migrationStatus: 'MIGRATED' as const,
+                        driverId: cInfo.driverId,
+                        serverError: undefined
+                    };
+                } else if (errorMap.has(rowNum)) {
+                    return {
+                        ...row,
+                        migrationStatus: 'FAILED' as const,
+                        serverError: errorMap.get(rowNum)
+                    };
+                }
+                return row;
+            });
+            setParsedRows(updatedRows);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) onSuccess();
@@ -337,15 +411,45 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     fleetInputRef.current?.focus();
                 }, 100);
             } else {
+                const resData = err?.response?.data?.data;
+                if (resData) {
+                    const createdMap = new Map<number, any>();
+                    if (resData.created) {
+                        resData.created.forEach((c: any) => createdMap.set(c.row, c));
+                    }
+                    const errorMap = new Map<number, string>();
+                    if (resData.errors) {
+                        resData.errors.forEach((e: any) => errorMap.set(e.row, e.message));
+                    }
+
+                    const updatedRows = parsedRows.map((row, index) => {
+                        const rowNum = index + 1;
+                        if (createdMap.has(rowNum)) {
+                            const cInfo = createdMap.get(rowNum);
+                            return {
+                                ...row,
+                                migrationStatus: 'MIGRATED' as const,
+                                driverId: cInfo.driverId,
+                                serverError: undefined
+                            };
+                        } else if (errorMap.has(rowNum)) {
+                            return {
+                                ...row,
+                                migrationStatus: 'FAILED' as const,
+                                serverError: errorMap.get(rowNum)
+                            };
+                        }
+                        return row;
+                    });
+                    setParsedRows(updatedRows);
+                    setResult(resData);
+                }
+
                 const rowErrors = err?.response?.data?.data?.errors;
                 if (rowErrors && rowErrors.length > 0) {
                     toast.error(`Row ${rowErrors[0].row}: ${rowErrors[0].message}`);
                 } else {
                     toast.error(serverMsg || 'Data migration failed.');
-                }
-                
-                if (err?.response?.data?.data) {
-                    setResult(err.response.data.data);
                 }
             }
         } finally { setUploading(false); }
@@ -614,7 +718,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     )}
 
                     {/* Preview Table */}
-                    {parsedRows.length > 0 && !result && (
+                    {parsedRows.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -635,7 +739,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                             <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="overflow-x-auto max-h-[300px]">
                                     <table className="w-full text-left text-xs border-collapse">
-                                        <thead className="sticky top-0" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
+                                        <thead className="sticky top-0" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)', zIndex: 1 }}>
                                             <tr>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>#</th>
                                                 {MIGRATION_COLUMNS.map(key => (
@@ -650,7 +754,14 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                         <tbody>
                                             {parsedRows.map((row, i) => (
                                                 <Fragment key={i}>
-                                                    <tr style={{ borderBottom: row._rowErrors.length > 0 ? 'none' : '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                                                    <tr style={{ 
+                                                        borderBottom: (row._rowErrors.length > 0 || row.serverError) ? 'none' : '1px solid var(--border-main)', 
+                                                        background: (row._rowErrors.length > 0 || row.migrationStatus === 'FAILED') 
+                                                            ? 'rgba(239,68,68,0.04)' 
+                                                            : row.migrationStatus === 'MIGRATED' 
+                                                                ? 'rgba(34,197,94,0.04)' 
+                                                                : 'transparent' 
+                                                    }}>
                                                         <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
                                                         {MIGRATION_COLUMNS.map(key => {
                                                                 let val = row[key as keyof ParsedRow];
@@ -670,37 +781,53 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                                                     </td>
                                                                 );
                                                             })}
-                                                        <td className="px-3 py-2">
-                                                            {row._rowErrors.length === 0
-                                                                ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
-                                                                : (
-                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
-                                                                        {row._rowErrors.length} error(s)
-                                                                    </span>
-                                                                )
-                                                            }
+                                                        <td className="px-3 py-2 whitespace-nowrap">
+                                                            {row.migrationStatus === 'MIGRATED' ? (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                                                                    MIGRATED {row.driverId ? `(${row.driverId})` : ''}
+                                                                </span>
+                                                            ) : row.migrationStatus === 'FAILED' ? (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                                                    FAILED
+                                                                </span>
+                                                            ) : row._rowErrors.length === 0 ? (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                                                    {row._rowErrors.length} error(s)
+                                                                </span>
+                                                            )}
                                                         </td>
                                                         <td className="px-3 py-2 text-center">
-                                                            <button 
-                                                                onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
-                                                                className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
-                                                                title="Remove Entry"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            {!result ? (
+                                                                <button 
+                                                                    onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
+                                                                    className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
+                                                                    title="Remove Entry"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-xs" style={{ color: 'var(--text-dim)' }}>—</span>
+                                                            )}
                                                         </td>
                                                     </tr>
-                                                    {row._rowErrors.length > 0 && (
+                                                    {(row._rowErrors.length > 0 || row.serverError) && (
                                                         <tr style={{ borderBottom: '1px solid var(--border-main)', background: 'rgba(239,68,68,0.04)' }}>
                                                             <td colSpan={MIGRATION_COLUMNS.length + 3} className="px-4 py-2 pt-0 pb-3">
                                                                 <div className="flex items-start gap-2 p-2.5 rounded-lg border border-red-500/20 bg-red-500/5">
                                                                     <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-                                                                    <div className="flex flex-col gap-1">
+                                                                    <div className="flex flex-col gap-1 text-left">
                                                                         {row._rowErrors.map((err, errIdx) => (
                                                                             <span key={errIdx} className="text-[11px] font-medium text-red-400">
                                                                                 • {err}
                                                                             </span>
                                                                         ))}
+                                                                        {row.serverError && (
+                                                                            <span className="text-[11px] font-bold text-red-400">
+                                                                                • Server Error: {row.serverError}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </td>
