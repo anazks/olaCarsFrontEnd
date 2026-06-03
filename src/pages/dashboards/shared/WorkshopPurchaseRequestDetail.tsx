@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     getWorkshopProcurementRequestById, 
@@ -14,7 +14,7 @@ import { getDecodedToken, getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
-    const styles = {
+    const styles: Record<ProcurementRequest['status'], { bg: string; text: string; border: string; icon: ReactNode }> = {
         PENDING: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
@@ -448,7 +448,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                         color: 'var(--text-main)',
                                         height: '100px'
                                     }}
-                                    required={actionType === 'REJECT'}
+                                    required={actionType === 'REJECT' || undefined}
                                 />
                             </div>
                         </div>

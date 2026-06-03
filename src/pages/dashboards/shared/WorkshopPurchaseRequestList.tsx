@@ -6,7 +6,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
-    const styles = {
+    const styles: Record<ProcurementRequest['status'], { bg: string; text: string; border: string }> = {
         PENDING: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
