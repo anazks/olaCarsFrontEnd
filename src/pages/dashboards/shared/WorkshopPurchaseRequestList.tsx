@@ -31,13 +31,18 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(59, 130, 246, 0.1)',
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
+        },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(236, 72, 153, 0.1)',
+            text: '#ec4899',
+            border: 'rgba(236, 72, 153, 0.3)',
         }
     };
     const style = styles[status] || styles.APPROVED;
     return (
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-tighter w-fit"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status}
+            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status}
         </div>
     );
 };
@@ -210,6 +215,7 @@ const WorkshopPurchaseRequestList = () => {
                                 <option value="PENDING">Pending (Manager)</option>
                                 <option value="PENDING_FINANCE_APPROVAL">Pending (Finance)</option>
                                 <option value="APPROVED">Approved</option>
+                                <option value="PENDING_FINANCE_APPROVAL">Pending Finance</option>
                                 <option value="REJECTED">Rejected</option>
                                 <option value="CONVERTED_TO_PO">Converted</option>
                             </select>

@@ -37,6 +37,12 @@ export interface ProcurementRequest {
     rejectionReason?: string;
     supplier?: ProcurementRequestSupplier;
     notes?: string;
+    merchandiserPrice?: number;
+    merchandiserTotalAmount?: number;
+    originalTotalAmount?: number;
+    documents?: string[];
+    rejectionNote?: string;
+    approvalNote?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -56,7 +62,7 @@ export interface PaginatedResponse<T> {
 export interface ProcurementRequestFilters {
     page?: number;
     limit?: number;
-    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO';
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'PENDING_FINANCE_APPROVAL';
     branch?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';

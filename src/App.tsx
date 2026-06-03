@@ -39,6 +39,7 @@ import ManageFinanceStaff from './pages/dashboards/shared/ManageFinanceStaff';
 import ManageOperationStaff from './pages/dashboards/shared/ManageOperationStaff';
 import ManageWorkshopManagers from './pages/dashboards/shared/ManageWorkshopManagers';
 import ManageWorkshopStaff from './pages/dashboards/shared/ManageWorkshopStaff';
+import ManageMerchendisers from './pages/dashboards/shared/ManageMerchendisers';
 import ManageSuppliers from './pages/dashboards/shared/ManageSuppliers';
 import SupplierDetail from './pages/dashboards/shared/SupplierDetail';
 import Reports from './pages/dashboards/shared/Reports';
@@ -114,6 +115,8 @@ import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 import ManualJournals from './pages/dashboards/finance/ManualJournals';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
 import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
+import FinancialAdminScraps from './pages/dashboards/financialAdmin/FinancialAdminScraps';
+import FinancialAdminWriteOffs from './pages/dashboards/financialAdmin/FinancialAdminWriteOffs';
 
 // Sales Pages
 import Customers from './pages/dashboards/finance/Sales/Customers';
@@ -195,6 +198,7 @@ function App() {
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
                 <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
                 <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
+                <Route path="manage-merchendisers" element={<ManageMerchendisers />} />
               </Route>
 
               {/* Branch / Supplier Management */}
@@ -309,6 +313,7 @@ function App() {
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
                 <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
                 <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
+                <Route path="manage-merchendisers" element={<ManageMerchendisers />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="BRANCH_VIEW" />}>
@@ -486,6 +491,8 @@ function App() {
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
               <Route path="payment-requests" element={<FinancialAdminPaymentRequests />} />
+              <Route path="scraps" element={<FinancialAdminScraps />} />
+              <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
             </Route>
           </Route>
 
@@ -503,6 +510,7 @@ function App() {
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
                 <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
                 <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
+                <Route path="manage-merchendisers" element={<ManageMerchendisers />} />
               </Route>
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>
                 <Route path="manage-suppliers" element={<ManageSuppliers />} />
@@ -579,6 +587,7 @@ function App() {
                 <Route path="manage-operation-staff" element={<ManageOperationStaff />} />
                 <Route path="manage-workshop-managers" element={<ManageWorkshopManagers />} />
                 <Route path="manage-workshop-staff" element={<ManageWorkshopStaff />} />
+                <Route path="manage-merchendisers" element={<ManageMerchendisers />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredPermission="SUPPLIER_VIEW" />}>

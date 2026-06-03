@@ -48,6 +48,12 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
             text: '#64748b',
             border: 'rgba(100, 116, 139, 0.3)',
             icon: <Trash2 size={12} />
+        },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(236, 72, 153, 0.1)',
+            text: '#ec4899',
+            border: 'rgba(236, 72, 153, 0.3)',
+            icon: <Clock size={12} />
         }
     };
 
@@ -281,6 +287,7 @@ const PurchaseOrderList = () => {
                                 <option value="REQUESTED">Requested</option>
                                 <option value="MANAGER_APPROVED">Manager Approved</option>
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>
+                                <option value="PENDING_FINANCE_APPROVAL">Pending Finance Approval</option>
                                 <option value="APPROVED">{t('management.common.status.approved')}</option>
                                 <option value="REJECTED">{t('management.common.status.rejected')}</option>
                                 <option value="DISPOSED">Disposed</option>
@@ -521,7 +528,7 @@ const PurchaseOrderList = () => {
                                         </td>
                                         <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
                                             <div className="flex justify-center gap-2">
-                                                {po.status === 'WAITING' && po.createdBy !== currentUserId && (
+                                                {(po.status === 'WAITING' || po.status === 'PENDING_FINANCE_APPROVAL') && po.createdBy !== currentUserId && (
                                                     <HasPermission permission="PURCHASE_ORDER_APPROVE">
                                                         <button
                                                             onClick={(e) => {
