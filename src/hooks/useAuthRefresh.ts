@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { getToken, getDecodedToken, getRefreshToken, setToken, setRefreshToken, setUser } from '../utils/auth';
 import { getProfile, REFRESH_ENDPOINTS } from '../services/authService';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 /**
  * Activity-aware auth refresh hook.
@@ -58,6 +59,7 @@ export const performTokenRefresh = async (): Promise<{ accessToken: string; refr
                 setRefreshToken(newRefreshToken);
             }
 
+            toast.success('Session secured: Token refreshed automatically', { id: 'token-refresh' });
             console.log('[AuthRefresh] ✅ Tokens refreshed successfully');
             return { accessToken, refreshToken: newRefreshToken };
         } catch (error) {

@@ -54,9 +54,15 @@ export const removeToken = (): void => {
 
 import toast from 'react-hot-toast';
 
-export const logout = (): void => {
+export const logout = (reason: 'manual' | 'expired' = 'manual'): void => {
     removeToken();
-    toast.success('Logged out successfully');
+    
+    if (reason === 'expired') {
+        toast.error('Session expired. Please log in again.', { id: 'session-expired' });
+    } else {
+        toast.success('Logged out successfully', { id: 'logout-success' });
+    }
+
     // Use window.location.href for a hard redirect to clear all states
     if (window.location.pathname !== '/admin/login') {
         window.location.href = '/admin/login';

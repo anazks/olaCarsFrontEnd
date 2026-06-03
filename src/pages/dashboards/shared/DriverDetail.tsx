@@ -283,6 +283,43 @@ const DriverDetail = () => {
         }
     };
 
+    const handleUpdatePersonalInfo = async (email: string, phone: string) => {
+        try {
+            setLoading(true);
+            await updateDriver(id!, {
+                personalInfo: {
+                    ...driver?.personalInfo,
+                    email,
+                    phone
+                }
+            });
+            await fetchDriver();
+        } catch (error: any) {
+            console.error('Error updating driver:', error);
+            setActionError(error.response?.data?.message || 'Failed to update personal info');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateLicense = async (licenseNumber: string) => {
+        try {
+            setLoading(true);
+            await updateDriver(id!, {
+                drivingLicense: {
+                    ...driver?.drivingLicense,
+                    licenseNumber
+                }
+            });
+            await fetchDriver();
+        } catch (error: any) {
+            console.error('Error updating license:', error);
+            setActionError(error.response?.data?.message || 'Failed to update license number');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateCreditCheck = async (data: any) => {
         try {
             setLoading(true);
@@ -598,10 +635,23 @@ const DriverDetail = () => {
                                 )}
                             </div>
                         </div>
-                        <p className="flex items-center gap-2 text-base mt-1" style={{ color: 'var(--text-muted)' }}>
+                        <div className="flex items-center gap-2 text-base mt-1" style={{ color: 'var(--text-muted)' }}>
                             <FileText size={14} />
                             License: <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.drivingLicense?.licenseNumber || 'N/A'}</span>
-                        </p>
+                            <HasPermission permission="DRIVER_EDIT">
+                                <button
+                                    onClick={() => {
+                                        const licenseNumber = prompt("Enter License Number", driver.drivingLicense?.licenseNumber || "");
+                                        if (licenseNumber !== null) {
+                                            handleUpdateLicense(licenseNumber);
+                                        }
+                                    }}
+                                    className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline ml-2"
+                                >
+                                    Edit
+                                </button>
+                            </HasPermission>
+                        </div>
                     </div>
                 </div>
 
@@ -703,7 +753,25 @@ const DriverDetail = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
                                 {/* Column 1: Contact & Personal Info */}
                                 <div className="space-y-3 pr-0 md:pr-4 border-r-0 md:border-r border-white/5">
-                                    <div className="text-[11px] font-black uppercase tracking-widest text-brand-lime mb-1">Personal Details</div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="text-[11px] font-black uppercase tracking-widest text-brand-lime">Personal Details</div>
+                                        <HasPermission permission="DRIVER_EDIT">
+                                            <button
+                                                onClick={() => {
+                                                    const email = prompt("Enter Email Address", driver.personalInfo?.email || "");
+                                                    if (email !== null) {
+                                                        const phone = prompt("Enter Phone Number", driver.personalInfo?.phone || "");
+                                                        if (phone !== null) {
+                                                            handleUpdatePersonalInfo(email, phone);
+                                                        }
+                                                    }
+                                                }}
+                                                className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline"
+                                            >
+                                                Edit
+                                            </button>
+                                        </HasPermission>
+                                    </div>
                                     <CompactInfo label="Email Address" value={driver.personalInfo?.email} />
                                     <CompactInfo label="Phone Number" value={driver.personalInfo?.phone} />
                                     <CompactInfo label="WhatsApp" value={driver.personalInfo?.whatsappNumber || 'N/A'} />

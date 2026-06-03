@@ -1,0 +1,402 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { 
+    BookMarked, 
+    ArrowLeft, 
+    List,
+    AlertTriangle,
+    FileText,
+    Receipt,
+    User
+} from 'lucide-react';
+import { getAllAccountingCodes } from '../../../services/accountingService';
+import type { AccountingCode } from '../../../services/accountingService';
+import { getLedgerEntries } from '../../../services/ledgerService';
+import type { LedgerEntry } from '../../../services/ledgerService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+
+const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+    'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
+    'EXPENSE': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' }, // Red
+    'ASSET': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' }, // Blue
+    'LIABILITY': { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: 'rgba(249,115,22,0.3)' }, // Orange
+    'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
+};
+
+const AccountingCodeDetails = () => {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    const [code, setCode] = useState<AccountingCode | null>(null);
+    const [entries, setEntries] = useState<LedgerEntry[]>([]);
+    
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
+
+    const fetchData = useCallback(async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+            // 1. Fetch the accounting code details
+            const allCodes = await getAllAccountingCodes();
+            const foundCode = allCodes.find(c => c._id === id || (c as any).id === id);
+            
+            if (!foundCode) {
+                setError("Accounting code not found.");
+                setLoading(false);
+                return;
+            }
+            setCode(foundCode);
+
+            // 2. Fetch the ledger entries for this code
+            const filters = {
+                accountingCode: id,
+                page,
+                limit
+            };
+            const ledgerRes = await getLedgerEntries(filters);
+            setEntries(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
+            if (ledgerRes.pagination) {
+                setPagination(ledgerRes.pagination);
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch details');
+        } finally {
+            setLoading(false);
+        }
+    }, [id, page, limit]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleInvoiceClick = async (invoiceNumber: string) => {
+        try {
+            const { getInvoices } = await import('../../../services/invoiceService');
+            const response = await getInvoices({ search: invoiceNumber });
+            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            if (response.data && response.data.length > 0) {
+                const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
+                navigate(`${basePath}/invoices/${invoice._id}`);
+            } else {
+                navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
+            }
+        } catch (err) {
+            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
+        }
+    };
+
+    const handleBillClick = async (billNumber: string) => {
+        try {
+            const { getAllBills } = await import('../../../services/billService');
+            const response = await getAllBills({ search: billNumber });
+            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            if (response.success && response.data && response.data.length > 0) {
+                const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
+                navigate(`${basePath}/bills/${bill._id}`);
+            } else {
+                navigate(`${basePath}/bills`, { state: { search: billNumber } });
+            }
+        } catch (err) {
+            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            navigate(`${basePath}/bills`, { state: { search: billNumber } });
+        }
+    };
+
+    const renderDescriptionWithLinks = (description: string) => {
+        if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+
+        const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/i;
+        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+
+        const matchBill = description.match(billRegex);
+        const matchInvoice = description.match(invoiceRegex);
+
+        if (matchBill) {
+            const billNum = matchBill[0];
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleBillClick(billNum); }}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                    >
+                        <Receipt size={11} strokeWidth={2.5} />
+                        View Bill ({billNum})
+                    </button>
+                </div>
+            );
+        }
+
+        if (matchInvoice) {
+            const invNum = matchInvoice[0];
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleInvoiceClick(invNum); }}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                        style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                    >
+                        <FileText size={11} strokeWidth={2.5} />
+                        View Invoice ({invNum})
+                    </button>
+                </div>
+            );
+        }
+
+        return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
+    };
+
+    if (loading && !code) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (error || !code) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+                <AlertTriangle size={48} className="text-red-500" />
+                <h2 className="text-xl font-bold">Error Loading Account</h2>
+                <p className="text-white/60">{error || 'Account not found'}</p>
+                <button onClick={() => navigate(-1)} className="px-4 py-2 mt-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all font-semibold">
+                    Go Back
+                </button>
+            </div>
+        );
+    }
+
+    const style = CATEGORY_STYLES[code.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
+
+    // Derived statistics (calculated locally for this page's view)
+    const totalDebit = entries.reduce((sum, entry) => {
+        if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
+        return sum + (entry.debit || 0);
+    }, 0);
+
+    const totalCredit = entries.reduce((sum, entry) => {
+        if (entry.amount !== undefined && entry.type === 'CREDIT') return sum + entry.amount;
+        return sum + (entry.credit || 0);
+    }, 0);
+
+    return (
+        <div className="container-responsive space-y-6 pb-20 animate-fade-in">
+            <Breadcrumbs 
+                items={[
+                    { label: 'Finance', path: '../../finance-dashboard' },
+                    { label: 'Chart of Accounts', path: '../chart-of-accounts' },
+                    { label: code.code, active: true }
+                ]} 
+            />
+
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
+                <div>
+                    <button 
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
+                        style={{ color: 'var(--brand-lime)' }}
+                    >
+                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Accounts
+                    </button>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                            <BookMarked size={28} style={{ color: 'var(--brand-lime)' }} />
+                            {code.name}
+                        </h1>
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
+                            {code.category}
+                        </span>
+                    </div>
+                    <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
+                </div>
+                
+                {/* Stats */}
+                <div className="flex items-center gap-6 mt-4 sm:mt-0">
+                    <div className="text-right">
+                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Debit</div>
+                        <div className="text-xl font-mono font-bold text-red-400">
+                            {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Credit</div>
+                        <div className="text-xl font-mono font-bold text-green-400">
+                            {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+                    <div className="text-right pl-6 border-l border-white/10">
+                        <div className="text-[10px] uppercase tracking-widest font-bold text-brand-lime mb-1" style={{ color: 'var(--brand-lime)' }}>Net Movement</div>
+                        <div className="text-xl font-mono font-black" style={{ color: 'var(--text-main)' }}>
+                            {Math.abs(totalCredit - totalDebit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            <span className="text-xs font-normal ml-1 text-white/40">
+                                {totalCredit > totalDebit ? '(Cr)' : totalCredit < totalDebit ? '(Dr)' : ''}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-2xl border bg-card overflow-hidden transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="p-4 border-b border-white/5 flex items-center gap-2">
+                    <List size={18} className="text-white/50" />
+                    <h3 className="font-bold text-sm tracking-wide text-white/80">Account Transactions</h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    ) : entries.length === 0 ? (
+                        <div className="text-center py-20" style={{ color: 'var(--text-dim)' }}>
+                            <FileText size={48} className="mx-auto mb-4 opacity-30" />
+                            <p className="text-lg font-medium">No transactions found</p>
+                            <p className="text-sm mt-1">This account hasn't been used in any ledger entries yet.</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Date</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Description</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Audit Trace</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Debit</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {entries.map((entry) => {
+                                    const entryDateStr = entry.entryDate || entry.date;
+                                    const dateObj = new Date(entryDateStr);
+                                    const formattedDate = !isNaN(dateObj.getTime()) 
+                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                                        : entryDateStr;
+
+                                    const debitVal = entry.amount !== undefined 
+                                        ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                                        : (entry.debit || 0);
+                                        
+                                    const creditVal = entry.amount !== undefined 
+                                        ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+                                        : (entry.credit || 0);
+
+                                    return (
+                                        <tr 
+                                            key={entry._id}
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                            onClick={() => {
+                                                const basePath = location.pathname.split('/chart-of-accounts/')[0];
+                                                navigate(`${basePath}/ledger/${entry._id}`);
+                                            }}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                 {renderDescriptionWithLinks(entry.description)}
+                                                 {entry.referenceId && (
+                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                 )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-xs opacity-70" style={{ color: 'var(--text-dim)' }}>
+                                                    <User size={12} />
+                                                    {entry.creatorRole || 'SYSTEM'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {debitVal > 0 ? (
+                                                    <span className="font-mono text-sm font-bold text-red-400">
+                                                        {debitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {creditVal > 0 ? (
+                                                    <span className="font-mono text-sm font-bold text-green-400">
+                                                        {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Pagination UI */}
+                {!loading && entries.length > 0 && pagination && (
+                    <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-topbar)' }}>
+                        <div className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span className="font-bold" style={{ color: 'var(--text-main)' }}>{((page - 1) * limit) + 1}</span> to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{Math.min(page * limit, pagination.total)}</span> of <span className="font-bold" style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <select 
+                                value={limit}
+                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                className="px-2 py-1 rounded border text-xs outline-none bg-transparent"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                <option value="10">10 / page</option>
+                                <option value="25">25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    style={{ 
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                        color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        background: 'transparent'
+                                    }}
+                                >
+                                    Previous
+                                </button>
+                                
+                                <div className="flex items-center px-4">
+                                    <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
+                                        Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                                    disabled={page === pagination.pages}
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    style={{ 
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                        color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        background: 'transparent'
+                                    }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default AccountingCodeDetails;

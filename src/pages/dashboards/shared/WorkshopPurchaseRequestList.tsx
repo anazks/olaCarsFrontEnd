@@ -12,6 +12,11 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
         },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(234, 88, 12, 0.1)',
+            text: '#ea580c',
+            border: 'rgba(234, 88, 12, 0.3)',
+        },
         APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
@@ -207,7 +212,8 @@ const WorkshopPurchaseRequestList = () => {
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="ALL">All Statuses</option>
-                                <option value="PENDING">Pending</option>
+                                <option value="PENDING">Pending (Manager)</option>
+                                <option value="PENDING_FINANCE_APPROVAL">Pending (Finance)</option>
                                 <option value="APPROVED">Approved</option>
                                 <option value="PENDING_FINANCE_APPROVAL">Pending Finance</option>
                                 <option value="REJECTED">Rejected</option>

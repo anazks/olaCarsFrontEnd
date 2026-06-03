@@ -14,7 +14,11 @@ api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
+            if (typeof config.headers.set === 'function') {
+                config.headers.set('Authorization', `Bearer ${token}`);
+            } else {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },
@@ -104,8 +108,7 @@ api.interceptors.response.use(
             
             // If the retried request itself fails, we must force logout to avoid infinite loops
             if (originalRequest._retry) {
-                toast.error('Session expired. Please login again.');
-                logout();
+                logout('expired');
                 return Promise.reject(error);
             }
 
@@ -118,7 +121,11 @@ api.interceptors.response.use(
                         failedQueue.push({ resolve, reject });
                     })
                         .then((token) => {
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
+                            if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
+                                originalRequest.headers.set('Authorization', `Bearer ${token}`);
+                            } else {
+                                originalRequest.headers.Authorization = `Bearer ${token}`;
+                            }
                             return api(originalRequest);
                         })
                         .catch((err) => {
@@ -135,7 +142,11 @@ api.interceptors.response.use(
                     const result = await performTokenRefresh();
 
                     if (result && result.accessToken) {
-                        originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+                        if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
+                            originalRequest.headers.set('Authorization', `Bearer ${result.accessToken}`);
+                        } else {
+                            originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+                        }
                         processQueue(null, result.accessToken);
                         return api(originalRequest);
                     } else {
@@ -143,8 +154,7 @@ api.interceptors.response.use(
                     }
                 } catch (err) {
                     processQueue(err, null);
-                    toast.error('Session expired. Please login again.');
-                    logout();
+                    logout('expired');
                     return Promise.reject(err);
                 } finally {
                     isRefreshing = false;
@@ -152,8 +162,7 @@ api.interceptors.response.use(
             }
 
             // No refresh token or role stored, force logout
-            toast.error('Session expired or unauthorized. Please login again.');
-            logout();
+            logout('expired');
             return Promise.reject(error);
         }
 

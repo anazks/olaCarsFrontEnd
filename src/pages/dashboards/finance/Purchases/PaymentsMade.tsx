@@ -138,8 +138,7 @@ const PaymentsMade = () => {
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                     </button>
-                    {userRole !== 'admin' && (
-                        <button 
+                    <button 
                             onClick={() => setIsCreateModalOpen(true)} 
                             className="flex items-center gap-1.5 px-4 py-2 bg-brand-lime text-black text-xs font-black uppercase tracking-wider rounded-xl hover:shadow-lg active:scale-95 transition-all duration-300 cursor-pointer"
                             style={{ background: 'var(--brand-lime)' }}
@@ -147,7 +146,6 @@ const PaymentsMade = () => {
                             <Plus size={14} strokeWidth={3} />
                             Record Payment Made
                         </button>
-                    )}
                 </div>
             </div>
 

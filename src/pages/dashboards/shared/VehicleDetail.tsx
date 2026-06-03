@@ -728,6 +728,7 @@ const VehicleDetail = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                            <InfoRow label="Vehicle Number" value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Car, Search, Save, CheckCircle2, Filter, FileText } from 'lucide-react';
 import { getAllVehicles, updateVehicleLeaseSettings } from '../../../services/vehicleService';
@@ -7,6 +8,7 @@ import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const VehicleLeaseSettings = () => {
+    const navigate = useNavigate();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -178,8 +180,11 @@ const VehicleLeaseSettings = () => {
                                         <input type="checkbox" className="rounded border-gray-300" />
                                     </td>
                                     <td className="py-4 px-3 font-semibold text-gray-500">{(index + 1).toString().padStart(2, '0')}</td>
-                                    <td className="py-4 px-3">
-                                        <div className="font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.basicDetails.make} {vehicle.basicDetails.model}</div>
+                                    <td 
+                                        className="py-4 px-3 cursor-pointer"
+                                        onClick={() => navigate(`../vehicles/${vehicle._id}`)}
+                                    >
+                                        <div className="font-bold hover:opacity-80 transition-opacity" style={{ color: 'var(--brand-lime)' }}>{vehicle.basicDetails.make} {vehicle.basicDetails.model}</div>
                                         <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>Plate No: {vehicle.basicDetails.vin}</div>
                                     </td>
                                     <td className="py-4 px-3">

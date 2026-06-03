@@ -158,15 +158,13 @@ const Customers = () => {
                             <DollarSign size={14} className="opacity-70" /> Payments
                         </button>
 
-                        {userRole !== 'admin' && (
-                            <button
+                        <button
                                 onClick={() => navigate('../../shared/drivers/create')}
                                 className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300"
                                 style={{ background: 'var(--brand-lime)' }}
                             >
                                 <UserPlus size={14} /> Add Customer
                             </button>
-                        )}
                     </div>
                 </div>
 

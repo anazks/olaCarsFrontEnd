@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { 
     TrendingUp, TrendingDown, Download, 
     Filter, FileText, Loader2, 
@@ -28,6 +29,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const Reports = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const user = getDecodedToken();
     const isCM = user?.role?.toLowerCase() === 'countrymanager';
     const isBM = user?.role?.toLowerCase() === 'branchmanager';
@@ -436,7 +438,12 @@ const Reports = () => {
                                     </thead>
                                     <tbody>
                                         {driverPerformance.map(driver => (
-                                            <tr key={driver.id} className="border-t hover:bg-white/5 transition-all" style={{ borderColor: 'var(--border-main)' }}>
+                                            <tr 
+                                                key={driver.id} 
+                                                className="border-t hover:bg-white/5 transition-all cursor-pointer" 
+                                                style={{ borderColor: 'var(--border-main)' }}
+                                                onClick={() => navigate(`../drivers/${driver.id}`)}
+                                            >
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)' }}>
