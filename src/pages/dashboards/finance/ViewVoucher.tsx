@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { getVoucherById, type Voucher } from '../../../services/ledgerService';
 import { useTheme } from '../../../context/ThemeContext';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
 
 interface ViewVoucherProps {
     voucherId: string;
@@ -91,8 +93,39 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
 
 
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = async () => {
+        if (!voucher) return;
+        const toastId = toast.loading("Preparing print layout...");
+        try {
+            const res = await api.get(`/api/vouchers/${voucher._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
+            };
+            
+            toast.success("Print dialog opened successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to print PDF:", err);
+            toast.error("Failed generating voucher PDF document.", { id: toastId });
+        }
     };
 
     return (

@@ -15,7 +15,8 @@ import {
     Download,
     TrendingUp,
     Car,
-    Eye
+    Eye,
+    Loader2
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -28,6 +29,8 @@ import {
 } from 'recharts';
 import { getBranchExtendedDetails } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
 
 const BranchDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -38,6 +41,7 @@ const BranchDetails = () => {
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [exportingPdf, setExportingPdf] = useState(false);
 
     // Date filter state (default 1 month)
     const [dateRange, setDateRange] = useState(() => {
@@ -121,6 +125,38 @@ const BranchDetails = () => {
         return filled;
     })();
 
+    const handleDownloadPdf = async () => {
+        if (!id) return;
+        setExportingPdf(true);
+        const toastId = toast.loading("Generating Branch PDF report...");
+        try {
+            const query = {
+                startDate: dateRange.startDate,
+                endDate: dateRange.endDate
+            };
+            const res = await api.get(`/api/branch/${id}/export/pdf`, { params: query, responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            // Download PDF file
+            const link = document.createElement('a');
+            link.href = url;
+            const codeStr = data?.branch?.code?.toLowerCase() || 'branch';
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `branch_${codeStr}_report_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("Branch PDF downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate branch PDF:", err);
+            toast.error("Failed generating branch PDF document.", { id: toastId });
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
     return (
         <div className="container-responsive space-y-8 animate-in fade-in duration-500 p-4 md:p-8">
             {/* Header Section */}
@@ -166,8 +202,16 @@ const BranchDetails = () => {
                             style={{ color: 'var(--text-main)' }}
                         />
                     </div>
-                    <button className="p-3 rounded-2xl bg-[#C8E600] text-black font-black hover:shadow-lg hover:shadow-[#C8E600]/20 transition-all active:scale-95">
-                        <Download size={20} />
+                    <button 
+                        disabled={exportingPdf}
+                        onClick={handleDownloadPdf}
+                        className="p-3 rounded-2xl bg-[#C8E600] text-black font-black hover:shadow-lg hover:shadow-[#C8E600]/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center min-w-[44px]"
+                    >
+                        {exportingPdf ? (
+                            <Loader2 className="animate-spin" size={20} />
+                        ) : (
+                            <Download size={20} />
+                        )}
                     </button>
                 </div>
             </div>

@@ -8,6 +8,8 @@ import {
 import * as expenseService from '../../../../services/expenseService';
 import type { Expense } from '../../../../services/expenseService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
+import api from '../../../../services/api';
+import toast from 'react-hot-toast';
 
 const ExpenseDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -22,14 +24,14 @@ const ExpenseDetail = () => {
 
     const fetchExpense = useCallback(async () => {
         if (!id) return;
-        setLoading(true);
-        setError(null);
         try {
+            setLoading(true);
+            setError(null);
             const res = await expenseService.getExpenseById(id);
             setExpense(res.data);
         } catch (err: any) {
-            console.error('Failed to load expense:', err);
-            setError(err.message || 'Failed to fetch expense details.');
+            console.error('Error fetching expense:', err);
+            setError(err.response?.data?.message || 'Failed to fetch expense details.');
         } finally {
             setLoading(false);
         }
@@ -39,11 +41,45 @@ const ExpenseDetail = () => {
         fetchExpense();
     }, [fetchExpense]);
 
-    const printVoucher = () => {
-        window.print();
+    const printVoucher = async () => {
+        if (!expense) return;
+        const toastId = toast.loading("Preparing print layout...");
+        try {
+            const res = await api.get(`/api/expenses/${expense._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
+            };
+            
+            toast.success("Print dialog opened successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to print PDF:", err);
+            toast.error("Failed generating expense PDF document.", { id: toastId });
+        }
     };
 
-    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = (n: number | undefined | null) => {
+        if (n === undefined || n === null || typeof n !== 'number') return '0.00';
+        return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
 
     if (loading) {
         return (
