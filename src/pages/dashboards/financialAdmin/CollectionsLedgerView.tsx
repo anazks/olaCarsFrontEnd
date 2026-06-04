@@ -172,6 +172,51 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
+    const getPageNumbers = () => {
+        const totalPages = pagination.pages;
+        const currentPage = pagination.page;
+        const pages: (number | string)[] = [];
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Always include first page
+            pages.push(1);
+
+            if (currentPage > 3) {
+                pages.push('ellipsis-start');
+            }
+
+            // Determine range around current page
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            let finalStart = start;
+            let finalEnd = end;
+            if (currentPage <= 3) {
+                finalEnd = 4;
+            } else if (currentPage >= totalPages - 2) {
+                finalStart = totalPages - 3;
+            }
+
+            for (let i = finalStart; i <= finalEnd; i++) {
+                if (i > 1 && i < totalPages) {
+                    pages.push(i);
+                }
+            }
+
+            if (currentPage < totalPages - 2) {
+                pages.push('ellipsis-end');
+            }
+
+            // Always include last page
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
     const handleExport = async () => {
         setExporting(true);
         const toastId = toast.loading("Fetching all records for export...");
@@ -590,19 +635,24 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         >
                             {'<'}
                         </button>
-                        {[...Array(Math.min(pagination.pages, 5))].map((_, i) => {
-                            const pageNum = i + 1;
+                        {getPageNumbers().map((item, index) => {
+                            if (typeof item === 'string') {
+                                return (
+                                    <span key={`ellipsis-${index}`} className="px-1 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                        ...
+                                    </span>
+                                );
+                            }
                             return (
                                 <button 
-                                    key={pageNum}
-                                    onClick={() => fetchPage(pageNum)}
-                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    key={item}
+                                    onClick={() => fetchPage(item)}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === item ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                                 >
-                                    {pageNum.toString().padStart(2, '0')}
+                                    {item.toString().padStart(2, '0')}
                                 </button>
                             );
                         })}
-                        {pagination.pages > 5 && <span className="px-1.5">...</span>}
                         <button 
                             disabled={pagination.page >= pagination.pages || loading}
                             onClick={() => fetchPage(pagination.page + 1)}
