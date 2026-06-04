@@ -363,6 +363,7 @@
       "searchPlaceholderBranches": "Search by name, code, city, state...",
       "allStatuses": "All Statuses",
       "allCountries": "All Countries",
+      "allBranches": "All Branches",
       "startDate": "Start Date",
       "endDate": "End Date",
       "resetAll": "Reset All",
@@ -433,7 +434,9 @@
         "twoFactorAuth": "Two-Factor Authentication",
         "create": "Create",
         "branchManager": "Branch Manager",
-        "selectBranchManager": "Select a Branch Manager"
+        "selectBranchManager": "Select a Branch Manager",
+        "countryManager": "Country Manager",
+        "selectCountryManager": "Select a Country Manager"
       }
     },
     "branches": {
@@ -460,7 +463,13 @@
       "createButton": "Create Manager",
       "updateButton": "Update Manager",
       "deleteTitle": "Confirm Deletion",
-      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? This will permanently disable their access to the system."
+      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? This will permanently disable their access to the system.",
+      "form": {
+        "invalidEmailFormat": "Please enter a valid email address.",
+        "phoneRequired": "Phone number is required.",
+        "invalidPhoneLength": "Please enter a valid phone number (6-12 digits excluding country code).",
+        "invalidPhoneRepeated": "Phone number cannot consist of repeated digits."
+      }
     },
     "financeStaff": {
       "title": "Manage Finance Staff",
@@ -482,7 +491,17 @@
       "notFound": "No operation staff found",
       "clickToAdd": "Click \"Add Operation Staff\" to create one",
       "modalTitleCreate": "Add Operation Staff",
-      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+      "createButton": "Create Staff",
+      "updateButton": "Save Changes",
+      "form": {
+        "invalidEmailFormat": "Please enter a valid email address.",
+        "phoneRequired": "Phone number is required.",
+        "invalidPhoneRepeated": "Phone number cannot consist of repeated digits.",
+        "phoneTooShort": "Phone number is too short.",
+        "phoneTooLong": "Phone number is too long.",
+        "invalidPhoneLength": "Please enter a valid phone number."
+      }
     },
     "workshopStaff": {
       "title": "Manage Workshop Staff",
@@ -495,7 +514,36 @@
       "createButton": "Create Staff",
       "updateButton": "Save Changes",
       "deleteTitle": "Delete Account?",
-      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+      "form": {
+        "invalidEmailFormat": "Please enter a valid email address.",
+        "phoneRequired": "Phone number is required.",
+        "invalidPhoneRepeated": "Phone number cannot consist of repeated digits.",
+        "phoneTooShort": "Phone number is too short.",
+        "phoneTooLong": "Phone number is too long.",
+        "invalidPhoneLength": "Please enter a valid phone number."
+      }
+    },
+    "workshopManager": {
+      "title": "Manage Workshop Managers",
+      "subtitle": "Manage workshop managers across branches",
+      "add": "Add Manager",
+      "loading": "Loading workshop managers...",
+      "notFound": "No Workshop Managers found",
+      "modalTitleCreate": "Add Workshop Manager",
+      "modalTitleEdit": "Edit Workshop Manager",
+      "deleteTitle": "Delete Manager",
+      "deleteConfirm": "Are you sure you want to delete {{name}}?",
+      "createButton": "Create Manager",
+      "updateButton": "Update Manager",
+      "form": {
+        "invalidEmailFormat": "Please enter a valid email address.",
+        "phoneRequired": "Phone number is required.",
+        "invalidPhoneRepeated": "Phone number cannot consist of repeated digits.",
+        "phoneTooShort": "Phone number is too short.",
+        "phoneTooLong": "Phone number is too long.",
+        "invalidPhoneLength": "Please enter a valid phone number."
+      }
     },
     "opAdmins": {
       "title": "Manage Operational Admins",
@@ -528,7 +576,15 @@
       "modalTitleCreate": "Add Country Manager",
       "modalTitleEdit": "Edit Country Manager",
       "deleteTitle": "Delete Country Manager?",
-      "createButton": "Create Manager"
+      "createButton": "Create Manager",
+      "form": {
+        "invalidEmailFormat": "Please enter a valid email address.",
+        "phoneRequired": "Phone number is required.",
+        "invalidPhoneRepeated": "Phone number cannot consist of repeated digits.",
+        "phoneTooShort": "Phone number is too short.",
+        "phoneTooLong": "Phone number is too long.",
+        "invalidPhoneLength": "Please enter a valid phone number."
+      }
     },
     "suppliers": {
       "title": "Manage Suppliers",
@@ -782,7 +838,8 @@
         "Pickup": "Pickup",
         "Van": "Van",
         "Luxury": "Luxury",
-        "Commercial": "Commercial"
+        "Commercial": "Commercial",
+        "MUV": "MUV"
       },
       "fuelTypes": {
         "Petrol": "Petrol",
@@ -1027,7 +1084,7 @@
       "title": "Driver Management",
       "subtitle": "Monitor and manage driver onboarding applications",
       "newBtn": "New Application",
-      "searchPlaceholder": "Search by name or email...",
+      "searchPlaceholder": "Search by name, license number, status or ID...",
       "filters": {
         "status": "Onboarding Status",
         "branch": "Assigned Branch",

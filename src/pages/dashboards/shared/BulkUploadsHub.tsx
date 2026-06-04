@@ -50,10 +50,10 @@ const BulkUploadsHub = () => {
             ];
         } else if (type === 'invoice') {
             fileName = 'invoice_bulk_template.csv';
-            headers = ['licenseNumber', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
+            headers = ['fullName', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
             rows = [
-                ['DL-123456', '180', '180', '2026-06-15', 'Week 24', 'Weekly Rent', 'Paid in full'],
-                ['DL-789012', '200', '100', '2026-06-20', '', 'Service charge', 'Partial payment']
+                ['John Smith', '180', '180', '2026-06-15', 'Week 24', 'Weekly Rent', 'Paid in full'],
+                ['Maria Garcia', '200', '100', '2026-06-20', '', 'Service charge', 'Partial payment']
             ];
         }
 

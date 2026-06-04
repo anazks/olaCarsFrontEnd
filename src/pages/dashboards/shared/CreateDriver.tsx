@@ -5,26 +5,27 @@ import { driverService } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 // ─── Country Codes ────────────────────────────────────────────────────
 const COUNTRY_CODES = [
-    { code: '+91', country: 'India', iso: 'IN', regex: /^[6789]\d{9}$/, placeholder: '9876543210', maxDigits: 10 },
-    { code: '+254', country: 'Kenya', iso: 'KE', regex: /^[17]\d{8}$/, placeholder: '712 345678', maxDigits: 9 },
-    { code: '+256', country: 'Uganda', iso: 'UG', regex: /^[2347]\d{8}$/, placeholder: '772 345678', maxDigits: 9 },
-    { code: '+255', country: 'Tanzania', iso: 'TZ', regex: /^[67]\d{8}$/, placeholder: '712 345678', maxDigits: 9 },
-    { code: '+251', country: 'Ethiopia', iso: 'ET', regex: /^[79]\d{8}$/, placeholder: '912 345678', maxDigits: 9 },
-    { code: '+234', country: 'Nigeria', iso: 'NG', regex: /^[789]\d{9}$/, placeholder: '803 123 4567', maxDigits: 10 },
-    { code: '+233', country: 'Ghana', iso: 'GH', regex: /^[235]\d{8}$/, placeholder: '24 123 4567', maxDigits: 9 },
-    { code: '+27', country: 'South Africa', iso: 'ZA', regex: /^[678]\d{8}$/, placeholder: '82 123 4567', maxDigits: 9 },
-    { code: '+971', country: 'UAE', iso: 'AE', regex: /^5\d{8}$/, placeholder: '50 123 4567', maxDigits: 9 },
-    { code: '+966', country: 'Saudi Arabia', iso: 'SA', regex: /^5\d{8}$/, placeholder: '50 123 4567', maxDigits: 9 },
-    { code: '+44', country: 'UK', iso: 'GB', regex: /^7\d{9}$/, placeholder: '7123 456789', maxDigits: 10 },
-    { code: '+1', country: 'USA', iso: 'US', regex: /^\d{10}$/, placeholder: '202 555 0123', maxDigits: 10 },
-    { code: '+1', country: 'Canada', iso: 'CA', regex: /^\d{10}$/, placeholder: '416 555 0123', maxDigits: 10 },
-    { code: '+86', country: 'China', iso: 'CN', regex: /^1\d{10}$/, placeholder: '138 1234 5678', maxDigits: 11 },
-    { code: '+61', country: 'Australia', iso: 'AU', regex: /^4\d{8}$/, placeholder: '412 345 678', maxDigits: 9 },
-    { code: '+49', country: 'Germany', iso: 'DE', regex: /^1[567]\d{8,9}$/, placeholder: '170 1234567', maxDigits: 11 },
-    { code: '+33', country: 'France', iso: 'FR', regex: /^[67]\d{8}$/, placeholder: '6 1234 5678', maxDigits: 9 },
+    { code: '+91', country: 'India', iso: 'IN', placeholder: '9876543210', maxDigits: 10 },
+    { code: '+254', country: 'Kenya', iso: 'KE', placeholder: '712 345678', maxDigits: 9 },
+    { code: '+256', country: 'Uganda', iso: 'UG', placeholder: '772 345678', maxDigits: 9 },
+    { code: '+255', country: 'Tanzania', iso: 'TZ', placeholder: '712 345678', maxDigits: 9 },
+    { code: '+251', country: 'Ethiopia', iso: 'ET', placeholder: '912 345678', maxDigits: 9 },
+    { code: '+234', country: 'Nigeria', iso: 'NG', placeholder: '803 123 4567', maxDigits: 10 },
+    { code: '+233', country: 'Ghana', iso: 'GH', placeholder: '24 123 4567', maxDigits: 9 },
+    { code: '+27', country: 'South Africa', iso: 'ZA', placeholder: '82 123 4567', maxDigits: 9 },
+    { code: '+971', country: 'UAE', iso: 'AE', placeholder: '50 123 4567', maxDigits: 9 },
+    { code: '+966', country: 'Saudi Arabia', iso: 'SA', placeholder: '50 123 4567', maxDigits: 9 },
+    { code: '+44', country: 'UK', iso: 'GB', placeholder: '7123 456789', maxDigits: 10 },
+    { code: '+1', country: 'USA', iso: 'US', placeholder: '202 555 0123', maxDigits: 10 },
+    { code: '+1', country: 'Canada', iso: 'CA', placeholder: '416 555 0123', maxDigits: 10 },
+    { code: '+86', country: 'China', iso: 'CN', placeholder: '138 1234 5678', maxDigits: 11 },
+    { code: '+61', country: 'Australia', iso: 'AU', placeholder: '412 345 678', maxDigits: 9 },
+    { code: '+49', country: 'Germany', iso: 'DE', placeholder: '170 1234567', maxDigits: 11 },
+    { code: '+33', country: 'France', iso: 'FR', placeholder: '6 1234 5678', maxDigits: 9 },
 ];
 
 const RELATIONSHIP_OPTIONS = [
@@ -53,6 +54,22 @@ const isValidEmail = (email: string) => {
 
 const isValidName = (name: string) => /^[a-zA-Z\s'-]{2,50}$/.test(name.trim());
 const isValidAlphanumeric = (str: string) => /^[a-zA-Z0-9-]{3,30}$/.test(str.trim());
+
+const getPhoneErrorMessage = (validation: any, fieldLabel: string) => {
+    switch (validation.errorKey) {
+        case 'REQUIRED':
+            return `${fieldLabel} is required.`;
+        case 'REPEATED_DIGITS':
+            return 'Phone number cannot consist of repeated digits.';
+        case 'TOO_SHORT':
+            return 'Phone number is too short for this country.';
+        case 'TOO_LONG':
+            return 'Phone number is too long for this country.';
+        case 'INVALID_FORMAT':
+        default:
+            return `Enter a valid ${fieldLabel.toLowerCase()}.`;
+    }
+};
 
 const getMaxDOB = () => {
     const d = new Date();
@@ -288,25 +305,21 @@ const CreateDriver = () => {
                 else if (!isValidEmail(value)) error = 'Enter a valid email address.';
                 break;
             case 'phoneNumber': {
-                const rawDigits = value.replace(/\D/g, '');
-                const country = COUNTRY_CODES.find(cc => cc.code === formData.phoneCode);
+                const fullPhone = `${formData.phoneCode}${value.trim()}`;
+                const validation = validatePhoneDetails(fullPhone);
                 if (!value.trim()) {
                     error = 'Phone number is required.';
-                } else if (country && !country.regex.test(rawDigits)) {
-                    error = `Invalid format for ${country.country}. E.g. ${country.placeholder}`;
-                } else if (!country && !/^\d{6,15}$/.test(rawDigits)) {
-                    error = 'Enter a valid phone number (6-15 digits).';
+                } else if (!validation.isValid) {
+                    error = getPhoneErrorMessage(validation, 'Phone number');
                 }
                 break;
             }
             case 'whatsappNumber': {
-                if (value) {
-                    const rawDigits = value.replace(/\D/g, '');
-                    const country = COUNTRY_CODES.find(cc => cc.code === formData.whatsappCode);
-                    if (country && !country.regex.test(rawDigits)) {
-                        error = `Invalid format for ${country.country}. E.g. ${country.placeholder}`;
-                    } else if (!country && !/^\d{6,15}$/.test(rawDigits)) {
-                        error = 'Enter a valid WhatsApp number (6-15 digits).';
+                if (value.trim()) {
+                    const fullPhone = `${formData.whatsappCode}${value.trim()}`;
+                    const validation = validatePhoneDetails(fullPhone);
+                    if (!validation.isValid) {
+                        error = getPhoneErrorMessage(validation, 'WhatsApp number');
                     }
                 }
                 break;
@@ -326,17 +339,14 @@ const CreateDriver = () => {
                 break;
             case 'emergencyContactName':
                 if (!value.trim()) error = 'Emergency contact name is required.';
-                else if (!isValidName(value)) error = 'Name should contain letters only.';
                 break;
             case 'emergencyContactPhone': {
-                const rawDigits = value.replace(/\D/g, '');
-                const country = COUNTRY_CODES.find(cc => cc.code === formData.emergencyContactCode);
+                const fullPhone = `${formData.emergencyContactCode}${value.trim()}`;
+                const validation = validatePhoneDetails(fullPhone);
                 if (!value.trim()) {
                     error = 'Emergency contact phone is required.';
-                } else if (country && !country.regex.test(rawDigits)) {
-                    error = `Invalid format for ${country.country}. E.g. ${country.placeholder}`;
-                } else if (!country && !/^\d{6,15}$/.test(rawDigits)) {
-                    error = 'Enter a valid phone number (6-15 digits).';
+                } else if (!validation.isValid) {
+                    error = getPhoneErrorMessage(validation, 'Contact phone');
                 }
                 break;
             }

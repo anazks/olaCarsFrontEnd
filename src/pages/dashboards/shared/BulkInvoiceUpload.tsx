@@ -1,12 +1,13 @@
-import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { bulkUploadInvoices } from '../../../services/invoiceService';
+import { getAllDrivers } from '../../../services/driverService';
 
 interface ParsedInvoiceRow {
-    licenseNumber: string;
+    fullName: string;
     amount: string | number;
     amountPaid?: string | number;
     dueDate?: string;
@@ -22,12 +23,63 @@ interface BulkInvoiceUploadProps {
     onSuccess: () => void;
 }
 
-const CSV_COLUMNS = ['licenseNumber', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
+const CSV_COLUMNS = ['fullName', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
 
 const SAMPLE_DATA = [
-    { licenseNumber: 'DL-123456', amount: '180', amountPaid: '180', dueDate: '2026-06-15', weekLabel: 'Week 24', description: 'Weekly Rent', notes: 'Paid in full' },
-    { licenseNumber: 'DL-789012', amount: '200', amountPaid: '100', dueDate: '2026-06-20', weekLabel: '', description: 'Service charge', notes: 'Partial payment' }
+    { fullName: 'John Smith', amount: '180', amountPaid: '180', dueDate: '2026-06-15', weekLabel: 'Week 24', description: 'Weekly Rent', notes: 'Paid in full' },
+    { fullName: 'Maria Garcia', amount: '200', amountPaid: '100', dueDate: '2026-06-20', weekLabel: '', description: 'Service charge', notes: 'Partial payment' }
 ];
+
+const parseFlexibleDate = (dateStr: any): Date | null => {
+    if (!dateStr) return null;
+    
+    if (dateStr instanceof Date) {
+        return isNaN(dateStr.getTime()) ? null : dateStr;
+    }
+    
+    if (typeof dateStr === 'number') {
+        const date = new Date((dateStr - 25569) * 86400 * 1000);
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    const str = dateStr.toString().trim();
+    if (!str) return null;
+
+    // Match DD-MM-YYYY or DD/MM/YYYY
+    const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
+    const match = str.match(dmyRegex);
+    if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1; // 0-indexed
+        const year = parseInt(match[3], 10);
+        const date = new Date(year, month, day);
+        if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date;
+        }
+    }
+
+    // Try standard JS Date parsing
+    const parsedDate = new Date(str);
+    if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+    }
+
+    return null;
+};
+
+const normalizeRowDates = (row: any): any => {
+    const updated = { ...row };
+    if (updated.dueDate) {
+        const parsed = parseFlexibleDate(updated.dueDate);
+        if (parsed) {
+            const yyyy = parsed.getFullYear();
+            const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+            const dd = String(parsed.getDate()).padStart(2, '0');
+            updated.dueDate = `${yyyy}-${mm}-${dd}`;
+        }
+    }
+    return updated;
+};
 
 const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProps) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,10 +89,38 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [availableDriverNames, setAvailableDriverNames] = useState<Set<string>>(new Set());
+    const [loadingDrivers, setLoadingDrivers] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setLoadingDrivers(true);
+            getAllDrivers({ limit: 1000 })
+                .then(res => {
+                    const list = Array.isArray(res.data) ? res.data : [];
+                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim()).filter(Boolean));
+                    setAvailableDriverNames(names);
+                })
+                .catch(err => {
+                    console.error('Failed to load driver names for validation', err);
+                })
+                .finally(() => {
+                    setLoadingDrivers(false);
+                });
+        } else {
+            setAvailableDriverNames(new Set());
+            setLoadingDrivers(false);
+        }
+    }, [isOpen]);
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        if (!row.licenseNumber?.toString().trim()) errors.push('Missing licenseNumber');
+        const name = row.fullName?.toString().trim();
+        if (!name) {
+            errors.push('Missing fullName');
+        } else if (availableDriverNames.size > 0 && !availableDriverNames.has(name.toLowerCase())) {
+            errors.push(`Driver "${name}" not found`);
+        }
         
         const amt = Number(row.amount);
         if (isNaN(amt) || amt < 0) errors.push('Invalid amount');
@@ -51,12 +131,24 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         }
 
         if (row.dueDate) {
-            const date = new Date(row.dueDate);
-            if (isNaN(date.getTime())) errors.push('Invalid dueDate (YYYY-MM-DD expected)');
+            const parsed = parseFlexibleDate(row.dueDate);
+            if (!parsed) {
+                errors.push('Invalid dueDate (expected DD-MM-YYYY or YYYY-MM-DD)');
+            }
         }
         
         return errors;
-    }, []);
+    }, [availableDriverNames]);
+
+    // Re-validate rows when driver names load
+    useEffect(() => {
+        if (parsedRows.length > 0 && availableDriverNames.size > 0) {
+            setParsedRows(prev => prev.map(row => ({
+                ...row,
+                _rowErrors: validateRow(row)
+            })));
+        }
+    }, [availableDriverNames, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -72,10 +164,13 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
-                    const rows: ParsedInvoiceRow[] = (jsonData as any[]).map(row => ({
-                        ...row,
-                        _rowErrors: validateRow(row),
-                    }));
+                    const rows: ParsedInvoiceRow[] = (jsonData as any[]).map(row => {
+                        const normalized = normalizeRowDates(row);
+                        return {
+                            ...normalized,
+                            _rowErrors: validateRow(normalized),
+                        };
+                    });
                     setParsedRows(rows);
                     if (rows.length === 0) toast.error('No data rows found in the Excel file.');
                     else toast.success(`Parsed ${rows.length} row(s) from ${file.name}`);
@@ -90,10 +185,13 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                 skipEmptyLines: true,
                 transformHeader: (h: string) => h.trim(),
                 complete: (results) => {
-                    const rows: ParsedInvoiceRow[] = (results.data as any[]).map(row => ({
-                        ...row,
-                        _rowErrors: validateRow(row),
-                    }));
+                    const rows: ParsedInvoiceRow[] = (results.data as any[]).map(row => {
+                        const normalized = normalizeRowDates(row);
+                        return {
+                            ...normalized,
+                            _rowErrors: validateRow(normalized),
+                        };
+                    });
                     setParsedRows(rows);
                     if (rows.length === 0) toast.error('No data rows found in the file.');
                     else toast.success(`Parsed ${rows.length} row(s) from ${file.name}`);
@@ -167,6 +265,15 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         setFileName('');
         setResult(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleRemoveRow = (index: number) => {
+        setParsedRows(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveInvalid = () => {
+        setParsedRows(prev => prev.filter(row => row._rowErrors.length === 0));
+        toast.success('Removed all invalid rows');
     };
 
     if (!isOpen) return null;
@@ -263,15 +370,28 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         <div className="flex gap-4 mt-1 text-xs">
                                             <span className="text-emerald-500 font-bold">{validCount} valid</span>
                                             {errorCount > 0 && <span className="text-rose-500 font-bold">{errorCount} errors</span>}
+                                            {loadingDrivers && (
+                                                <span className="text-blue-500 font-bold flex items-center gap-1">
+                                                    <Loader2 size={12} className="animate-spin" /> Verifying driver names...
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
+                                    {errorCount > 0 && (
+                                        <button 
+                                            onClick={handleRemoveInvalid} 
+                                            className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-50 transition-colors"
+                                        >
+                                            Remove All Invalid
+                                        </button>
+                                    )}
                                     <button onClick={handleReset} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         Change File
                                     </button>
                                     <button
-                                        onClick={handleSubmit} disabled={uploading || validCount === 0}
+                                        onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingDrivers}
                                         className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02]"
                                         style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                                     >
@@ -286,24 +406,34 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                     <table className="w-full text-left text-xs">
                                         <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-main)' }}>
                                             <tr>
-                                                <th className="py-3 px-4">License No</th>
+                                                <th className="py-3 px-4">Driver Name</th>
                                                 <th className="py-3 px-4">Amount</th>
                                                 <th className="py-3 px-4">Amount Paid</th>
                                                 <th className="py-3 px-4">Due Date</th>
                                                 <th className="py-3 px-4">Status</th>
+                                                <th className="py-3 px-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                            {parsedRows.slice(0, 50).map((row, i) => (
-                                                <tr key={i} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
-                                                    <td className="py-3 px-4 font-mono">{row.licenseNumber || '-'}</td>
+                                            {parsedRows.map((row, idx) => (
+                                                <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+                                                    <td className="py-3 px-4">{row.fullName || '-'}</td>
                                                     <td className="py-3 px-4 font-bold">{row.amount || '-'}</td>
                                                     <td className="py-3 px-4 font-bold text-emerald-500">{row.amountPaid || '-'}</td>
                                                     <td className="py-3 px-4 text-dim">{row.dueDate || '-'}</td>
                                                     <td className="py-3 px-4">
-                                                        {row._rowErrors.length > 0 ? (
-                                                            <div className="flex items-center gap-1.5 text-rose-500" title={row._rowErrors.join(', ')}>
-                                                                <AlertTriangle size={14} /> Error
+                                                        {loadingDrivers ? (
+                                                            <div className="flex items-center gap-1.5 text-blue-500">
+                                                                <Loader2 size={14} className="animate-spin" /> Verifying...
+                                                            </div>
+                                                        ) : row._rowErrors.length > 0 ? (
+                                                            <div className="flex flex-col text-rose-500" title={row._rowErrors.join(', ')}>
+                                                                <div className="flex items-center gap-1.5 font-bold">
+                                                                    <AlertTriangle size={14} /> Error
+                                                                 </div>
+                                                                <span className="text-[10px] text-rose-400 mt-0.5 max-w-[200px] break-words">
+                                                                    {row._rowErrors.join(', ')}
+                                                                </span>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1.5 text-emerald-500">
@@ -311,16 +441,20 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                                             </div>
                                                         )}
                                                     </td>
+                                                    <td className="py-3 px-4 text-right">
+                                                        <button 
+                                                            onClick={() => handleRemoveRow(idx)}
+                                                            className="p-1.5 rounded-lg hover:bg-rose-50 text-dim hover:text-rose-500 transition-colors border-none"
+                                                            title="Remove Row"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-                                {parsedRows.length > 50 && (
-                                    <div className="p-2 text-center text-[10px] text-dim border-t uppercase tracking-widest" style={{ borderColor: 'var(--border-main)' }}>
-                                        Showing first 50 rows
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}

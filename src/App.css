@@ -557,3 +557,56 @@
   box-shadow: 0 0 4px #C8E600 !important;
   box-sizing: border-box !important;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   REACT-PHONE-INPUT-2 DROPDOWN THEME STYLING
+   ══════════════════════════════════════════════════════════════ */
+.react-tel-input .country-list {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-main) !important;
+}
+
+.react-tel-input .country-list .country {
+  color: var(--text-main) !important;
+}
+
+.react-tel-input .country-list .country .country-name {
+  color: var(--text-main) !important;
+}
+
+.react-tel-input .country-list .country .dial-code {
+  color: var(--text-muted) !important;
+}
+
+.react-tel-input .country-list .country:hover,
+.react-tel-input .country-list .country.highlight {
+  background-color: var(--sidebar-hover) !important;
+}
+
+.react-tel-input .country-list .search {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-main) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL PRINT MEDIA STYLES
+   ══════════════════════════════════════════════════════════════ */
+@media print {
+  /* Reset outer layout containers and scroll states */
+  html, body, #root, 
+  .flex.h-screen, 
+  .flex-1.flex.flex-col.overflow-hidden, 
+  main {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Force background colors to print if needed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

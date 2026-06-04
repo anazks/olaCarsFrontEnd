@@ -13,8 +13,9 @@ import {
 } from '../../../services/insuranceService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { downloadFile } from '../../../utils/fileDownloader';
 
-const ManageInsurances = () => {
+const   ManageInsurances = () => {
     const { t } = useTranslation();
     const [insurances, setInsurances] = useState<Insurance[]>([]);
     const [loading, setLoading] = useState(true);
@@ -346,17 +347,21 @@ const ManageInsurances = () => {
                                                     >
                                                         <Eye size={16} />
                                                     </button>
-                                                    <a
-                                                        href={getFullUrl(ins.documents?.policyDocumentUrl)}
-                                                        download
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500"
+                                                    <button
+                                                        onClick={() => {
+                                                            const supplierName = typeof ins.supplier === 'object' ? ins.supplier?.name : 'Supplier';
+                                                            const policyNo = ins.policyNumber || 'Policy';
+                                                            downloadFile(
+                                                                getFullUrl(ins.documents?.policyDocumentUrl),
+                                                                `Insurance_Policy_${supplierName.replace(/\s+/g, '_')}_${policyNo.replace(/\s+/g, '_')}`
+                                                            );
+                                                        }}
+                                                        className="p-2 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500 cursor-pointer"
                                                         style={{ background: 'rgba(59,130,246,0.1)' }}
                                                         title={t('management.common.download', { defaultValue: 'Download' })}
                                                     >
                                                         <Download size={16} />
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 <span className="text-[10px] italic" style={{ color: 'var(--text-dim)' }}>No Document</span>
@@ -442,13 +447,14 @@ const ManageInsurances = () => {
                                         <select
                                             required
                                             disabled={supplierLoading}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm disabled:opacity-50"
+                                            className="w-full rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm disabled:opacity-50"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                             value={formData.supplier}
                                             onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
                                         >
-                                            <option value="">{supplierLoading ? 'Loading Suppliers...' : 'Select Insurance Supplier'}</option>
+                                            <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{supplierLoading ? 'Loading Suppliers...' : 'Select Insurance Supplier'}</option>
                                             {suppliers.map(s => (
-                                                <option key={s._id} value={s._id}>{s.name}</option>
+                                                <option key={s._id} value={s._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{s.name}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -458,7 +464,8 @@ const ManageInsurances = () => {
                                             required
                                             type="text"
                                             placeholder="e.g. Global, UAE, India"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            className="w-full rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                             value={formData.country}
                                             onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                                         />
@@ -469,7 +476,8 @@ const ManageInsurances = () => {
                                             type="number"
                                             min="0"
                                             placeholder="e.g. 50000"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all"
+                                            className="w-full rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                             value={formData.insuredValue || ''}
                                             onChange={(e) => setFormData({ ...formData, insuredValue: Number(e.target.value) })}
                                         />
@@ -479,23 +487,25 @@ const ManageInsurances = () => {
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.policyType')}</label>
                                             <select
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                 value={formData.policyType}
                                                 onChange={(e) => setFormData({ ...formData, policyType: e.target.value as PolicyType })}
                                             >
-                                                <option value="INDIVIDUAL">{t('management.insurances.types.INDIVIDUAL')}</option>
-                                                <option value="FLEET">{t('management.insurances.types.FLEET')}</option>
+                                                <option value="INDIVIDUAL" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('management.insurances.types.INDIVIDUAL')}</option>
+                                                <option value="FLEET" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('management.insurances.types.FLEET')}</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs text-dim uppercase">{t('management.insurances.form.coverage')}</label>
                                             <select
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                className="w-full rounded-xl px-4 py-3 outline-none focus:border-lime transition-all text-sm"
+                                                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                 value={formData.coverageType}
                                                 onChange={(e) => setFormData({ ...formData, coverageType: e.target.value as CoverageType })}
                                             >
-                                                <option value="COMPREHENSIVE">{t('management.insurances.coverage.COMPREHENSIVE')}</option>
-                                                <option value="THIRD_PARTY">{t('management.insurances.coverage.THIRD_PARTY')}</option>
+                                                <option value="COMPREHENSIVE" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('management.insurances.coverage.COMPREHENSIVE')}</option>
+                                                <option value="THIRD_PARTY" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('management.insurances.coverage.THIRD_PARTY')}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -506,7 +516,7 @@ const ManageInsurances = () => {
                             <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-lime">{t('management.insurances.form.policyDoc')}</h3>
                                 <div className="flex items-center gap-4">
-                                    <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-lime/40 hover:bg-lime/5 transition-all cursor-pointer group">
+                                    <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 hover:border-lime/40 hover:bg-lime/5 transition-all cursor-pointer group" style={{ borderColor: 'var(--border-main)' }}>
                                         <input
                                             type="file"
                                             className="hidden"
