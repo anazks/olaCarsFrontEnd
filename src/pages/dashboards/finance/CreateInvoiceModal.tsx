@@ -3,6 +3,8 @@ import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent } f
 import { createInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
+import { getAllTaxes } from '../../../services/taxService';
+import type { Tax } from '../../../services/taxService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 
@@ -79,7 +81,8 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
     const [discountType, setDiscountType] = useState<'NONE' | 'PERCENTAGE' | 'FIXED'>('NONE');
     const [discountValue, setDiscountValue] = useState('');
-    const [taxRate, setTaxRate] = useState('');
+    const [taxes, setTaxes] = useState<Tax[]>([]);
+    const [selectedTax, setSelectedTax] = useState<Tax | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     const fetchDrivers = useCallback(async () => {
@@ -89,7 +92,23 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
         } catch { /* silent */ }
     }, []);
 
-    useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+    const fetchTaxes = useCallback(async () => {
+        try {
+            const fetchedTaxes = await getAllTaxes();
+            const activeTaxes = fetchedTaxes.filter(t => t.isActive);
+            setTaxes(activeTaxes);
+            if (activeTaxes.length > 0) {
+                setSelectedTax(activeTaxes[0]);
+            }
+        } catch (err) {
+            console.error('Error fetching taxes:', err);
+        }
+    }, []);
+
+    useEffect(() => { 
+        fetchDrivers(); 
+        fetchTaxes();
+    }, [fetchDrivers, fetchTaxes]);
 
     const filteredDrivers = drivers.filter(d =>
         d.personalInfo?.fullName?.toLowerCase().includes(driverSearch.toLowerCase()) ||
@@ -111,7 +130,8 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
     })();
 
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = taxRate ? Math.round(afterDiscount * (parseFloat(taxRate) || 0) / 100 * 100) / 100 : 0;
+    const taxRate = selectedTax ? selectedTax.rate : 0;
+    const taxAmount = Math.round(afterDiscount * taxRate / 100 * 100) / 100;
     const grandTotal = Math.round((afterDiscount + taxAmount) * 100) / 100;
 
     // ── Line Item Helpers ─────────────────────────────────────────────────────
@@ -122,8 +142,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
     const removeItem = (idx: number) => setLineItems(prev => prev.filter((_, i) => i !== idx));
 
     // ── Submit ────────────────────────────────────────────────────────────────
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const saveInvoice = async (isDraft: boolean) => {
         if (!selectedDriver) { toast.error('Please select a driver'); return; }
         if (!dueDate) { toast.error('Due date is required'); return; }
         const validItems = lineItems.filter(i => i.name.trim() && parseFloat(i.unitPrice) > 0);
@@ -144,10 +163,12 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                 })),
                 discountType: discountType === 'NONE' ? 'PERCENTAGE' : discountType,
                 discountValue: discountType !== 'NONE' ? parseFloat(discountValue) || 0 : 0,
-                taxRate: parseFloat(taxRate) || 0,
+                tax: selectedTax ? selectedTax._id : undefined,
+                taxRate,
                 notes,
+                status: isDraft ? 'DRAFT' : 'PENDING'
             });
-            toast.success('Manual invoice created!');
+            toast.success(isDraft ? 'Draft invoice saved!' : 'Manual invoice created!');
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -155,6 +176,15 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await saveInvoice(false);
+    };
+
+    const handleSaveDraft = async () => {
+        await saveInvoice(true);
     };
 
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -424,22 +454,25 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                 {/* Tax */}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
-                                        <Percent size={11} /> Tax Rate (%)
+                                        <Percent size={11} /> Tax Mode
                                     </label>
-                                    <div className="relative">
-                                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2" size={13} style={{ color: 'var(--text-dim)' }} />
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.01"
-                                            placeholder="0"
-                                            value={taxRate}
-                                            onChange={e => setTaxRate(e.target.value)}
-                                            className="w-full pl-8 pr-4 py-2.5 border rounded-xl text-sm font-bold outline-none focus:border-brand-lime transition-colors"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                    </div>
+                                    <select
+                                        value={selectedTax?._id || ''}
+                                        onChange={e => {
+                                            const selectedId = e.target.value;
+                                            const found = taxes.find(t => t._id === selectedId);
+                                            setSelectedTax(found || null);
+                                        }}
+                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold outline-none focus:border-brand-lime transition-colors cursor-pointer"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>No Tax (0%)</option>
+                                        {taxes.map(t => (
+                                            <option key={t._id} value={t._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                                {t.name} ({t.rate}%)
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* Notes */}
@@ -543,8 +576,9 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="flex-1 sm:flex-none px-6 py-2.5 border rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer"
+                            onClick={handleSaveDraft}
+                            disabled={submitting || grandTotal <= 0 || !selectedDriver || !dueDate}
+                            className="flex-1 sm:flex-none px-6 py-2.5 border rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
                             Save as Draft

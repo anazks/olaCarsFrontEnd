@@ -307,7 +307,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             
             {/* HEADER & DESCRIPTION */}
             {/* Compact Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4 mb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <div>
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <span className={meta.colorClass}>{meta.icon}</span>

@@ -28,3 +28,8 @@ export const updateTaxStatus = async (id: string, isActive: boolean): Promise<Ta
     const response = await api.put(`/api/tax/${id}`, { isActive });
     return response.data.data || response.data;
 };
+
+export const updateTax = async (id: string, payload: Partial<CreateTaxPayload & { isActive: boolean }>): Promise<Tax> => {
+    const response = await api.put(`/api/tax/${id}`, payload);
+    return response.data.data || response.data;
+};

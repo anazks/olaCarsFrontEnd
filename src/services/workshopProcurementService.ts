@@ -93,8 +93,8 @@ export const approveProcurementRequest = async (
 };
 
 export const financeApproveProcurementRequest = async (
-    id: string, 
-    data: { status: 'APPROVED' | 'REJECTED', note?: string }
+    id: string,
+    data: { status: 'APPROVED' | 'REJECTED'; note?: string }
 ) => {
     const response = await api.put(`/api/workshop-procurement/${id}/finance-approve`, data);
     return response.data.data || response.data;

@@ -50,10 +50,35 @@ const BulkUploadsHub = () => {
             ];
         } else if (type === 'invoice') {
             fileName = 'invoice_bulk_template.csv';
-            headers = ['fullName', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
+            headers = [
+                'Invoice Date', 'Invoice ID', 'Invoice Number', 'Invoice Status', 'Customer ID',
+                'Customer Name', 'Customer Number', 'Company ID', 'Is Inclusive Tax', 'Due Date',
+                'Discount Type', 'SubTotal', 'Total', 'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY',
+                'Balance', 'Adjustment', 'Notes', 'Entity Discount Amount', 'Location ID',
+                'Item Name', 'Item Desc', 'Quantity', 'Discount', 'Discount Amount',
+                'Item Total', 'Item Price', 'Account', 'Account Code', 'Line Item Location Name',
+                'Invoice Shipment Status', 'Manually Shipped Quantity', 'Tax ID', 'Item Tax',
+                'Item Tax %', 'Item Tax Amount', 'Item Tax Type'
+            ];
             rows = [
-                ['John Smith', '180', '180', '2026-06-15', 'Week 24', 'Weekly Rent', 'Paid in full'],
-                ['Maria Garcia', '200', '100', '2026-06-20', '', 'Service charge', 'Partial payment']
+                [
+                    '2026-06-01', 'INV-ZOHO-001', 'INV-000101', 'Closed', 'DRV001',
+                    'John Smith', '+254700000001', 'COMP01', 'FALSE', '2026-06-15',
+                    'Percentage', '180', '208.8', '', '',
+                    '0', '', 'Weekly lease payment', '0', '',
+                    'Weekly Rent', 'Vehicle Rent charge for week 23', '1', '0', '0',
+                    '180', '180', 'Bank Transfer', '1010', '',
+                    '', '', 'TAX16', 'VAT 16%', '16', '28.8', 'Taxable'
+                ],
+                [
+                    '2026-06-02', 'INV-ZOHO-002', 'INV-000102', 'Pending', 'DRV002',
+                    'Maria Garcia', '+254711223344', 'COMP01', 'FALSE', '2026-06-20',
+                    'Percentage', '100', '116.0', '', '',
+                    '116.0', '', 'Scheduled oil change maintenance', '0', '',
+                    'Oil Change Service', 'Service & Filter replacement', '1', '0', '0',
+                    '100', '100', 'Cash', '1020', '',
+                    '', '', 'TAX16', 'VAT 16%', '16', '16.0', 'Taxable'
+                ]
             ];
         }
 

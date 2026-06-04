@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../store';
+import { setExecutiveDashboardData } from '../../store/dashboardSlice';
 import {
     ResponsiveContainer,
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
@@ -30,36 +33,20 @@ const COLORS = {
 const ExecutiveDashboard = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const executiveState = useSelector((state: RootState) => state.dashboard.executive);
 
-    const [loading, setLoading] = useState(true);
-    const [financeTotals, setFinanceTotals] = useState<{ name: string; amount: number; fill: string }[]>([]);
-    const [vehicleData, setVehicleData] = useState<any[]>([]);
-    const [driverData, setDriverData] = useState<any[]>([]);
-    const [staffData, setStaffData] = useState<any[]>([]);
-    const [branches, setBranches] = useState<any[]>([]);
-    const [rentTrendData, setRentTrendData] = useState<any[]>([]);
-    const [poTrendData, setPoTrendData] = useState<any[]>([]);
-    // KPI States
-    const [kpiData, setKpiData] = useState({
-        totalActiveVehicles: 0,
-        monthlyRevenue: 0,
-        outstandingCollections: 0,
-        activeDrivers: 0,
-        collectionCompliance: 0,
-        last12MonthRevenue: 0,
-        outstandingBalance: 0,
-        activeAlerts: 0,
-        alertsDetailed: {
-            critical: [] as any[],
-            major: [] as any[],
-            minor: [] as any[]
-        },
-        tasks: {
-            overdue: 0,
-            upcoming: 0,
-            assigned: 0
-        }
-    });
+    const [loading, setLoading] = useState(!executiveState.isLoaded);
+    const [branches, setBranches] = useState<any[]>(executiveState.branches);
+    const isFirstMount = useRef(true);
+
+    const financeTotals = executiveState.financeTotals;
+    const vehicleData = executiveState.vehicleData;
+    const driverData = executiveState.driverData;
+    const staffData = executiveState.staffData;
+    const rentTrendData = executiveState.rentTrendData;
+    const poTrendData = executiveState.poTrendData;
+    const kpiData = executiveState.kpiData;
 
     const todayStr = new Date().toISOString().split('T')[0];
     const oneMonthAgoDate = new Date();
@@ -72,13 +59,17 @@ const ExecutiveDashboard = () => {
     const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setLoading(true);
         try {
+            let fetchedBranches = branches;
             if (branches.length === 0) {
                 try {
                     const brRes = await getAllBranches({ limit: 100 });
-                    if (brRes.data) setBranches(brRes.data);
+                    if (brRes.data) {
+                        fetchedBranches = brRes.data;
+                        setBranches(brRes.data);
+                    }
                 } catch (e) {
                     console.error("Failed to load branches", e);
                 }
@@ -244,7 +235,12 @@ const ExecutiveDashboard = () => {
                 newKpi.totalActiveVehicles = activeVecs;
             }
 
-            setKpiData(newKpi);
+            let finalFinanceTotals = [...executiveState.financeTotals];
+            let finalVehicleData = [...executiveState.vehicleData];
+            let finalDriverData = [...executiveState.driverData];
+            let finalStaffData = [...executiveState.staffData];
+            let finalRentTrendData = [...executiveState.rentTrendData];
+            let finalPoTrendData = [...executiveState.poTrendData];
 
             // 1. Finance Aggregation
             if (ledgerRes.status === 'fulfilled') {
@@ -279,14 +275,12 @@ const ExecutiveDashboard = () => {
                     }
                 });
 
-                setFinanceTotals([
+                finalFinanceTotals = [
                     { name: 'Income', amount: Math.max(0, totalIncome), fill: '#22c55e' },
                     { name: 'Expense', amount: Math.max(0, totalExpense), fill: '#ef4444' },
                     { name: 'Assets', amount: Math.max(0, totalAssets), fill: '#3b82f6' },
                     { name: 'Liability', amount: Math.max(0, totalLiability), fill: '#f59e0b' }
-                ]);
-
-
+                ];
             }
 
             // 2. Fleet & Driver Aggregation
@@ -323,7 +317,7 @@ const ExecutiveDashboard = () => {
                         const pKey = groupByDay 
                             ? wd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                             : wd.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
-                            
+                        
                         const curr = rentMap.get(pKey) || { period: pKey, Paid: 0, Pending: 0, Overdue: 0 };
                         const amtPaid = week.amountPaid || 0;
                         const bal = week.balance || 0;
@@ -345,14 +339,14 @@ const ExecutiveDashboard = () => {
                     else scoreCounts['80+']++;
                 });
 
-                setDriverData([
+                finalDriverData = [
                     { name: 'Unscored', Drivers: scoreCounts.Unscored, fill: COLORS.teal },
                     { name: '<60', Drivers: scoreCounts['<60'], fill: COLORS.red },
                     { name: '60-80', Drivers: scoreCounts['60-80'], fill: COLORS.yellow },
                     { name: '80+', Drivers: scoreCounts['80+'], fill: COLORS.green }
-                ].filter(d => d.Drivers > 0));
+                ].filter(d => d.Drivers > 0);
 
-                const rTrend = Array.from(rentMap.values()).sort((a,b) => {
+                finalRentTrendData = Array.from(rentMap.values()).sort((a,b) => {
                     if (groupByDay) {
                         const da = new Date(`${a.period} ${new Date().getFullYear()}`);
                         const db = new Date(`${b.period} ${new Date().getFullYear()}`);
@@ -360,7 +354,6 @@ const ExecutiveDashboard = () => {
                     }
                     return new Date(`01 ${a.period}`).getTime() - new Date(`01 ${b.period}`).getTime();
                 });
-                setRentTrendData(rTrend);
             }
 
             // 3. Vehicle Analytics
@@ -380,13 +373,13 @@ const ExecutiveDashboard = () => {
                     }
                 });
 
-                setVehicleData([
+                finalVehicleData = [
                     { name: 'Active', count: vDisplayCounts.Active, fill: COLORS.green },
                     { name: 'Maintenance', count: vDisplayCounts.Maintenance, fill: COLORS.orange },
                     { name: 'Available', count: vDisplayCounts.Available, fill: COLORS.blue },
                     { name: 'Suspended', count: vDisplayCounts.Suspended, fill: COLORS.red },
                     { name: 'Pipeline', count: vDisplayCounts.Other, fill: COLORS.purple }
-                ].filter(d => d.count > 0));
+                ].filter(d => d.count > 0);
             }
 
             // 4. Purchase Order Analytics
@@ -415,7 +408,7 @@ const ExecutiveDashboard = () => {
                     poMap.set(pKey, curr);
                 });
 
-                const poTrend = Array.from(poMap.values()).sort((a,b) => {
+                finalPoTrendData = Array.from(poMap.values()).sort((a,b) => {
                     if (groupByDay) {
                         const da = new Date(`${a.period} ${new Date().getFullYear()}`);
                         const db = new Date(`${b.period} ${new Date().getFullYear()}`);
@@ -423,27 +416,35 @@ const ExecutiveDashboard = () => {
                     }
                     return new Date(`01 ${a.period}`).getTime() - new Date(`01 ${b.period}`).getTime();
                 });
-                setPoTrendData(poTrend);
             }
 
             // 5. Staff Analytics
             if (staffRes.status === 'fulfilled') {
                 const sd = staffRes.value.data;
-                setStaffData([
+                finalStaffData = [
                     { name: 'Branch Mgrs', count: sd.branchManagers?.length || 0, fill: COLORS.indigo },
                     { name: 'Finance Staff', count: sd.financeStaff?.length || 0, fill: COLORS.pink },
                     { name: 'Operation Staff', count: sd.operationStaff?.length || 0, fill: COLORS.teal },
                     { name: 'Country Mgrs', count: sd.countryManagers?.length || 0, fill: COLORS.yellow },
                     { name: 'Global Admins', count: sd.globalAdmins?.length || 0, fill: COLORS.green }
-                ].filter(x => x.count > 0));
+                ].filter(x => x.count > 0);
             }
+
+            dispatch(setExecutiveDashboardData({
+                financeTotals: finalFinanceTotals,
+                vehicleData: finalVehicleData,
+                driverData: finalDriverData,
+                staffData: finalStaffData,
+                rentTrendData: finalRentTrendData,
+                poTrendData: finalPoTrendData,
+                kpiData: newKpi,
+                branches: fetchedBranches
+            }));
 
         } catch (e) {
             console.error('Failed fetching data', e);
         } finally {
-            setTimeout(() => {
-                setLoading(false);
-            }, 900);
+            setLoading(false);
         }
     };
 
@@ -455,7 +456,9 @@ const ExecutiveDashboard = () => {
     }, [globalStartDate, globalEndDate]);
 
     useEffect(() => {
-        fetchData();
+        const shouldShowLoader = !executiveState.isLoaded || !isFirstMount.current;
+        fetchData(shouldShowLoader);
+        isFirstMount.current = false;
     }, [globalStartDate, globalEndDate, globalBranch]);
 
     // ─── Render Components ──────────────────────────────────────────
@@ -543,7 +546,7 @@ const ExecutiveDashboard = () => {
 
 
                     <button
-                        onClick={fetchData}
+                        onClick={() => fetchData(true)}
                         disabled={loading}
                         className="flex items-center gap-1 lg:gap-2 px-2 py-1.5 lg:px-4 lg:py-2 bg-lime text-black rounded-lg text-xs lg:text-sm font-bold transition-all hover:bg-lime/90 disabled:opacity-50 cursor-pointer"
                     >

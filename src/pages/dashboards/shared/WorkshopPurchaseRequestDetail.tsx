@@ -60,10 +60,7 @@ const WorkshopPurchaseRequestDetail = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const role = getUserRole();
-    const userRole = role;
-
-    // States for Action Modal
+    const userRole = getUserRole();
     const [userId, setUserId] = useState<string>('');
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [actionType, setActionType] = useState<'APPROVE' | 'REJECT'>('APPROVE');
@@ -77,18 +74,15 @@ const WorkshopPurchaseRequestDetail = () => {
 
     const submitAction = async () => {
         if (!request) return;
-        const targetStatus = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
-        setActionLoading(targetStatus);
+        const status = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+        setActionLoading(status);
         try {
-            await financeApproveProcurementRequest(request._id, {
-                status: targetStatus,
-                note: actionNote
-            });
-            toast.success(actionType === 'APPROVE' ? 'Request Approved' : 'Request Rejected');
+            await financeApproveProcurementRequest(request._id, { status, note: actionNote });
+            toast.success(actionType === 'APPROVE' ? 'Pricing Approved' : 'Pricing Rejected');
             setIsActionModalOpen(false);
             fetchRequestDetails();
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to update request');
+            toast.error(err.response?.data?.message || `Failed to ${actionType.toLowerCase()} pricing`);
         } finally {
             setActionLoading(null);
         }
@@ -412,7 +406,7 @@ const WorkshopPurchaseRequestDetail = () => {
                     )}
 
                     {/* Action Buttons for Finance Admin */}
-                    {request.status === 'PENDING_FINANCE_APPROVAL' && (role === 'financeadmin' || role === 'admin') && (
+                    {request.status === 'PENDING_FINANCE_APPROVAL' && (userRole === 'financeadmin' || userRole === 'admin') && (
                         <div className="rounded-2xl border p-5 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#C8E600]">
                                 <AlertCircle size={14} /> Pending Finance Approval

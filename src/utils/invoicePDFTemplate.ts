@@ -122,8 +122,26 @@ export const generateInvoiceHTML = (invoice: any, driver: any, vehicle: any) => 
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                         <td style="padding: 8pt 5pt; font-size: 11pt; color: #555;">Subtotal</td>
-                        <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right;">$${(invoice.totalAmountDue || invoice.baseAmount || 0).toLocaleString()}</td>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right;">$${(invoice.subtotal || invoice.baseAmount || 0).toLocaleString()}</td>
                     </tr>
+                    ${(invoice.discountAmount || 0) > 0 ? `
+                    <tr>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; color: #555;">Discount (${invoice.discountType === 'PERCENTAGE' ? `${invoice.discountValue}%` : 'Fixed'})</td>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right; color: #ef4444;">-$${(invoice.discountAmount || 0).toLocaleString()}</td>
+                    </tr>
+                    ` : ''}
+                    ${(invoice.taxAmount || 0) > 0 ? `
+                    <tr>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; color: #555;">Tax (${invoice.taxRate}%)</td>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right; color: #3b82f6;">+$${(invoice.taxAmount || 0).toLocaleString()}</td>
+                    </tr>
+                    ` : ''}
+                    ${(invoice.carryOverAmount || 0) > 0 ? `
+                    <tr>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; color: #555;">Carry Over Balance</td>
+                        <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right; color: #f59e0b;">+$${(invoice.carryOverAmount || 0).toLocaleString()}</td>
+                    </tr>
+                    ` : ''}
                     <tr>
                         <td style="padding: 8pt 5pt; font-size: 11pt; color: #555;">Amount Paid</td>
                         <td style="padding: 8pt 5pt; font-size: 11pt; font-weight: 600; text-align: right; color: #22c55e;">-$${(invoice.amountPaid || 0).toLocaleString()}</td>
