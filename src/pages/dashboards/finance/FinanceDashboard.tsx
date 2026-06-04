@@ -4,8 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setFinanceDashboardData } from '../../../store/dashboardSlice';
 import { 
-    RefreshCw, 
-    Plus, Calendar, 
+    Activity, RefreshCw, 
+    List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
     Building2, FileText, Eye, CheckCircle
