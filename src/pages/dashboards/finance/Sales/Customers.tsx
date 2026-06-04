@@ -7,7 +7,6 @@ import {
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import { getUserRole } from '../../../../utils/auth';
 
 const formatDate = (dateString?: string) => {
     if (!dateString) return '—';
