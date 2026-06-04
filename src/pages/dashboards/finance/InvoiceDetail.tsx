@@ -531,7 +531,7 @@ const InvoiceDetail = () => {
                                 <tr className="bg-white/5">
                                     <td colSpan={3} className="px-6 py-4 text-right font-bold text-xs" style={{ color: 'var(--text-dim)' }}>Subtotal</td>
                                     <td className="px-6 py-4 text-right font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        ${(invoice.subtotal || invoice.totalAmountDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${(invoice.subtotal || invoice.baseAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
                                 </tr>
 
@@ -549,6 +549,15 @@ const InvoiceDetail = () => {
                                         <td colSpan={3} className="px-6 py-3 text-right font-bold text-xs text-blue-400">Tax ({invoice.taxRate}%)</td>
                                         <td className="px-6 py-3 text-right font-bold text-sm text-blue-400">
                                             + ${invoice.taxAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {(invoice.carryOverAmount || 0) > 0 && (
+                                    <tr className="bg-white/5">
+                                        <td colSpan={3} className="px-6 py-3 text-right font-bold text-xs text-amber-500">Carry Over Balance</td>
+                                        <td className="px-6 py-3 text-right font-bold text-sm text-amber-500">
+                                            + ${invoice.carryOverAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </td>
                                     </tr>
                                 )}
@@ -863,6 +872,7 @@ const InvoiceDetail = () => {
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
+        case 'DRAFT': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-blue-500/10 text-blue-400 border-blue-500/20 select-none">Draft</span>;
         case 'PAID': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none"><CheckCircle2 size={10} strokeWidth={3} /> Paid</span>;
         case 'PARTIAL': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-yellow-500/10 text-yellow-500 border-yellow-500/20 select-none"><Clock size={10} strokeWidth={3} /> Partial</span>;
         case 'OVERDUE': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none"><AlertCircle size={10} strokeWidth={3} /> Overdue</span>;
