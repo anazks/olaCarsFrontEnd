@@ -20,7 +20,6 @@ const formatDate = (dateString?: string) => {
 
 const Customers = () => {
     const navigate = useNavigate();
-    const userRole = getUserRole();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
