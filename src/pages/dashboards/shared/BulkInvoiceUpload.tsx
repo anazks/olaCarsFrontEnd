@@ -209,8 +209,8 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             getAllDrivers({ limit: 1000 })
                 .then(res => {
                     const list = Array.isArray(res.data) ? res.data : [];
-                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim().replace(/\s+/g, ' ')).filter(Boolean));
-                    const ids = new Set(list.map(d => d.driverId?.toLowerCase().trim()).filter(Boolean));
+                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
+                    const ids = new Set(list.map(d => d.driverId?.toLowerCase().trim()).filter((id): id is string => !!id));
                     setAvailableDriverNames(names);
                     setAvailableDriverIds(ids);
                 })
