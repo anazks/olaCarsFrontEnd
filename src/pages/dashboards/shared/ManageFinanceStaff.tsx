@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, ShieldCheck, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, Building2, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, ShieldCheck, Eye, Unlock } from 'lucide-react';
 import {
     getAllFinanceStaff,
     createFinanceStaff,
@@ -234,6 +234,18 @@ const ManageFinanceStaff = () => {
             setError(err.response?.data?.message || err.message || t('management.common.deleteFailed'));
         } finally {
             setDeleteLoading(false);
+        }
+    };
+
+    const handleUnblock = async (staff: FinanceStaff) => {
+        try {
+            await updateFinanceStaff({
+                id: staff._id,
+                status: 'ACTIVE'
+            });
+            fetchData();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         }
     };
 
@@ -490,6 +502,18 @@ const ManageFinanceStaff = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {staff.status === 'LOCKED' && (
+                                                    <HasPermission permission="STAFF_EDIT">
+                                                        <button
+                                                            onClick={() => handleUnblock(staff)}
+                                                            className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
+                                                            style={{ color: 'var(--brand-lime)' }}
+                                                            title={t('common.unblock', { defaultValue: 'Unblock' })}
+                                                        >
+                                                            <Unlock size={18} />
+                                                        </button>
+                                                    </HasPermission>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         const currentPath = window.location.pathname;

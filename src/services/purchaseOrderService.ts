@@ -2,7 +2,7 @@ import api from './api';
 import type { Supplier } from './supplierService';
 import type { Branch } from './branchService';
 
-export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED';
+export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED' | 'PENDING_FINANCE_APPROVAL';
 export type POPurpose = 'Vehicle' | 'Spare Parts' | 'Others';
 
 export interface PurchaseOrderItem {
@@ -11,6 +11,7 @@ export interface PurchaseOrderItem {
     description?: string;
     unitPrice: number;
     accountId?: string;
+    merchandiserPrice?: number;
     images?: (File | string)[]; // File for upload, string for view
 }
 
@@ -18,6 +19,11 @@ export interface EditHistoryEntry {
     updatedAt: string;
     updatedBy: string;
     changeSummary: string;
+    // Database raw fields fallback
+    editedAt?: string;
+    editedBy?: string | { name: string };
+    editorRole?: string;
+    changesSummary?: string;
 }
 
 export interface PaginationMetadata {
@@ -39,6 +45,10 @@ export interface PurchaseOrder {
     purpose: POPurpose;
     items: PurchaseOrderItem[];
     totalAmount: number;
+    originalTotalAmount?: number;
+    merchandiserTotalAmount?: number;
+    documents?: string[];
+    rejectionNote?: string;
     purchaseOrderDate: string;
     paymentDate?: string;
     branch: string | Branch;
@@ -67,6 +77,7 @@ export interface ApproveRejectPurchaseOrderPayload {
     status: POStatus;
     notes?: string;
     rejectionReason?: string;
+    rejectionNote?: string;
 }
 
 export interface UpdatePurchaseOrderPayload {

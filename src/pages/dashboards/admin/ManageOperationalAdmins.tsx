@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Shield, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle, Eye, Unlock } from 'lucide-react';
 import {
     getAllOperationalAdmins,
     createOperationalAdmin,
@@ -15,6 +15,7 @@ import {
 } from '../../../services/operationalAdminService';
 import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
+import HasPermission from '../../../components/HasPermission';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -180,6 +181,18 @@ const ManageOperationalAdmins = () => {
             setDeleteTarget(null);
         } finally {
             setDeleteLoading(false);
+        }
+    };
+
+    const handleUnblock = async (admin: OperationalAdmin) => {
+        try {
+            await updateOperationalAdmin({
+                id: admin._id,
+                status: 'ACTIVE'
+            } as UpdateOperationalAdminPayload);
+            fetchAdmins();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || t('management.common.operationFailed'));
         }
     };
 
@@ -407,6 +420,18 @@ const ManageOperationalAdmins = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
+                                                {admin.status === 'LOCKED' && (
+                                                    <HasPermission permission="STAFF_EDIT">
+                                                        <button
+                                                            onClick={() => handleUnblock(admin)}
+                                                            className="p-2 rounded-lg hover:bg-[#C8E600]/10 transition-colors"
+                                                            style={{ color: '#C8E600' }}
+                                                            title={t('common.unblock', { defaultValue: 'Unblock' })}
+                                                        >
+                                                            <Unlock size={15} />
+                                                        </button>
+                                                    </HasPermission>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         const currentPath = window.location.pathname;

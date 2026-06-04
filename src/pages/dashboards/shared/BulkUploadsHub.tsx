@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock } from 'lucide-react';
+import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -8,8 +8,9 @@ import DataMigrationUpload from './DataMigrationUpload';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import BulkUploadJournal from '../finance/BulkUploadJournal';
+import BulkInvoiceUpload from './BulkInvoiceUpload';
 
-type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | null;
+type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | 'invoice' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -22,7 +23,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'vehicle' | 'migration' | 'journal', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'vehicle' | 'migration' | 'journal' | 'invoice', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -31,21 +32,28 @@ const BulkUploadsHub = () => {
         if (type === 'driver') {
             fileName = 'driver_bulk_template.csv';
             headers = ['fullName', 'email', 'phone', 'whatsappNumber', 'dateOfBirth', 'nationality', 'idType', 'idNumber', 'licenseNumber', 'licenseCountry', 'licenseExpiry', 'emergencyName', 'emergencyRelationship', 'emergencyPhone'];
-            rows = [['John Doe', 'john@example.com', '+15550199', '+15550199', '1990-01-01', 'US', 'Passport', 'P12345', 'L9988', 'US', '2028-12-31', 'Jane Doe', 'Spouse', '+15550198']];
+            rows = [['John Smith', 'john.smith@example.com', '+254700000001', '+254700000001', '1995-05-15', 'Kenyan', 'National ID', 'ID-12345678', 'DL-123456', 'Kenya', '2028-12-31', 'Jane Smith', 'Spouse', '+254700000002'], ['Maria Garcia', 'maria.garcia@example.com', '+254711223344', '+254711223344', '1990-08-22', 'Kenyan', 'Passport', 'PP-88552211', 'DL-789012', 'Kenya', '2029-06-30', 'Carlos Garcia', 'Brother', '+254711223355']];
         } else if (type === 'vehicle') {
             fileName = 'vehicle_bulk_template.csv';
             headers = ['make', 'model', 'year', 'vin', 'registrationNumber', 'registrationExpiry', 'category', 'fuelType', 'transmission', 'colour', 'odometer', 'gpsSerialNumber', 'purchasePrice', 'vendorName', 'purchaseDate', 'paymentMethod', 'weeklyRent', 'sellingValue', 'leaseDurationWeeks', 'fleetNumber'];
-            rows = [['Toyota', 'Camry', '2022', '1NXBR32E6NZ000001', 'REG-123', '2027-12-31', 'Sedan', 'Petrol', 'Automatic', 'Black', '12000', 'GPS-777', '22000', 'Toyota Dealers', '2022-05-10', 'Cash', '180', '16000', '260', 'FL-101']];
+            rows = [['Toyota', 'Corolla', '2022', '1NXBR32E6NZ000001', 'KCC 123A', '2027-12-31', 'Sedan', 'Petrol', 'Automatic', 'White', '15000', 'GPS-998811', '18000', 'Toyota Kenya', '2023-01-15', 'Cash', '150', '14000', '260', 'FL-001'], ['Nissan', 'X-Trail', '2021', 'JN1TA0CP8LX000002', 'KCD 456B', '2026-06-30', 'SUV', 'Diesel', 'Automatic', 'Silver', '42000', 'GPS-776622', '22000', 'Nissan Motors', '2022-08-20', 'Finance', '200', '17500', '260', 'FL-002']];
         } else if (type === 'migration') {
             fileName = 'data_migration_template.csv';
-            headers = ['driverFullName', 'driverEmail', 'driverPhone', 'whatsappNumber', 'dateOfBirth', 'nationality', 'idType', 'idNumber', 'licenseNumber', 'licenseCountry', 'licenseExpiry', 'emergencyName', 'emergencyRelationship', 'emergencyPhone', 'vehicleMake', 'vehicleModel', 'vehicleYear', 'vehicleVin', 'vehicleRegNumber', 'vehicleRegExpiry', 'vehicleCategory', 'vehicleFuelType', 'vehicleTransmission', 'vehicleColour', 'vehicleOdometer', 'vehicleGpsSerial', 'vehiclePurchasePrice', 'vehicleVendorName', 'vehiclePurchaseDate', 'vehiclePaymentMethod', 'vehicleWeeklyRent', 'vehicleSellingValue', 'vehicleLeaseDurationWeeks', 'vehicleFleetNumber'];
-            rows = [['Jane Doe', 'jane@example.com', '+15551000', '+15551000', '1993-05-20', 'US', 'Passport', 'P54321', 'L1122', 'US', '2029-01-01', 'Bob Doe', 'Father', '+15552000', 'Toyota', 'Prius', '2021', '1NXBR32E6NZ000099', 'REG-999', '2028-06-30', 'Sedan', 'Hybrid', 'Automatic', 'White', '25000', 'GPS-888', '19000', 'Prius Fleet', '2021-10-12', 'Finance', '160', '14000', '260', 'FL-999']];
+            headers = ['fullName','email','phone','whatsappNumber','dateOfBirth','nationality','idType','idNumber','licenseNumber','licenseCountry','licenseExpiry','emergencyName','emergencyRelationship','emergencyPhone','vehicleNumber','vehicleMake','vehicleModel','vehicleYear','vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','activationDate','deactivationDate','weeklyRent','durationWeeks','remarks'];
+            rows = [['John Smith', 'john@example.com', '+254700000001', '+254700000001', '1995-05-15', 'Kenyan', 'National ID', 'ID-12345', 'DL-123', 'Kenya', '2028-12-31', 'Jane Smith', 'Spouse', '+254700000002', 'KAA 123A', 'Toyota', 'Corolla', '2022', 'Sedan', 'GASOLINE', 'White', '', '15/01/24', '', '1500', '60', 'Migrated from old system']];
         } else if (type === 'journal') {
             fileName = 'journal_entries_template.csv';
-            headers = ['date', 'reference', 'description', 'accountCode', 'accountName', 'debit', 'credit', 'branchCode'];
+            headers = ['Date', 'Reference', 'Branch', 'Account Code', 'Debit', 'Credit', 'Line Description', 'Tax Name'];
             rows = [
-                ['2026-05-20', 'INV-001', 'Rent payment received', '1010', 'Cash', '200', '0', 'BR01'],
-                ['2026-05-20', 'INV-001', 'Rent revenue earned', '4010', 'Rent Income', '0', '200', 'BR01']
+                ['2026-05-20', 'INV-001', 'BR01', '1010', '200', '0', 'Rent payment received', ''],
+                ['2026-05-20', 'INV-001', 'BR01', '4010', '0', '200', 'Rent revenue earned', '']
+            ];
+        } else if (type === 'invoice') {
+            fileName = 'invoice_bulk_template.csv';
+            headers = ['fullName', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
+            rows = [
+                ['John Smith', '180', '180', '2026-06-15', 'Week 24', 'Weekly Rent', 'Paid in full'],
+                ['Maria Garcia', '200', '100', '2026-06-20', '', 'Service charge', 'Partial payment']
             ];
         }
 
@@ -94,7 +102,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">4</p>
+                        <p className="text-base font-black text-main">5</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -105,7 +113,7 @@ const BulkUploadsHub = () => {
             </div>
 
             {/* Bento Grid layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 
                 {/* CARD 1: DRIVERS */}
                 <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
@@ -361,6 +369,61 @@ const BulkUploadsHub = () => {
                         </button>
                     </div>
                 </div>
+                {/* CARD 5: INVOICES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+                                <FileText size={20} className="text-blue-500" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Invoice Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload multiple invoices for Rent, Workshop, or Deposits. Auto-calculates payment status based on amounts and dynamically generates prefix codes.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('invoice', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('invoice', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('invoice')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
 
             </div>
 
@@ -420,6 +483,12 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
             )}
+
+            <BulkInvoiceUpload 
+                isOpen={activeModal === 'invoice'} 
+                onClose={() => setActiveModal(null)} 
+                onSuccess={() => setActiveModal(null)} 
+            />
         </div>
     );
 };

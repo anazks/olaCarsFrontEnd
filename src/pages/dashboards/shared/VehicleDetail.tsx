@@ -48,7 +48,7 @@ const DOC_FIELDS = [
     { key: 'transferOfOwnership', label: 'Transfer of Ownership' },
 ];
 
-const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial'];
+const CATEGORIES: VehicleCategory[] = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial', 'MUV'];
 const FUEL_TYPES: FuelType[] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const TRANSMISSIONS: Transmission[] = ['Automatic', 'Manual'];
 const BODY_TYPES: BodyType[] = ['Hatchback', 'Saloon', 'Coupe', 'Convertible', 'Truck'];
@@ -729,6 +729,7 @@ const VehicleDetail = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                            <InfoRow label="Vehicle Number" value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />
