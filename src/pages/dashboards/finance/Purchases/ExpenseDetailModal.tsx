@@ -1,5 +1,7 @@
 import { X, FolderOpen, User, ShoppingBag, Landmark, Tag, FileText, Printer, CheckCircle } from 'lucide-react';
 import type { Expense } from '../../../../services/expenseService';
+import api from '../../../../services/api';
+import toast from 'react-hot-toast';
 
 interface Props {
     expense: Expense | null;
@@ -11,8 +13,19 @@ const ExpenseDetailModal = ({ expense, onClose }: Props) => {
 
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const printVoucher = () => {
-        window.print();
+    const printVoucher = async () => {
+        if (!expense) return;
+        const toastId = toast.loading("Generating printable expense PDF...");
+        try {
+            const res = await api.get(`/api/expenses/${expense._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating expense PDF document.", { id: toastId });
+        }
     };
 
     return (

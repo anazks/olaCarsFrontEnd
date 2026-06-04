@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { getVoucherById, type Voucher } from '../../../services/ledgerService';
 import { useTheme } from '../../../context/ThemeContext';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
 
 interface ViewVoucherProps {
     voucherId: string;
@@ -91,8 +93,19 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
 
 
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = async () => {
+        if (!voucher) return;
+        const toastId = toast.loading("Generating printable voucher PDF...");
+        try {
+            const res = await api.get(`/api/vouchers/${voucher._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating voucher PDF document.", { id: toastId });
+        }
     };
 
     return (

@@ -836,7 +836,7 @@ const VehicleDetail = () => {
                                             <span className="hidden sm:inline text-dim opacity-40">|</span>
                                             <button
                                                 onClick={() => {
-                                                    const regNo = vehicle.basicDetails?.registrationNumber || 'vehicle';
+                                                    const regNo = vehicle.legalDocs?.registrationNumber || 'vehicle';
                                                     downloadFile(
                                                         toFullUrl(vehiclePolicies[0].certificate) || '',
                                                         `Insurance_Certificate_${regNo.replace(/\s+/g, '_')}`
@@ -1248,7 +1248,7 @@ const VehicleDetail = () => {
                                                         <span className="hidden sm:inline text-dim opacity-40">|</span>
                                                         <button
                                                             onClick={() => {
-                                                                const regNo = vehicle.basicDetails?.registrationNumber || 'vehicle';
+                                                                const regNo = vehicle.legalDocs?.registrationNumber || 'vehicle';
                                                                 downloadFile(
                                                                     docUrl,
                                                                     `${df.label.replace(/\s+/g, '_')}_${regNo.replace(/\s+/g, '_')}`

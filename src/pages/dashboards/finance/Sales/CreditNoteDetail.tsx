@@ -11,6 +11,7 @@ import { getAllDrivers } from '../../../../services/driverService';
 import { useTheme } from '../../../../context/ThemeContext';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
+import api from '../../../../services/api';
 
 const CreditNoteDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -171,6 +172,21 @@ const CreditNoteDetail = () => {
         }
     };
 
+    const handlePrintPdf = async () => {
+        if (!note) return;
+        const toastId = toast.loading("Generating printable credit note PDF...");
+        try {
+            const res = await api.get(`/api/credit-notes/${note._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating credit note PDF document.", { id: toastId });
+        }
+    };
+
     const handleConfirmApply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!id || !applyInvoiceId) {
@@ -307,7 +323,7 @@ const CreditNoteDetail = () => {
                         >
                             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
-                        <button onClick={() => window.print()} className="flex items-center gap-1 px-3.5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-xl active:scale-95 cursor-pointer"><Printer size={12} /> Print</button>
+                        <button onClick={handlePrintPdf} className="flex items-center gap-1 px-3.5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-xl active:scale-95 cursor-pointer"><Printer size={12} /> Print</button>
                     </div>
                 </div>
 

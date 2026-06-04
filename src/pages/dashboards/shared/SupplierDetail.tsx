@@ -4,14 +4,17 @@ import {
     Users, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle, 
-    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins
+    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins, X
 } from 'lucide-react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import { getSupplierById, type Supplier } from '../../../services/supplierService';
+import { getSupplierById, updateSupplier, type Supplier, type UpdateSupplierPayload } from '../../../services/supplierService';
 import { getAllBills, type Bill } from '../../../services/billService';
 import { getAllPurchaseOrders, type PurchaseOrder } from '../../../services/purchaseOrderService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 interface RelatedPayment {
     _id: string;
@@ -28,6 +31,17 @@ interface RelatedPayment {
     }>;
 }
 
+const CATEGORIES = [
+    "Vehicles",
+    "Insurance",
+    "Spare Parts",
+    "Services",
+    "Office Supplies",
+    "IT Equipment",
+    "Marketing",
+    "Other"
+];
+
 const SupplierDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -41,6 +55,90 @@ const SupplierDetail = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'pos' | 'bills' | 'payments' | 'ledger'>('overview');
+
+    // Edit Supplier Form State
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        address: '',
+        category: CATEGORIES[0],
+        customCategory: '',
+        isActive: true
+    });
+    const [formError, setFormError] = useState<string | null>(null);
+    const [formLoading, setFormLoading] = useState(false);
+
+    const openEditModal = () => {
+        if (!supplier) return;
+        const isPredefined = CATEGORIES.includes(supplier.category);
+        setFormData({
+            name: supplier.name,
+            contactPerson: supplier.contactPerson || '',
+            email: supplier.email || '',
+            phone: supplier.phone || '',
+            address: supplier.address || '',
+            category: isPredefined ? supplier.category : 'Other',
+            customCategory: isPredefined ? '' : supplier.category,
+            isActive: supplier.isActive
+        });
+        setFormError(null);
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id || !supplier) return;
+        setFormLoading(true);
+        setFormError(null);
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError('Please enter a valid email address.');
+            setFormLoading(false);
+            return;
+        }
+
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            setFormError(phoneValidation.defaultMessage || 'Please enter a valid phone number.');
+            setFormLoading(false);
+            return;
+        }
+
+        const finalCategory = formData.category === 'Other' ? formData.customCategory : formData.category;
+
+        if (!finalCategory.trim()) {
+            setFormError('Please specify a category.');
+            setFormLoading(false);
+            return;
+        }
+
+        try {
+            const payload: UpdateSupplierPayload = {
+                id,
+                name: formData.name,
+                contactPerson: formData.contactPerson,
+                email: formData.email,
+                phone: formData.phone,
+                address: formData.address,
+                category: finalCategory,
+                isActive: formData.isActive
+            };
+            await updateSupplier(payload);
+            toast.success('Supplier profile updated successfully.');
+            setIsEditModalOpen(false);
+            fetchData();
+        } catch (err: any) {
+            setFormError(err.response?.data?.message || err.message || 'Failed to update supplier profile.');
+        } finally {
+            setFormLoading(false);
+        }
+    };
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -93,6 +191,21 @@ const SupplierDetail = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const handlePrintSupplier = async () => {
+        if (!id) return;
+        const toastId = toast.loading("Generating printable supplier PDF...");
+        try {
+            const res = await api.get(`/api/supplier/${id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating supplier PDF document.", { id: toastId });
+        }
+    };
 
     if (loading) {
         return (
@@ -180,7 +293,7 @@ const SupplierDetail = () => {
                     </button>
 
                     <button 
-                        onClick={() => navigate(parentPath)}
+                        onClick={openEditModal}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                     >
@@ -188,7 +301,7 @@ const SupplierDetail = () => {
                     </button>
 
                     <button 
-                        onClick={() => window.print()}
+                        onClick={handlePrintSupplier}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
                     >
                         <Download size={14} /> Export Statement
@@ -523,6 +636,224 @@ const SupplierDetail = () => {
                     </div>
                 )}
             </div>
+
+            {/* Edit Supplier Modal */}
+            {isEditModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3"
+                    style={{
+                        background: "rgba(0,0,0,0.8)",
+                        backdropFilter: "blur(8px)"
+                    }}
+                    onClick={() => setIsEditModalOpen(false)}
+                >
+                    <div
+                        className="rounded-2xl p-6 max-w-4xl w-full mx-2 relative border max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-300 select-text"
+                        style={{
+                            background: "var(--bg-card)",
+                            borderColor: "var(--border-main)"
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-semibold" style={{ color: "var(--text-main)" }}>
+                                Edit Supplier Profile
+                            </h2>
+                            <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-white/10 rounded-lg transition">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEditSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Supplier Name */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Supplier Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="Enter supplier name"
+                                    />
+                                </div>
+
+                                {/* Contact Person */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Contact Person
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                        value={formData.contactPerson}
+                                        onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                                        placeholder="Enter contact person name"
+                                    />
+                                </div>
+
+                                {/* Email */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        placeholder="Enter email address"
+                                    />
+                                </div>
+
+                                {/* Phone */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Phone Number
+                                    </label>
+                                    <PhoneInput
+                                        country={"in"}
+                                        value={formData.phone}
+                                        onChange={(phone) => setFormData({ ...formData, phone })}
+                                        containerStyle={{ width: "100%" }}
+                                        inputStyle={{
+                                            width: "100%",
+                                            height: "42px",
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            color: "var(--text-main)",
+                                            borderRadius: "12px",
+                                            fontSize: "14px"
+                                        }}
+                                        buttonStyle={{
+                                            background: "var(--bg-input)",
+                                            border: "1px solid var(--border-main)",
+                                            borderRadius: "12px 0 0 12px"
+                                        }}
+                                        dropdownStyle={{
+                                            background: "var(--bg-card)",
+                                            color: "var(--text-main)",
+                                            border: "1px solid var(--border-main)",
+                                            borderRadius: "12px",
+                                            marginTop: "4px",
+                                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Category Dropdown */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Category
+                                    </label>
+                                    <select
+                                        value={formData.category}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                    >
+                                        {CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Custom Category (Conditional) */}
+                                {formData.category === 'Other' && (
+                                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Custom Category
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.customCategory}
+                                            onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+                                            placeholder="Specify custom category"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Address */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                    Address
+                                </label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all resize-none"
+                                    style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    placeholder="Enter physical address"
+                                />
+                            </div>
+
+                            {/* Status and Toggle */}
+                            <div className="flex items-center justify-between p-4 rounded-xl border" style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}>
+                                <div>
+                                    <div className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>Status</div>
+                                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>Active suppliers can receive Purchase Orders and generate Bills</div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.isActive}
+                                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                                </label>
+                            </div>
+
+                            {/* ERROR */}
+                            {formError && (
+                                <div className="p-4 rounded-xl text-sm flex items-center gap-3" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
+                                    <AlertCircle size={18} />
+                                    {formError}
+                                </div>
+                            )}
+
+                            {/* ACTIONS */}
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1 py-3 rounded-xl text-sm font-medium transition-all"
+                                    style={{ border: "1px solid var(--border-main)", color: "var(--text-dim)" }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={formLoading}
+                                    className="flex-[2] py-3 rounded-xl font-bold flex justify-center items-center shadow-lg hover:-translate-y-0.5 transition-all"
+                                    style={{ background: "#C8E600", color: "#0A0A0A" }}
+                                >
+                                    {formLoading ? (
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

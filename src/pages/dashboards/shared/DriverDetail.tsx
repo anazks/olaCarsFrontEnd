@@ -10,6 +10,7 @@ import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
 import { getUser, getUserRole } from '../../../utils/auth';
 import HasPermission from '../../../components/HasPermission';
+import api from '../../../services/api';
 
 const DriverDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -94,65 +95,38 @@ const DriverDetail = () => {
     };
 
 
-    const handlePrintContract = () => {
-        if (!contractPreviewHTML) return;
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Print Contract</title>
-                        <style>
-                            body { font-family: serif; line-height: 1.6; color: #111; padding: 40px; }
-                            h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; }
-                            table { width: 100%; border-collapse: collapse; margin: 1em 0; }
-                            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                            @media print {
-                                body { padding: 0; }
-                            }
-                        </style>
-                    </head>
-                    <body>${contractPreviewHTML}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 250);
+    const handlePrintContract = async () => {
+        if (!id) return;
+        const toastId = toast.loading("Generating printable contract PDF...");
+        try {
+            const res = await api.get(`/api/driver/${id}/contract/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating contract PDF document.", { id: toastId });
         }
     };
 
     const handleDownloadContract = async () => {
-        if (!contractPreviewHTML) return;
-        const toastId = toast.loading('Downloading Contract...');
+        if (!id) return;
+        const toastId = toast.loading("Generating contract PDF download...");
         try {
-            const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
-            const container = document.createElement('div');
-            container.style.width = '550pt';
-            container.style.padding = '40pt';
-            container.style.color = '#111';
-            container.style.fontFamily = 'serif';
-            container.style.lineHeight = '1.6';
-            container.innerHTML = contractPreviewHTML;
-
-            const style = document.createElement('style');
-            style.innerHTML = `
-                h1, h2, h3 { font-family: sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
-                p { margin-bottom: 1em; }
-                table { width: 100%; border-collapse: collapse; margin: 1em 0; }
-                th, td { border: 1pt solid #eee; padding: 8pt; text-align: left; }
-            `;
-            container.appendChild(style);
-            document.body.appendChild(container);
-
-            await doc.html(container, { x: 20, y: 20, width: 550, windowWidth: 800 });
-            doc.save(`Driver_Contract_${driver?.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Preview'}.pdf`);
-            document.body.removeChild(container);
-            toast.success('Download complete', { id: toastId });
-        } catch (error: any) {
-            toast.error('Failed to download', { id: toastId });
+            const res = await api.get(`/api/driver/${id}/contract/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Driver_Contract_${driver?.personalInfo?.fullName?.replace(/\s+/g, '_') || id}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            toast.success("PDF downloaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to download PDF:", err);
+            toast.error("Failed downloading contract PDF document.", { id: toastId });
         }
     };
 
