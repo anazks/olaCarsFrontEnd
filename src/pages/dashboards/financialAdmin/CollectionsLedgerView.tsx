@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
      Calendar, MapPin, Building, 
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet,
-    Loader2
+    Loader2, FileText
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
+import api from '../../../services/api';
 
 // Services
 import { 
@@ -89,6 +90,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [exporting, setExporting] = useState(false);
+    const [exportingPdf, setExportingPdf] = useState(false);
 
     // Filter state
     const [allBranches, setAllBranches] = useState<any[]>([]);
@@ -265,6 +267,39 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         }
     };
 
+    const handleExportPdf = async () => {
+        setExportingPdf(true);
+        const toastId = toast.loading("Generating PDF Report...");
+        try {
+            const query = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                listType: meta.listType
+            };
+            const res = await api.get('/api/collections/export/pdf', { params: query, responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            // Download PDF file
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            const filename = `${meta.title.toLowerCase().replace(/\s+/g, '_')}_report_${dateStr}.pdf`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("PDF report downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("PDF generation failed:", err);
+            toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
@@ -393,7 +428,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         <button 
                             disabled={exporting || loading}
                             onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" 
                             style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
                             {exporting ? (
@@ -402,7 +437,23 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 </>
                             ) : (
                                 <>
-                                    <FileSpreadsheet size={16} /> Export
+                                    <FileSpreadsheet size={16} /> Export CSV
+                                </>
+                            )}
+                        </button>
+
+                        <button 
+                            disabled={exportingPdf || loading}
+                            onClick={handleExportPdf}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime text-black font-bold text-sm hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                            {exportingPdf ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={16} /> Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText size={16} /> Export PDF
                                 </>
                             )}
                         </button>

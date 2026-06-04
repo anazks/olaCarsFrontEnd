@@ -194,15 +194,35 @@ const SupplierDetail = () => {
 
     const handlePrintSupplier = async () => {
         if (!id) return;
-        const toastId = toast.loading("Generating printable supplier PDF...");
+        const toastId = toast.loading("Preparing print layout...");
         try {
             const res = await api.get(`/api/supplier/${id}/pdf`, { responseType: 'blob' });
             const blob = new Blob([res.data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            toast.success("PDF loaded successfully", { id: toastId });
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
+            };
+            
+            toast.success("Print dialog opened successfully", { id: toastId });
         } catch (err: any) {
-            console.error("Failed to generate PDF:", err);
+            console.error("Failed to print PDF:", err);
             toast.error("Failed generating supplier PDF document.", { id: toastId });
         }
     };
@@ -302,7 +322,8 @@ const SupplierDetail = () => {
 
                     <button 
                         onClick={handlePrintSupplier}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        style={{ background: 'var(--brand-lime)' }}
                     >
                         <Download size={14} /> Export Statement
                     </button>

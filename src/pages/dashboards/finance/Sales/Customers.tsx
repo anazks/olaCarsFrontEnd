@@ -7,7 +7,6 @@ import {
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import { getUserRole } from '../../../../utils/auth';
 
 const formatDate = (dateString?: string) => {
     if (!dateString) return '—';
@@ -21,7 +20,6 @@ const formatDate = (dateString?: string) => {
 
 const Customers = () => {
     const navigate = useNavigate();
-    const userRole = getUserRole();
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);

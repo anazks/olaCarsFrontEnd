@@ -31,11 +31,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(59, 130, 246, 0.1)',
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(236, 72, 153, 0.1)',
-            text: '#ec4899',
-            border: 'rgba(236, 72, 153, 0.3)',
         }
     };
     const style = styles[status] || styles.APPROVED;

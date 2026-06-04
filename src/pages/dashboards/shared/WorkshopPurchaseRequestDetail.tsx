@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWorkshopProcurementRequestById, approveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, approveProcurementRequest, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { 
     ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
-    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2,
+    ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getUserRole } from '../../../utils/auth';
+import { getUserRole, getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
@@ -40,12 +41,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
             icon: <Receipt size={14} />
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(236, 72, 153, 0.1)',
-            text: '#ec4899',
-            border: 'rgba(236, 72, 153, 0.3)',
-            icon: <Clock size={14} />
         }
     };
     const style = styles[status] || styles.APPROVED;
@@ -66,6 +61,38 @@ const WorkshopPurchaseRequestDetail = () => {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const role = getUserRole();
+    const userRole = role;
+
+    // States for Action Modal
+    const [userId, setUserId] = useState<string>('');
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [actionType, setActionType] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+    const [actionNote, setActionNote] = useState('');
+
+    const openActionModal = (type: 'APPROVE' | 'REJECT') => {
+        setActionType(type);
+        setActionNote('');
+        setIsActionModalOpen(true);
+    };
+
+    const submitAction = async () => {
+        if (!request) return;
+        const targetStatus = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+        setActionLoading(targetStatus);
+        try {
+            await financeApproveProcurementRequest(request._id, {
+                status: targetStatus,
+                note: actionNote
+            });
+            toast.success(actionType === 'APPROVE' ? 'Request Approved' : 'Request Rejected');
+            setIsActionModalOpen(false);
+            fetchRequestDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to update request');
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     const fetchRequestDetails = useCallback(async () => {
         if (!id) return;
@@ -157,14 +184,14 @@ const WorkshopPurchaseRequestDetail = () => {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => openActionModal('REJECT')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 cursor-pointer bg-transparent"
                         >
                             <XCircle size={18} /> Reject Proposed
                         </button>
                         <button
                             onClick={() => openActionModal('APPROVE')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer border-none"
                             style={{ background: '#C8E600', color: '#111' }}
                         >
@@ -474,18 +501,18 @@ const WorkshopPurchaseRequestDetail = () => {
                                 onClick={() => setIsActionModalOpen(false)}
                                 className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:bg-white/5 cursor-pointer bg-transparent"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
-                                disabled={actionLoading}
+                                disabled={!!actionLoading}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={submitAction}
-                                disabled={actionLoading || (actionType === 'REJECT' && !actionNote.trim())}
+                                disabled={!!actionLoading || (actionType === 'REJECT' && !actionNote.trim())}
                                 className="flex-1 py-3 rounded-xl text-sm font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center cursor-pointer border-none"
                                 style={{
                                     background: actionType === 'REJECT' ? '#ef4444' : '#C8E600',
                                     color: actionType === 'REJECT' ? 'white' : '#0A0A0A',
-                                    opacity: (actionLoading || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
+                                    opacity: (!!actionLoading || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
                                 }}
                             >
                                 {actionLoading ? (

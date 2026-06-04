@@ -5,7 +5,7 @@ import {
     List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2
+    Building2, FileText, Eye, CheckCircle
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';

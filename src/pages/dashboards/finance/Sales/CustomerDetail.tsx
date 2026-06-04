@@ -315,7 +315,8 @@ const CustomerDetail = () => {
 
                     <button 
                         onClick={handleDownloadPdf}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+                        style={{ background: 'var(--brand-lime)' }}
                     >
                         <FileText size={14} /> Export PDF
                     </button>
