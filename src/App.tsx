@@ -291,6 +291,8 @@ function App() {
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="scraps" element={<FinancialAdminScraps />} />
+              <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
 
               {/* Nested Collections Routing Hub */}
               <Route path="collections" element={<Navigate to="dashboard" replace />} />

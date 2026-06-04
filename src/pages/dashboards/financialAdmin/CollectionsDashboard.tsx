@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     ResponsiveContainer, AreaChart, Area, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -12,6 +12,9 @@ import {
     TrendingUp, Wallet, FileText, Clock, FilterX
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../../store';
+import { setCollectionsDashboardData } from '../../../store/dashboardSlice';
 
 // Services
 import { 
@@ -66,23 +69,29 @@ const CollectionsDashboard = () => {
         tooltipText: isDark ? '#FFFFFF' : '#0A0A0A',
     };
 
+    const dispatch = useDispatch();
+    const collectionsState = useSelector((state: RootState) => state.dashboard.collections);
+
+    const isFirstMount = useRef(true);
+    const isListFirstMount = useRef(true);
+
     // Loading & Stats state
-    const [loading, setLoading] = useState(true);
-    const [metrics, setMetrics] = useState<CollectionsMetricData | null>(null);
-    const [trend, setTrend] = useState<TrendDataPoint[]>([]);
-    const [recentOverdue, setRecentOverdue] = useState<OverdueEntry[]>([]);
-    const [upcomingPayments, setUpcomingPayments] = useState<UpcomingEntry[]>([]);
+    const [loading, setLoading] = useState(!collectionsState.isLoaded);
+    const [metrics, setMetrics] = useState<CollectionsMetricData | null>(collectionsState.metrics);
+    const [trend, setTrend] = useState<TrendDataPoint[]>(collectionsState.trend);
+    const [recentOverdue, setRecentOverdue] = useState<OverdueEntry[]>(collectionsState.recentOverdue);
+    const [upcomingPayments, setUpcomingPayments] = useState<UpcomingEntry[]>(collectionsState.upcomingPayments);
 
     // List and Paginated state
-    const [listItems, setListItems] = useState<CollectionListItem[]>([]);
+    const [listItems, setListItems] = useState<CollectionListItem[]>(collectionsState.listItems);
     const [listLoading, setListLoading] = useState(false);
-    const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1 });
+    const [pagination, setPagination] = useState(collectionsState.pagination);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
     // Lookup collections
-    const [allBranches, setAllBranches] = useState<any[]>([]);
+    const [allBranches, setAllBranches] = useState<any[]>(collectionsState.branches);
 
     // Filter presets
     const [filters, setFilters] = useState({
@@ -118,9 +127,15 @@ const CollectionsDashboard = () => {
     // 1. Fetch Initial Setup (Branches)
     useEffect(() => {
         const loadBranches = async () => {
+            if (collectionsState.branches.length > 0) {
+                setAllBranches(collectionsState.branches);
+                return;
+            }
             try {
                 const res = await getAllBranches({ limit: 1000 });
-                setAllBranches(res.data || []);
+                const brData = res.data || [];
+                setAllBranches(brData);
+                dispatch(setCollectionsDashboardData({ branches: brData }));
             } catch (err) {
                 console.error('Error loading branches', err);
             }
@@ -155,13 +170,22 @@ const CollectionsDashboard = () => {
 
     // 2. Fetch Primary Analytics/Overview
     const loadAnalytics = async () => {
-        setLoading(true);
+        if (!collectionsState.isLoaded) {
+            setLoading(true);
+        }
         try {
             const data = await getCollectionsOverview(filters);
             setMetrics(data.metrics);
             setTrend(data.trend);
             setRecentOverdue(data.recentOverdue);
             setUpcomingPayments(data.upcomingPayments);
+
+            dispatch(setCollectionsDashboardData({
+                metrics: data.metrics,
+                trend: data.trend,
+                recentOverdue: data.recentOverdue,
+                upcomingPayments: data.upcomingPayments
+            }));
         } catch (err) {
             console.error('Failed fetching collections overview', err);
         } finally {
@@ -187,6 +211,15 @@ const CollectionsDashboard = () => {
                 total: data.pagination.total,
                 pages: data.pagination.pages
             });
+
+            dispatch(setCollectionsDashboardData({
+                listItems: data.items || [],
+                pagination: {
+                    page: data.pagination.page,
+                    total: data.pagination.total,
+                    pages: data.pagination.pages
+                }
+            }));
         } catch (err) {
             console.error('Failed fetching invoice grid', err);
         } finally {
@@ -196,11 +229,27 @@ const CollectionsDashboard = () => {
 
     // Sync primary analytics trigger on core filters change
     useEffect(() => {
+        const cacheAge = Date.now() - (collectionsState.lastFetched || 0);
+        const isCacheFresh = collectionsState.isLoaded && cacheAge < 5 * 60 * 1000;
+
+        if (isFirstMount.current && isCacheFresh) {
+            isFirstMount.current = false;
+            return;
+        }
+        isFirstMount.current = false;
         loadAnalytics();
     }, [filters.country, filters.branch, filters.startDate, filters.endDate]);
 
     // Sync list fetch on any interactive element change
     useEffect(() => {
+        const cacheAge = Date.now() - (collectionsState.lastFetched || 0);
+        const isCacheFresh = collectionsState.isLoaded && cacheAge < 5 * 60 * 1000;
+
+        if (isListFirstMount.current && isCacheFresh) {
+            isListFirstMount.current = false;
+            return;
+        }
+        isListFirstMount.current = false;
         loadList(1);
     }, [filters.country, filters.branch, filters.startDate, filters.endDate, debouncedSearch, statusFilter]);
 

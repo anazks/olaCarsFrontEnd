@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../../../store';
+import { setCustomersData } from '../../../../store/dashboardSlice';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
     ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus
@@ -20,10 +23,14 @@ const formatDate = (dateString?: string) => {
 
 const Customers = () => {
     const navigate = useNavigate();
-    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const dispatch = useDispatch();
+    const customersState = useSelector((state: RootState) => state.dashboard.customers);
+
+    const [drivers, setDrivers] = useState<Driver[]>(customersState.list);
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!customersState.isLoaded);
     const [error, setError] = useState<string | null>(null);
+    const isFirstMount = useRef(true);
 
     // Filters & Search
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,7 +47,7 @@ const Customers = () => {
     // Pagination State
     const [page, setPage] = useState(1);
     const [limit] = useState(25);
-    const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
+    const [pagination, setPagination] = useState<PaginationMetadata | null>(customersState.pagination);
 
     const getPageNumbers = () => {
         const totalPages = pagination?.totalPages || 1;
@@ -100,9 +107,9 @@ const Customers = () => {
         fetchBranchesData();
     }, []);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
         try {
-            setLoading(true);
+            if (showLoadingSpinner) setLoading(true);
             setError(null);
             const filters: DriverFilters = {
                 page,
@@ -118,8 +125,14 @@ const Customers = () => {
             if (endDate) filters.endDate = endDate;
 
             const res = await driverService.getAllDrivers(filters);
-            setDrivers(res.data || []);
+            const driversList = res.data || [];
+            setDrivers(driversList);
             setPagination(res.pagination);
+
+            dispatch(setCustomersData({
+                list: driversList,
+                pagination: res.pagination
+            }));
         } catch (error: any) {
             console.error('Error fetching customers:', error);
             setError(error.message || 'Failed to load customers');
@@ -127,10 +140,23 @@ const Customers = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, statusFilter, branchFilter, startDate, endDate]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, statusFilter, branchFilter, startDate, endDate, dispatch]);
 
     useEffect(() => {
-        fetchData();
+        const cacheAge = Date.now() - (customersState.lastFetched || 0);
+        const isCacheFresh = customersState.isLoaded && cacheAge < 5 * 60 * 1000;
+
+        if (isFirstMount.current && isCacheFresh) {
+            isFirstMount.current = false;
+            // Synchronize local states with Redux just in case
+            setDrivers(customersState.list);
+            setPagination(customersState.pagination);
+            return;
+        }
+
+        const shouldShowLoader = !customersState.isLoaded || !isFirstMount.current;
+        fetchData(shouldShowLoader);
+        isFirstMount.current = false;
     }, [fetchData]);
 
     const handleSort = (field: string) => {
@@ -178,7 +204,7 @@ const Customers = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <button 
-                            onClick={fetchData} 
+                            onClick={() => fetchData(true)} 
                             className="p-2 rounded-xl border transition-all duration-300 hover:bg-white/10 active:scale-95"
                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >

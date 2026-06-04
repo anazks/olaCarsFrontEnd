@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { addCustomer } from '../../../store/dashboardSlice';
 import { User, Mail, Phone, Calendar, Briefcase, FileText, ChevronLeft, Building2, ShieldCheck, ChevronRight, ChevronDown } from 'lucide-react';
 import { driverService } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -235,6 +237,7 @@ const PhoneInputField = ({ icon, label, name, codeName, required = true, formDat
 
 const CreateDriver = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const user = getUser();
     const role = getUserRole();
     const [loading, setLoading] = useState(false);
@@ -502,7 +505,8 @@ const CreateDriver = () => {
                 branch: formData.branchId,
             };
 
-            await driverService.createDriver(driverData);
+            const newDriver = await driverService.createDriver(driverData);
+            dispatch(addCustomer(newDriver));
             navigate('../drivers');
         } catch (error) {
             console.error('Error creating driver application:', error);

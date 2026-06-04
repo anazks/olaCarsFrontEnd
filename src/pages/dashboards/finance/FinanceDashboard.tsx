@@ -158,7 +158,12 @@ const FinanceDashboard = () => {
     };
 
     useEffect(() => {
-        fetchDashboardData(!financeState.isLoaded);
+        const cacheAge = Date.now() - (financeState.lastFetched || 0);
+        const isCacheFresh = financeState.isLoaded && cacheAge < 5 * 60 * 1000; // 5 minutes fresh
+        
+        if (!isCacheFresh) {
+            fetchDashboardData(!financeState.isLoaded);
+        }
     }, []);
 
     // ==========================================

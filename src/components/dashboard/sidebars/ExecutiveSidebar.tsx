@@ -14,7 +14,8 @@ import {
     X,
     ShoppingCart,
     ShoppingBag,
-    Shield
+    Shield,
+    Wrench
 } from 'lucide-react';
 import { removeToken, getUser } from '../../../utils/auth';
 import { useTranslation } from 'react-i18next';
@@ -183,6 +184,15 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: 'All Insurance', path: '/admin/admin/vehicle-policies' },
                 { label: 'Claims', path: '/admin/admin/insurance-claims' },
                 { label: 'Providers', path: '/admin/admin/insurances' },
+            ]
+        },
+        {
+            id: 'workshop-management',
+            label: 'Workshop Management',
+            icon: <Wrench size={22} />,
+            subItems: [
+                { label: 'Scraps', path: '/admin/admin/scraps' },
+                { label: 'Write Offs', path: '/admin/admin/write-offs' }
             ]
         },
         {

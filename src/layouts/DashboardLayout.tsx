@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from '../components/dashboard/TopBar';
+import { useDashboardPrefetcher } from '../hooks/useDashboardPrefetcher';
 
 interface DashboardLayoutProps {
     SidebarComponent: React.ElementType;
 }
 
 const DashboardLayoutContent = ({ SidebarComponent }: DashboardLayoutProps) => {
+    useDashboardPrefetcher();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const toggleSidebar = () => {
