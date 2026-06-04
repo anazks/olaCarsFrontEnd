@@ -12,12 +12,9 @@ import type { Invoice } from '../../../services/invoiceService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import { getUserRole } from '../../../utils/auth';
-
 const InvoiceDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const userRole = getUserRole();
 
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState<boolean>(true);

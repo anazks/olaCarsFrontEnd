@@ -181,14 +181,14 @@ const WorkshopPurchaseRequestDetail = () => {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => openActionModal('REJECT')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 cursor-pointer bg-transparent"
                         >
                             <XCircle size={18} /> Reject Proposed
                         </button>
                         <button
                             onClick={() => openActionModal('APPROVE')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer border-none"
                             style={{ background: '#C8E600', color: '#111' }}
                         >

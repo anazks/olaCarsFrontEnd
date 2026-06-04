@@ -6,7 +6,6 @@ import {
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentMadeModal from './CreatePaymentMadeModal';
-import { getUserRole } from '../../../../utils/auth';
 
 interface BillReference {
     billId: string;
@@ -36,7 +35,6 @@ interface PaymentMade {
 }
 
 const PaymentsMade = () => {
-    const userRole = getUserRole();
     const [payments, setPayments] = useState<PaymentMade[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
