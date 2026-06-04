@@ -7,13 +7,7 @@ import { bulkUploadInvoices } from '../../../services/invoiceService';
 import { getAllDrivers } from '../../../services/driverService';
 
 interface ParsedInvoiceRow {
-    fullName: string;
-    amount: string | number;
-    amountPaid?: string | number;
-    dueDate?: string;
-    description?: string;
-    notes?: string;
-    weekLabel?: string;
+    [key: string]: any;
     _rowErrors: string[];
 }
 
@@ -23,11 +17,96 @@ interface BulkInvoiceUploadProps {
     onSuccess: () => void;
 }
 
-const CSV_COLUMNS = ['fullName', 'amount', 'amountPaid', 'dueDate', 'weekLabel', 'description', 'notes'];
+const CSV_COLUMNS = [
+    'Invoice Date', 'Invoice ID', 'Invoice Number', 'Invoice Status', 'Customer ID',
+    'Customer Name', 'Customer Number', 'Company ID', 'Is Inclusive Tax', 'Due Date',
+    'Discount Type', 'SubTotal', 'Total', 'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY',
+    'Balance', 'Adjustment', 'Notes', 'Entity Discount Amount', 'Location ID',
+    'Item Name', 'Item Desc', 'Quantity', 'Discount', 'Discount Amount',
+    'Item Total', 'Item Price', 'Account', 'Account Code', 'Line Item Location Name',
+    'Invoice Shipment Status', 'Manually Shipped Quantity', 'Tax ID', 'Item Tax',
+    'Item Tax %', 'Item Tax Amount', 'Item Tax Type'
+];
 
 const SAMPLE_DATA = [
-    { fullName: 'John Smith', amount: '180', amountPaid: '180', dueDate: '2026-06-15', weekLabel: 'Week 24', description: 'Weekly Rent', notes: 'Paid in full' },
-    { fullName: 'Maria Garcia', amount: '200', amountPaid: '100', dueDate: '2026-06-20', weekLabel: '', description: 'Service charge', notes: 'Partial payment' }
+    {
+        'Invoice Date': '2026-06-01',
+        'Invoice ID': 'INV-ZOHO-001',
+        'Invoice Number': 'INV-000101',
+        'Invoice Status': 'Closed',
+        'Customer ID': 'DRV001',
+        'Customer Name': 'John Smith',
+        'Customer Number': '+254700000001',
+        'Company ID': 'COMP01',
+        'Is Inclusive Tax': 'FALSE',
+        'Due Date': '2026-06-15',
+        'Discount Type': 'Percentage',
+        'SubTotal': '180',
+        'Total': '208.8',
+        'TotalRetentionAmountFCY': '',
+        'TotalRetentionAmountBCY': '',
+        'Balance': '0',
+        'Adjustment': '',
+        'Notes': 'Weekly lease payment',
+        'Entity Discount Amount': '0',
+        'Location ID': '',
+        'Item Name': 'Weekly Rent',
+        'Item Desc': 'Vehicle Rent charge for week 23',
+        'Quantity': '1',
+        'Discount': '0',
+        'Discount Amount': '0',
+        'Item Total': '180',
+        'Item Price': '180',
+        'Account': 'Bank Transfer',
+        'Account Code': '1010',
+        'Line Item Location Name': '',
+        'Invoice Shipment Status': '',
+        'Manually Shipped Quantity': '',
+        'Tax ID': 'TAX16',
+        'Item Tax': 'VAT 16%',
+        'Item Tax %': '16',
+        'Item Tax Amount': '28.8',
+        'Item Tax Type': 'Taxable'
+    },
+    {
+        'Invoice Date': '2026-06-02',
+        'Invoice ID': 'INV-ZOHO-002',
+        'Invoice Number': 'INV-000102',
+        'Invoice Status': 'Pending',
+        'Customer ID': 'DRV002',
+        'Customer Name': 'Maria Garcia',
+        'Customer Number': '+254711223344',
+        'Company ID': 'COMP01',
+        'Is Inclusive Tax': 'FALSE',
+        'Due Date': '2026-06-20',
+        'Discount Type': 'Percentage',
+        'SubTotal': '100',
+        'Total': '116.0',
+        'TotalRetentionAmountFCY': '',
+        'TotalRetentionAmountBCY': '',
+        'Balance': '116.0',
+        'Adjustment': '',
+        'Notes': 'Scheduled oil change maintenance',
+        'Entity Discount Amount': '0',
+        'Location ID': '',
+        'Item Name': 'Oil Change Service',
+        'Item Desc': 'Service & Filter replacement',
+        'Quantity': '1',
+        'Discount': '0',
+        'Discount Amount': '0',
+        'Item Total': '100',
+        'Item Price': '100',
+        'Account': 'Cash',
+        'Account Code': '1020',
+        'Line Item Location Name': '',
+        'Invoice Shipment Status': '',
+        'Manually Shipped Quantity': '',
+        'Tax ID': 'TAX16',
+        'Item Tax': 'VAT 16%',
+        'Item Tax %': '16',
+        'Item Tax Amount': '16.0',
+        'Item Tax Type': 'Taxable'
+    }
 ];
 
 const parseFlexibleDate = (dateStr: any): Date | null => {
@@ -45,12 +124,11 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
     const str = dateStr.toString().trim();
     if (!str) return null;
 
-    // Match DD-MM-YYYY or DD/MM/YYYY
     const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
     const match = str.match(dmyRegex);
     if (match) {
         const day = parseInt(match[1], 10);
-        const month = parseInt(match[2], 10) - 1; // 0-indexed
+        const month = parseInt(match[2], 10) - 1;
         const year = parseInt(match[3], 10);
         const date = new Date(year, month, day);
         if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
@@ -58,7 +136,6 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
         }
     }
 
-    // Try standard JS Date parsing
     const parsedDate = new Date(str);
     if (!isNaN(parsedDate.getTime())) {
         return parsedDate;
@@ -67,17 +144,48 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
     return null;
 };
 
+const getRowVal = (r: any, possibleKeys: string[]): any => {
+    if (!r) return undefined;
+    for (const key of possibleKeys) {
+        const cleanKey = key.replace(/^\ufeff/, '').trim().toLowerCase();
+        if (r[key] !== undefined) return r[key];
+        for (const k of Object.keys(r)) {
+            const cleanK = k.replace(/^\ufeff/, '').trim().toLowerCase();
+            if (cleanK === cleanKey) {
+                return r[k];
+            }
+        }
+    }
+    return undefined;
+};
+
 const normalizeRowDates = (row: any): any => {
     const updated = { ...row };
-    if (updated.dueDate) {
-        const parsed = parseFlexibleDate(updated.dueDate);
+    
+    const dueDateVal = getRowVal(row, ['Due Date', 'dueDate']);
+    const dueDateKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'due date') || 'Due Date';
+    if (dueDateVal) {
+        const parsed = parseFlexibleDate(dueDateVal);
         if (parsed) {
             const yyyy = parsed.getFullYear();
             const mm = String(parsed.getMonth() + 1).padStart(2, '0');
             const dd = String(parsed.getDate()).padStart(2, '0');
-            updated.dueDate = `${yyyy}-${mm}-${dd}`;
+            updated[dueDateKey] = `${yyyy}-${mm}-${dd}`;
         }
     }
+    
+    const invoiceDateVal = getRowVal(row, ['Invoice Date', 'invoiceDate']);
+    const invoiceDateKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'invoice date') || 'Invoice Date';
+    if (invoiceDateVal) {
+        const parsed = parseFlexibleDate(invoiceDateVal);
+        if (parsed) {
+            const yyyy = parsed.getFullYear();
+            const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+            const dd = String(parsed.getDate()).padStart(2, '0');
+            updated[invoiceDateKey] = `${yyyy}-${mm}-${dd}`;
+        }
+    }
+    
     return updated;
 };
 
@@ -90,6 +198,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
     const [availableDriverNames, setAvailableDriverNames] = useState<Set<string>>(new Set());
+    const [availableDriverIds, setAvailableDriverIds] = useState<Set<string>>(new Set());
     const [loadingDrivers, setLoadingDrivers] = useState(false);
 
     useEffect(() => {
@@ -98,57 +207,87 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             getAllDrivers({ limit: 1000 })
                 .then(res => {
                     const list = Array.isArray(res.data) ? res.data : [];
-                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim()).filter(Boolean));
+                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim().replace(/\s+/g, ' ')).filter(Boolean));
+                    const ids = new Set(list.map(d => d.driverId?.toLowerCase().trim()).filter(Boolean));
                     setAvailableDriverNames(names);
+                    setAvailableDriverIds(ids);
                 })
                 .catch(err => {
-                    console.error('Failed to load driver names for validation', err);
+                    console.error('Failed to load driver names/IDs for validation', err);
                 })
                 .finally(() => {
                     setLoadingDrivers(false);
                 });
         } else {
             setAvailableDriverNames(new Set());
+            setAvailableDriverIds(new Set());
             setLoadingDrivers(false);
         }
     }, [isOpen]);
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        const name = row.fullName?.toString().trim();
-        if (!name) {
-            errors.push('Missing fullName');
-        } else if (availableDriverNames.size > 0 && !availableDriverNames.has(name.toLowerCase())) {
-            errors.push(`Driver "${name}" not found`);
+        const name = (getRowVal(row, ['Customer Name', 'customerName', 'fullName', 'driver name', 'driverName', 'customer', 'driver']) || '').toString().trim();
+        const customerId = (getRowVal(row, ['Customer ID', 'customerId', 'driver id', 'driverId']) || '').toString().trim();
+
+        if (!name && !customerId) {
+            const rowKeys = Object.keys(row).filter(k => !k.startsWith('_'));
+            errors.push(`Missing Customer Name or Customer ID (Found columns: ${rowKeys.join(', ') || 'none'})`);
+        } else {
+            let found = false;
+            
+            // 1. Try Customer ID match
+            if (customerId && availableDriverIds.has(customerId.toLowerCase().trim())) {
+                found = true;
+            }
+            
+            // 2. Try exact and flexible Customer Name match
+            if (!found && name) {
+                const cleanNameInput = name.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (availableDriverNames.has(cleanNameInput)) {
+                    found = true;
+                } else {
+                    // Flexible match: substring match to handle middle names or slight formatting differences
+                    for (const dbName of availableDriverNames) {
+                        const cleanDbName = dbName.toLowerCase().replace(/\s+/g, ' ').trim();
+                        if (cleanDbName === cleanNameInput || cleanDbName.includes(cleanNameInput) || cleanNameInput.includes(cleanDbName)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ((availableDriverNames.size > 0 || availableDriverIds.size > 0) && !found) {
+                errors.push(`Driver not found for ID "${customerId}" or Name "${name}"`);
+            }
         }
         
-        const amt = Number(row.amount);
-        if (isNaN(amt) || amt < 0) errors.push('Invalid amount');
-
-        if (row.amountPaid) {
-            const paid = Number(row.amountPaid);
-            if (isNaN(paid) || paid < 0) errors.push('Invalid amountPaid');
+        const subtotal = Number(getRowVal(row, ['SubTotal', 'subtotal', 'itemPrice', 'Item Price', 'amount']) || 0);
+        if (isNaN(subtotal) || subtotal < 0) {
+            errors.push('Invalid SubTotal/amount');
         }
 
-        if (row.dueDate) {
-            const parsed = parseFlexibleDate(row.dueDate);
+        const dueDate = getRowVal(row, ['Due Date', 'dueDate']);
+        if (dueDate) {
+            const parsed = parseFlexibleDate(dueDate);
             if (!parsed) {
-                errors.push('Invalid dueDate (expected DD-MM-YYYY or YYYY-MM-DD)');
+                errors.push('Invalid Due Date (expected DD-MM-YYYY or YYYY-MM-DD)');
             }
         }
         
         return errors;
-    }, [availableDriverNames]);
+    }, [availableDriverNames, availableDriverIds]);
 
     // Re-validate rows when driver names load
     useEffect(() => {
-        if (parsedRows.length > 0 && availableDriverNames.size > 0) {
+        if (parsedRows.length > 0 && (availableDriverNames.size > 0 || availableDriverIds.size > 0)) {
             setParsedRows(prev => prev.map(row => ({
                 ...row,
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableDriverNames, validateRow]);
+    }, [availableDriverNames, availableDriverIds, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -165,7 +304,11 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
                     const rows: ParsedInvoiceRow[] = (jsonData as any[]).map(row => {
-                        const normalized = normalizeRowDates(row);
+                        const trimmedRow: any = {};
+                        for (const key of Object.keys(row)) {
+                            trimmedRow[key.trim()] = row[key];
+                        }
+                        const normalized = normalizeRowDates(trimmedRow);
                         return {
                             ...normalized,
                             _rowErrors: validateRow(normalized),
@@ -276,6 +419,20 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         toast.success('Removed all invalid rows');
     };
 
+    const handleDownloadInvalid = () => {
+        const invalidRows = parsedRows.filter(row => row._rowErrors.length > 0);
+        if (invalidRows.length === 0) {
+            toast.error('No invalid rows found.');
+            return;
+        }
+        const cleanedRows = invalidRows.map(({ _rowErrors, ...rest }) => rest);
+        const worksheet = XLSX.utils.json_to_sheet(cleanedRows, { header: CSV_COLUMNS });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Invalid Invoices");
+        XLSX.writeFile(workbook, "invalid_invoices_reupload.xlsx");
+        toast.success("Downloaded invalid invoices template.");
+    };
+
     if (!isOpen) return null;
 
     const validCount = parsedRows.filter(r => r._rowErrors.length === 0).length;
@@ -380,12 +537,20 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                 </div>
                                 <div className="flex gap-2">
                                     {errorCount > 0 && (
-                                        <button 
-                                            onClick={handleRemoveInvalid} 
-                                            className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-50 transition-colors"
-                                        >
-                                            Remove All Invalid
-                                        </button>
+                                        <>
+                                            <button 
+                                                onClick={handleDownloadInvalid} 
+                                                className="px-4 py-2 rounded-lg text-xs font-bold border border-amber-500 text-amber-500 hover:bg-amber-500/5 transition-colors"
+                                            >
+                                                Download Invalid Rows
+                                            </button>
+                                            <button 
+                                                onClick={handleRemoveInvalid} 
+                                                className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-50 transition-colors"
+                                            >
+                                                Remove All Invalid
+                                            </button>
+                                        </>
                                     )}
                                     <button onClick={handleReset} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
                                         Change File
@@ -406,21 +571,25 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                     <table className="w-full text-left text-xs">
                                         <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-main)' }}>
                                             <tr>
-                                                <th className="py-3 px-4">Driver Name</th>
-                                                <th className="py-3 px-4">Amount</th>
-                                                <th className="py-3 px-4">Amount Paid</th>
-                                                <th className="py-3 px-4">Due Date</th>
+                                                <th className="py-3 px-4">Invoice No</th>
+                                                <th className="py-3 px-4">Customer Name</th>
+                                                <th className="py-3 px-4">SubTotal</th>
+                                                <th className="py-3 px-4">Total</th>
                                                 <th className="py-3 px-4">Status</th>
+                                                <th className="py-3 px-4">Due Date</th>
+                                                <th className="py-3 px-4">Validation</th>
                                                 <th className="py-3 px-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {parsedRows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
-                                                    <td className="py-3 px-4">{row.fullName || '-'}</td>
-                                                    <td className="py-3 px-4 font-bold">{row.amount || '-'}</td>
-                                                    <td className="py-3 px-4 font-bold text-emerald-500">{row.amountPaid || '-'}</td>
-                                                    <td className="py-3 px-4 text-dim">{row.dueDate || '-'}</td>
+                                                    <td className="py-3 px-4">{getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '-'}</td>
+                                                    <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'fullName', 'driver name', 'driverName']) || '-'}</td>
+                                                    <td className="py-3 px-4 font-bold">{getRowVal(row, ['SubTotal', 'subtotal', 'amount', 'itemPrice', 'Item Price']) || '-'}</td>
+                                                    <td className="py-3 px-4 font-bold text-emerald-500">{getRowVal(row, ['Total', 'total']) || '-'}</td>
+                                                    <td className="py-3 px-4">{getRowVal(row, ['Invoice Status', 'status']) || '-'}</td>
+                                                    <td className="py-3 px-4 text-dim">{getRowVal(row, ['Due Date', 'dueDate']) || '-'}</td>
                                                     <td className="py-3 px-4">
                                                         {loadingDrivers ? (
                                                             <div className="flex items-center gap-1.5 text-blue-500">
