@@ -200,20 +200,20 @@ const InsuranceClaimDetail = () => {
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Policy Number</p>
-                                <p className="font-medium font-mono bg-white/5 px-2 py-1 rounded inline-block">
+                                <p className="font-medium font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded inline-block" style={{ color: 'var(--text-main)' }}>
                                     {claim.policyNumber && claim.policyNumber !== 'Unknown' 
                                         ? claim.policyNumber 
                                         : (activePolicy?.policyNumber || activePolicy?.insurance?.policyNumber || 'Unknown')}
                                 </p>
                             </div>
                             {vehicle && (
-                                <div className="md:col-span-2 bg-white/5 rounded-xl p-4 flex items-center gap-4 mt-2">
-                                    <div className="p-3 bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
+                                <div className="md:col-span-2 bg-black/5 dark:bg-white/5 rounded-xl p-4 flex items-center gap-4 mt-2">
+                                    <div className="p-3 bg-black/10 dark:bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
                                     <div>
-                                        <p className="font-bold text-sm">
+                                        <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
                                             {vehicle?.basicDetails?.make || 'Unknown Make'} {vehicle?.basicDetails?.model || 'Unknown Model'} {vehicle?.basicDetails?.year ? `(${vehicle.basicDetails.year})` : ''}
                                         </p>
-                                        <p className="text-xs text-gray-400 font-mono mt-1">
+                                        <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-dim)' }}>
                                             Plate No: {vehicle?.basicDetails?.vin || 'N/A'} | REG: {vehicle?.legalDocs?.registrationNumber || 'N/A'}
                                         </p>
                                     </div>
@@ -235,7 +235,7 @@ const InsuranceClaimDetail = () => {
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Claim Amount</p>
-                                <p className="font-bold text-xl text-white">${claim.claimAmount.toLocaleString()}</p>
+                                <p className="font-bold text-xl" style={{ color: 'var(--text-main)' }}>${claim.claimAmount.toLocaleString()}</p>
                             </div>
                             {claim.incidentLocation && (
                                 <div>
@@ -252,7 +252,7 @@ const InsuranceClaimDetail = () => {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Description</p>
-                            <div className="bg-black/20 rounded-xl p-4 text-sm leading-relaxed text-gray-300">
+                            <div className="bg-black/5 dark:bg-black/20 rounded-xl p-4 text-sm leading-relaxed" style={{ color: 'var(--text-main)' }}>
                                 {claim.incidentDescription}
                             </div>
                         </div>
@@ -274,7 +274,7 @@ const InsuranceClaimDetail = () => {
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Net Payable (After Excess)</p>
-                                            <p className="font-bold text-lg text-white">${(claim.netPayable || claim.approvedAmount).toLocaleString()}</p>
+                                            <p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>${(claim.netPayable || claim.approvedAmount).toLocaleString()}</p>
                                         </div>
                                     </>
                                 )}
@@ -293,7 +293,7 @@ const InsuranceClaimDetail = () => {
                                 {claim.rejectionReason && (
                                     <div className="col-span-1 sm:col-span-2">
                                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Rejection Reason</p>
-                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-200">
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-600 dark:text-red-200">
                                             {claim.rejectionReason}
                                         </div>
                                     </div>
@@ -304,9 +304,9 @@ const InsuranceClaimDetail = () => {
                 </div>
 
                 {/* Right Column - Status Progression */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:sticky lg:top-6 self-start">
                     {!isTerminal && (
-                        <div className="bg-glass border rounded-2xl p-6 shadow-xl sticky top-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="bg-glass border rounded-2xl p-6 shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <h3 className="font-black uppercase tracking-widest text-sm mb-4" style={{ color: 'var(--text-main)' }}>Progress Claim</h3>
                             
                             <form onSubmit={handleProgress} className="space-y-4">
@@ -319,7 +319,7 @@ const InsuranceClaimDetail = () => {
                                         style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     >
                                         {(ALLOWED_TRANSITIONS[claim.status] || []).map(s => (
-                                            <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                                            <option key={s} value={s} style={{ background: 'var(--bg-card)' }}>{s.replace('_', ' ')}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -409,7 +409,7 @@ const InsuranceClaimDetail = () => {
 
                     {/* Timeline History */}
                     <div className="bg-glass border rounded-2xl p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <h3 className="font-black uppercase tracking-widest text-sm mb-6 text-gray-400">Claim History</h3>
+                        <h3 className="font-black uppercase tracking-widest text-sm mb-6" style={{ color: 'var(--text-dim)' }}>Claim History</h3>
                         <div className="space-y-6">
                             {claim.statusHistory?.map((historyEntry, index) => (
                                 <div key={index} className="flex gap-4">
@@ -420,14 +420,14 @@ const InsuranceClaimDetail = () => {
                                             'bg-[#D4F12E] shadow-[0_0_10px_rgba(212,241,46,0.3)]'
                                         }`} />
                                         {index < claim.statusHistory.length - 1 && (
-                                            <div className="w-px h-full bg-white/10 my-1" />
+                                            <div className="w-px h-full bg-neutral-200 dark:bg-white/10 my-1" />
                                         )}
                                     </div>
                                     <div className="pb-4">
-                                        <p className="text-sm font-bold text-white">{historyEntry.status.replace('_', ' ')}</p>
+                                        <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{historyEntry.status.replace('_', ' ')}</p>
                                         <p className="text-xs text-gray-500 mt-1">{new Date(historyEntry.timestamp).toLocaleString()}</p>
                                         {historyEntry.notes && (
-                                            <p className="text-xs text-gray-400 mt-2 bg-white/5 p-2 rounded-lg inline-block">
+                                            <p className="text-xs mt-2 bg-black/5 dark:bg-white/5 p-2 rounded-lg inline-block" style={{ color: 'var(--text-dim)' }}>
                                                 {historyEntry.notes}
                                             </p>
                                         )}

@@ -358,6 +358,7 @@
       "searchPlaceholderBranches": "Buscar por nombre, código, ciudad, estado...",
       "allStatuses": "Todos los Estados",
       "allCountries": "Todos los Países",
+      "allBranches": "Todas las Sucursales",
       "startDate": "Fecha de Inicio",
       "endDate": "Fecha de Fin",
       "resetAll": "Reiniciar Todo",
@@ -428,7 +429,9 @@
         "twoFactorAuth": "Autenticación de Dos Factores",
         "create": "Crear",
         "branchManager": "Gerente de Sucursal",
-        "selectBranchManager": "Seleccionar un gerente de sucursal"
+        "selectBranchManager": "Seleccionar un gerente de sucursal",
+        "countryManager": "Gerente de País",
+        "selectCountryManager": "Seleccionar un Gerente de País"
       }
     },
     "branches": {
@@ -455,7 +458,13 @@
       "createButton": "Crear Gerente",
       "updateButton": "Actualizar Gerente",
       "deleteTitle": "Confirmar Eliminación",
-      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar a {{name}}? Esto desactivará permanentemente su acceso al sistema."
+      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar a {{name}}? Esto desactivará permanentemente su acceso al sistema.",
+      "form": {
+        "invalidEmailFormat": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "phoneRequired": "El número de teléfono es obligatorio.",
+        "invalidPhoneLength": "Por favor, introduzca un número de teléfono válido (6-12 dígitos sin incluir el código del país).",
+        "invalidPhoneRepeated": "El número de teléfono no puede consistir en dígitos repetidos."
+      }
     },
     "financeStaff": {
       "title": "Gestionar Personal de Finanzas",
@@ -481,7 +490,15 @@
       "createButton": "Crear Personal",
       "updateButton": "Guardar Cambios",
       "deleteTitle": "¿Eliminar Cuenta?",
-      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
+      "form": {
+        "invalidEmailFormat": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "phoneRequired": "El número de teléfono es obligatorio.",
+        "invalidPhoneRepeated": "El número de teléfono no puede consistir en dígitos repetidos.",
+        "phoneTooShort": "El número de teléfono es demasiado corto.",
+        "phoneTooLong": "El número de teléfono es demasiado largo.",
+        "invalidPhoneLength": "Por favor, introduzca un número de teléfono válido."
+      }
     },
     "workshopStaff": {
       "title": "Gestionar Personal del Taller",
@@ -494,7 +511,36 @@
       "createButton": "Crear Personal",
       "updateButton": "Guardar Cambios",
       "deleteTitle": "¿Eliminar Cuenta?",
-      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
+      "form": {
+        "invalidEmailFormat": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "phoneRequired": "El número de teléfono es obligatorio.",
+        "invalidPhoneRepeated": "El número de teléfono no puede consistir en dígitos repetidos.",
+        "phoneTooShort": "El número de teléfono es demasiado corto.",
+        "phoneTooLong": "El número de teléfono es demasiado largo.",
+        "invalidPhoneLength": "Por favor, introduzca un número de teléfono válido."
+      }
+    },
+    "workshopManager": {
+      "title": "Gestionar Gerentes del Taller",
+      "subtitle": "Gestionar gerentes de taller en todas las sucursales",
+      "add": "Agregar Gerente",
+      "loading": "Cargando gerentes de taller...",
+      "notFound": "No se encontraron gerentes de taller",
+      "modalTitleCreate": "Agregar Gerente del Taller",
+      "modalTitleEdit": "Editar Gerente del Taller",
+      "deleteTitle": "Eliminar Gerente",
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}?",
+      "createButton": "Crear Gerente",
+      "updateButton": "Actualizar Gerente",
+      "form": {
+        "invalidEmailFormat": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "phoneRequired": "El número de teléfono es obligatorio.",
+        "invalidPhoneRepeated": "El número de teléfono no puede consistir en dígitos repetidos.",
+        "phoneTooShort": "El número de teléfono es demasiado corto.",
+        "phoneTooLong": "El número de teléfono es demasiado largo.",
+        "invalidPhoneLength": "Por favor, introduzca un número de teléfono válido."
+      }
     },
     "opAdmins": {
       "title": "Gestionar Administradores Operativos",
@@ -527,7 +573,15 @@
       "modalTitleCreate": "Agregar Gerente de País",
       "modalTitleEdit": "Editar Gerente de País",
       "deleteTitle": "¿Eliminar Gerente de País?",
-      "createButton": "Crear Gerente"
+      "createButton": "Crear Gerente",
+      "form": {
+        "invalidEmailFormat": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "phoneRequired": "El número de teléfono es obligatorio.",
+        "invalidPhoneRepeated": "El número de teléfono no puede consistir en dígitos repetidos.",
+        "phoneTooShort": "El número de teléfono es demasiado corto.",
+        "phoneTooLong": "El número de teléfono es demasiado largo.",
+        "invalidPhoneLength": "Por favor, introduzca un número de teléfono válido."
+      }
     },
     "suppliers": {
       "title": "Gestionar Proveedores",

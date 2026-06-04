@@ -26,6 +26,7 @@ interface Props {
 }
 
 const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
@@ -99,6 +100,15 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
         if (!selectedSupplier) { toast.error('Please select a supplier'); return; }
         if (!selectedBranch) { toast.error('Please select a branch'); return; }
         if (!dueDate) { toast.error('Due date is required'); return; }
+        const minAllowedDueDate = billDate > todayStr ? billDate : todayStr;
+        if (dueDate < minAllowedDueDate) {
+            if (billDate > todayStr) {
+                toast.error('Due date cannot be before the bill date');
+            } else {
+                toast.error('Due date cannot be in the past');
+            }
+            return;
+        }
         
         const validItems = lineItems.filter(i => i.itemName.trim() && parseFloat(i.unitPrice) > 0 && i.accountId);
         if (validItems.length === 0) {
@@ -216,7 +226,14 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                     <input 
                                         type="date" 
                                         value={billDate} 
-                                        onChange={e => setBillDate(e.target.value)}
+                                        onChange={e => {
+                                            const newDate = e.target.value;
+                                            setBillDate(newDate);
+                                            const minAllowed = newDate > todayStr ? newDate : todayStr;
+                                            if (dueDate && dueDate < minAllowed) {
+                                                setDueDate(minAllowed);
+                                            }
+                                        }}
                                         className="w-full px-3 py-3 border rounded-2xl text-xs font-semibold outline-none"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
                                     />
@@ -228,6 +245,7 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                         required 
                                         value={dueDate} 
                                         onChange={e => setDueDate(e.target.value)}
+                                        min={billDate > todayStr ? billDate : todayStr}
                                         className="w-full px-3 py-3 border rounded-2xl text-xs font-semibold outline-none focus:border-brand-lime"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
                                     />

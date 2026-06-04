@@ -1,4 +1,5 @@
 import api from './api';
+import { getUserRole, getUserId } from '../utils/auth';
 
 /**
  * Each staff role maps to its own login endpoint.
@@ -128,9 +129,32 @@ export const refreshTokens = async (apiRole: string, refreshToken: string): Prom
     };
 };
 
-export const changePassword = async (userId: string, data: any) => {
+const ROLE_PREFIXES: Record<string, string> = {
+    'admin': 'admin',
+    'operationaladmin': 'operational-admin',
+    'operationadmin': 'operational-admin',
+    'financialadmin': 'finance-admin',
+    'financeadmin': 'finance-admin',
+    'countrymanager': 'country-manager',
+    'branchmanager': 'branch-manager',
+    'branchopstaff': 'operation-staff',
+    'operationstaff': 'operation-staff',
+    'branchfinstaff': 'finance-staff',
+    'financestaff': 'finance-staff',
+    'workshopmanager': 'workshop-manager',
+    'workshopstaff': 'workshop-staff',
+};
 
-    return await api.post(`api/user/${userId}/change-password`, data);
+export const changePassword = async (userId: string, data: any) => {
+    const activeUserId = userId || getUserId() || '';
+    const role = getUserRole();
+    const prefix = role ? (ROLE_PREFIXES[role] || 'user') : 'user';
+    const requestData = {
+        currentPassword: data.oldPassword || data.currentPassword,
+        newPassword: data.newPassword
+    };
+
+    return await api.post(`api/${prefix}/${activeUserId}/change-password`, requestData);
 };
 
 export const updateUserProfile = async (data: any) => {
