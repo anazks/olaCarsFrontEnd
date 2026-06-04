@@ -18,7 +18,7 @@ export const QuickAddSupplierModal = ({ isOpen, onClose, onSuccess }: QuickAddSu
         phone: '',
         email: '',
         address: '',
-        category: 'Parts/Service'
+        category: 'Vehicles'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +52,7 @@ export const QuickAddSupplierModal = ({ isOpen, onClose, onSuccess }: QuickAddSu
                 phone: '',
                 email: '',
                 address: '',
-                category: 'Parts/Service'
+                category: 'Vehicles'
             });
             onClose();
         } catch (err: any) {
@@ -108,11 +108,13 @@ export const QuickAddSupplierModal = ({ isOpen, onClose, onSuccess }: QuickAddSu
                             className="w-full px-4 py-2.5 border rounded-xl outline-none focus:border-brand-lime cursor-pointer appearance-none"
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            <option value="Parts/Service" style={{ background: 'var(--bg-card)' }}>Parts & Service</option>
-                            <option value="Fleet Maintenance" style={{ background: 'var(--bg-card)' }}>Fleet Maintenance</option>
-                            <option value="Utilities" style={{ background: 'var(--bg-card)' }}>Utilities</option>
-                            <option value="Rent/Lease" style={{ background: 'var(--bg-card)' }}>Rent/Lease</option>
-                            <option value="Admin & Office" style={{ background: 'var(--bg-card)' }}>Admin & Office</option>
+                            <option value="Vehicles" style={{ background: 'var(--bg-card)' }}>Vehicles</option>
+                            <option value="Insurance" style={{ background: 'var(--bg-card)' }}>Insurance</option>
+                            <option value="Spare Parts" style={{ background: 'var(--bg-card)' }}>Spare Parts</option>
+                            <option value="Services" style={{ background: 'var(--bg-card)' }}>Services</option>
+                            <option value="Office Supplies" style={{ background: 'var(--bg-card)' }}>Office Supplies</option>
+                            <option value="IT Equipment" style={{ background: 'var(--bg-card)' }}>IT Equipment</option>
+                            <option value="Marketing" style={{ background: 'var(--bg-card)' }}>Marketing</option>
                             <option value="Other" style={{ background: 'var(--bg-card)' }}>Other</option>
                         </select>
                     </div>

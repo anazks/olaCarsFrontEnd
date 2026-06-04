@@ -295,7 +295,7 @@ const CollectionsDashboard = () => {
 
 
             {/* STAT CARDS COMPACT GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 my-8">
                 <MetricStatCard 
                     title="Total Billed" 
                     value={`$${(metrics?.totalInvoiced || 0).toLocaleString()}`} 

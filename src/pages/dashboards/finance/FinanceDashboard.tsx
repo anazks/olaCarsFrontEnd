@@ -5,7 +5,7 @@ import {
     List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2, FileText, Eye, CheckCircle
+    Building2
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -1325,9 +1325,9 @@ const FinanceDashboard = () => {
             )}
 
             {/* Bottom Deck: Assigned Tasks & Recent Transactions */}
-            <div className={`grid grid-cols-1 ${userRole !== 'admin' ? 'xl:grid-cols-3' : ''} gap-6`}>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Global Transaction Ledger */}
-                <div className={`${userRole !== 'admin' ? 'xl:col-span-2' : ''} rounded-2xl border overflow-hidden flex flex-col justify-between`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="xl:col-span-2 rounded-2xl border overflow-hidden flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-6 bg-brand-lime rounded-full" />
@@ -1372,7 +1372,11 @@ const FinanceDashboard = () => {
                                             const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
                                             return (
-                                                <tr key={entry._id} className="hover:bg-white/[0.01] transition-colors">
+                                                <tr 
+                                                    key={entry._id} 
+                                                    className="hover:bg-white/[0.05] transition-colors cursor-pointer"
+                                                    onClick={() => navigate(`../ledger/${entry._id}`)}
+                                                >
                                                     <td className="px-6 py-4 font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</td>
                                                     <td className="px-6 py-4 text-dim max-w-xs truncate font-medium">{entry.description}</td>
                                                     <td className="px-6 py-4">
@@ -1399,7 +1403,6 @@ const FinanceDashboard = () => {
                 </div>
 
                 {/* Assigned Operational Missions */}
-                {userRole !== 'admin' && (
                     <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center justify-between mb-6">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
@@ -1455,7 +1458,6 @@ const FinanceDashboard = () => {
                             </div>
                         </div>
                     </div>
-                )}
             </div>
         </div>
     );

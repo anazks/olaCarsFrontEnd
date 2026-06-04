@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
+import { Database, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { dataMigrateDrivers, type DataMigrationResult } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getAllFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
+import { getAllFinanceStaff, createFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
 import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 
@@ -17,8 +17,10 @@ interface ParsedRow {
     emergencyName?: string; emergencyRelationship?: string; emergencyPhone?: string;
     vehicleNumber: string;
     vehicleMake?: string; vehicleModel?: string; vehicleYear?: string;
-    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string; vehicleSellingValue?: string;
-    activationDate?: string; deactivationDate?: string; remarks?: string;
+    vehicleCategory?: string; vehicleFuelType?: string; vehicleColour?: string; vehicleVin?: string;
+    activationDate?: string; deactivationDate?: string; 
+    weeklyRent?: string | number; durationWeeks?: string | number;
+    remarks?: string;
     _rowErrors: string[];
 }
 
@@ -31,8 +33,8 @@ const MIGRATION_COLUMNS = [
     'idType','idNumber','licenseNumber','licenseCountry','licenseExpiry',
     'emergencyName','emergencyRelationship','emergencyPhone',
     'vehicleNumber','vehicleMake','vehicleModel','vehicleYear',
-    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','vehicleSellingValue',
-    'activationDate','deactivationDate','remarks'
+    'vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin',
+    'activationDate','deactivationDate','weeklyRent','durationWeeks','remarks'
 ];
 
 const SAMPLE_DATA = [{
@@ -43,8 +45,8 @@ const SAMPLE_DATA = [{
     emergencyName:'Jane Smith', emergencyRelationship:'Spouse', emergencyPhone:'+254700000002',
     vehicleNumber:'KAA 123A',
     vehicleMake:'Toyota', vehicleModel:'Corolla', vehicleYear:'2022',
-    vehicleCategory:'Sedan', vehicleFuelType:'Petrol', vehicleColour:'White', vehicleVin:'', vehicleSellingValue:'15000',
-    activationDate:'2024-01-15', deactivationDate:'', remarks:'Migrated from old system'
+    vehicleCategory:'Sedan', vehicleFuelType:'GASOLINE', vehicleColour:'White', vehicleVin:'', 
+    activationDate:'15/01/24', deactivationDate:'', weeklyRent: 1500, durationWeeks: 60, remarks:'Migrated from old system'
 }];
 
 const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
@@ -58,6 +60,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [updateExisting, setUpdateExisting] = useState(true);
     const [result, setResult] = useState<DataMigrationResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -72,6 +75,48 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [nextFleetLoading, setNextFleetLoading] = useState(false);
     const [fleetError, setFleetError] = useState<string | null>(null);
     const [isCheckingFleet, setIsCheckingFleet] = useState(false);
+
+    const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+    const [newStaffForm, setNewStaffForm] = useState({ fullName: '', email: '', phone: '', password: '' });
+    const [creatingStaffLoader, setCreatingStaffLoader] = useState(false);
+
+    const handleCreateStaff = async () => {
+        try {
+            if (!newStaffForm.fullName || !newStaffForm.email || !newStaffForm.phone || !newStaffForm.password) {
+                toast.error("Please fill all staff fields");
+                return;
+            }
+            const branchToUse = needsBranchSelection ? selectedBranch : decoded?.branchId;
+            if (!branchToUse) {
+                toast.error("Please select a branch first");
+                return;
+            }
+            setCreatingStaffLoader(true);
+            const newStaff = await createFinanceStaff({
+                ...newStaffForm,
+                branchId: branchToUse,
+                status: 'ACTIVE'
+            });
+            toast.success("Finance staff created");
+            
+            // Refresh list
+            const res = await getAllFinanceStaff({ branchId: branchToUse, limit: 200 });
+            const updatedStaff = res.data || [];
+            setFinanceStaff(updatedStaff);
+            
+            // Auto select
+            setSelectedStaff(newStaff._id);
+            const staffObj = updatedStaff.find(s => s._id === newStaff._id) || newStaff;
+            setSelectedStaffObj(staffObj as any);
+            
+            setIsCreatingStaff(false);
+            setNewStaffForm({ fullName: '', email: '', phone: '', password: '' });
+        } catch(err: any) {
+            toast.error(err?.response?.data?.message || "Failed to create staff");
+        } finally {
+            setCreatingStaffLoader(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
@@ -121,11 +166,69 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        if (!row.fullName?.trim()) errors.push('Missing fullName');
-        if (!row.email?.trim()) errors.push('Missing email');
-        if (!row.phone?.trim()) errors.push('Missing phone');
-        if (!row.vehicleNumber?.trim()) errors.push('Missing vehicleNumber');
-        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Invalid email');
+        const nameVal = String(row.fullName || '').trim();
+        if (!nameVal) errors.push('Missing fullName');
+        else if (/^\d+$/.test(nameVal)) errors.push('Name cannot be just numbers');
+
+        if (!row.vehicleNumber || !String(row.vehicleNumber).trim()) errors.push('Missing vehicleNumber');
+        
+        const emailVal = String(row.email || '').trim();
+        if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) errors.push('Invalid email');
+        
+        const phoneVal = String(row.phone || '').trim();
+        if (phoneVal && /[a-zA-Z]/.test(phoneVal)) errors.push('Phone cannot contain alphabets');
+
+        if (!row.weeklyRent) errors.push('Missing weekly rent');
+        else if (isNaN(Number(row.weeklyRent))) errors.push('Weekly rent must be a number');
+
+        if (!row.durationWeeks) errors.push('Missing duration weeks');
+        else if (isNaN(Number(row.durationWeeks))) errors.push('Duration weeks must be a number');
+
+        if (!row.activationDate) {
+            errors.push('Missing activation date');
+        } else {
+            if (typeof row.activationDate === 'string' && !/^\d{2}\/\d{2}\/\d{2,4}$/.test(row.activationDate)) {
+                errors.push('Activation date must be in DD/MM/YY or DD/MM/YYYY format');
+            }
+        }
+
+        if (row.activationDate && row.durationWeeks) {
+            let parsedDate = null;
+            if (typeof row.activationDate === 'number') {
+                const utcDays = Math.floor(row.activationDate - 25569);
+                parsedDate = new Date(utcDays * 86400 * 1000);
+            } else if (typeof row.activationDate === 'string') {
+                const parts = row.activationDate.split('/');
+                if (parts.length === 3) {
+                    let year = parts[2];
+                    if (year.length === 2) year = `20${year}`;
+                    parsedDate = new Date(`${year}-${parts[1]}-${parts[0]}`);
+                } else {
+                    const dashParts = row.activationDate.split('-');
+                    if (dashParts.length === 3 && dashParts[2].length === 4) {
+                        parsedDate = new Date(`${dashParts[2]}-${dashParts[1]}-${dashParts[0]}`);
+                    } else if (dashParts.length === 3 && dashParts[0].length === 4) {
+                        parsedDate = new Date(`${dashParts[0]}-${dashParts[1]}-${dashParts[2]}`);
+                    } else {
+                        parsedDate = new Date(row.activationDate);
+                    }
+                }
+            }
+
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
+                const duration = Number(row.durationWeeks);
+                const endDate = new Date(parsedDate);
+                endDate.setDate(endDate.getDate() + (duration * 7));
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                if (endDate < today) {
+                    errors.push('Activation date is too far in the past for this duration (all weeks have elapsed)');
+                }
+            }
+        }
+
         return errors;
     }, []);
 
@@ -181,9 +284,44 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 
         setUploading(true);
         try {
-            const payload = valid.map(({ _rowErrors, ...rest }) => rest);
+            const normalizeDate = (val: any): string | undefined => {
+                if (!val) return undefined;
+                if (typeof val === 'number') {
+                    const utcDays = Math.floor(val - 25569);
+                    const d = new Date(utcDays * 86400 * 1000);
+                    return d.toISOString().split('T')[0];
+                }
+                if (typeof val === 'string') {
+                    if (val.includes('/')) {
+                        const parts = val.split('/');
+                        if (parts.length === 3) {
+                            let year = parts[2];
+                            if (year.length === 2) year = `20${year}`;
+                            return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                    }
+                    if (val.includes('-')) {
+                        const parts = val.split('-');
+                        if (parts.length === 3) {
+                            if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            if (parts[0].length === 4) return val;
+                        }
+                    }
+                    return val;
+                }
+                return undefined;
+            };
+
+            const payload = valid.map(({ _rowErrors, ...rest }) => ({
+                ...rest,
+                activationDate: normalizeDate(rest.activationDate),
+                deactivationDate: normalizeDate(rest.deactivationDate),
+                dateOfBirth: normalizeDate(rest.dateOfBirth),
+                licenseExpiry: normalizeDate(rest.licenseExpiry),
+            }));
+
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined);
+            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
             setResult(res.data);
             toast.success(res.message);
             if (res.data.created.length > 0) onSuccess();
@@ -271,8 +409,29 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                     {/* Handling Staff Selector */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
-                            {staffLoading ? (
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
+                                {(!needsBranchSelection || selectedBranch) && !isCreatingStaff && (
+                                    <button onClick={() => setIsCreatingStaff(true)} className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400">
+                                        + New Staff
+                                    </button>
+                                )}
+                            </div>
+
+                            {isCreatingStaff ? (
+                                <div className="space-y-3 mt-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                    <input type="text" placeholder="Full Name" value={newStaffForm.fullName} onChange={e => setNewStaffForm({...newStaffForm, fullName: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="email" placeholder="Email Address" value={newStaffForm.email} onChange={e => setNewStaffForm({...newStaffForm, email: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="tel" placeholder="Phone Number" value={newStaffForm.phone} onChange={e => setNewStaffForm({...newStaffForm, phone: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <input type="password" placeholder="Password" value={newStaffForm.password} onChange={e => setNewStaffForm({...newStaffForm, password: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
+                                    <div className="flex gap-2 justify-end pt-1">
+                                        <button onClick={() => setIsCreatingStaff(false)} className="text-[10px] px-3 py-1.5 rounded uppercase font-black tracking-wider text-red-400 hover:bg-red-400/10 transition-colors">Cancel</button>
+                                        <button onClick={handleCreateStaff} disabled={creatingStaffLoader} className="text-[10px] px-3 py-1.5 rounded bg-amber-500 text-black uppercase font-black tracking-wider flex items-center gap-1 hover:opacity-90 transition-opacity">
+                                            {creatingStaffLoader ? <Loader2 size={12} className="animate-spin"/> : null} Create & Select
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : staffLoading ? (
                                 <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
                             ) : financeStaff.length === 0 ? (
                                 <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
@@ -403,6 +562,22 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                         </div>
                     </div>
 
+                    {/* Update Existing Option */}
+                    <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <input
+                            type="checkbox"
+                            id="updateExisting"
+                            checked={updateExisting}
+                            onChange={(e) => setUpdateExisting(e.target.checked)}
+                            className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500/20 cursor-pointer"
+                            style={{ accentColor: '#f59e0b' }}
+                        />
+                        <label htmlFor="updateExisting" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                            Update existing records if found
+                        </label>
+                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>(Matches by Vehicle VIN & Driver Phone/Name)</span>
+                    </div>
+
                     {/* Template Downloads */}
                     <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                         <Info size={16} style={{ color: '#f59e0b' }} />
@@ -463,28 +638,75 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                         <thead className="sticky top-0" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
                                             <tr>
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>#</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Name</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Email</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Phone</th>
-                                                <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Vehicle #</th>
+                                                {MIGRATION_COLUMNS.map(key => (
+                                                        <th key={key} className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                            {key}
+                                                        </th>
+                                                    ))}
                                                 <th className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                                <th className="px-3 py-2 font-bold text-center" style={{ color: 'var(--text-dim)' }}>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {parsedRows.map((row, i) => (
-                                                <tr key={i} style={{ borderBottom: '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
-                                                    <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-main)' }}>{row.fullName || '—'}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.email || '—'}</td>
-                                                    <td className="px-3 py-2" style={{ color: 'var(--text-muted)' }}>{row.phone || '—'}</td>
-                                                    <td className="px-3 py-2 font-bold" style={{ color: '#f59e0b' }}>{row.vehicleNumber || '—'}</td>
-                                                    <td className="px-3 py-2">
-                                                        {row._rowErrors.length === 0
-                                                            ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
-                                                            : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} title={row._rowErrors.join(', ')}>{row._rowErrors.length} error(s)</span>
-                                                        }
-                                                    </td>
-                                                </tr>
+                                                <Fragment key={i}>
+                                                    <tr style={{ borderBottom: row._rowErrors.length > 0 ? 'none' : '1px solid var(--border-main)', background: row._rowErrors.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                                                        <td className="px-3 py-2 font-bold" style={{ color: 'var(--text-dim)' }}>{i + 1}</td>
+                                                        {MIGRATION_COLUMNS.map(key => {
+                                                                let val = row[key as keyof ParsedRow];
+                                                                
+                                                                if (typeof val === 'number' && val > 40000 && val < 60000 && key.toLowerCase().includes('date')) {
+                                                                    const utcDays = Math.floor(val - 25569);
+                                                                    const d = new Date(utcDays * 86400 * 1000);
+                                                                    const day = d.getUTCDate().toString().padStart(2, '0');
+                                                                    const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+                                                                    const year = d.getUTCFullYear();
+                                                                    val = `${day}-${month}-${year}`;
+                                                                }
+
+                                                                return (
+                                                                    <td key={key} className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
+                                                                        {String(val || '—')}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        <td className="px-3 py-2">
+                                                            {row._rowErrors.length === 0
+                                                                ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>OK</span>
+                                                                : (
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                                                        {row._rowErrors.length} error(s)
+                                                                    </span>
+                                                                )
+                                                            }
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            <button 
+                                                                onClick={() => setParsedRows(prev => prev.filter((_, index) => index !== i))}
+                                                                className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-red-400 hover:text-red-300"
+                                                                title="Remove Entry"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {row._rowErrors.length > 0 && (
+                                                        <tr style={{ borderBottom: '1px solid var(--border-main)', background: 'rgba(239,68,68,0.04)' }}>
+                                                            <td colSpan={MIGRATION_COLUMNS.length + 3} className="px-4 py-2 pt-0 pb-3">
+                                                                <div className="flex items-start gap-2 p-2.5 rounded-lg border border-red-500/20 bg-red-500/5">
+                                                                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {row._rowErrors.map((err, errIdx) => (
+                                                                            <span key={errIdx} className="text-[11px] font-medium text-red-400">
+                                                                                • {err}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </Fragment>
                                             ))}
                                         </tbody>
                                     </table>
@@ -522,6 +744,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                             )}
                         </div>
                     )}
+                    
                 </div>
 
                 {/* Footer */}
@@ -545,3 +768,4 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
 };
 
 export default DataMigrationUpload;
+

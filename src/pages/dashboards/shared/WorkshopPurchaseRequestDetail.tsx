@@ -1,16 +1,13 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    getWorkshopProcurementRequestById, 
-    financeApproveWorkshopRequest,
-    type ProcurementRequest 
-} from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, approveProcurementRequest, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { 
     ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
-    User, Calendar, Landmark, AlertCircle, Package, Receipt,
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2,
     ExternalLink
 } from 'lucide-react';
-import { getDecodedToken, getUserRole } from '../../../utils/auth';
+import toast from 'react-hot-toast';
+import { getUserRole, getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
@@ -19,6 +16,12 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
+            icon: <Clock size={14} />
+        },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(234, 88, 12, 0.1)',
+            text: '#ea580c',
+            border: 'rgba(234, 88, 12, 0.3)',
             icon: <Clock size={14} />
         },
         APPROVED: {
@@ -38,12 +41,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
             icon: <Receipt size={14} />
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(236, 72, 153, 0.1)',
-            text: '#ec4899',
-            border: 'rgba(236, 72, 153, 0.3)',
-            icon: <Clock size={14} />
         }
     };
     const style = styles[status] || styles.APPROVED;
@@ -61,15 +58,38 @@ const WorkshopPurchaseRequestDetail = () => {
     const navigate = useNavigate();
     const [request, setRequest] = useState<ProcurementRequest | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [userId, setUserId] = useState('');
     const userRole = getUserRole();
-
-    // Modal state
+    const [userId, setUserId] = useState<string>('');
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [actionType, setActionType] = useState<'APPROVE' | 'REJECT'>('APPROVE');
     const [actionNote, setActionNote] = useState('');
-    const [actionLoading, setActionLoading] = useState(false);
+
+    const openActionModal = (type: 'APPROVE' | 'REJECT') => {
+        setActionType(type);
+        setActionNote('');
+        setIsActionModalOpen(true);
+    };
+
+    const submitAction = async () => {
+        if (!request) return;
+        const status = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+        setActionLoading(status);
+        try {
+            await financeApproveProcurementRequest(request._id, {
+                status,
+                note: actionNote
+            });
+            toast.success(actionType === 'APPROVE' ? 'Pricing Approved' : 'Pricing Rejected');
+            setIsActionModalOpen(false);
+            fetchRequestDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || `Failed to ${actionType.toLowerCase()} pricing`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     const fetchRequestDetails = useCallback(async () => {
         if (!id) return;
@@ -94,27 +114,17 @@ const WorkshopPurchaseRequestDetail = () => {
         fetchRequestDetails();
     }, [fetchRequestDetails]);
 
-    const openActionModal = (type: 'APPROVE' | 'REJECT') => {
-        setActionType(type);
-        setActionNote('');
-        setIsActionModalOpen(true);
-    };
-
-    const submitAction = async () => {
-        if (!id) return;
-        setActionLoading(true);
+    const handleAction = async (status: 'APPROVED' | 'REJECTED') => {
+        if (!request) return;
+        setActionLoading(status);
         try {
-            await financeApproveWorkshopRequest(id, {
-                status: actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-                note: actionNote
-            });
-            setIsActionModalOpen(false);
-            setActionNote('');
-            await fetchRequestDetails();
+            await approveProcurementRequest(request._id, { status });
+            toast.success(status === 'APPROVED' ? 'Request Approved' : 'Request Rejected');
+            fetchRequestDetails();
         } catch (err: any) {
-            alert(err.response?.data?.message || err.message || 'Action failed');
+            toast.error(err.response?.data?.message || 'Failed to update request');
         } finally {
-            setActionLoading(false);
+            setActionLoading(null);
         }
     };
 
@@ -397,6 +407,36 @@ const WorkshopPurchaseRequestDetail = () => {
                             </p>
                         </div>
                     )}
+
+                    {/* Action Buttons for Finance Admin */}
+                    {request.status === 'PENDING_FINANCE_APPROVAL' && (userRole === 'financeadmin' || userRole === 'admin') && (
+                        <div className="rounded-2xl border p-5 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#C8E600]">
+                                <AlertCircle size={14} /> Pending Finance Approval
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                                Review the requested parts and cost. Once approved, the workshop can proceed with the procurement.
+                            </p>
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => handleAction('REJECTED')}
+                                    disabled={!!actionLoading}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
+                                >
+                                    {actionLoading === 'REJECTED' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                                    Reject
+                                </button>
+                                <button 
+                                    onClick={() => handleAction('APPROVED')}
+                                    disabled={!!actionLoading}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                                >
+                                    {actionLoading === 'APPROVED' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                    Approve Request
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -458,18 +498,18 @@ const WorkshopPurchaseRequestDetail = () => {
                                 onClick={() => setIsActionModalOpen(false)}
                                 className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:bg-white/5 cursor-pointer bg-transparent"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
-                                disabled={actionLoading}
+                                disabled={!!actionLoading}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={submitAction}
-                                disabled={actionLoading || (actionType === 'REJECT' && !actionNote.trim())}
+                                disabled={!!actionLoading || (actionType === 'REJECT' && !actionNote.trim())}
                                 className="flex-1 py-3 rounded-xl text-sm font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center cursor-pointer border-none"
                                 style={{
                                     background: actionType === 'REJECT' ? '#ef4444' : '#C8E600',
                                     color: actionType === 'REJECT' ? 'white' : '#0A0A0A',
-                                    opacity: (actionLoading || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
+                                    opacity: (!!actionLoading || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
                                 }}
                             >
                                 {actionLoading ? (

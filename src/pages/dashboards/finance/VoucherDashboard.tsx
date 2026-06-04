@@ -448,7 +448,6 @@ const VoucherDashboard = () => {
                                 setShowCreateModal(false);
                                 fetchVouchers();
                             }} 
-                            type="PAYMENT"
                         />
                     </div>
                 </div>

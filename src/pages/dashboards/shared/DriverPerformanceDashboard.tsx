@@ -8,7 +8,6 @@ import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-
 // ─── Types ────────────────────────────────────────────────────────────
 type SortKey = 'name' | 'drivingScore' | 'avgSpeed' | 'totalDistance' | 'fuelEfficiency' | 'safetyTotal' | 'outstanding' | 'weeklyRent';
 type SortDir = 'asc' | 'desc';

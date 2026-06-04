@@ -12,6 +12,11 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
         },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(234, 88, 12, 0.1)',
+            text: '#ea580c',
+            border: 'rgba(234, 88, 12, 0.3)',
+        },
         APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
@@ -26,11 +31,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(59, 130, 246, 0.1)',
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(236, 72, 153, 0.1)',
-            text: '#ec4899',
-            border: 'rgba(236, 72, 153, 0.3)',
         }
     };
     const style = styles[status] || styles.APPROVED;
@@ -207,9 +207,9 @@ const WorkshopPurchaseRequestList = () => {
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="ALL">All Statuses</option>
-                                <option value="PENDING">Pending</option>
+                                <option value="PENDING">Pending (Manager)</option>
+                                <option value="PENDING_FINANCE_APPROVAL">Pending (Finance)</option>
                                 <option value="APPROVED">Approved</option>
-                                <option value="PENDING_FINANCE_APPROVAL">Pending Finance</option>
                                 <option value="REJECTED">Rejected</option>
                                 <option value="CONVERTED_TO_PO">Converted</option>
                             </select>

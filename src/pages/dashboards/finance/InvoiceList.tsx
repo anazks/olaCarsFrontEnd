@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-    FileText, RefreshCw, Filter, Search, CheckCircle2, 
+import {
+    FileText, RefreshCw, Filter, Search, CheckCircle2,
     Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
+import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
 import { getUserRole } from '../../../utils/auth';
 
 const InvoiceList = () => {
@@ -22,7 +23,8 @@ const InvoiceList = () => {
     const [error, setError] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
+
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -35,7 +37,7 @@ const InvoiceList = () => {
             setSearchQuery(location.state.search);
         }
     }, [location.state]);
-    
+
     // Server Pagination
     const [page, setPage] = useState(1);
     const limit = 25;
@@ -81,7 +83,7 @@ const InvoiceList = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (statusFilter !== 'ALL') filters.status = statusFilter;
-            
+
             const res = await getInvoicesRegistry(filters);
             console.log('[InvoiceList] API Response:', res);
             if (res) {
@@ -89,7 +91,7 @@ const InvoiceList = () => {
                 const data = res.data || res;
                 const dataArray = Array.isArray(data) ? data : [];
                 setInvoices(dataArray);
-                
+
                 const pag = res.pagination || {};
                 setPagination({
                     total: pag.totalItems || dataArray.length,
@@ -139,15 +141,15 @@ const InvoiceList = () => {
 
     return (
         <div className="container-responsive space-y-6 pb-12">
-            <Breadcrumbs 
+            <Breadcrumbs
                 items={[
                     { label: 'Sales', path: '#' },
                     { label: 'Invoices', active: true }
-                ]} 
+                ]}
             />
 
             <div className="space-y-6 animate-in fade-in duration-500">
-                
+
                 {/* Uniform Compact Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 border-b border-white/5 pb-4">
                     <div>
@@ -158,8 +160,8 @@ const InvoiceList = () => {
                         <p className="text-xs font-medium text-dim mt-0.5">Manage vehicle rental leases and record operator payments.</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <button 
-                            onClick={() => setShowSettingsModal(true)} 
+                        <button
+                            onClick={() => setShowSettingsModal(true)}
                             className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             title="Automation Settings"
@@ -168,24 +170,32 @@ const InvoiceList = () => {
                         </button>
 
                         {userRole !== 'admin' && (
-                        <button 
-                            onClick={handleDeleteAll}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-sm hover:shadow-md active:scale-95 transition-all duration-300 border border-rose-500/20 cursor-pointer"
+                            <button
+                                onClick={handleDeleteAll}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-sm hover:shadow-md active:scale-95 transition-all duration-300 border border-rose-500/20 cursor-pointer"
+                            >
+                                <Trash2 size={13} strokeWidth={2.5} /> Delete All
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setShowBulkUpload(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
                         >
-                            <Trash2 size={13} strokeWidth={2.5}/> Delete All
+                            <FileText size={14} strokeWidth={3} />
+                            Bulk Upload
                         </button>
-                    )}
-                    
-                    {userRole !== 'admin' && (
-                        <button 
-                            onClick={() => setShowCreateModal(true)} 
+
+                        <button
+                            onClick={() => setShowCreateModal(true)}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
                             <Plus size={14} strokeWidth={3} />
                             New Invoice
                         </button>
-                    )}
+
                     </div>
                 </div>
 
@@ -203,43 +213,43 @@ const InvoiceList = () => {
                         />
                     </div>
                     <div className="flex gap-3 flex-shrink-0">
-                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                            <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                style={{ color: 'var(--text-main)' }}
-                            />
+                        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                />
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                            <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                style={{ color: 'var(--text-main)' }}
-                            />
+                        <div className="relative flex-shrink-0">
+                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
+                            <select
+                                value={statusFilter}
+                                onChange={e => setStatusFilter(e.target.value)}
+                                className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
+                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL" style={{ background: 'var(--bg-card)' }}>ALL STATUSES</option>
+                                <option value="PENDING" style={{ background: 'var(--bg-card)' }}>PENDING</option>
+                                <option value="PARTIAL" style={{ background: 'var(--bg-card)' }}>PARTIAL</option>
+                                <option value="PAID" style={{ background: 'var(--bg-card)' }}>PAID</option>
+                                <option value="OVERDUE" style={{ background: 'var(--bg-card)' }}>OVERDUE</option>
+                            </select>
                         </div>
-                    </div>
-                    <div className="relative flex-shrink-0">
-                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
-                        <select
-                            value={statusFilter}
-                            onChange={e => setStatusFilter(e.target.value)}
-                            className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
-                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                        >
-                            <option value="ALL" style={{background: 'var(--bg-card)'}}>ALL STATUSES</option>
-                            <option value="PENDING" style={{background: 'var(--bg-card)'}}>PENDING</option>
-                            <option value="PARTIAL" style={{background: 'var(--bg-card)'}}>PARTIAL</option>
-                            <option value="PAID" style={{background: 'var(--bg-card)'}}>PAID</option>
-                            <option value="OVERDUE" style={{background: 'var(--bg-card)'}}>OVERDUE</option>
-                        </select>
-                    </div>
                     </div>
                 </div>
 
@@ -297,7 +307,7 @@ const InvoiceList = () => {
                                     </th>
                                     <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            <Calendar size={12}/> Due Date <SortIcon field="dueDate" />
+                                            <Calendar size={12} /> Due Date <SortIcon field="dueDate" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
@@ -334,8 +344,8 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : (
                                     invoices.map((invoice, index) => (
-                                        <tr 
-                                            key={invoice._id} 
+                                        <tr
+                                            key={invoice._id}
                                             onClick={() => handleRowClick(invoice._id)}
                                             className="transition-colors cursor-pointer group"
                                             style={{ borderBottom: '1px solid var(--border-main)' }}
@@ -420,14 +430,14 @@ const InvoiceList = () => {
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
                                                 <div className="flex justify-center gap-2">
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleRowClick(invoice._id)}
                                                         className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
                                                         title="Inspect Invoice Document"
                                                     >
                                                         <Eye size={14} strokeWidth={2.5} />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDeleteInvoice(invoice._id)}
                                                         className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-rose-500 hover:border-rose-500/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
                                                         title="Delete Invoice"
@@ -470,7 +480,7 @@ const InvoiceList = () => {
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                                style={{ 
+                                                style={{
                                                     background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
                                                     color: page === pageNum ? '#000' : 'var(--text-main)',
                                                     border: page === pageNum ? 'none' : '1px solid var(--border-main)'
@@ -496,7 +506,7 @@ const InvoiceList = () => {
             </div>
 
             {showCreateModal && (
-                <CreateInvoiceModal 
+                <CreateInvoiceModal
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={() => {
                         setShowCreateModal(false);
@@ -506,19 +516,28 @@ const InvoiceList = () => {
             )}
 
             {showSettingsModal && (
-                <InvoiceSettingsModal 
+                <InvoiceSettingsModal
                     onClose={() => setShowSettingsModal(false)}
                 />
             )}
+
+            <BulkInvoiceUpload
+                isOpen={showBulkUpload}
+                onClose={() => setShowBulkUpload(false)}
+                onSuccess={() => {
+                    setShowBulkUpload(false);
+                    fetchData();
+                }}
+            />
         </div>
     );
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
-        case 'PAID': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none"><CheckCircle2 size={10} strokeWidth={3}/> Paid</span>;
-        case 'PARTIAL': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-yellow-500/10 text-yellow-500 border-yellow-500/20 select-none"><Clock size={10} strokeWidth={3}/> Partial</span>;
-        case 'OVERDUE': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none"><AlertCircle size={10} strokeWidth={3}/> Overdue</span>;
+        case 'PAID': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none"><CheckCircle2 size={10} strokeWidth={3} /> Paid</span>;
+        case 'PARTIAL': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-yellow-500/10 text-yellow-500 border-yellow-500/20 select-none"><Clock size={10} strokeWidth={3} /> Partial</span>;
+        case 'OVERDUE': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none"><AlertCircle size={10} strokeWidth={3} /> Overdue</span>;
         default: return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-white/5 text-[#A3A3A3] border-white/10 select-none">Pending</span>;
     }
 };

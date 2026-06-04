@@ -90,6 +90,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
     const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
 
 
+
     const handlePrint = () => {
         window.print();
     };
@@ -263,7 +264,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                         </p>
                         {voucher.postedAt && (
                             <p>
-                                Posted by: <span className="font-semibold text-[color:var(--text-main)] print:text-black">{voucher.postedBy?.personalInfo?.fullName || voucher.postedBy?.username || `User (${voucher.postedByRole || 'System'})`}</span> on {new Date(voucher.postedAt).toLocaleString()}
+                                Posted by: <span className="font-semibold text-[color:var(--text-main)] print:text-black">{(voucher as any).postedBy?.personalInfo?.fullName || (voucher as any).postedBy?.username || `User (${(voucher as any).postedByRole || 'System'})`}</span> on {new Date(voucher.postedAt).toLocaleString()}
                             </p>
                         )}
                     </div>
