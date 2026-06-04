@@ -197,6 +197,8 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadStatusText, setUploadStatusText] = useState('');
     const [availableDriverNames, setAvailableDriverNames] = useState<Set<string>>(new Set());
     const [availableDriverIds, setAvailableDriverIds] = useState<Set<string>>(new Set());
     const [loadingDrivers, setLoadingDrivers] = useState(false);
@@ -384,22 +386,49 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         }
 
         setUploading(true);
+        setUploadProgress(0);
+        setUploadStatusText('Uploading invoices...');
+
+        // Start progress simulation
+        const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+                if (prev >= 90) {
+                    clearInterval(progressInterval);
+                    return 90;
+                }
+                return prev + 10;
+            });
+        }, 150);
+
         try {
             const payload = validRows.map(({ _rowErrors, ...rest }) => rest);
             const res = await bulkUploadInvoices({ rows: payload, invoiceType });
+            
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            setUploadStatusText('Processing completed.');
             setResult(res);
-            if (res.errorCount > 0) {
+
+            if (res.successCount > 0) {
+                toast.success(`${res.successCount} invoices created successfully.`);
+                if (res.skippedCount > 0) {
+                    toast(`${res.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
+                }
+                onSuccess();
+            } else if (res.skippedCount > 0) {
+                toast(`All ${res.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
+            } else if (res.errorCount > 0) {
                 toast.error(`Completed with ${res.errorCount} errors.`);
             } else {
-                toast.success(`${res.successCount} invoices created successfully.`);
-            }
-            if (res.successCount > 0) {
-                onSuccess();
+                toast.success('Upload complete.');
             }
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Bulk upload failed.');
+            clearInterval(progressInterval);
+            toast.error(err?.response?.data?.message || err?.message || 'Bulk upload failed.');
         } finally {
             setUploading(false);
+            setUploadProgress(100);
+            setUploadStatusText('');
         }
     };
 
@@ -536,7 +565,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    {errorCount > 0 && (
+                                    {errorCount > 0 && !uploading && (
                                         <>
                                             <button 
                                                 onClick={handleDownloadInvalid} 
@@ -552,7 +581,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                             </button>
                                         </>
                                     )}
-                                    <button onClick={handleReset} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button onClick={handleReset} disabled={uploading} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5 disabled:opacity-40" style={{ borderColor: 'var(--border-main)' }}>
                                         Change File
                                     </button>
                                     <button
@@ -565,6 +594,24 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                     </button>
                                 </div>
                             </div>
+
+                            {uploading && (
+                                <div className="p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                    <div className="flex items-center justify-between text-xs font-bold text-main">
+                                        <span className="flex items-center gap-2 text-main">
+                                            <Loader2 size={14} className="animate-spin text-blue-500" />
+                                            {uploadStatusText}
+                                        </span>
+                                        <span style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
+                                    </div>
+                                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--border-main)' }}>
+                                        <div 
+                                            className="h-full rounded-full transition-all duration-300 ease-out" 
+                                            style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -638,9 +685,21 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                 <h3 className="text-xl font-bold text-main mb-2">Upload Complete</h3>
                                 <p className="text-sm text-dim">
                                     Successfully created <span className="font-bold text-emerald-500">{result.successCount}</span> invoices.
+                                    {result.skippedCount > 0 && <span className="text-amber-500 font-semibold"> Skipped {result.skippedCount} duplicate(s).</span>}
                                     {result.errorCount > 0 && <span className="text-rose-500"> Failed for {result.errorCount} rows.</span>}
                                 </p>
                             </div>
+
+                            {result.skippedCount > 0 && (
+                                <div className="mt-4 text-left max-w-lg mx-auto p-4 rounded-xl border bg-blue-500/5 border-blue-500/20">
+                                    <p className="text-xs font-bold text-blue-500 mb-2 uppercase tracking-wider">Skipped duplicates (Already exist):</p>
+                                    <ul className="text-xs space-y-1 text-dim max-h-32 overflow-y-auto custom-scrollbar">
+                                        {result.skipped?.map((msg: string, i: number) => (
+                                            <li key={i}>• {msg}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
 
                             {result.errorCount > 0 && (
                                 <div className="mt-6 text-left max-w-lg mx-auto p-4 rounded-xl border bg-rose-500/5 border-rose-500/20">

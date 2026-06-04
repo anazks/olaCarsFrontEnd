@@ -44,7 +44,7 @@ const InvoiceList = () => {
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
-    const [sortBy, setSortBy] = useState('dueDate');
+    const [sortBy, setSortBy] = useState('generatedAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
@@ -58,6 +58,51 @@ const InvoiceList = () => {
 
     const handlePageChange = (pageNum: number) => {
         setPage(pageNum);
+    };
+
+    const getPageNumbers = () => {
+        const totalPages = pagination.pages;
+        const currentPage = page;
+        const pages: (number | string)[] = [];
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Always include first page
+            pages.push(1);
+
+            if (currentPage > 3) {
+                pages.push('ellipsis-start');
+            }
+
+            // Determine range around current page
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            let finalStart = start;
+            let finalEnd = end;
+            if (currentPage <= 3) {
+                finalEnd = 4;
+            } else if (currentPage >= totalPages - 2) {
+                finalStart = totalPages - 3;
+            }
+
+            for (let i = finalStart; i <= finalEnd; i++) {
+                if (i > 1 && i < totalPages) {
+                    pages.push(i);
+                }
+            }
+
+            if (currentPage < totalPages - 2) {
+                pages.push('ellipsis-end');
+            }
+
+            // Always include last page
+            pages.push(totalPages);
+        }
+        return pages;
     };
 
     const handleSort = (field: string) => {
@@ -305,6 +350,11 @@ const InvoiceList = () => {
                                             Node Location
                                         </div>
                                     </th>
+                                    <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('generatedAt')}>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            <Calendar size={12} /> Invoice Date <SortIcon field="generatedAt" />
+                                        </div>
+                                    </th>
                                     <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('dueDate')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             <Calendar size={12} /> Due Date <SortIcon field="dueDate" />
@@ -316,7 +366,7 @@ const InvoiceList = () => {
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={11} className="py-20 text-center">
+                                        <td colSpan={13} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Decrypting Ledger...</span>
@@ -325,7 +375,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={11} className="py-20 text-center">
+                                        <td colSpan={13} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
                                                 <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
@@ -334,7 +384,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : invoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={11} className="py-20 text-center">
+                                        <td colSpan={13} className="py-20 text-center">
                                             <div className="text-dim space-y-1 uppercase">
                                                 <FileText className="mx-auto opacity-20 mb-2" size={32} />
                                                 <p className="text-xs font-black tracking-widest">No statements recorded</p>
@@ -426,6 +476,9 @@ const InvoiceList = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
+                                                {invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : 'N/A'}
+                                            </td>
+                                            <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
@@ -469,24 +522,26 @@ const InvoiceList = () => {
                                     <ChevronLeft size={18} />
                                 </button>
                                 <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                                        let pageNum: number;
-                                        if (pagination.pages <= 5) pageNum = i + 1;
-                                        else if (page <= 3) pageNum = i + 1;
-                                        else if (page >= pagination.pages - 2) pageNum = pagination.pages - 4 + i;
-                                        else pageNum = page - 2 + i;
+                                    {getPageNumbers().map((item, index) => {
+                                        if (typeof item === 'string') {
+                                            return (
+                                                <span key={`ellipsis-${index}`} className="px-1 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                key={item}
+                                                onClick={() => handlePageChange(item)}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === item ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                                 style={{
-                                                    background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
-                                                    color: page === pageNum ? '#000' : 'var(--text-main)',
-                                                    border: page === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                    background: page === item ? 'var(--brand-lime)' : 'transparent',
+                                                    color: page === item ? '#000' : 'var(--text-main)',
+                                                    border: page === item ? 'none' : '1px solid var(--border-main)'
                                                 }}
                                             >
-                                                {pageNum}
+                                                {item}
                                             </button>
                                         );
                                     })}
