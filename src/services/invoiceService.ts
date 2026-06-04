@@ -139,3 +139,8 @@ export const updateGenerationSettings = async (generationDay: number): Promise<v
     await api.post('/api/invoices/settings/generation', { generationDay });
 };
 
+export const bulkUploadInvoices = async (data: { rows: any[], invoiceType: string }): Promise<any> => {
+    const response = await api.post('/api/invoices/bulk-upload', data);
+    return response.data.data;
+};
+

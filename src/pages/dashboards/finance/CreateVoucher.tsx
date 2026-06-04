@@ -107,10 +107,10 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
     );
 };
 
-const CreateVoucher = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
+const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { onClose: () => void; onSuccess: () => void; type?: VoucherType }) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
-    const [type, setType] = useState<VoucherType>('PAYMENT');
+    const [type, setType] = useState<VoucherType>(initialType);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);

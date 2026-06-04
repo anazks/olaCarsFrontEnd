@@ -276,6 +276,24 @@ const DriverDetail = () => {
         }
     };
 
+    const handleUpdateLicense = async (licenseNumber: string) => {
+        try {
+            setLoading(true);
+            await updateDriver(id!, {
+                drivingLicense: {
+                    ...driver?.drivingLicense,
+                    licenseNumber
+                }
+            });
+            await fetchDriver();
+        } catch (error: any) {
+            console.error('Error updating license:', error);
+            setActionError(error.response?.data?.message || 'Failed to update license number');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateCreditCheck = async (data: any) => {
         try {
             setLoading(true);
@@ -591,10 +609,23 @@ const DriverDetail = () => {
                                 )}
                             </div>
                         </div>
-                        <p className="flex items-center gap-2 text-base mt-1" style={{ color: 'var(--text-muted)' }}>
+                        <div className="flex items-center gap-2 text-base mt-1" style={{ color: 'var(--text-muted)' }}>
                             <FileText size={14} />
                             License: <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.drivingLicense?.licenseNumber || 'N/A'}</span>
-                        </p>
+                            <HasPermission permission="DRIVER_EDIT">
+                                <button
+                                    onClick={() => {
+                                        const licenseNumber = prompt("Enter License Number", driver.drivingLicense?.licenseNumber || "");
+                                        if (licenseNumber !== null) {
+                                            handleUpdateLicense(licenseNumber);
+                                        }
+                                    }}
+                                    className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline ml-2"
+                                >
+                                    Edit
+                                </button>
+                            </HasPermission>
+                        </div>
                     </div>
                 </div>
 

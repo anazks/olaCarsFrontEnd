@@ -84,14 +84,26 @@ const ExecutiveDashboard = () => {
                 }
             }
 
+            const startD = globalStartDate ? new Date(globalStartDate) : new Date(0);
+            const endD = globalEndDate ? new Date(globalEndDate) : new Date();
+            endD.setHours(23, 59, 59, 999);
+            startD.setHours(0, 0, 0, 0);
+
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+            twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+            // Fetch from minimum of twelveMonthsAgo and startD to cover both KPIs
+            const fetchStartDate = (startD < twelveMonthsAgo) ? startD : twelveMonthsAgo;
+
             const baseFilters: any = {};
             if (globalBranch !== 'all') baseFilters.branch = globalBranch;
-            // We fetch all records and filter locally by date range to allow cross-period KPI calculations
             baseFilters.sortOrder = globalSort;
             baseFilters.sortBy = 'createdAt';
+            baseFilters.startDate = fetchStartDate.toISOString().split('T')[0];
 
             const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes] = await Promise.allSettled([
-                getLedgerEntries({ limit: 5000, ...baseFilters }),
+                getLedgerEntries({ limit: 10000, ...baseFilters }),
                 getAllDrivers({ limit: 1000, ...baseFilters }),
                 getAllVehicles({ limit: 1000, ...baseFilters }),
                 getAllPurchaseOrders({ limit: 500, ...baseFilters }),
@@ -100,10 +112,6 @@ const ExecutiveDashboard = () => {
                 getTasks({ limit: 1000, ...baseFilters })
             ]);
 
-            const startD = globalStartDate ? new Date(globalStartDate) : new Date(0);
-            const endD = globalEndDate ? new Date(globalEndDate) : new Date();
-            endD.setHours(23, 59, 59, 999);
-            startD.setHours(0, 0, 0, 0);
             const diffDays = (endD.getTime() - startD.getTime()) / (1000 * 3600 * 24);
             const groupByDay = diffDays <= 60;
 
@@ -448,7 +456,7 @@ const ExecutiveDashboard = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [globalStartDate, globalEndDate, globalBranch]);
 
     // ─── Render Components ──────────────────────────────────────────
 

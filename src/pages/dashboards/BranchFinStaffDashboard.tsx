@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet, Receipt, Calculator, AlertCircle, ClipboardList, RefreshCw, BarChart3 } from 'lucide-react';
+import { Wallet, Receipt, Calculator, AlertCircle, ClipboardList, RefreshCw, BarChart3, Eye, CheckCircle } from 'lucide-react';
 import { getLedgerEntries } from '../../services/ledgerService';
 import { getTasks } from '../../services/taskService';
 import type { StaffTask } from '../../services/taskService';
 import { getUser } from '../../utils/auth';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../services/purchaseOrderService';
+import type { PurchaseOrder } from '../../services/purchaseOrderService';
 
 const BranchFinStaffDashboard = () => {
     const { t } = useTranslation();
@@ -20,6 +22,7 @@ const BranchFinStaffDashboard = () => {
     });
     const [transactions, setTransactions] = useState<any[]>([]);
     const [tasks, setTasks] = useState<StaffTask[]>([]);
+    const [pendingPOs, setPendingPOs] = useState<PurchaseOrder[]>([]);
     const user = getUser();
 
     const fetchDashboardData = async () => {
@@ -28,12 +31,19 @@ const BranchFinStaffDashboard = () => {
             const branchId = user?.branchId;
             if (!branchId) return;
 
-            const [ledgerRes, taskData] = await Promise.all([
+            const [ledgerRes, taskData, poRes] = await Promise.all([
                 getLedgerEntries({ branchId, limit: 500 }),
-                getTasks({ assignedTo: user?.id || user?._id })
+                getTasks({ assignedTo: user?.id || user?._id }),
+                getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
+                    console.error("BranchFinStaffDashboard: Fetch POs failed:", err);
+                    return { data: [] as PurchaseOrder[] };
+                })
             ]);
 
+            console.log("BranchFinStaffDashboard: PENDING_FINANCE_APPROVAL POs response:", poRes);
             const ledgerData = Array.isArray(ledgerRes) ? ledgerRes : (ledgerRes as any).data || [];
+            const poList = Array.isArray(poRes?.data) ? poRes.data : (Array.isArray(poRes) ? poRes : []);
+            setPendingPOs(poList);
             
             let cash = 0;
             let pending = 0;
@@ -68,6 +78,17 @@ const BranchFinStaffDashboard = () => {
             toast.error("Critical synchronization error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleQuickApprovePO = async (poId: string) => {
+        if (!window.confirm('Are you sure you want to approve this purchase order?')) return;
+        try {
+            await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
+            toast.success('Purchase order approved successfully');
+            fetchDashboardData();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Approval failed');
         }
     };
 
@@ -185,6 +206,72 @@ const BranchFinStaffDashboard = () => {
             </div>
 
 
+
+            {/* Purchase Orders Pending Finance Approval */}
+            {pendingPOs.length > 0 && (
+                <div className="rounded-2xl border overflow-hidden mb-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-1.5 h-6 bg-lime rounded-full" />
+                            <h2 className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-main)' }}>POs Awaiting Finance Approval</h2>
+                        </div>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">PO Number</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Supplier</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Date</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Amount</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                {pendingPOs.map((po) => (
+                                    <tr key={po._id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-8 py-5">
+                                            <div className="text-xs font-black text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`purchase-orders/${po._id}`)}>
+                                                {po.purchaseOrderNumber}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <div className="text-xs font-medium text-dim">{typeof po.supplier === 'object' ? po.supplier.name : 'Unknown Supplier'}</div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <div className="text-xs font-medium text-dim">{new Date(po.createdAt).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="px-8 py-5 text-right">
+                                            <div className="text-sm font-black text-white">
+                                                ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => navigate(`purchase-orders/${po._id}`)}
+                                                    className="p-2 bg-white/5 border border-white/10 text-dim hover:text-brand-lime rounded-xl transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickApprovePO(po._id)}
+                                                    className="p-2 bg-white/5 border border-white/10 text-dim hover:text-emerald-400 rounded-xl transition-all"
+                                                    title="Approve PO"
+                                                >
+                                                    <CheckCircle size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Global Transaction Ledger */}
             <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
