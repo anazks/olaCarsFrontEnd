@@ -4,8 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setFinanceDashboardData } from '../../../store/dashboardSlice';
 import { 
-    Activity, RefreshCw, 
-    List, Plus, Calendar, 
+    RefreshCw, 
+    Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
     Building2, FileText, Eye, CheckCircle
@@ -356,7 +356,7 @@ const FinanceDashboard = () => {
         // Cash Income = Invoices actually collected
         liveData.invoices.forEach(inv => {
             cashIncome += inv.amountPaid || 0;
-            inv.payments?.forEach(pmt => {
+            inv.payments?.forEach((pmt: any) => {
                 const pDate = new Date(pmt.paidAt);
                 if (isNaN(pDate.getTime())) return;
                 const mKey = pDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
@@ -395,7 +395,7 @@ const FinanceDashboard = () => {
             expMap.set(accName, (expMap.get(accName) || 0) + e.amount);
         });
         liveData.bills.forEach(b => {
-            b.items?.forEach(item => {
+            b.items?.forEach((item: any) => {
                 const name = typeof item.accountId === 'object' && item.accountId ? (item.accountId.name || 'Vendor Cost') : 'Supplier Inbound';
                 expMap.set(name, (expMap.get(name) || 0) + (item.quantity * item.unitPrice));
             });
@@ -553,7 +553,7 @@ const FinanceDashboard = () => {
         liveData.invoices.forEach(inv => {
             const amt = inv.totalAmountDue || 0;
             if (inv.invoiceType === 'MANUAL' && inv.lineItems && inv.lineItems.length > 0) {
-                inv.lineItems.forEach(item => {
+                inv.lineItems.forEach((item: any) => {
                     const name = (item.name || '').toLowerCase();
                     const val = (item.unitPrice || 0) * (item.qty || 1);
                     if (name.includes('rent') || name.includes('lease') || name.includes('hire')) rental += val;
