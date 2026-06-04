@@ -216,6 +216,11 @@ const CreditNotes = () => {
             toast.error("Fill mandatory fields.");
             return;
         }
+        const today = new Date().toISOString().split('T')[0];
+        if (creditNoteDate < today) {
+            toast.error("Credit Note date cannot be in the past.");
+            return;
+        }
         setSubmitting(true);
         try {
             const payload: any = {
@@ -333,7 +338,13 @@ const CreditNotes = () => {
                                 <input
                                     type="date"
                                     value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
+                                    onChange={e => {
+                                        const newStart = e.target.value;
+                                        setStartDate(newStart);
+                                        if (endDate && newStart && newStart > endDate) {
+                                            setEndDate('');
+                                        }
+                                    }}
                                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                     style={{ color: 'var(--text-main)' }}
                                 />
@@ -343,6 +354,7 @@ const CreditNotes = () => {
                                 <input
                                     type="date"
                                     value={endDate}
+                                    min={startDate || undefined}
                                     onChange={e => setEndDate(e.target.value)}
                                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                     style={{ color: 'var(--text-main)' }}
@@ -634,7 +646,7 @@ const CreditNotes = () => {
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>4. Date *</label>
-                                    <input required type="date" value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
+                                    <input required type="date" min={new Date().toISOString().split('T')[0]} value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
                                 </div>
                             </div>
 

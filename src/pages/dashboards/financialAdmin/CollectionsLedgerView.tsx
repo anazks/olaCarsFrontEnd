@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
      Calendar, MapPin, Building, 
-    Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
+    Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet,
+    Loader2
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
 
 // Services
@@ -86,6 +88,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [exporting, setExporting] = useState(false);
 
     // Filter state
     const [allBranches, setAllBranches] = useState<any[]>([]);
@@ -165,6 +168,101 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
 
     const updateFilter = (key: string, val: string) => {
         setFilters(p => ({ ...p, [key]: val }));
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        const toastId = toast.loading("Fetching all records for export...");
+        try {
+            const query = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                page: 1,
+                limit: 100000,
+                listType: meta.listType
+            };
+            const data = await getCollectionsList(query);
+            const items = data.items || [];
+            
+            if (items.length === 0) {
+                toast.error("No records found to export.", { id: toastId });
+                setExporting(false);
+                return;
+            }
+
+            toast.loading("Generating CSV file...", { id: toastId });
+
+            const escapeCSV = (val: any) => {
+                if (val === null || val === undefined) return '';
+                const str = String(val);
+                if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            const headers = [
+                'Sl No.',
+                'Invoice Number',
+                'Driver Name',
+                'Driver ID',
+                'Vehicle Number',
+                'Fleet Number',
+                'Branch',
+                'Country',
+                'Due Date',
+                'Days Overdue',
+                'Gross Billed ($)',
+                'Net Settled ($)',
+                'Current Balance ($)',
+                'Status'
+            ];
+
+            const csvRows = [
+                headers.join(','),
+                ...items.map((item, idx) => {
+                    const formattedDate = item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : '';
+                    return [
+                        idx + 1,
+                        item.invoiceNumber,
+                        item.driverName,
+                        item.driverId,
+                        item.vehicleNumber,
+                        item.fleetNumber,
+                        item.branch,
+                        item.country,
+                        formattedDate,
+                        item.daysOverdue || 0,
+                        item.totalAmountDue,
+                        item.amountPaid,
+                        item.balance,
+                        item.status
+                    ].map(escapeCSV).join(',');
+                })
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            const filename = `${meta.title.toLowerCase().replace(/\s+/g, '_')}_ledger_${dateStr}.csv`;
+            
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success(`Successfully exported ${items.length} records to CSV.`, { id: toastId });
+        } catch (err) {
+            console.error('Export failed', err);
+            toast.error("Failed to export data. Please try again.", { id: toastId });
+        } finally {
+            setExporting(false);
+        }
     };
 
     return (
@@ -292,8 +390,21 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
                             </div>
                         )}
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                            <FileSpreadsheet size={16} /> Export
+                        <button 
+                            disabled={exporting || loading}
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            {exporting ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={16} /> Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet size={16} /> Export
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

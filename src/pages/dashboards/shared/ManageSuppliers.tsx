@@ -14,6 +14,7 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -162,26 +163,29 @@ const ManageSuppliers = () => {
             return;
         }
 
-        // Validate phone number format and limit
-        const cleanPhone = formData.phone.replace(/\D/g, '');
-        if (!cleanPhone) {
-            setFormError(t('management.suppliers.form.phoneRequired', { defaultValue: 'Phone number is required.' }));
-            setFormLoading(false);
-            return;
-        }
-
-        // Extract local phone number by matching common dial codes
-        const DIAL_CODES = ["971", "966", "254", "256", "255", "251", "234", "233", "49", "44", "33", "27", "91", "86", "61", "1"];
-        const matchCode = DIAL_CODES.find(code => cleanPhone.startsWith(code));
-        const localNumber = matchCode ? cleanPhone.slice(matchCode.length) : cleanPhone;
-
-        if (localNumber.length < 6 || localNumber.length > 12) {
-            setFormError(t('management.suppliers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number (6-12 digits excluding country code).' }));
-            setFormLoading(false);
-            return;
-        }
-        if (/(\d)\1{5,}/.test(cleanPhone)) {
-            setFormError(t('management.suppliers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' }));
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.suppliers.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.suppliers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.suppliers.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.suppliers.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.suppliers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
             setFormLoading(false);
             return;
         }

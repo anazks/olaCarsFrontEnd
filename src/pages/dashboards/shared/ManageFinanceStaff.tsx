@@ -18,6 +18,7 @@ import { getUser, getUserRole } from '../../../utils/auth';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -156,6 +157,33 @@ const ManageFinanceStaff = () => {
         e.preventDefault();
         setFormLoading(true);
         setFormError(null);
+
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.financeStaff.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.financeStaff.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.financeStaff.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.financeStaff.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.financeStaff.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
+            setFormLoading(false);
+            return;
+        }
 
         try {
             if (modalMode === 'create') {
@@ -334,8 +362,8 @@ const ManageFinanceStaff = () => {
                                 <option value="LOCKED">{t('management.common.status.locked')}</option>
                             </select>
                         </div>
-                        <div>
-                            <FilterLabel label={t('management.common.modal.assignBranch')} />
+                         <div>
+                            <FilterLabel label={t('management.common.table.branchInfo')} />
                             <select
                                 value={branchFilter}
                                 onChange={(e) => { setBranchFilter(e.target.value); setCurrentPage(1); }}
@@ -353,7 +381,14 @@ const ManageFinanceStaff = () => {
                             <input
                                 type="date"
                                 value={startDate}
-                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                onChange={(e) => {
+                                    const newStart = e.target.value;
+                                    setStartDate(newStart);
+                                    if (newStart && endDate && endDate < newStart) {
+                                        setEndDate(newStart);
+                                    }
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />
@@ -363,8 +398,10 @@ const ManageFinanceStaff = () => {
                             <input
                                 type="date"
                                 value={endDate}
+                                disabled={!startDate}
+                                min={startDate}
                                 onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
+                                className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />
                         </div>
@@ -618,7 +655,7 @@ const ManageFinanceStaff = () => {
                                                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                                 className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime"
                                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                placeholder={t('management.common.modal.enterFullName')}
+                                                placeholder="John Doe"
                                             />
                                         </div>
                                         <div className="space-y-2">

@@ -13,6 +13,7 @@ import {
 } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 import HasPermission from '../../../components/HasPermission';
 import { getAllBranchManagers, type BranchManager } from '../../../services/branchManagerService';
 import { getAllCountryManagers, createCountryManager, type CountryManager, type CreateCountryManagerPayload } from '../../../services/countryManagerService';
@@ -134,10 +135,29 @@ const ManageBranches = () => {
             return;
         }
 
-        // Prevent phone number consisting of repeated digits (e.g. 0000000000)
-        const cleanCMPhone = cmForm.phone.replace(/\D/g, '');
-        if (/(\d)\1{5,}/.test(cleanCMPhone)) {
-            setCmFormError(t('management.branches.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits (e.g., 0000000000).' }));
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(cmForm.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.branches.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.branches.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.branches.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.branches.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.branches.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setCmFormError(errorMsg);
             return;
         }
 
@@ -230,10 +250,29 @@ const ManageBranches = () => {
             return;
         }
 
-        // Prevent phone number consisting of repeated digits (e.g. 0000000000)
-        const cleanPhone = formData.phone.replace(/\D/g, '');
-        if (/(\d)\1{5,}/.test(cleanPhone)) {
-            setFormError(t('management.branches.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits (e.g., 0000000000).' }));
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.branches.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.branches.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.branches.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.branches.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.branches.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
             return;
         }
 

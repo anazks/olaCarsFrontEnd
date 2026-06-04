@@ -246,6 +246,21 @@ const InvoiceDetail = () => {
         }
     };
 
+    const handlePrintPdf = async () => {
+        if (!invoice) return;
+        const toastId = toast.loading("Generating printable invoice PDF...");
+        try {
+            const res = await api.get(`/api/invoices/${invoice._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("PDF loaded successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating invoice PDF document.", { id: toastId });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -271,18 +286,20 @@ const InvoiceDetail = () => {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-20 select-text">
-            <Breadcrumbs 
-                items={[
-                    { label: 'Sales', path: '../invoices' },
-                    { label: 'Invoices', path: '../invoices' },
-                    { label: invoice.invoiceNumber, active: true }
-                ]} 
-            />
+            <div className="print:hidden">
+                <Breadcrumbs 
+                    items={[
+                        { label: 'Sales', path: '../invoices' },
+                        { label: 'Invoices', path: '../invoices' },
+                        { label: invoice.invoiceNumber, active: true }
+                    ]} 
+                />
+            </div>
 
             {/* Header / Toolbar */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('../invoices')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                    <button onClick={() => navigate('../invoices')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600] print:hidden cursor-pointer">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -298,11 +315,11 @@ const InvoiceDetail = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto print:hidden">
                     {invoice.status !== 'PAID' && userRole !== 'admin' && (
                         <button 
                             onClick={triggerEditModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all cursor-pointer"
                             style={{ color: 'var(--text-main)' }}
                         >
                             <Edit3 size={14} /> Edit Invoice
@@ -312,7 +329,7 @@ const InvoiceDetail = () => {
                     {invoice.balance > 0 && userRole !== 'admin' && (
                         <button 
                             onClick={triggerCreditNoteModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-bold text-xs rounded-xl transition-all"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-bold text-xs rounded-xl transition-all cursor-pointer"
                         >
                             <FileSpreadsheet size={14} /> Issue Credit Note
                         </button>
@@ -321,20 +338,20 @@ const InvoiceDetail = () => {
                     {invoice.status !== 'PAID' && userRole !== 'admin' && (
                         <button 
                             onClick={triggerPaymentModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#C8E600] text-black font-black text-xs hover:scale-[1.02] active:scale-95 transition-all rounded-xl shadow-lg"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#C8E600] text-black font-black text-xs hover:scale-[1.02] active:scale-95 transition-all rounded-xl shadow-lg cursor-pointer"
                         >
                             <DollarSign size={14} strokeWidth={3}/> Record Payment
                         </button>
                     )}
 
-                    <button onClick={() => window.print()} className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/5 border border-white/10 font-bold text-xs rounded-xl hover:bg-white/10 transition-all" style={{ color: 'var(--text-main)' }}>
+                    <button onClick={handlePrintPdf} className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/5 border border-white/10 font-bold text-xs rounded-xl hover:bg-white/10 transition-all cursor-pointer" style={{ color: 'var(--text-main)' }}>
                         <Printer size={14}/> Print
                     </button>
 
                     {userRole !== 'admin' && (
                         <button 
                             onClick={handleDeleteInvoice}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
                         >
                             <Trash2 size={14}/> Delete
                         </button>

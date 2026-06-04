@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Upload } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
-import BulkUploadJournal from './BulkUploadJournal';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -27,7 +26,6 @@ const GeneralLedger = () => {
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -57,6 +55,13 @@ const GeneralLedger = () => {
         }, 400);
         return () => clearTimeout(handler);
     }, [searchQuery]);
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -228,22 +233,13 @@ const GeneralLedger = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canCreateEntry && (
-                        <>
-                            <button
-                                onClick={() => setShowBulkUploadModal(true)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border hover:scale-105 active:scale-95 hover:bg-white/5 cursor-pointer"
-                                style={{ background: 'transparent', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
-                            >
-                                <Upload size={14} strokeWidth={3} /> Bulk Upload
-                            </button>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
-                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                            >
-                                <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
-                            </button>
-                        </>
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
+                        </button>
                     )}
                 </div>
             </div>
@@ -282,11 +278,18 @@ const GeneralLedger = () => {
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
-                    <span style={{ color: 'var(--text-dim)' }}>to</span>
                     <input 
                         type="date" 
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (startDate && val && val < startDate) {
+                                setEndDate(startDate);
+                            } else {
+                                setEndDate(val);
+                            }
+                        }}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
@@ -444,12 +447,7 @@ const GeneralLedger = () => {
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr 
-                                            key={entry._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
-                                            style={{ borderColor: 'var(--border-main)' }}
-                                            onClick={() => navigate(`../ledger/${entry._id}`)}
-                                        >
+                                        <tr key={entry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
@@ -561,18 +559,6 @@ const GeneralLedger = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
                     <CreateJournalEntry 
                         onClose={() => setShowCreateModal(false)} 
-                        onSuccess={() => {
-                            fetchData();
-                        }} 
-                    />
-                </div>
-            )}
-
-            {/* Bulk Upload Modal */}
-            {showBulkUploadModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                    <BulkUploadJournal 
-                        onClose={() => setShowBulkUploadModal(false)} 
                         onSuccess={() => {
                             fetchData();
                         }} 

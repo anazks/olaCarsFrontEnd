@@ -14,6 +14,16 @@ import {
 import { toast } from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
+const resolveImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+    const s3Base = (import.meta.env.VITE_S3_BASE_URL || '').replace(/['"]/g, '').replace(/\/$/, '');
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['"]/g, '').replace(/\/$/, '');
+    const base = s3Base || apiBase;
+    return `${base}/${cleanPath}`;
+};
+
 const AccidentReportDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -285,7 +295,7 @@ const AccidentReportDetail = () => {
                                     >
                                         {/* Image Asset */}
                                         <img 
-                                            src={img} 
+                                            src={resolveImageUrl(img)} 
                                             alt={`Incident Scene ${idx + 1}`} 
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:opacity-90" 
                                         />
@@ -301,7 +311,7 @@ const AccidentReportDetail = () => {
                                         </div>
 
                                         <a 
-                                            href={img} 
+                                            href={resolveImageUrl(img)} 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
                                             className="absolute inset-0 z-20"

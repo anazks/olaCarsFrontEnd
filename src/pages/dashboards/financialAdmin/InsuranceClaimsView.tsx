@@ -129,7 +129,7 @@ const InsuranceClaimsView = () => {
                                 <td className="py-4 px-6 flex items-center justify-end gap-2">
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); navigate(`/admin/${basePath}/insurance-claims/${claim._id}`); }}
-                                        className="px-3 py-1.5 rounded bg-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-colors flex items-center gap-1"
+                                        className="px-3 py-1.5 rounded bg-black/5 dark:bg-white/10 text-neutral-800 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-black/10 dark:hover:bg-white/20 transition-colors flex items-center gap-1"
                                     >
                                         <Eye size={12} /> View
                                     </button>

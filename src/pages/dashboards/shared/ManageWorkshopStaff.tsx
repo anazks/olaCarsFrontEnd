@@ -20,6 +20,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -166,6 +167,41 @@ const ManageWorkshopStaff = () => {
         e.preventDefault();
         setFormLoading(true);
         setFormError(null);
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.workshopStaff.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            setFormLoading(false);
+            return;
+        }
+
+        // Validate phone details
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.workshopStaff.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.workshopStaff.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.workshopStaff.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.workshopStaff.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.workshopStaff.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
+            setFormLoading(false);
+            return;
+        }
 
         try {
             if (modalMode === 'create') {
@@ -570,13 +606,6 @@ const ManageWorkshopStaff = () => {
                                 <X size={24} />
                             </button>
                         </div>
-
-                        {formError && (
-                            <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-xl text-sm flex items-center gap-3 font-medium">
-                                <AlertTriangle size={18} />
-                                {formError}
-                            </div>
-                        )}
 
                         {formError && (
                             <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-xl text-sm flex items-center gap-3 font-medium">

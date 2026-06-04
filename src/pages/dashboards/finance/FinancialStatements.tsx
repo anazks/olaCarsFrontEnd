@@ -9,12 +9,28 @@ const FinancialStatements = () => {
     const [loading, setLoading] = useState(true);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-    
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+    };
+
+    const getToday = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+        startDate: getOneMonthAgo(),
+        endDate: getToday()
     });
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -29,15 +45,19 @@ const FinancialStatements = () => {
         try {
             if (activeTab === 'PL') {
                 const data = await getPLReport(filters);
+                console.log('Backend PL Report Data:', data);
                 setReportData(data.data || data);
             } else {
                 const data = await getBalanceSheetReport(filters);
+                console.log('Backend Balance Sheet Report Data:', data);
                 setReportData(data.data || data);
             }
         } catch (error) {
-            console.error('Failed to fetch report', error);
+            console.error('Failed to fetch report from backend', error);
             // Fallback mock data for demo if backend not ready
-            setReportData(getMockData(activeTab));
+            const mock = getMockData(activeTab);
+            console.warn('Falling back to frontend mock data:', mock);
+            setReportData(mock);
         } finally {
             setLoading(false);
         }
@@ -78,7 +98,6 @@ const FinancialStatements = () => {
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Calendar size={18} className="text-dim" />
                     <input 
                         type="date" 
                         value={filters.startDate}
@@ -89,7 +108,15 @@ const FinancialStatements = () => {
                     <input 
                         type="date" 
                         value={filters.endDate}
-                        onChange={e => setFilters({...filters, endDate: e.target.value})}
+                        min={filters.startDate}
+                        onChange={e => {
+                            const val = e.target.value;
+                            if (filters.startDate && val && val < filters.startDate) {
+                                setFilters({...filters, endDate: filters.startDate});
+                            } else {
+                                setFilters({...filters, endDate: val});
+                            }
+                        }}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>

@@ -151,7 +151,7 @@ const DashboardSettings = () => {
         }
         setIsSubmittingPassword(true);
         try {
-            await changePassword(user?.id || '', {
+            await changePassword(user?._id || user?.id || '', {
                 oldPassword: passwords.oldPassword,
                 newPassword: passwords.newPassword
             });
@@ -169,7 +169,11 @@ const DashboardSettings = () => {
         setSavingThreshold(true);
         setThresholdError(null);
         try {
-            await systemSettingsService.updatePOThreshold(Number(threshold));
+            const numValue = Number(threshold);
+            if (isNaN(numValue) || numValue < 0) {
+                throw new Error('Please enter a valid positive number');
+            }
+            await systemSettingsService.updatePOThreshold(numValue);
             setThresholdSuccess(true);
             setTimeout(() => setThresholdSuccess(false), 3000);
         } catch (err: any) {
@@ -510,8 +514,15 @@ const DashboardSettings = () => {
                                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg transition-colors group-focus-within:text-lime" style={{ color: 'var(--text-dim)' }}>$</div>
                                                 <input 
                                                     type="number"
+                                                    required
+                                                    min="0"
+                                                    step="0.01"
                                                     value={threshold}
-                                                    onChange={(e) => setThreshold(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (val !== '' && Number(val) < 0) return;
+                                                        setThreshold(val);
+                                                    }}
                                                     className="w-full pl-10 pr-4 py-4 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-lime/20 text-xl font-bold"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                     placeholder="0.00"

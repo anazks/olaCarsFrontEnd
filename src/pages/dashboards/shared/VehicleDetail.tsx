@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Zap, Wrench, Clock, Send, Edit2, Save
+    Zap, Wrench, Clock, Send, Edit2, Save, Download
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
@@ -21,6 +21,7 @@ import alertService from '../../../services/alertService';
 import type { Alert } from '../../../services/alertService';
 import { updateMaintenanceSettings } from '../../../services/vehicleService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { downloadFile } from '../../../utils/fileDownloader';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const PIPELINE: VehicleStatus[] = [
@@ -823,14 +824,29 @@ const VehicleDetail = () => {
                                         </div>
                                     )}
                                     {vehiclePolicies[0].certificate && (
-                                        <a
-                                            href={toFullUrl(vehiclePolicies[0].certificate)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-lime font-bold mt-2 hover:underline flex items-center gap-1"
-                                        >
-                                            <FileText size={10} /> View Insurance Certificate
-                                        </a>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
+                                            <a
+                                                href={toFullUrl(vehiclePolicies[0].certificate)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] text-lime font-bold hover:underline flex items-center gap-1"
+                                            >
+                                                <FileText size={10} /> View Insurance Certificate
+                                            </a>
+                                            <span className="hidden sm:inline text-dim opacity-40">|</span>
+                                            <button
+                                                onClick={() => {
+                                                    const regNo = vehicle.basicDetails?.registrationNumber || 'vehicle';
+                                                    downloadFile(
+                                                        toFullUrl(vehiclePolicies[0].certificate) || '',
+                                                        `Insurance_Certificate_${regNo.replace(/\s+/g, '_')}`
+                                                    );
+                                                }}
+                                                className="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 outline-none"
+                                            >
+                                                <Download size={10} /> Download Certificate
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ) : (
@@ -1225,9 +1241,24 @@ const VehicleDetail = () => {
                                             <div className="flex flex-col min-w-0">
                                                 <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
                                                 {docUrl ? (
-                                                    <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold mt-1 hover:underline flex items-center gap-1">
-                                                        <FileText size={10} /> View Document
-                                                    </a>
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                                        <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold hover:underline flex items-center gap-1">
+                                                            <FileText size={10} /> View
+                                                        </a>
+                                                        <span className="hidden sm:inline text-dim opacity-40">|</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                const regNo = vehicle.basicDetails?.registrationNumber || 'vehicle';
+                                                                downloadFile(
+                                                                    docUrl,
+                                                                    `${df.label.replace(/\s+/g, '_')}_${regNo.replace(/\s+/g, '_')}`
+                                                                );
+                                                            }}
+                                                            className="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 outline-none"
+                                                        >
+                                                            <Download size={10} /> Download
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
                                                         <XCircle size={10} /> Not Uploaded
