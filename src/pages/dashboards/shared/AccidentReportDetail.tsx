@@ -154,7 +154,7 @@ const AccidentReportDetail = () => {
                 <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
                     <div className="flex items-center gap-5">
                         <button 
-                            onClick={() => navigate('..')} 
+                            onClick={() => navigate(-1)} 
                             className="p-3.5 rounded-xl transition-all border hover:bg-red-500/10 hover:text-red-500"
                             style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                         >
