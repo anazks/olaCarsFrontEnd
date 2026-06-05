@@ -122,7 +122,7 @@ const StaffManagement = () => {
         {
             icon: <Target size={24} />,
             label: 'Target Management',
-            path: `${basePath}/target-management`,
+            path: `${basePath}/directives/targets`,
             permission: 'STAFF_PERFORMANCE_VIEW',
             description: 'Set, monitor, and adjust performance targets for individuals and teams.'
         },
