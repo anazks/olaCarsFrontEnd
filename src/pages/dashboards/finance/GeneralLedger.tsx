@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
@@ -123,7 +123,8 @@ const GeneralLedger = () => {
     const totalDebit = summaryStats.totalDebit;
     const totalCredit = summaryStats.totalCredit;
 
-    const handleInvoiceClick = async (invoiceNumber: string) => {
+    const handleInvoiceClick = async (e: React.MouseEvent, invoiceNumber: string) => {
+        e.stopPropagation();
         try {
             const { getInvoices } = await import('../../../services/invoiceService');
             const response = await getInvoices({ search: invoiceNumber });
@@ -138,7 +139,8 @@ const GeneralLedger = () => {
         }
     };
 
-    const handleBillClick = async (billNumber: string) => {
+    const handleBillClick = async (e: React.MouseEvent, billNumber: string) => {
+        e.stopPropagation();
         try {
             const { getAllBills } = await import('../../../services/billService');
             const response = await getAllBills({ search: billNumber });
@@ -168,7 +170,7 @@ const GeneralLedger = () => {
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => handleBillClick(billNum)}
+                        onClick={(e) => handleBillClick(e, billNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                     >
                         <Receipt size={11} strokeWidth={2.5} />
@@ -184,7 +186,7 @@ const GeneralLedger = () => {
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => handleInvoiceClick(invNum)}
+                        onClick={(e) => handleInvoiceClick(e, invNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                         style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
                     >
@@ -424,6 +426,7 @@ const GeneralLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Audit Trace</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -446,7 +449,12 @@ const GeneralLedger = () => {
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr key={entry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
+                                        <tr 
+                                            key={entry._id} 
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                            onClick={() => navigate(`./${entry._id}`)}
+                                        >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
@@ -456,9 +464,17 @@ const GeneralLedger = () => {
                                                      <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
                                                  )}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-1 items-start">
-                                                    <span className="font-mono text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                            <td 
+                                                className="px-6 py-4"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (entry.accountingCode?._id) {
+                                                        navigate(`../chart-of-accounts/${entry.accountingCode._id}`);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex flex-col gap-1 items-start group/acc cursor-pointer">
+                                                    <span className="font-mono text-xs font-bold group-hover/acc:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>
                                                         {entry.accountingCode?.code} - {entry.accountingCode?.name}
                                                     </span>
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border"
@@ -486,6 +502,16 @@ const GeneralLedger = () => {
                                                         {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <button 
+                                                    onClick={() => navigate(`./${entry._id}`)}
+                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-brand-lime/10 text-[var(--brand-lime)] border border-transparent hover:border-brand-lime/20 cursor-pointer"
+                                                    style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={14} strokeWidth={2.5} />
+                                                </button>
                                             </td>
                                         </tr>
                                     );
