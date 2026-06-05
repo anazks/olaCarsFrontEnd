@@ -523,7 +523,7 @@ const CreateDriver = () => {
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <button
-                    onClick={() => navigate('..')}
+                    onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-semibold"
                 >
                     <ChevronLeft size={20} />

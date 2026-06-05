@@ -202,7 +202,7 @@ const CreatePurchaseOrder = () => {
                     <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>Fill in the details to request a new purchase</p>
                 </div>
                 <button
-                    onClick={() => navigate('..')}
+                    onClick={() => navigate(-1)}
                     className="p-2.5 rounded-xl transition-all border hover:bg-white/5"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                 >

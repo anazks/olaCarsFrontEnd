@@ -32,6 +32,19 @@ const PurchaseOrderDetail = () => {
 
     const [userLevel, setUserLevel] = useState(0);
     const [userId, setUserId] = useState('');
+    const [associatedBillId, setAssociatedBillId] = useState<string | null>(null);
+
+    const getRolePath = () => {
+        const role = getUserRole()?.toLowerCase();
+        if (role === 'admin') return 'admin';
+        if (role === 'operationadmin') return 'operational-admin';
+        if (role === 'financialadmin' || role === 'financeadmin') return 'financial-admin';
+        if (role === 'countrymanager') return 'country-manager';
+        if (role === 'branchmanager') return 'branch-manager';
+        if (role === 'operationstaff') return 'branch-op-staff';
+        if (role === 'financestaff') return 'branch-fin-staff';
+        return 'financial-admin'; // fallback
+    };
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +65,20 @@ const PurchaseOrderDetail = () => {
                 setUserId(decoded.id || '');
                 const role = (decoded.role || decoded.roles || '').toLowerCase();
                 setUserLevel(ROLE_LEVELS[role] || 0);
+            }
+
+            // Fetch associated bill if it is marked as billed
+            if (data && data.isBilled) {
+                try {
+                    const billRes = await billService.getAllBills({ purchaseOrder: data._id });
+                    if (billRes.success && billRes.data && billRes.data.length > 0) {
+                        setAssociatedBillId(billRes.data[0]._id);
+                    }
+                } catch (billErr) {
+                    console.error('Failed to fetch associated bill:', billErr);
+                }
+            } else {
+                setAssociatedBillId(null);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch PO details');
@@ -103,7 +130,8 @@ const PurchaseOrderDetail = () => {
 
     const onConvertSuccess = (billId: string) => {
         setIsConvertModalOpen(false);
-        navigate(`/admin/financial-admin/bills/${billId}`);
+        const rolePath = getRolePath();
+        navigate(`/admin/${rolePath}/bills/${billId}`);
     };
 
     const handleDispose = async () => {
@@ -137,7 +165,7 @@ const PurchaseOrderDetail = () => {
                 <AlertCircle size={48} className="mx-auto text-red-500 opacity-50" />
                 <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>PO Not Found</h1>
                 <p style={{ color: 'var(--text-dim)' }}>{error || "The purchase order you're looking for doesn't exist or you don't have access."}</p>
-                <button onClick={() => navigate('..')} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+                <button onClick={() => navigate(-1)} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
                     Back to List
                 </button>
             </div>
@@ -172,7 +200,7 @@ const PurchaseOrderDetail = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                    <button onClick={() => navigate(-1)} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -246,7 +274,10 @@ const PurchaseOrderDetail = () => {
                 {po.isBilled && (
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
-                            onClick={() => navigate(`/admin/financial-admin/bills`)} // Simplified for now, or fetch bill ID
+                            onClick={() => {
+                                const rolePath = getRolePath();
+                                navigate(associatedBillId ? `/admin/${rolePath}/bills/${associatedBillId}` : `/admin/${rolePath}/bills`);
+                            }}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
                             style={{ color: '#C8E600' }}
                         >
