@@ -362,14 +362,15 @@ const LedgerEntryDetailPage = () => {
                                     <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-muted)' }}>{driverDetails.contactNumber}</p>
                                 </div>
                                 <button 
-                                    onClick={() => {
-                                        const basePath = location.pathname.split('/ledger/')[0];
-                                        navigate(`${basePath}/drivers/${driverDetails._id}`);
-                                    }}
-                                    className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-brand-lime text-black hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
-                                >
-                                    View Full Profile
-                                </button>
+                                     onClick={() => {
+                                         const basePath = location.pathname.split('/ledger/')[0];
+                                         navigate(`${basePath}/drivers/${driverDetails._id}`);
+                                     }}
+                                     className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
+                                     style={{ background: 'var(--brand-lime)', color: '#000000' }}
+                                 >
+                                     View Full Profile
+                                 </button>
                             </div>
                         </div>
                     )}
