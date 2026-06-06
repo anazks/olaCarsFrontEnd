@@ -20,6 +20,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -165,6 +166,41 @@ const ManageBranchManagers = () => {
         e.preventDefault();
         setFormLoading(true);
         setFormError(null);
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.branchManagers.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            setFormLoading(false);
+            return;
+        }
+
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.branchManagers.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.branchManagers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.branchManagers.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.branchManagers.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.branchManagers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
+            setFormLoading(false);
+            return;
+        }
 
         try {
             if (modalMode === 'create') {
@@ -764,6 +800,8 @@ const ManageBranchManagers = () => {
 
                             <div className="flex gap-4 pt-4">
                                 <button
+                                    type="button"
+                                    onClick={closeModal}
                                     className="flex-1 py-4 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
                                     style={{ background: 'transparent', border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                                 >

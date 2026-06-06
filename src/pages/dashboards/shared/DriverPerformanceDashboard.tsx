@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
@@ -8,6 +8,9 @@ import type { Branch } from '../../../services/branchService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../../store';
+import { setFleetDashboardData } from '../../../store/dashboardSlice';
 // ─── Types ────────────────────────────────────────────────────────────
 type SortKey = 'name' | 'drivingScore' | 'avgSpeed' | 'totalDistance' | 'fuelEfficiency' | 'safetyTotal' | 'outstanding' | 'weeklyRent';
 type SortDir = 'asc' | 'desc';
@@ -92,6 +95,10 @@ const computeDriverMetrics = (driver: Driver): Omit<DriverMetrics, 'branchName'>
 
 // ─── Main Component ───────────────────────────────────────────────────
 const DriverPerformanceDashboard = () => {
+    const dispatch = useDispatch();
+    const fleetState = useSelector((state: RootState) => state.dashboard.fleet);
+    const isFirstMount = useRef(true);
+
     const navigate = useNavigate();
     const currentUser = getUser();
     const userRole = getUserRole();
@@ -99,9 +106,9 @@ const DriverPerformanceDashboard = () => {
     const isGlobalRole = ['admin', 'countrymanager', 'operationadmin', 'financeadmin'].includes(userRole || '');
     const isBranchScoped = ['branchmanager', 'financestaff', 'operationstaff'].includes(userRole || '');
 
-    const [drivers, setDrivers] = useState<Driver[]>([]);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [drivers, setDrivers] = useState<Driver[]>(fleetState.drivers);
+    const [branches, setBranches] = useState<Branch[]>(fleetState.branches);
+    const [loading, setLoading] = useState(!fleetState.isLoaded);
     const [selectedBranch, setSelectedBranch] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortKey, setSortKey] = useState<SortKey>('outstanding');
@@ -110,33 +117,53 @@ const DriverPerformanceDashboard = () => {
     const pageSize = 15;
 
     // Fetch data
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
+    const fetchData = async (showLoadingSpinner = true) => {
+        try {
+            if (showLoadingSpinner) {
                 setLoading(true);
-
-                // Fetch branches for filter dropdown (global roles)
-                if (isGlobalRole) {
-                    const branchRes = await getAllBranches({ limit: 100 });
-                    setBranches(branchRes.data || []);
-                }
-
-                // Build filter params
-                const filters: any = { status: 'ACTIVE', limit: 500 };
-                if (isBranchScoped && currentUser?.branch) {
-                    filters.branch = typeof currentUser.branch === 'object' ? currentUser.branch._id : currentUser.branch;
-                }
-
-                const res = await getAllDrivers(filters);
-                setDrivers(res.data || []);
-            } catch (error) {
-                console.error('Error fetching driver data:', error);
-            } finally {
-                setLoading(false);
             }
-        };
 
-        fetchData();
+            let branchData = branches;
+            // Fetch branches for filter dropdown (global roles)
+            if (isGlobalRole && branches.length === 0) {
+                const branchRes = await getAllBranches({ limit: 100 });
+                branchData = branchRes.data || [];
+                setBranches(branchData);
+            }
+
+            // Build filter params
+            const filters: any = { status: 'ACTIVE', limit: 500 };
+            if (isBranchScoped && currentUser?.branch) {
+                filters.branch = typeof currentUser.branch === 'object' ? currentUser.branch._id : currentUser.branch;
+            }
+
+            const res = await getAllDrivers(filters);
+            const driverData = res.data || [];
+            setDrivers(driverData);
+
+            dispatch(setFleetDashboardData({
+                drivers: driverData,
+                branches: branchData
+            }));
+        } catch (error) {
+            console.error('Error fetching driver data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const cacheAge = Date.now() - (fleetState.lastFetched || 0);
+        const isCacheFresh = fleetState.isLoaded && cacheAge < 5 * 60 * 1000;
+
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            if (isCacheFresh) {
+                return; // skip fetching, render from cache
+            }
+        }
+
+        fetchData(!fleetState.isLoaded);
     }, []);
 
     // Process metrics

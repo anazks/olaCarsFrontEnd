@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Upload } from 'lucide-react';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
-import BulkUploadJournal from './BulkUploadJournal';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -28,7 +27,6 @@ const GeneralLedger = () => {
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [summaryStats, setSummaryStats] = useState({ totalDebit: 0, totalCredit: 0 });
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -58,6 +56,13 @@ const GeneralLedger = () => {
         }, 400);
         return () => clearTimeout(handler);
     }, [searchQuery]);
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (startDate && endDate && endDate < startDate) {
+            setEndDate(startDate);
+        }
+    }, [startDate, endDate]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -118,7 +123,8 @@ const GeneralLedger = () => {
     const totalDebit = summaryStats.totalDebit;
     const totalCredit = summaryStats.totalCredit;
 
-    const handleInvoiceClick = async (invoiceNumber: string) => {
+    const handleInvoiceClick = async (e: React.MouseEvent, invoiceNumber: string) => {
+        e.stopPropagation();
         try {
             const { getInvoices } = await import('../../../services/invoiceService');
             const response = await getInvoices({ search: invoiceNumber });
@@ -133,7 +139,8 @@ const GeneralLedger = () => {
         }
     };
 
-    const handleBillClick = async (billNumber: string) => {
+    const handleBillClick = async (e: React.MouseEvent, billNumber: string) => {
+        e.stopPropagation();
         try {
             const { getAllBills } = await import('../../../services/billService');
             const response = await getAllBills({ search: billNumber });
@@ -163,7 +170,7 @@ const GeneralLedger = () => {
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => handleBillClick(billNum)}
+                        onClick={(e) => handleBillClick(e, billNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                     >
                         <Receipt size={11} strokeWidth={2.5} />
@@ -179,7 +186,7 @@ const GeneralLedger = () => {
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
-                        onClick={() => handleInvoiceClick(invNum)}
+                        onClick={(e) => handleInvoiceClick(e, invNum)}
                         className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
                         style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
                     >
@@ -227,22 +234,13 @@ const GeneralLedger = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canCreateEntry && (
-                        <>
-                            <button
-                                onClick={() => setShowBulkUploadModal(true)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border hover:scale-105 active:scale-95 hover:bg-white/5 cursor-pointer"
-                                style={{ background: 'transparent', borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
-                            >
-                                <Upload size={14} strokeWidth={3} /> Bulk Upload
-                            </button>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
-                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                            >
-                                <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
-                            </button>
-                        </>
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
+                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                        >
+                            <PlusCircle size={14} strokeWidth={3} /> Add Manual Entry
+                        </button>
                     )}
                 </div>
             </div>
@@ -281,11 +279,18 @@ const GeneralLedger = () => {
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
-                    <span style={{ color: 'var(--text-dim)' }}>to</span>
                     <input 
                         type="date" 
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (startDate && val && val < startDate) {
+                                setEndDate(startDate);
+                            } else {
+                                setEndDate(val);
+                            }
+                        }}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
                         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
                     />
@@ -421,6 +426,7 @@ const GeneralLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Audit Trace</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -444,10 +450,10 @@ const GeneralLedger = () => {
 
                                     return (
                                         <tr 
-                                            key={entry._id}
+                                            key={entry._id} 
                                             className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
                                             style={{ borderColor: 'var(--border-main)' }}
-                                            onClick={() => navigate(`../ledger/${entry._id}`)}
+                                            onClick={() => navigate(`./${entry._id}`)}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
@@ -458,9 +464,17 @@ const GeneralLedger = () => {
                                                      <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
                                                  )}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-1 items-start">
-                                                    <span className="font-mono text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                            <td 
+                                                className="px-6 py-4"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (entry.accountingCode?._id) {
+                                                        navigate(`../chart-of-accounts/${entry.accountingCode._id}`);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex flex-col gap-1 items-start group/acc cursor-pointer">
+                                                    <span className="font-mono text-xs font-bold group-hover/acc:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>
                                                         {entry.accountingCode?.code} - {entry.accountingCode?.name}
                                                     </span>
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border"
@@ -488,6 +502,16 @@ const GeneralLedger = () => {
                                                         {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <button 
+                                                    onClick={() => navigate(`./${entry._id}`)}
+                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-brand-lime/10 text-[var(--brand-lime)] border border-transparent hover:border-brand-lime/20 cursor-pointer"
+                                                    style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={14} strokeWidth={2.5} />
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -560,18 +584,6 @@ const GeneralLedger = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
                     <CreateJournalEntry 
                         onClose={() => setShowCreateModal(false)} 
-                        onSuccess={() => {
-                            fetchData();
-                        }} 
-                    />
-                </div>
-            )}
-
-            {/* Bulk Upload Modal */}
-            {showBulkUploadModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                    <BulkUploadJournal 
-                        onClose={() => setShowBulkUploadModal(false)} 
                         onSuccess={() => {
                             fetchData();
                         }} 

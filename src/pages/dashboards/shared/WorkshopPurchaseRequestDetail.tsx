@@ -34,12 +34,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
             icon: <Receipt size={14} />
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(236, 72, 153, 0.1)',
-            text: '#ec4899',
-            border: 'rgba(236, 72, 153, 0.3)',
-            icon: <Clock size={14} />
         }
     };
     const style = styles[status] || styles.APPROVED;
@@ -145,7 +139,7 @@ const WorkshopPurchaseRequestDetail = () => {
                 <AlertCircle size={48} className="mx-auto text-red-500 opacity-50" />
                 <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Request Not Found</h1>
                 <p style={{ color: 'var(--text-dim)' }}>{error || "The purchase request you're looking for doesn't exist or you don't have access."}</p>
-                <button onClick={() => navigate('..')} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                <button onClick={() => navigate(-1)} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all cursor-pointer" style={{ color: 'var(--text-main)' }}>
                     Back to List
                 </button>
             </div>
@@ -166,7 +160,7 @@ const WorkshopPurchaseRequestDetail = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600] cursor-pointer border-none bg-transparent">
+                    <button onClick={() => navigate(-1)} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600] cursor-pointer border-none bg-transparent">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -183,14 +177,14 @@ const WorkshopPurchaseRequestDetail = () => {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => openActionModal('REJECT')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 cursor-pointer bg-transparent"
                         >
                             <XCircle size={18} /> Reject Proposed
                         </button>
                         <button
                             onClick={() => openActionModal('APPROVE')}
-                            disabled={actionLoading}
+                            disabled={!!actionLoading}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer border-none"
                             style={{ background: '#C8E600', color: '#111' }}
                         >
@@ -411,7 +405,7 @@ const WorkshopPurchaseRequestDetail = () => {
                     )}
 
                     {/* Action Buttons for Finance Admin */}
-                    {request.status === 'PENDING_FINANCE_APPROVAL' && (role === 'financeadmin' || role === 'admin') && (
+                    {request.status === 'PENDING_FINANCE_APPROVAL' && (userRole === 'financeadmin' || userRole === 'admin') && (
                         <div className="rounded-2xl border p-5 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#C8E600]">
                                 <AlertCircle size={14} /> Pending Finance Approval

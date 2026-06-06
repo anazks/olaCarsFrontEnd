@@ -84,6 +84,177 @@ const CustomerDetail = () => {
     const prepaymentBalance = Math.max(0, totalPaymentsReceived - totalApplied);
     const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
 
+    const handleExportStatement = () => {
+        if (!driver) {
+            toast.error("No customer profile loaded to export");
+            return;
+        }
+
+        const toastId = toast.loading("Generating Statement CSV...");
+
+        try {
+            const escapeCSV = (val: any) => {
+                if (val === null || val === undefined) return '';
+                const str = String(val);
+                if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            // Build Header metadata
+            const metadataRows = [
+                ['CUSTOMER STATEMENT OF ACCOUNT', ''],
+                ['Customer Name', driver.personalInfo.fullName],
+                ['Customer ID', driver.driverId || 'TEMP-ID'],
+                ['Email', driver.personalInfo.email || 'N/A'],
+                ['Phone', driver.personalInfo.phone || 'N/A'],
+                ['Registered Date', new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()],
+                ['Account Status', driver.status || 'N/A'],
+                ['Assigned Vehicle', (driver.assignedVehicle as any)?.basicDetails ? `${(driver.assignedVehicle as any).basicDetails.make} ${(driver.assignedVehicle as any).basicDetails.model}` : 'None Assigned'],
+                ['Outstanding Balance', `$${outstandingBalance.toFixed(2)}`],
+                ['Prepayment Credit Balance', `$${prepaymentBalance.toFixed(2)}`],
+                ['', ''], // Empty row spacer
+            ];
+
+            // Build Transactions Header
+            const headers = [
+                'Date',
+                'Transaction Type',
+                'Reference Number',
+                'Details / Description',
+                'Debit (Charges) ($)',
+                'Credit (Payments/Notes) ($)',
+                'Running Balance ($)',
+                'Status'
+            ];
+
+            // Consolidate all transactions: Invoices, Payments, Credit Notes
+            interface TransactionItem {
+                date: Date;
+                type: 'Invoice' | 'Payment' | 'Credit Note';
+                refNumber: string;
+                description: string;
+                debit: number;
+                credit: number;
+                status: string;
+            }
+
+            const txList: TransactionItem[] = [];
+
+            // Add Invoices
+            invoices.forEach(inv => {
+                txList.push({
+                    date: new Date(inv.dueDate || inv.generatedAt || new Date()),
+                    type: 'Invoice',
+                    refNumber: inv.invoiceNumber || '—',
+                    description: inv.weekLabel ? `Rental Charge: ${inv.weekLabel}` : 'Rental Charge',
+                    debit: inv.totalAmountDue || 0,
+                    credit: 0,
+                    status: inv.status || '—'
+                });
+            });
+
+            // Add Payments
+            payments.forEach(pmt => {
+                if (pmt.status === 'VOID') return; // Ignore voided payments in financial statements
+                txList.push({
+                    date: new Date(pmt.paymentDate || new Date()),
+                    type: 'Payment',
+                    refNumber: pmt.paymentNumber || '—',
+                    description: `Payment Received via ${pmt.paymentMethod || 'Other'}`,
+                    debit: 0,
+                    credit: pmt.amountReceived || 0,
+                    status: pmt.status || '—'
+                });
+            });
+
+            // Add Credit Notes
+            creditNotes.forEach(cn => {
+                txList.push({
+                    date: new Date(cn.creditNoteDate || new Date()),
+                    type: 'Credit Note',
+                    refNumber: cn.creditNoteNumber || '—',
+                    description: cn.reason ? `Credit Note: ${cn.reason}` : 'Credit Note Issued',
+                    debit: 0,
+                    credit: cn.amount || 0,
+                    status: cn.status || '—'
+                });
+            });
+
+            // Sort transactions chronologically
+            txList.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            // Compute running balance
+            let runningBalance = 0;
+            const transactionRows = txList.map(tx => {
+                runningBalance += tx.debit - tx.credit;
+                return [
+                    tx.date.toLocaleDateString(),
+                    tx.type,
+                    tx.refNumber,
+                    tx.description,
+                    tx.debit > 0 ? tx.debit.toFixed(2) : '0.00',
+                    tx.credit > 0 ? tx.credit.toFixed(2) : '0.00',
+                    runningBalance.toFixed(2),
+                    tx.status
+                ];
+            });
+
+            // Combine everything into CSV format
+            const csvRows = [
+                ...metadataRows.map(row => row.map(escapeCSV).join(',')),
+                headers.map(escapeCSV).join(','),
+                ...transactionRows.map(row => row.map(escapeCSV).join(','))
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            const safeName = driver.personalInfo.fullName.toLowerCase().replace(/\s+/g, '_');
+            const dateStr = new Date().toISOString().split('T')[0];
+            const filename = `${safeName}_statement_${dateStr}.csv`;
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("Statement CSV downloaded successfully!", { id: toastId });
+        } catch (error) {
+            console.error("Failed to generate statement CSV:", error);
+            toast.error("Failed to export statement", { id: toastId });
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!id) return;
+        const toastId = toast.loading("Generating statement PDF from backend...");
+        try {
+            const res = await api.get(`/api/driver/${id}/statement/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            // Download PDF file
+            const link = document.createElement('a');
+            link.href = url;
+            const safeName = driver?.personalInfo?.fullName?.toLowerCase().replace(/\s+/g, '_') || 'customer';
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `${safeName}_statement_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("PDF statement downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to generate PDF:", err);
+            toast.error("Failed generating statement PDF document.", { id: toastId });
+        }
+    };
+
     return (
         <div className="container-responsive space-y-6 pb-20 animate-in fade-in duration-500">
             <Breadcrumbs 
@@ -98,7 +269,7 @@ const CustomerDetail = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                     <button 
-                        onClick={() => navigate('..')} 
+                        onClick={() => navigate(-1)} 
                         className="p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer" 
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
@@ -134,8 +305,20 @@ const CustomerDetail = () => {
                         <Edit2 size={14} className="opacity-70" /> Edit Profile
                     </button>
 
-                    <button className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-lime text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">
-                        <Download size={14} /> Export Statement
+                    <button 
+                        onClick={handleExportStatement}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <Download size={14} className="opacity-70" /> Export CSV
+                    </button>
+
+                    <button 
+                        onClick={handleDownloadPdf}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+                        style={{ background: 'var(--brand-lime)' }}
+                    >
+                        <FileText size={14} /> Export PDF
                     </button>
                 </div>
             </div>

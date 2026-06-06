@@ -59,7 +59,7 @@ const BillDetail = () => {
                 <AlertCircle size={48} className="mx-auto text-red-500 opacity-50" />
                 <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Bill Not Found</h1>
                 <p style={{ color: 'var(--text-dim)' }}>{error || "The bill you're looking for doesn't exist."}</p>
-                <button onClick={() => navigate('..')} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+                <button onClick={() => navigate(-1)} className="px-6 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
                     Back to List
                 </button>
             </div>
@@ -85,7 +85,7 @@ const BillDetail = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('..')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                    <button onClick={() => navigate(-1)} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
                         <ArrowLeft size={20} />
                     </button>
                     <div>

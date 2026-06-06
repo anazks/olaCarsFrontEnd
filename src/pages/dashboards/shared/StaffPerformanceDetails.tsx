@@ -37,6 +37,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 const StaffPerformanceDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const todayStr = new Date().toISOString().split('T')[0];
     
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -113,7 +114,14 @@ const StaffPerformanceDetails = () => {
                         <input 
                             type="date" 
                             value={dateRange.startDate} 
-                            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                            max={todayStr}
+                            onChange={(e) => {
+                                const newStart = e.target.value;
+                                setDateRange(prev => ({
+                                    startDate: newStart,
+                                    endDate: newStart && prev.endDate && prev.endDate < newStart ? newStart : prev.endDate
+                                }));
+                            }}
                             className="bg-transparent text-[11px] font-bold px-3 py-1.5 outline-none"
                             style={{ color: 'var(--text-main)' }}
                         />
@@ -121,8 +129,11 @@ const StaffPerformanceDetails = () => {
                         <input 
                             type="date" 
                             value={dateRange.endDate} 
+                            disabled={!dateRange.startDate}
+                            min={dateRange.startDate}
+                            max={todayStr}
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="bg-transparent text-[11px] font-bold px-3 py-1.5 outline-none"
+                            className="bg-transparent text-[11px] font-bold px-3 py-1.5 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{ color: 'var(--text-main)' }}
                         />
                     </div>

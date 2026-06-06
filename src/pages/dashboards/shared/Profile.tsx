@@ -49,7 +49,7 @@ const Profile = () => {
         setStatus({ type: null, message: '' });
 
         try {
-            await changePassword(user?.id || '', {
+            await changePassword(user?._id || user?.id || '', {
                 oldPassword: passwords.oldPassword,
                 newPassword: passwords.newPassword
             });

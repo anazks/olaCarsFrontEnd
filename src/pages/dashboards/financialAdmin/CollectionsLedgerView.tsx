@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
      Calendar, MapPin, Building, 
-    Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet, 
+    Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet,
+    Loader2, FileText
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
+import api from '../../../services/api';
 
 // Services
 import { 
@@ -86,6 +89,8 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [exporting, setExporting] = useState(false);
+    const [exportingPdf, setExportingPdf] = useState(false);
 
     // Filter state
     const [allBranches, setAllBranches] = useState<any[]>([]);
@@ -167,6 +172,179 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         setFilters(p => ({ ...p, [key]: val }));
     };
 
+    const getPageNumbers = () => {
+        const totalPages = pagination.pages;
+        const currentPage = pagination.page;
+        const pages: (number | string)[] = [];
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Always include first page
+            pages.push(1);
+
+            if (currentPage > 3) {
+                pages.push('ellipsis-start');
+            }
+
+            // Determine range around current page
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            let finalStart = start;
+            let finalEnd = end;
+            if (currentPage <= 3) {
+                finalEnd = 4;
+            } else if (currentPage >= totalPages - 2) {
+                finalStart = totalPages - 3;
+            }
+
+            for (let i = finalStart; i <= finalEnd; i++) {
+                if (i > 1 && i < totalPages) {
+                    pages.push(i);
+                }
+            }
+
+            if (currentPage < totalPages - 2) {
+                pages.push('ellipsis-end');
+            }
+
+            // Always include last page
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        const toastId = toast.loading("Fetching all records for export...");
+        try {
+            const query = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                page: 1,
+                limit: 100000,
+                listType: meta.listType
+            };
+            const data = await getCollectionsList(query);
+            const items = data.items || [];
+            
+            if (items.length === 0) {
+                toast.error("No records found to export.", { id: toastId });
+                setExporting(false);
+                return;
+            }
+
+            toast.loading("Generating CSV file...", { id: toastId });
+
+            const escapeCSV = (val: any) => {
+                if (val === null || val === undefined) return '';
+                const str = String(val);
+                if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            const headers = [
+                'Sl No.',
+                'Invoice Number',
+                'Driver Name',
+                'Driver ID',
+                'Vehicle Number',
+                'Fleet Number',
+                'Branch',
+                'Country',
+                'Due Date',
+                'Days Overdue',
+                'Gross Billed ($)',
+                'Net Settled ($)',
+                'Current Balance ($)',
+                'Status'
+            ];
+
+            const csvRows = [
+                headers.join(','),
+                ...items.map((item, idx) => {
+                    const formattedDate = item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : '';
+                    return [
+                        idx + 1,
+                        item.invoiceNumber,
+                        item.driverName,
+                        item.driverId,
+                        item.vehicleNumber,
+                        item.fleetNumber,
+                        item.branch,
+                        item.country,
+                        formattedDate,
+                        item.daysOverdue || 0,
+                        item.totalAmountDue,
+                        item.amountPaid,
+                        item.balance,
+                        item.status
+                    ].map(escapeCSV).join(',');
+                })
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            const filename = `${meta.title.toLowerCase().replace(/\s+/g, '_')}_ledger_${dateStr}.csv`;
+            
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success(`Successfully exported ${items.length} records to CSV.`, { id: toastId });
+        } catch (err) {
+            console.error('Export failed', err);
+            toast.error("Failed to export data. Please try again.", { id: toastId });
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleExportPdf = async () => {
+        setExportingPdf(true);
+        const toastId = toast.loading("Generating PDF Report...");
+        try {
+            const query = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                listType: meta.listType
+            };
+            const res = await api.get('/api/collections/export/pdf', { params: query, responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            // Download PDF file
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            const filename = `${meta.title.toLowerCase().replace(/\s+/g, '_')}_report_${dateStr}.pdf`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("PDF report downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("PDF generation failed:", err);
+            toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
@@ -174,7 +352,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             
             {/* HEADER & DESCRIPTION */}
             {/* Compact Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4 mb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <div>
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <span className={meta.colorClass}>{meta.icon}</span>
@@ -292,8 +470,37 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
                             </div>
                         )}
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                            <FileSpreadsheet size={16} /> Export
+                        <button 
+                            disabled={exporting || loading}
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            {exporting ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={16} /> Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet size={16} /> Export CSV
+                                </>
+                            )}
+                        </button>
+
+                        <button 
+                            disabled={exportingPdf || loading}
+                            onClick={handleExportPdf}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-lime text-black font-bold text-sm hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                            {exportingPdf ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={16} /> Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText size={16} /> Export PDF
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -428,19 +635,24 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         >
                             {'<'}
                         </button>
-                        {[...Array(Math.min(pagination.pages, 5))].map((_, i) => {
-                            const pageNum = i + 1;
+                        {getPageNumbers().map((item, index) => {
+                            if (typeof item === 'string') {
+                                return (
+                                    <span key={`ellipsis-${index}`} className="px-1 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                        ...
+                                    </span>
+                                );
+                            }
                             return (
                                 <button 
-                                    key={pageNum}
-                                    onClick={() => fetchPage(pageNum)}
-                                    className={`px-2.5 py-1 rounded ${pagination.page === pageNum ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    key={item}
+                                    onClick={() => fetchPage(item)}
+                                    className={`px-2.5 py-1 rounded ${pagination.page === item ? 'bg-[#D4F12E] text-black' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                                 >
-                                    {pageNum.toString().padStart(2, '0')}
+                                    {item.toString().padStart(2, '0')}
                                 </button>
                             );
                         })}
-                        {pagination.pages > 5 && <span className="px-1.5">...</span>}
                         <button 
                             disabled={pagination.page >= pagination.pages || loading}
                             onClick={() => fetchPage(pagination.page + 1)}

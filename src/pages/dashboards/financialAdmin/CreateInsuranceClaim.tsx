@@ -119,11 +119,12 @@ const CreateInsuranceClaim = () => {
                                 required
                                 value={vehicleId}
                                 onChange={(e) => setVehicleId(e.target.value)}
-                                className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                className="w-full border rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="">-- Select a Vehicle --</option>
+                                <option value="" style={{ background: 'var(--bg-card)' }}>-- Select a Vehicle --</option>
                                 {vehicles.map(v => (
-                                    <option key={v._id} value={v._id}>
+                                    <option key={v._id} value={v._id} style={{ background: 'var(--bg-card)' }}>
                                         {v.basicDetails.make} {v.basicDetails.model} ({v.legalDocs?.registrationNumber || v.basicDetails.vin})
                                     </option>
                                 ))}
@@ -131,11 +132,11 @@ const CreateInsuranceClaim = () => {
                         </div>
 
                         {selectedVehicle && (
-                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
-                                <div className="p-3 bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
+                            <div className="bg-black/5 dark:bg-white/5 border rounded-xl p-4 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="p-3 bg-black/10 dark:bg-black/20 rounded-lg"><Car className="text-[#D4F12E]" /></div>
                                 <div>
-                                    <p className="font-bold text-sm text-white">{selectedVehicle?.basicDetails?.make || 'Unknown Make'} {selectedVehicle?.basicDetails?.model || 'Unknown Model'}</p>
-                                    <p className="text-xs text-gray-400 font-mono mt-1">Plate No: {selectedVehicle?.basicDetails?.vin || 'N/A'} | REG: {selectedVehicle?.legalDocs?.registrationNumber || 'N/A'}</p>
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{selectedVehicle?.basicDetails?.make || 'Unknown Make'} {selectedVehicle?.basicDetails?.model || 'Unknown Model'}</p>
+                                    <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-dim)' }}>Plate No: {selectedVehicle?.basicDetails?.vin || 'N/A'} | REG: {selectedVehicle?.legalDocs?.registrationNumber || 'N/A'}</p>
                                 </div>
                             </div>
                         )}
@@ -148,7 +149,8 @@ const CreateInsuranceClaim = () => {
                                     required
                                     value={incidentDate}
                                     onChange={(e) => setIncidentDate(e.target.value)}
-                                    className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    className="w-full border rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark light' }}
                                 />
                             </div>
 
@@ -159,7 +161,8 @@ const CreateInsuranceClaim = () => {
                                     value={workOrderId}
                                     onChange={(e) => setWorkOrderId(e.target.value)}
                                     placeholder="E.g. WO-12345"
-                                    className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    className="w-full border rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
                         </div>
@@ -174,7 +177,8 @@ const CreateInsuranceClaim = () => {
                                     value={claimAmount}
                                     onChange={(e) => setClaimAmount(e.target.value)}
                                     placeholder="0.00"
-                                    className="w-full bg-black border border-gray-800 rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    className="w-full border rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
                         </div>
@@ -187,7 +191,8 @@ const CreateInsuranceClaim = () => {
                                 value={incidentDescription}
                                 onChange={(e) => setIncidentDescription(e.target.value)}
                                 placeholder="Describe the incident in detail..."
-                                className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors resize-none"
+                                className="w-full border rounded-xl px-4 py-3 text-sm font-bold focus:border-[#D4F12E] outline-none transition-colors resize-none"
+                                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />
                         </div>
 
@@ -195,7 +200,8 @@ const CreateInsuranceClaim = () => {
                             <button 
                                 type="button" 
                                 onClick={() => navigate(-1)} 
-                                className="flex-1 py-3.5 rounded-xl border border-gray-700 font-bold text-sm hover:bg-white/5 transition-colors"
+                                className="flex-1 py-3.5 rounded-xl border font-bold text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 Cancel
                             </button>

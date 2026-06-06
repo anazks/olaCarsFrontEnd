@@ -1,20 +1,39 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, Download, RefreshCw, ChevronRight, PieChart } from 'lucide-react';
+import { TrendingUp, Download, RefreshCw, ChevronRight, PieChart, Loader2 } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
 
 const FinancialStatements = () => {
     const activeTab = 'PL';
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-    
+    const getOneMonthAgo = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+    };
+
+    const getToday = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+        startDate: getOneMonthAgo(),
+        endDate: getToday()
     });
+
+    // Keep end date valid relative to start date
+    useEffect(() => {
+        if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+            setFilters(prev => ({ ...prev, endDate: filters.startDate }));
+        }
+    }, [filters.startDate, filters.endDate]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -29,15 +48,19 @@ const FinancialStatements = () => {
         try {
             if (activeTab === 'PL') {
                 const data = await getPLReport(filters);
+                console.log('Backend PL Report Data:', data);
                 setReportData(data.data || data);
             } else {
                 const data = await getBalanceSheetReport(filters);
+                console.log('Backend Balance Sheet Report Data:', data);
                 setReportData(data.data || data);
             }
         } catch (error) {
-            console.error('Failed to fetch report', error);
+            console.error('Failed to fetch report from backend', error);
             // Fallback mock data for demo if backend not ready
-            setReportData(getMockData(activeTab));
+            const mock = getMockData(activeTab);
+            console.warn('Falling back to frontend mock data:', mock);
+            setReportData(mock);
         } finally {
             setLoading(false);
         }
@@ -46,6 +69,38 @@ const FinancialStatements = () => {
     useEffect(() => {
         fetchReport();
     }, [activeTab, filters.branch, filters.startDate, filters.endDate]);
+
+    const handleExportPdf = async () => {
+        setExporting(true);
+        const toastId = toast.loading("Generating PDF Report...");
+        try {
+            const query = {
+                ...filters,
+                reportType: activeTab
+            };
+            const res = await api.get('/api/reporting/export/pdf', { params: query, responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            // Download PDF file
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = activeTab === 'PL' ? 'income_statement' : 'balance_sheet';
+            const filename = `${title}_report_${dateStr}.pdf`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("PDF report downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("PDF generation failed:", err);
+            toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
+        } finally {
+            setExporting(false);
+        }
+    };
 
     return (
         <div className="container-responsive space-y-6">
@@ -61,9 +116,21 @@ const FinancialStatements = () => {
                     <p className="text-xs font-medium text-dim mt-0.5">Consolidated and branch-level financial reporting</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <button className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border hover:bg-white/5 cursor-pointer"
-                            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                        <Download size={14} /> Export PDF
+                    <button 
+                        disabled={exporting || loading}
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        {exporting ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" /> Exporting...
+                            </>
+                        ) : (
+                            <>
+                                <Download size={14} /> Export PDF
+                            </>
+                        )}
                     </button>
                     <button 
                         onClick={fetchReport}
@@ -78,7 +145,6 @@ const FinancialStatements = () => {
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Calendar size={18} className="text-dim" />
                     <input 
                         type="date" 
                         value={filters.startDate}
@@ -89,7 +155,15 @@ const FinancialStatements = () => {
                     <input 
                         type="date" 
                         value={filters.endDate}
-                        onChange={e => setFilters({...filters, endDate: e.target.value})}
+                        min={filters.startDate}
+                        onChange={e => {
+                            const val = e.target.value;
+                            if (filters.startDate && val && val < filters.startDate) {
+                                setFilters({...filters, endDate: filters.startDate});
+                            } else {
+                                setFilters({...filters, endDate: val});
+                            }
+                        }}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>

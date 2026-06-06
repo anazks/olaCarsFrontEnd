@@ -210,10 +210,60 @@ const CreditNotes = () => {
         }
     };
 
+    const getPageNumbers = () => {
+        const totalPages = pagination.pages;
+        const currentPage = page;
+        const pages: (number | string)[] = [];
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Always include first page
+            pages.push(1);
+
+            if (currentPage > 3) {
+                pages.push('ellipsis-start');
+            }
+
+            // Determine range around current page
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            let finalStart = start;
+            let finalEnd = end;
+            if (currentPage <= 3) {
+                finalEnd = 4;
+            } else if (currentPage >= totalPages - 2) {
+                finalStart = totalPages - 3;
+            }
+
+            for (let i = finalStart; i <= finalEnd; i++) {
+                if (i > 1 && i < totalPages) {
+                    pages.push(i);
+                }
+            }
+
+            if (currentPage < totalPages - 2) {
+                pages.push('ellipsis-end');
+            }
+
+            // Always include last page
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
     const handleCreateCreditNote = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedDriverId || !amount || !reason) {
             toast.error("Fill mandatory fields.");
+            return;
+        }
+        const today = new Date().toISOString().split('T')[0];
+        if (creditNoteDate < today) {
+            toast.error("Credit Note date cannot be in the past.");
             return;
         }
         setSubmitting(true);
@@ -333,7 +383,13 @@ const CreditNotes = () => {
                                 <input
                                     type="date"
                                     value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
+                                    onChange={e => {
+                                        const newStart = e.target.value;
+                                        setStartDate(newStart);
+                                        if (endDate && newStart && newStart > endDate) {
+                                            setEndDate('');
+                                        }
+                                    }}
                                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                     style={{ color: 'var(--text-main)' }}
                                 />
@@ -343,6 +399,7 @@ const CreditNotes = () => {
                                 <input
                                     type="date"
                                     value={endDate}
+                                    min={startDate || undefined}
                                     onChange={e => setEndDate(e.target.value)}
                                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                     style={{ color: 'var(--text-main)' }}
@@ -476,24 +533,26 @@ const CreditNotes = () => {
                                     <ChevronLeft size={18} />
                                 </button>
                                 <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                                        let pageNum: number;
-                                        if (pagination.pages <= 5) pageNum = i + 1;
-                                        else if (page <= 3) pageNum = i + 1;
-                                        else if (page >= pagination.pages - 2) pageNum = pagination.pages - 4 + i;
-                                        else pageNum = page - 2 + i;
+                                    {getPageNumbers().map((item, index) => {
+                                        if (typeof item === 'string') {
+                                            return (
+                                                <span key={`ellipsis-${index}`} className="px-1 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                key={item}
+                                                onClick={() => handlePageChange(item)}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${page === item ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                                 style={{ 
-                                                    background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
-                                                    color: page === pageNum ? '#000' : 'var(--text-main)',
-                                                    border: page === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                    background: page === item ? 'var(--brand-lime)' : 'transparent',
+                                                    color: page === item ? '#000' : 'var(--text-main)',
+                                                    border: page === item ? 'none' : '1px solid var(--border-main)'
                                                 }}
                                             >
-                                                {pageNum}
+                                                {item}
                                             </button>
                                         );
                                     })}
@@ -634,7 +693,7 @@ const CreditNotes = () => {
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>4. Date *</label>
-                                    <input required type="date" value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
+                                    <input required type="date" min={new Date().toISOString().split('T')[0]} value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
                                 </div>
                             </div>
 

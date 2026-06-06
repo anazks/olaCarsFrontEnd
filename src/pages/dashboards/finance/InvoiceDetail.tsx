@@ -246,6 +246,41 @@ const InvoiceDetail = () => {
         }
     };
 
+    const handlePrintPdf = async () => {
+        if (!invoice) return;
+        const toastId = toast.loading("Preparing print layout...");
+        try {
+            const res = await api.get(`/api/invoices/${invoice._id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
+            };
+            
+            toast.success("Print dialog opened successfully", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to print PDF:", err);
+            toast.error("Failed generating invoice PDF document.", { id: toastId });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -271,18 +306,20 @@ const InvoiceDetail = () => {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-20 select-text">
-            <Breadcrumbs
-                items={[
-                    { label: 'Sales', path: '../invoices' },
-                    { label: 'Invoices', path: '../invoices' },
-                    { label: invoice.invoiceNumber, active: true }
-                ]}
-            />
+            <div className="print:hidden">
+                <Breadcrumbs 
+                    items={[
+                        { label: 'Sales', path: '../invoices' },
+                        { label: 'Invoices', path: '../invoices' },
+                        { label: invoice.invoiceNumber, active: true }
+                    ]} 
+                />
+            </div>
 
             {/* Header / Toolbar */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('../invoices')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600]">
+                    <button onClick={() => navigate('../invoices')} className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[#C8E600] print:hidden cursor-pointer">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -298,11 +335,11 @@ const InvoiceDetail = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    {invoice.status !== 'PAID' && (
-                        <button
+                <div className="flex flex-wrap gap-2 w-full md:w-auto print:hidden">
+                    {invoice.status !== 'PAID' && userRole !== 'admin' && (
+                        <button 
                             onClick={triggerEditModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all cursor-pointer"
                             style={{ color: 'var(--text-main)' }}
                         >
                             <Edit3 size={14} /> Edit Invoice
@@ -312,7 +349,7 @@ const InvoiceDetail = () => {
                     {invoice.balance > 0 && (
                         <button
                             onClick={triggerCreditNoteModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-bold text-xs rounded-xl transition-all"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-indigo-400 font-bold text-xs rounded-xl transition-all cursor-pointer"
                         >
                             <FileSpreadsheet size={14} /> Issue Credit Note
                         </button>
@@ -321,22 +358,24 @@ const InvoiceDetail = () => {
                     {invoice.status !== 'PAID' && (
                         <button
                             onClick={triggerPaymentModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#C8E600] text-black font-black text-xs hover:scale-[1.02] active:scale-95 transition-all rounded-xl shadow-lg"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#C8E600] text-black font-black text-xs hover:scale-[1.02] active:scale-95 transition-all rounded-xl shadow-lg cursor-pointer"
                         >
                             <DollarSign size={14} strokeWidth={3} /> Record Payment
                         </button>
                     )}
 
-                    <button onClick={() => window.print()} className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/5 border border-white/10 font-bold text-xs rounded-xl hover:bg-white/10 transition-all" style={{ color: 'var(--text-main)' }}>
-                        <Printer size={14} /> Print
+                    <button onClick={handlePrintPdf} className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/5 border border-white/10 font-bold text-xs rounded-xl hover:bg-white/10 transition-all cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                        <Printer size={14}/> Print
                     </button>
 
-                    <button
-                        onClick={handleDeleteInvoice}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all"
-                    >
-                        <Trash2 size={14} /> Delete
-                    </button>
+                    {userRole !== 'admin' && (
+                        <button 
+                            onClick={handleDeleteInvoice}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                        >
+                            <Trash2 size={14}/> Delete
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -512,7 +551,7 @@ const InvoiceDetail = () => {
                                 <tr className="bg-white/5">
                                     <td colSpan={3} className="px-6 py-4 text-right font-bold text-xs" style={{ color: 'var(--text-dim)' }}>Subtotal</td>
                                     <td className="px-6 py-4 text-right font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        ${(invoice.subtotal || invoice.totalAmountDue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${(invoice.subtotal || invoice.baseAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
                                 </tr>
 
@@ -530,6 +569,15 @@ const InvoiceDetail = () => {
                                         <td colSpan={3} className="px-6 py-3 text-right font-bold text-xs text-blue-400">Tax ({invoice.taxRate}%)</td>
                                         <td className="px-6 py-3 text-right font-bold text-sm text-blue-400">
                                             + ${invoice.taxAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {(invoice.carryOverAmount || 0) > 0 && (
+                                    <tr className="bg-white/5">
+                                        <td colSpan={3} className="px-6 py-3 text-right font-bold text-xs text-amber-500">Carry Over Balance</td>
+                                        <td className="px-6 py-3 text-right font-bold text-sm text-amber-500">
+                                            + ${invoice.carryOverAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </td>
                                     </tr>
                                 )}
@@ -844,6 +892,7 @@ const InvoiceDetail = () => {
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
+        case 'DRAFT': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-blue-500/10 text-blue-400 border-blue-500/20 select-none">Draft</span>;
         case 'PAID': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none"><CheckCircle2 size={10} strokeWidth={3} /> Paid</span>;
         case 'PARTIAL': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-yellow-500/10 text-yellow-500 border-yellow-500/20 select-none"><Clock size={10} strokeWidth={3} /> Partial</span>;
         case 'OVERDUE': return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none"><AlertCircle size={10} strokeWidth={3} /> Overdue</span>;

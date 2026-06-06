@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Calculator, AlertTriangle, Check, X } from 'lucide-react';
-import { getAllTaxes, createTax, updateTaxStatus } from '../../../services/taxService';
+import { getAllTaxes, createTax, updateTaxStatus, updateTax } from '../../../services/taxService';
 import type { Tax, CreateTaxPayload } from '../../../services/taxService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -11,9 +11,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [error, setError] = useState<string | null>(null);
     const [isAddRouteActive, setIsAddRouteActive] = useState(false);
     
-    // Add Form State
+    // Add/Edit Form State
     const [newTax, setNewTax] = useState<CreateTaxPayload>({ name: '', rate: 0 });
     const [creating, setCreating] = useState(false);
+    const [editingTaxId, setEditingTaxId] = useState<string | null>(null);
 
     const userRole = getUserRole() || '';
     const canManageTaxes = ['admin', 'financialadmin'].includes(userRole);
@@ -37,6 +38,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
     const handleCreateTax = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isNaN(newTax.rate) || newTax.rate <= 0 || !Number.isInteger(newTax.rate)) {
+            setError('Tax percentage must be a whole number greater than 0');
+            return;
+        }
         setCreating(true);
         setError(null);
         try {
@@ -46,6 +51,28 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             await fetchTaxes();
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to create tax');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleEditTax = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTaxId) return;
+        if (isNaN(newTax.rate) || newTax.rate <= 0 || !Number.isInteger(newTax.rate)) {
+            setError('Tax percentage must be a whole number greater than 0');
+            return;
+        }
+        setCreating(true);
+        setError(null);
+        try {
+            await updateTax(editingTaxId, { name: newTax.name, rate: newTax.rate });
+            setNewTax({ name: '', rate: 0 });
+            setEditingTaxId(null);
+            setIsAddRouteActive(false);
+            await fetchTaxes();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to update tax');
         } finally {
             setCreating(false);
         }
@@ -101,16 +128,17 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 </div>
             )}
 
-            {/* Create Form */}
             {isAddRouteActive && (
                 <div className="p-6 rounded-2xl border transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Add New Tax Profile</h2>
-                        <button onClick={() => setIsAddRouteActive(false)} className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                        <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                            {editingTaxId ? 'Edit Tax Profile' : 'Add New Tax Profile'}
+                        </h2>
+                        <button onClick={() => { setIsAddRouteActive(false); setEditingTaxId(null); setNewTax({ name: '', rate: 0 }); }} className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: 'var(--text-dim)' }}>
                             <X size={20} />
                         </button>
                     </div>
-                    <form onSubmit={handleCreateTax} className="space-y-4">
+                    <form onSubmit={editingTaxId ? handleEditTax : handleCreateTax} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Profile Name</label>
@@ -129,10 +157,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 <input
                                     required
                                     type="number"
-                                    step="0.01"
-                                    min="0"
+                                    step="1"
+                                    min="1"
                                     placeholder="Enter percentage (e.g. 15)"
-                                    value={newTax.rate || ''}
+                                    value={isNaN(newTax.rate) ? '' : newTax.rate}
                                     onChange={e => setNewTax({ ...newTax, rate: parseFloat(e.target.value) })}
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
                                     style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
@@ -147,7 +175,7 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{ background: '#C8E600', color: '#0A0A0A' }}
                             >
-                                {creating ? 'Creating...' : 'Create Tax Profile'}
+                                {creating ? (editingTaxId ? 'Saving...' : 'Creating...') : (editingTaxId ? 'Save Changes' : 'Create Tax Profile')}
                             </button>
                         </div>
                     </form>
@@ -200,7 +228,22 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                             </div>
                                         </td>
                                         {canManageTaxes && (
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setNewTax({ name: t.name, rate: t.rate });
+                                                        setEditingTaxId(t._id);
+                                                        setIsAddRouteActive(true);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                                    style={{ 
+                                                        background: 'var(--bg-sidebar)', 
+                                                        border: '1px solid var(--border-main)',
+                                                        color: 'var(--text-main)' 
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
                                                 <button
                                                     onClick={() => handleToggleStatus(t._id, t.isActive)}
                                                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"

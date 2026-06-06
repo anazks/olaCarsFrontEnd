@@ -13,6 +13,7 @@ import {
 } from '../../../services/branchService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 import HasPermission from '../../../components/HasPermission';
 import { getAllBranchManagers, type BranchManager } from '../../../services/branchManagerService';
 import { getAllCountryManagers, createCountryManager, type CountryManager, type CreateCountryManagerPayload } from '../../../services/countryManagerService';
@@ -126,6 +127,40 @@ const ManageBranches = () => {
             setCmFormError('All fields are required.');
             return;
         }
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(cmForm.email.trim())) {
+            setCmFormError(t('management.branches.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            return;
+        }
+
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(cmForm.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.branches.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.branches.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.branches.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.branches.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.branches.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setCmFormError(errorMsg);
+            return;
+        }
+
         setAddingCM(true);
         setCmFormError(null);
         try {
@@ -207,6 +242,40 @@ const ManageBranches = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.branches.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            return;
+        }
+
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.branches.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.branches.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.branches.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.branches.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.branches.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
+            }
+            setFormError(errorMsg);
+            return;
+        }
+
         setFormLoading(true);
         setFormError(null);
 
@@ -214,6 +283,7 @@ const ManageBranches = () => {
             if (modalMode === 'create') {
                 const payload: CreateBranchPayload = {
                     ...formData,
+                    email: formData.email.trim(),
                     status: formData.status as any
                 };
                 await createBranch(payload);
@@ -221,6 +291,7 @@ const ManageBranches = () => {
                 const payload: UpdateBranchPayload = {
                     id: selectedBranch._id,
                     ...formData,
+                    email: formData.email.trim(),
                     status: formData.status as any
                 };
                 await updateBranch(payload);

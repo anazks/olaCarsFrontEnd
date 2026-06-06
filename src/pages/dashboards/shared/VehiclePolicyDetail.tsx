@@ -15,10 +15,14 @@ import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getUserRole } from '../../../utils/auth';
+import { API_ROLE_TO_ROUTE } from '../../../services/authService';
 
 const VehiclePolicyDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const role = getUserRole();
+    const baseRoute = (role && API_ROLE_TO_ROUTE[role]) || '/admin/financial-admin';
     
     const [policy, setPolicy] = useState<VehiclePolicy | null>(null);
     const [driver, setDriver] = useState<Driver | null>(null);
@@ -78,7 +82,7 @@ const VehiclePolicyDetail = () => {
     return (
         <div className="p-6 max-w-[1200px] mx-auto space-y-6">
             <button 
-                onClick={() => navigate('/admin/financial-admin/vehicle-policies')}
+                onClick={() => navigate(-1)}
                 className="flex items-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity"
             >
                 <ArrowLeft size={16} /> Back to Policies
@@ -96,7 +100,7 @@ const VehiclePolicyDetail = () => {
                 </div>
                 
                 <button
-                    onClick={() => navigate(`/admin/financial-admin/insurance-claims/new?vehicleId=${vehicle?._id}`)}
+                    onClick={() => navigate(`${baseRoute}/insurance-claims/new?vehicleId=${vehicle?._id}`)}
                     className="px-6 py-2.5 rounded-xl bg-[#D4F12E] text-black font-black uppercase tracking-widest text-sm hover:bg-[#c2dd2a] transition-all flex items-center gap-2"
                 >
                     <PlusCircle size={18} /> File Claim

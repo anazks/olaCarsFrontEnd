@@ -14,10 +14,25 @@ import type { VehiclePolicy } from '../../../services/insuranceService';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { downloadFile } from '../../../utils/fileDownloader';
+import { getUserRole } from '../../../utils/auth';
+import { API_ROLE_TO_ROUTE } from '../../../services/authService';
+
+const formatDate = (dateString?: string | Date) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+};
 
 const VehiclePolicyList = () => {
     useTranslation();
     const navigate = useNavigate();
+    const role = getUserRole();
+    const baseRoute = (role && API_ROLE_TO_ROUTE[role]) || '/admin/financial-admin';
     const [policies, setPolicies] = useState<VehiclePolicy[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -49,6 +64,7 @@ const VehiclePolicyList = () => {
         setError('');
         try {
             const data = await getAllVehiclePolicies(filters);
+            console.log('Vehicle policies data from backend:', data);
             if (data.success) {
                 setPolicies(data.data);
                 if (data.pagination) setPagination(data.pagination);
@@ -179,7 +195,7 @@ const VehiclePolicyList = () => {
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {policies.map(policy => (
-                                    <tr key={policy._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`/admin/financial-admin/vehicle-policies/${policy._id}`)}>
+                                    <tr key={policy._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`${baseRoute}/vehicle-policies/${policy._id}`)}>
                                         <td className="px-6 py-4">
                                             <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                 <Car size={16} className="text-lime" />
@@ -202,10 +218,10 @@ const VehiclePolicyList = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                                                {policy.startDate ? new Date(policy.startDate).toLocaleDateString() : '-'}
+                                                {formatDate(policy.startDate)}
                                             </div>
                                             <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                                                to {policy.expiryDate ? new Date(policy.expiryDate).toLocaleDateString() : '-'}
+                                                to {formatDate(policy.expiryDate)}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -234,25 +250,28 @@ const VehiclePolicyList = () => {
                                                         >
                                                             <Eye size={14} />
                                                         </button>
-                                                        <a 
-                                                            href={getFullUrl(policy.certificate)}
-                                                            download
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="p-1.5 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500"
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const regNo = policy.vehicle?.basicDetails?.registrationNumber || 'unknown';
+                                                                downloadFile(
+                                                                    getFullUrl(policy.certificate),
+                                                                    `Vehicle_Certificate_${regNo.replace(/\s+/g, '_')}`
+                                                                );
+                                                            }}
+                                                            className="p-1.5 rounded-xl transition-all hover:bg-blue-500/20 text-blue-500 cursor-pointer"
                                                             style={{ background: 'rgba(59,130,246,0.1)' }}
                                                             title="Download"
                                                         >
                                                             <Download size={14} />
-                                                        </a>
+                                                        </button>
                                                     </div>
                                                 ) : (
                                                     <span className="text-[10px] italic" style={{ color: 'var(--text-dim)' }}>No Cert</span>
                                                 )}
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/vehicle-policies/${policy._id}`); }}
-                                                    className="mt-2 px-3 py-1.5 rounded bg-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-colors flex items-center justify-center gap-1 w-full"
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`${baseRoute}/vehicle-policies/${policy._id}`); }}
+                                                    className="mt-2 px-3 py-1.5 rounded bg-black/5 dark:bg-white/10 text-neutral-800 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-black/10 dark:hover:bg-white/20 transition-colors flex items-center justify-center gap-1 w-full"
                                                 >
                                                     <Eye size={12} /> View Details
                                                 </button>

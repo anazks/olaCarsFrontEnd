@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import OlaLoader from '../../../components/common/OlaLoader';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../../store';
+import { setFinanceDashboardData } from '../../../store/dashboardSlice';
 import { 
     Activity, RefreshCw, 
     List, Plus, Calendar, 
     TrendingUp, ShieldAlert, ChevronDown, 
     Percent, Layers, PieChart as PieIcon, Coins,
-    Building2
+    Building2, FileText, Eye, CheckCircle
 } from 'lucide-react';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -29,11 +32,12 @@ import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../../servi
 import type { PurchaseOrder } from '../../../services/purchaseOrderService';
 
 const FinanceDashboard = () => {
+    const dispatch = useDispatch();
+    const financeState = useSelector((state: RootState) => state.dashboard.finance);
+
     // Basic States
-    const [tasks, setTasks] = useState<StaffTask[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!financeState.isLoaded);
     const [error, setError] = useState<string | null>(null);
-    const [pendingPOs, setPendingPOs] = useState<PurchaseOrder[]>([]);
     const navigate = useNavigate();
     const user = getUser();
     const userRole = getUserRole();
@@ -46,13 +50,10 @@ const FinanceDashboard = () => {
     const [accountingBasis, setAccountingBasis] = useState<'ACCRUAL' | 'CASH'>('ACCRUAL');
     const [fiscalYearRange, setFiscalYearRange] = useState<string>('This Fiscal Year');
 
-    // Aggregate values
-    const [liveData, setLiveData] = useState({
-        invoices: [] as Invoice[],
-        bills: [] as Bill[],
-        expenses: [] as Expense[],
-        ledger: [] as LedgerEntry[],
-    });
+    // Read from Redux store
+    const liveData = financeState.liveData;
+    const pendingPOs = financeState.pendingPOs;
+    const tasks = financeState.tasks;
 
     const getCurrencySymbol = () => '$';
 
@@ -63,8 +64,8 @@ const FinanceDashboard = () => {
         });
     };
 
-    const fetchDashboardData = async () => {
-        setLoading(true);
+    const fetchDashboardData = async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setLoading(true);
         setError(null);
         try {
             // Safe aggregation: catch individual failures so the UI never crashes
@@ -108,16 +109,16 @@ const FinanceDashboard = () => {
                 resolvedPOs = poRes as any;
             }
 
-            setLiveData({
-                invoices: resolvedInvoices,
-                bills: resolvedBills,
-                expenses: resolvedExpenses,
-                ledger: resolvedLedger
-            });
-
-            setPendingPOs(resolvedPOs);
-
-            setTasks(resolvedTasks.slice(0, 5));
+            dispatch(setFinanceDashboardData({
+                liveData: {
+                    invoices: resolvedInvoices,
+                    bills: resolvedBills,
+                    expenses: resolvedExpenses,
+                    ledger: resolvedLedger
+                },
+                pendingPOs: resolvedPOs,
+                tasks: resolvedTasks.slice(0, 5)
+            }));
 
             if (resolvedInvoices.length > 0 || resolvedBills.length > 0 || resolvedExpenses.length > 0) {
                 // If there's active live data, suggest turning on Live mode
@@ -139,7 +140,7 @@ const FinanceDashboard = () => {
             }
             await updateTaskStatus(taskId, newStatus, feedback);
             toast.success('Mission status synchronized');
-            fetchDashboardData();
+            fetchDashboardData(false);
         } catch (err) {
             toast.error('Synchronization failed');
         }
@@ -150,14 +151,19 @@ const FinanceDashboard = () => {
         try {
             await approveRejectPurchaseOrder(poId, { status: 'APPROVED' });
             toast.success('Purchase order approved successfully');
-            fetchDashboardData();
+            fetchDashboardData(false);
         } catch (err: any) {
             toast.error(err.response?.data?.message || err.message || 'Approval failed');
         }
     };
 
     useEffect(() => {
-        fetchDashboardData();
+        const cacheAge = Date.now() - (financeState.lastFetched || 0);
+        const isCacheFresh = financeState.isLoaded && cacheAge < 5 * 60 * 1000; // 5 minutes fresh
+        
+        if (!isCacheFresh) {
+            fetchDashboardData(!financeState.isLoaded);
+        }
     }, []);
 
     // ==========================================
@@ -355,7 +361,7 @@ const FinanceDashboard = () => {
         // Cash Income = Invoices actually collected
         liveData.invoices.forEach(inv => {
             cashIncome += inv.amountPaid || 0;
-            inv.payments?.forEach(pmt => {
+            inv.payments?.forEach((pmt: any) => {
                 const pDate = new Date(pmt.paidAt);
                 if (isNaN(pDate.getTime())) return;
                 const mKey = pDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
@@ -394,7 +400,7 @@ const FinanceDashboard = () => {
             expMap.set(accName, (expMap.get(accName) || 0) + e.amount);
         });
         liveData.bills.forEach(b => {
-            b.items?.forEach(item => {
+            b.items?.forEach((item: any) => {
                 const name = typeof item.accountId === 'object' && item.accountId ? (item.accountId.name || 'Vendor Cost') : 'Supplier Inbound';
                 expMap.set(name, (expMap.get(name) || 0) + (item.quantity * item.unitPrice));
             });
@@ -552,7 +558,7 @@ const FinanceDashboard = () => {
         liveData.invoices.forEach(inv => {
             const amt = inv.totalAmountDue || 0;
             if (inv.invoiceType === 'MANUAL' && inv.lineItems && inv.lineItems.length > 0) {
-                inv.lineItems.forEach(item => {
+                inv.lineItems.forEach((item: any) => {
                     const name = (item.name || '').toLowerCase();
                     const val = (item.unitPrice || 0) * (item.qty || 1);
                     if (name.includes('rent') || name.includes('lease') || name.includes('hire')) rental += val;
@@ -656,7 +662,7 @@ const FinanceDashboard = () => {
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
                     {/* Refresh */}
                     <button
-                        onClick={fetchDashboardData}
+                        onClick={() => fetchDashboardData(true)}
                         className="flex items-center justify-center p-2.5 rounded-xl border transition-all hover:bg-white/5 active:scale-90"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                         title="Re-synchronize Live Databases"

@@ -432,6 +432,7 @@
       "searchPlaceholderBranches": "Buscar por nombre, código, ciudad, estado...",
       "allStatuses": "Todos los Estados",
       "allCountries": "Todos los Países",
+      "allBranches": "Todas las Sucursales",
       "startDate": "Fecha de Inicio",
       "endDate": "Fecha de Fin",
       "resetAll": "Reiniciar Todo",

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '../../../../store';
+import { setCustomersData } from '../../../../store/dashboardSlice';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
     ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus
@@ -7,15 +10,27 @@ import {
 import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
-import { getUserRole } from '../../../../utils/auth';
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+};
 
 const Customers = () => {
     const navigate = useNavigate();
-    const userRole = getUserRole();
-    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const dispatch = useDispatch();
+    const customersState = useSelector((state: RootState) => state.dashboard.customers);
+
+    const [drivers, setDrivers] = useState<Driver[]>(customersState.list);
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!customersState.isLoaded);
     const [error, setError] = useState<string | null>(null);
+    const isFirstMount = useRef(true);
 
     // Filters & Search
     const [searchQuery, setSearchQuery] = useState('');
@@ -32,7 +47,7 @@ const Customers = () => {
     // Pagination State
     const [page, setPage] = useState(1);
     const [limit] = useState(25);
-    const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
+    const [pagination, setPagination] = useState<PaginationMetadata | null>(customersState.pagination);
 
     const getPageNumbers = () => {
         const totalPages = pagination?.totalPages || 1;
@@ -92,9 +107,9 @@ const Customers = () => {
         fetchBranchesData();
     }, []);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
         try {
-            setLoading(true);
+            if (showLoadingSpinner) setLoading(true);
             setError(null);
             const filters: DriverFilters = {
                 page,
@@ -110,8 +125,14 @@ const Customers = () => {
             if (endDate) filters.endDate = endDate;
 
             const res = await driverService.getAllDrivers(filters);
-            setDrivers(res.data || []);
+            const driversList = res.data || [];
+            setDrivers(driversList);
             setPagination(res.pagination);
+
+            dispatch(setCustomersData({
+                list: driversList,
+                pagination: res.pagination
+            }));
         } catch (error: any) {
             console.error('Error fetching customers:', error);
             setError(error.message || 'Failed to load customers');
@@ -119,10 +140,23 @@ const Customers = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, statusFilter, branchFilter, startDate, endDate]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, statusFilter, branchFilter, startDate, endDate, dispatch]);
 
     useEffect(() => {
-        fetchData();
+        const cacheAge = Date.now() - (customersState.lastFetched || 0);
+        const isCacheFresh = customersState.isLoaded && cacheAge < 5 * 60 * 1000;
+
+        if (isFirstMount.current && isCacheFresh) {
+            isFirstMount.current = false;
+            // Synchronize local states with Redux just in case
+            setDrivers(customersState.list);
+            setPagination(customersState.pagination);
+            return;
+        }
+
+        const shouldShowLoader = !customersState.isLoaded || !isFirstMount.current;
+        fetchData(shouldShowLoader);
+        isFirstMount.current = false;
     }, [fetchData]);
 
     const handleSort = (field: string) => {
@@ -170,7 +204,7 @@ const Customers = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <button 
-                            onClick={fetchData} 
+                            onClick={() => fetchData(true)} 
                             className="p-2 rounded-xl border transition-all duration-300 hover:bg-white/10 active:scale-95"
                             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                         >
@@ -255,7 +289,13 @@ const Customers = () => {
                             <input
                                 type="date"
                                 value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
+                                onChange={e => {
+                                    const newStart = e.target.value;
+                                    setStartDate(newStart);
+                                    if (endDate && newStart && newStart > endDate) {
+                                        setEndDate('');
+                                    }
+                                }}
                                 className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                 style={{ color: 'var(--text-main)' }}
                             />
@@ -265,6 +305,7 @@ const Customers = () => {
                             <input
                                 type="date"
                                 value={endDate}
+                                min={startDate || undefined}
                                 onChange={e => setEndDate(e.target.value)}
                                 className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                 style={{ color: 'var(--text-main)' }}
@@ -358,7 +399,7 @@ const Customers = () => {
                                                             {driver.personalInfo.fullName}
                                                         </span>
                                                         <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5 opacity-60">
-                                                            Joined {new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()}
+                                                            Joined {formatDate(driver.createdAt || driver.appliedAt)}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -388,7 +429,7 @@ const Customers = () => {
                                                 </span>
                                             </td>
                                             <td className="py-5 px-6 text-center text-dim font-bold">
-                                                {new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()}
+                                                {formatDate(driver.createdAt || driver.appliedAt)}
                                             </td>
                                             <td className="py-5 px-6 text-right">
                                                 <button className="p-2 bg-white/5 border border-white/10 text-dim hover:text-brand-lime hover:border-brand-lime/30 rounded-xl transition-all duration-300">

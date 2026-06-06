@@ -432,6 +432,7 @@
       "searchPlaceholderBranches": "Search by name, code, city, state...",
       "allStatuses": "All Statuses",
       "allCountries": "All Countries",
+      "allBranches": "All Branches",
       "startDate": "Start Date",
       "endDate": "End Date",
       "resetAll": "Reset All",

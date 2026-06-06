@@ -132,9 +132,13 @@ const LedgerEntryDetailPage = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
                 <AlertTriangle size={48} className="text-red-500" />
-                <h2 className="text-xl font-bold">Error Loading Entry</h2>
-                <p className="text-white/60">{error || 'Entry not found'}</p>
-                <button onClick={() => navigate(-1)} className="px-4 py-2 mt-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all font-semibold">
+                <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Error Loading Entry</h2>
+                <p style={{ color: 'var(--text-muted)' }}>{error || 'Entry not found'}</p>
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="px-4 py-2 mt-4 rounded-xl transition-all font-semibold border"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                >
                     Go Back
                 </button>
             </div>
@@ -166,7 +170,7 @@ const LedgerEntryDetailPage = () => {
             />
 
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <div>
                     <button 
                         onClick={() => navigate(-1)}
@@ -175,7 +179,7 @@ const LedgerEntryDetailPage = () => {
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Ledger
                     </button>
-                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-3">
+                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
                         <FileText size={28} style={{ color: 'var(--brand-lime)' }} />
                         Transaction Record
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold border ml-2" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
@@ -184,7 +188,7 @@ const LedgerEntryDetailPage = () => {
                     </h1>
                 </div>
                 <div className="text-right">
-                    <div className="text-xs font-semibold text-white/50 mb-1">Transaction Value</div>
+                    <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Transaction Value</div>
                     <div className={`text-3xl font-mono font-bold ${entry.type === 'CREDIT' ? 'text-green-400' : 'text-red-400'}`}>
                         {displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
@@ -198,28 +202,28 @@ const LedgerEntryDetailPage = () => {
                 <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-6">
                     
                     {/* Primary Info */}
-                    <div className="p-6 rounded-2xl border border-white/5 bg-card">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-white/50 mb-6 flex items-center gap-2">
+                    <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
                             <Info size={16} /> Base Details
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                             <div>
-                                <p className="text-xs font-semibold text-white/40 mb-1">Description</p>
-                                <p className="font-medium text-white">{entry.description}</p>
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Description</p>
+                                <p className="font-medium" style={{ color: 'var(--text-main)' }}>{entry.description}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white/40 mb-1 flex items-center gap-1"><Clock size={12}/> Time of Entry</p>
-                                <p className="font-mono text-sm">{formattedDate}</p>
+                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Clock size={12}/> Time of Entry</p>
+                                <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white/40 mb-1 flex items-center gap-1"><Tag size={12}/> Accounting Code</p>
+                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Tag size={12}/> Accounting Code</p>
                                 <div className="flex flex-col">
-                                    <span className="font-mono font-bold">{entry.accountingCode?.code}</span>
-                                    <span className="text-sm text-white/80">{entry.accountingCode?.name}</span>
+                                    <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
+                                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
                                 </div>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white/40 mb-1">Category</p>
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Category</p>
                                 <span className="inline-block px-2.5 py-1 rounded text-[10px] font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
                                     {entry.accountingCode?.category}
                                 </span>
@@ -228,20 +232,20 @@ const LedgerEntryDetailPage = () => {
                     </div>
 
                     {/* Double Entry Breakdown */}
-                    <div className="p-6 rounded-2xl border border-white/5 bg-card overflow-hidden">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-white/50 mb-6 flex items-center gap-2">
+                    <div className="p-6 rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
                             <Repeat size={16} /> Double-Entry Breakdown
                         </h3>
                         {relatedEntries.length === 0 ? (
-                            <p className="text-sm text-white/50 italic">No related double entries found for this transaction.</p>
+                            <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>No related double entries found for this transaction.</p>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-white/10">
+                                    <thead className="border-b" style={{ borderColor: 'var(--border-main)' }}>
                                         <tr>
-                                            <th className="pb-3 font-semibold text-white/50">Ledger Account</th>
-                                            <th className="pb-3 font-semibold text-white/50 text-right">Debit</th>
-                                            <th className="pb-3 font-semibold text-white/50 text-right">Credit</th>
+                                            <th className="pb-3 font-semibold" style={{ color: 'var(--text-dim)' }}>Ledger Account</th>
+                                            <th className="pb-3 font-semibold text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
+                                            <th className="pb-3 font-semibold text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -250,13 +254,13 @@ const LedgerEntryDetailPage = () => {
                                             const relDebit = rel.amount !== undefined ? (rel.type === 'DEBIT' ? rel.amount : 0) : (rel.debit || 0);
                                             const relCredit = rel.amount !== undefined ? (rel.type === 'CREDIT' ? rel.amount : 0) : (rel.credit || 0);
                                             return (
-                                                <tr key={rel._id} className={`border-b border-white/5 last:border-0 ${isSelf ? 'bg-brand-lime/5' : ''}`}>
+                                                <tr key={rel._id} className={`border-b last:border-0 ${isSelf ? 'bg-brand-lime/5' : ''}`} style={{ borderColor: 'var(--border-main)' }}>
                                                     <td className="py-4">
                                                         <div className="flex items-center gap-2">
                                                             {isSelf && <ArrowRight size={14} className="text-brand-lime" />}
                                                             <div className="flex flex-col">
-                                                                <span className={`font-mono font-bold ${isSelf ? 'text-white' : 'text-white/80'}`}>{rel.accountingCode?.code}</span>
-                                                                <span className="text-xs text-white/50">{rel.accountingCode?.name}</span>
+                                                                <span className="font-mono font-bold" style={{ color: isSelf ? 'var(--text-main)' : 'var(--text-muted)' }}>{rel.accountingCode?.code}</span>
+                                                                <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{rel.accountingCode?.name}</span>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -269,8 +273,8 @@ const LedgerEntryDetailPage = () => {
                                                 </tr>
                                             );
                                         })}
-                                        <tr className="bg-white/5">
-                                            <td className="py-3 px-4 font-bold text-white/60 uppercase tracking-widest text-xs">Total</td>
+                                        <tr style={{ background: 'var(--bg-sidebar)' }}>
+                                            <td className="py-3 px-4 font-bold uppercase tracking-widest text-xs" style={{ color: 'var(--text-muted)' }}>Total</td>
                                             <td className="py-3 px-4 text-right font-mono font-bold text-red-400">
                                                 {relatedEntries.reduce((sum, e) => sum + (e.amount !== undefined ? (e.type === 'DEBIT' ? e.amount : 0) : (e.debit || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
@@ -289,41 +293,41 @@ const LedgerEntryDetailPage = () => {
                 <div className="col-span-1 space-y-6">
                     
                     {/* Source Document Details */}
-                    <div className="p-6 rounded-2xl border border-white/5 bg-card">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-white/50 mb-6 flex items-center gap-2">
+                    <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
                             <FileText size={16} /> Source Origin
                         </h3>
                         <div className="space-y-4 text-sm">
-                            <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                                <span className="text-white/60">Source Type</span>
-                                <span className="font-bold">{sourceDocType}</span>
+                            <div className="flex justify-between items-center pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Source Type</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>{sourceDocType}</span>
                             </div>
                             
                             {(entry as any).transaction && typeof (entry as any).transaction === 'object' && (
                                 <>
-                                    <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                                        <span className="text-white/60">Payment Method</span>
-                                        <div className="flex items-center gap-1.5 font-mono">
-                                            <CreditCard size={14} className="text-white/40" />
+                                    <div className="flex justify-between items-center pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>Payment Method</span>
+                                        <div className="flex items-center gap-1.5 font-mono" style={{ color: 'var(--text-main)' }}>
+                                            <CreditCard size={14} style={{ color: 'var(--text-dim)' }} />
                                             {(entry as any).transaction.paymentMethod || 'N/A'}
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                                        <span className="text-white/60">Trx Status</span>
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10">
+                                    <div className="flex justify-between items-center pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>Trx Status</span>
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
                                             {(entry as any).transaction.status || 'N/A'}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                                        <span className="text-white/60">Trx Category</span>
-                                        <span className="font-medium">{(entry as any).transaction.transactionCategory || 'N/A'}</span>
+                                    <div className="flex justify-between items-center pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>Trx Category</span>
+                                        <span className="font-medium" style={{ color: 'var(--text-main)' }}>{(entry as any).transaction.transactionCategory || 'N/A'}</span>
                                     </div>
                                 </>
                             )}
 
                             {(entry.referenceId || invoiceDetails?.invoiceNumber) && (
                                 <div className="pt-2">
-                                    <span className="text-white/60 block mb-1">Reference Document</span>
+                                    <span className="block mb-1" style={{ color: 'var(--text-muted)' }}>Reference Document</span>
                                     <button 
                                         onClick={() => invoiceDetails ? navigate(`../invoices/${invoiceDetails._id}`) : null}
                                         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${invoiceDetails ? 'hover:bg-brand-lime/10 cursor-pointer' : 'cursor-default opacity-80'}`}
@@ -340,51 +344,52 @@ const LedgerEntryDetailPage = () => {
                     {/* Driver / Rent Details */}
                     {driverDetails && (
                         <div className="p-6 rounded-2xl border border-brand-lime/20 bg-brand-lime/5 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-lime/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-brand-lime mb-6 flex items-center gap-2" style={{ color: 'var(--brand-lime)' }}>
+                            <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" style={{ background: 'var(--brand-lime)', opacity: 0.1 }}></div>
+                            <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--brand-lime)' }}>
                                 <User size={16} /> Driver Profile Link
                             </h3>
                             
                             <div className="flex flex-col items-center text-center gap-3 relative z-10">
-                                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border-2 border-brand-lime/30">
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2 border-brand-lime/30" style={{ background: 'var(--bg-card)' }}>
                                     {driverDetails.profilePicture ? (
                                         <img src={driverDetails.profilePicture} alt={driverDetails.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <User size={24} className="text-white/50" />
+                                        <User size={24} style={{ color: 'var(--text-dim)' }} />
                                     )}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-lg">{driverDetails.name}</h4>
-                                    <p className="text-xs font-mono text-white/50 mt-1">{driverDetails.contactNumber}</p>
+                                    <h4 className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{driverDetails.name}</h4>
+                                    <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-muted)' }}>{driverDetails.contactNumber}</p>
                                 </div>
                                 <button 
-                                    onClick={() => {
-                                        const basePath = location.pathname.split('/ledger/')[0];
-                                        navigate(`${basePath}/drivers/${driverDetails._id}`);
-                                    }}
-                                    className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-brand-lime text-black hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
-                                >
-                                    View Full Profile
-                                </button>
+                                     onClick={() => {
+                                         const basePath = location.pathname.split('/ledger/')[0];
+                                         navigate(`${basePath}/drivers/${driverDetails._id}`);
+                                     }}
+                                     className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
+                                     style={{ background: 'var(--brand-lime)', color: '#000000' }}
+                                 >
+                                     View Full Profile
+                                 </button>
                             </div>
                         </div>
                     )}
 
                     {/* Audit Trail */}
-                    <div className="p-6 rounded-2xl border border-white/5 bg-card">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-white/50 mb-6 flex items-center gap-2">
+                    <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
                             <User size={16} /> Audit Trail
                         </h3>
                         <div className="space-y-4">
                             <div>
-                                <span className="text-xs text-white/40 block mb-1">Created By</span>
-                                <div className="font-medium text-sm">
+                                <span className="text-xs block mb-1" style={{ color: 'var(--text-dim)' }}>Created By</span>
+                                <div className="font-medium text-sm" style={{ color: 'var(--text-main)' }}>
                                     {entry.createdBy && typeof entry.createdBy === 'object' ? entry.createdBy.name || entry.createdBy.email : entry.createdBy || 'SYSTEM'}
                                 </div>
                             </div>
                             <div>
-                                <span className="text-xs text-white/40 block mb-1">Creator Role</span>
-                                <div className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-white/10 uppercase tracking-wider">
+                                <span className="text-xs block mb-1" style={{ color: 'var(--text-dim)' }}>Creator Role</span>
+                                <div className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
                                     {entry.creatorRole || 'SYSTEM'}
                                 </div>
                             </div>
