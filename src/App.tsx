@@ -74,6 +74,8 @@ import AlertsManagement from "./pages/dashboards/shared/AlertsManagement";
 import InsuranceClaimsView from "./pages/dashboards/financialAdmin/InsuranceClaimsView";
 import AccidentReports from "./pages/dashboards/shared/AccidentReports";
 import AccidentReportDetail from "./pages/dashboards/shared/AccidentReportDetail";
+import CreateInvoicePage from "./pages/dashboards/finance/CreateInvoicePage";
+import BankingOverview from "./pages/dashboards/finance/BankingOverview";
 
 // Purchase Order Pages
 import PurchaseOrderList from "./pages/dashboards/shared/PurchaseOrderList";

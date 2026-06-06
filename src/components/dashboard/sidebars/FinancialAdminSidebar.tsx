@@ -289,6 +289,18 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/manual-journals",
           permission: "JOURNAL_VIEW",
         },
+        {
+          label: t("sidebar.items.chartOfAccounts"),
+          path: "/admin/financial-admin/chart-of-accounts",
+        },
+        {
+          label: t("sidebar.items.taxManagement"),
+          path: "/admin/financial-admin/taxes",
+        },
+        {
+          label: t("sidebar.items.bankAccounts"),
+          path: "/admin/financial-admin/bank-accounts",
+        },
       ],
     },
     {
@@ -392,7 +404,7 @@ const FinancialAdminSidebar = ({
     },
     {
       id: "settings",
-      label: t("sidebar.sections.accountSettings"),
+      label: t("sidebar.sections.settings"),
       icon: <Settings size={22} />,
       subItems: [
         {
