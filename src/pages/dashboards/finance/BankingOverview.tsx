@@ -14,7 +14,8 @@ import {
     Upload,
     TrendingUp,
     FileSpreadsheet,
-    Info
+    Info,
+    Eye
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
@@ -57,6 +58,8 @@ const BankingOverview = () => {
     const [selectedAccountForImport, setSelectedAccountForImport] = useState('');
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
+
+
 
     // Filters
     const [filters, setFilters] = useState({
@@ -334,6 +337,15 @@ const BankingOverview = () => {
             };
         });
     }, [dailyFinance, bankAccounts]);
+
+    const handleViewTransactions = (account: any) => {
+        if (!account.accountingCodeId) {
+            toast.error('This account is not linked to any accounting code.');
+            return;
+        }
+        const basePath = window.location.pathname.split('/banking')[0];
+        navigate(`${basePath}/chart-of-accounts/${account.accountingCodeId}`);
+    };
 
     const handleImportSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -723,14 +735,12 @@ const BankingOverview = () => {
                                             </td>
                                             <td className="px-4 py-3.5 text-right">
                                                 <button 
-                                                    onClick={() => {
-                                                        setSelectedAccountForImport(account.id);
-                                                        setIsImportModalOpen(true);
-                                                    }}
-                                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 text-[9px] font-black uppercase tracking-wider text-dim hover:text-lime hover:bg-lime/10 border border-white/5 hover:border-lime/20 transition-all cursor-pointer"
+                                                    onClick={() => handleViewTransactions(account)}
+                                                    className="px-3 py-1.5 rounded-lg bg-white/5 text-[10px] font-black uppercase tracking-wider text-dim hover:text-lime hover:bg-lime/10 border border-white/5 hover:border-lime/20 transition-all cursor-pointer inline-flex items-center gap-1.5"
                                                     style={{ border: '1px solid var(--border-main)' }}
+                                                    title="View Ledger"
                                                 >
-                                                    Import
+                                                    <Eye size={12} /> View Ledger
                                                 </button>
                                             </td>
                                         </tr>
@@ -765,7 +775,7 @@ const BankingOverview = () => {
             {/* Import Statement Modal Workspace */}
             {isImportModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setIsImportModalOpen(false)} />
+                    <div className="absolute inset-0" onClick={() => setIsImportModalOpen(false)} />
                     <div className="relative border rounded-[2.5rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
@@ -847,6 +857,8 @@ const BankingOverview = () => {
                     </div>
                 </div>
             )}
+
+
         </div>
     );
 };

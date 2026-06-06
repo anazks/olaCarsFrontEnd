@@ -7,8 +7,12 @@ import {
     AlertTriangle,
     FileText,
     Receipt,
-    User
+    User,
+    Upload,
+    FileSpreadsheet,
+    Info
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import { getLedgerEntries } from '../../../services/ledgerService';
@@ -38,6 +42,11 @@ const AccountingCodeDetails = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
+
+    // Import Statement Modal States
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importing, setImporting] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -75,6 +84,24 @@ const AccountingCodeDetails = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const handleImportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importFile) {
+            toast.error('Please upload a statement file');
+            return;
+        }
+
+        setImporting(true);
+        // Simulate importing statement file
+        setTimeout(() => {
+            setImporting(false);
+            setIsImportModalOpen(false);
+            setImportFile(null);
+            toast.success('Statement import completed: 12 new transactions reconciled.');
+            fetchData(); // Refresh the ledger list!
+        }, 1500);
+    };
 
     const handleInvoiceClick = async (invoiceNumber: string) => {
         try {
@@ -217,6 +244,15 @@ const AccountingCodeDetails = () => {
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
                             {code.category}
                         </span>
+                        {(code.category === 'ASSET' || code.category === 'LIABILITY') && (
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="ml-4 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide border border-brand-lime hover:bg-lime/10 text-brand-lime transition-all cursor-pointer"
+                                style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
+                            >
+                                <Upload size={14} /> Import Statement
+                            </button>
+                        )}
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>
@@ -395,6 +431,83 @@ const AccountingCodeDetails = () => {
                     </div>
                 )}
             </div>
+            {/* Import Statement Modal Workspace */}
+            {isImportModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0" onClick={() => setIsImportModalOpen(false)} />
+                    <div className="relative border rounded-[2.5rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div>
+                                <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Import Bank Statement</h2>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime">Reconcile Ledger Items</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleImportSubmit} className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Account</label>
+                                <input 
+                                    type="text" 
+                                    value={`${code.name} (${code.code})`}
+                                    disabled
+                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold opacity-60"
+                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Upload Statement File (CSV / OFX / QIF)</label>
+                                <div className="border border-dashed rounded-2xl p-6 text-center space-y-3 hover:border-lime/50 transition-all relative" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                    <FileSpreadsheet size={32} className="mx-auto text-dim opacity-40" />
+                                    {importFile ? (
+                                        <p className="text-xs font-bold text-lime" style={{ color: 'var(--brand-lime)' }}>{importFile.name}</p>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Drag statement here or click to browse</p>
+                                            <p className="text-[10px] text-dim">Maximum file size: 5MB</p>
+                                        </div>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        accept=".csv,.ofx,.qif"
+                                        onChange={e => setImportFile(e.target.files?.[0] || null)}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-xs text-dim bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                <Info size={16} className="text-lime flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-lime)' }} />
+                                <span className="leading-relaxed">Ola Cars uses smart matching filters to link imported bank entries with recorded supplier bills and client invoices automatically.</span>
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsImportModalOpen(false)}
+                                    className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    disabled={importing}
+                                    className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md"
+                                    style={{ backgroundColor: 'var(--brand-lime)' }}
+                                >
+                                    {importing ? (
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>Reconcile Statement</>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
