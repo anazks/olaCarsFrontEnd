@@ -32,7 +32,10 @@ import {
   type PaginationMetadata,
 } from "../../../services/workshopManagerService";
 import PermissionSelector from "../../../components/common/PermissionSelector";
-import { getAllBranches, type Branch } from "../../../services/branchService";
+import {
+  getAllWorkshops,
+  type Workshop,
+} from "../../../services/workshopService";
 import { getUser, getUserRole } from "../../../utils/auth";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -60,7 +63,7 @@ const ManageWorkshopManagers = () => {
   const [workshopManagers, setWorkshopManagers] = useState<WorkshopManager[]>(
     [],
   );
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -74,7 +77,7 @@ const ManageWorkshopManagers = () => {
   const [statusFilter, setStatusFilter] = useState<
     WorkshopManager["status"] | "ALL"
   >("ALL");
-  const [branchFilter, setBranchFilter] = useState("ALL");
+  const [workshopFilter, setWorkshopFilter] = useState("ALL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -96,7 +99,7 @@ const ManageWorkshopManagers = () => {
     email: "",
     password: "",
     phone: "",
-    branchId: "",
+    workshopId: "",
     status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "LOCKED",
     permissions: [] as string[],
   });
@@ -128,17 +131,17 @@ const ManageWorkshopManagers = () => {
 
       if (searchQuery.trim()) filters.search = searchQuery.trim();
       if (statusFilter !== "ALL") filters.status = statusFilter;
-      if (branchFilter !== "ALL") filters.branchId = branchFilter;
+      if (workshopFilter !== "ALL") filters.workshopId = workshopFilter;
       if (startDate) filters.startDate = startDate;
       if (endDate) filters.endDate = endDate;
 
-      const [managersRes, branchesData] = await Promise.all([
+      const [managersRes, workshopsData] = await Promise.all([
         getAllWorkshopManagers(filters),
-        getAllBranches(),
+        getAllWorkshops(),
       ]);
       setWorkshopManagers(managersRes.data || []);
       setPagination(managersRes.pagination);
-      setBranches(branchesData.data || []);
+      setWorkshops(workshopsData.data || []);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -155,7 +158,7 @@ const ManageWorkshopManagers = () => {
     limit,
     searchQuery,
     statusFilter,
-    branchFilter,
+    workshopFilter,
     startDate,
     endDate,
     sortBy,
@@ -180,11 +183,7 @@ const ManageWorkshopManagers = () => {
       email: "",
       password: "",
       phone: "",
-      branchId: isBranchManager
-        ? typeof currentUser?.branchId === "object"
-          ? currentUser?.branchId?._id
-          : currentUser?.branchId || ""
-        : "",
+      workshopId: "",
       status: "ACTIVE",
       permissions: [],
     });
@@ -200,10 +199,10 @@ const ManageWorkshopManagers = () => {
       email: manager.email,
       password: "",
       phone: manager.phone || "",
-      branchId:
-        typeof manager.branchId === "object"
-          ? manager.branchId?._id || ""
-          : manager.branchId,
+      workshopId:
+        typeof manager.workshopId === "object"
+          ? manager.workshopId?._id || ""
+          : manager.workshopId,
       status: manager.status,
       permissions: manager.permissions || [],
     });
@@ -229,7 +228,7 @@ const ManageWorkshopManagers = () => {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          branchId: formData.branchId,
+          workshopId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };
@@ -240,7 +239,7 @@ const ManageWorkshopManagers = () => {
           fullName: formData.fullName,
           email: formData.email,
           phone: formData.phone,
-          branchId: formData.branchId,
+          workshopId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };
@@ -492,7 +491,7 @@ const ManageWorkshopManagers = () => {
             className="text-3xl font-black transition-colors"
             style={{ color: "var(--text-main)" }}
           >
-            {branches.length}
+            {workshops.length}
           </h3>
         </div>
       </div>
@@ -571,9 +570,9 @@ const ManageWorkshopManagers = () => {
             <div>
               <FilterLabel label="Assigned Branch" />
               <select
-                value={branchFilter}
+                value={workshopFilter}
                 onChange={(e) => {
-                  setBranchFilter(e.target.value);
+                  setWorkshopFilter(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold transition-all focus:ring-2 focus:ring-lime"
@@ -586,7 +585,7 @@ const ManageWorkshopManagers = () => {
                 <option value="ALL">
                   {t("management.common.allBranches")}
                 </option>
-                {branches.map((b) => (
+                {workshops.map((b) => (
                   <option key={b._id} value={b._id}>
                     {b.name}
                   </option>
@@ -774,10 +773,10 @@ const ManageWorkshopManagers = () => {
                           className="text-lime"
                           style={{ color: "var(--brand-lime)" }}
                         />
-                        {typeof manager.branchId === "object"
-                          ? manager.branchId?.name
-                          : branches.find((b) => b._id === manager.branchId)
-                              ?.name || manager.branchId}
+                        {typeof manager.workshopId === "object"
+                          ? manager.workshopId?.name
+                          : workshops.find((w) => w._id === manager.workshopId)
+                              ?.name || manager.workshopId}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -1176,13 +1175,18 @@ const ManageWorkshopManagers = () => {
                         className="text-xs font-black uppercase tracking-widest px-1 transition-colors"
                         style={{ color: "var(--text-dim)" }}
                       >
-                        {t("management.common.modal.assignBranch")}
+                        {t("management.common.modal.selectWorkshop", {
+                          defaultValue: "Select Workshop",
+                        })}
                       </label>
                       <select
                         required
-                        value={formData.branchId}
+                        value={formData.workshopId}
                         onChange={(e) =>
-                          setFormData({ ...formData, branchId: e.target.value })
+                          setFormData({
+                            ...formData,
+                            workshopId: e.target.value,
+                          })
                         }
                         className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime disabled:opacity-50"
                         style={{
@@ -1190,14 +1194,15 @@ const ManageWorkshopManagers = () => {
                           border: "1px solid var(--border-main)",
                           color: "var(--text-main)",
                         }}
-                        disabled={isBranchManager}
                       >
                         <option value="">
-                          {t("management.common.modal.selectBranch")}
+                          {t("management.common.modal.selectWorkshop", {
+                            defaultValue: "Select a Workshop",
+                          })}
                         </option>
-                        {branches.map((branch) => (
-                          <option key={branch._id} value={branch._id}>
-                            {branch.name} ({branch.city})
+                        {workshops.map((workshop) => (
+                          <option key={workshop._id} value={workshop._id}>
+                            {workshop.name} ({workshop.code})
                           </option>
                         ))}
                       </select>
