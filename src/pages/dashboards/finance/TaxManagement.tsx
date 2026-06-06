@@ -38,6 +38,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
     const handleCreateTax = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isNaN(newTax.rate) || newTax.rate <= 0 || !Number.isInteger(newTax.rate)) {
+            setError('Tax percentage must be a whole number greater than 0');
+            return;
+        }
         setCreating(true);
         setError(null);
         try {
@@ -55,6 +59,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const handleEditTax = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingTaxId) return;
+        if (isNaN(newTax.rate) || newTax.rate <= 0 || !Number.isInteger(newTax.rate)) {
+            setError('Tax percentage must be a whole number greater than 0');
+            return;
+        }
         setCreating(true);
         setError(null);
         try {
@@ -149,10 +157,10 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 <input
                                     required
                                     type="number"
-                                    step="0.01"
-                                    min="0"
+                                    step="1"
+                                    min="1"
                                     placeholder="Enter percentage (e.g. 15)"
-                                    value={newTax.rate || ''}
+                                    value={isNaN(newTax.rate) ? '' : newTax.rate}
                                     onChange={e => setNewTax({ ...newTax, rate: parseFloat(e.target.value) })}
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
                                     style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
