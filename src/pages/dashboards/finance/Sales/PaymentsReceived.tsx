@@ -28,6 +28,12 @@ interface DriverReference {
     avatarUrl?: string;
 }
 
+interface CustomerReference {
+    _id: string;
+    customerId?: string;
+    name?: string;
+}
+
 interface DepositedAccountReference {
     _id: string;
     code: string;
@@ -37,7 +43,8 @@ interface DepositedAccountReference {
 interface PaymentReceived {
     _id: string;
     paymentNumber: string;
-    driverId: DriverReference;
+    customerId?: CustomerReference;
+    driverId?: DriverReference;
     amountReceived: number;
     paymentDate: string;
     paymentMethod: string;
@@ -208,7 +215,7 @@ const PaymentsReceived = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={14} />
                     <input 
                         type="text" 
-                        placeholder="Search PR #, driver or ref..."
+                        placeholder="Search PR #, customer or ref..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-4 py-1.5 border rounded-xl outline-none text-xs font-medium focus:border-brand-lime/30 transition-all duration-200"
@@ -265,9 +272,9 @@ const PaymentsReceived = () => {
                                          Receipt # <SortIcon field="paymentNumber" />
                                      </div>
                                  </th>
-                                <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('driverId')}>
+                                <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('customerId')}>
                                      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                         Operator <SortIcon field="driverId" />
+                                         Customer <SortIcon field="customerId" />
                                      </div>
                                  </th>
                                 <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('paymentDate')}>
@@ -318,7 +325,18 @@ const PaymentsReceived = () => {
                                     >
                                         <td className="p-6 font-black text-sm">{pmt.paymentNumber}</td>
                                         <td className="p-6 font-bold text-xs">
-                                            {typeof pmt.driverId === 'object' && pmt.driverId ? (
+                                            {typeof pmt.customerId === 'object' && pmt.customerId ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-white" style={{ color: 'var(--text-main)' }}>
+                                                        {pmt.customerId.name || 'N/A'}
+                                                    </span>
+                                                    {pmt.customerId.customerId && (
+                                                        <span className="text-[9px] font-mono text-dim tracking-wider uppercase mt-0.5">
+                                                            {pmt.customerId.customerId}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : typeof pmt.driverId === 'object' && pmt.driverId ? (
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-white" style={{ color: 'var(--text-main)' }}>
                                                         {pmt.driverId.personalInfo?.fullName || pmt.driverId.name || 'N/A'}
@@ -330,7 +348,7 @@ const PaymentsReceived = () => {
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-dim">{String(pmt.driverId || 'N/A')}</span>
+                                                <span className="text-dim">N/A</span>
                                             )}
                                         </td>
                                         <td className="p-6 text-xs text-dim">{new Date(pmt.paymentDate).toLocaleDateString()}</td>

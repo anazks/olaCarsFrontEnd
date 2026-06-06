@@ -18,6 +18,8 @@ export interface TrendDataPoint {
 export interface OverdueEntry {
     id: string;
     invoiceNumber: string;
+    customerId?: string;
+    customerName?: string;
     driverId?: string;
     vehicleId?: string;
     driverName: string;
@@ -30,6 +32,8 @@ export interface OverdueEntry {
 export interface UpcomingEntry {
     id: string;
     invoiceNumber: string;
+    customerId?: string;
+    customerName?: string;
     driverId?: string;
     vehicleId?: string;
     driverName: string;
@@ -49,6 +53,8 @@ export interface CollectionsOverviewResponse {
 export interface CollectionListItem {
     id: string;
     invoiceNumber: string;
+    customerId?: string;
+    customerName?: string;
     driverId: string;
     driverName: string;
     vehicleId?: string;

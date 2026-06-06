@@ -20,6 +20,7 @@ export interface Invoice {
     _id: string;
     invoiceNumber: string;
     invoiceType: 'RENTAL' | 'WORKSHOP' | 'MANUAL' | 'DEPOSIT';
+    customer?: string | any;
     driver: string | any;
     vehicle: string | any;
     serviceBill?: string | any;
@@ -49,6 +50,11 @@ export interface Invoice {
 
 export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
     const response = await api.get(`/api/invoices?driver=${driverId}&limit=100`);
+    return response.data.data || [];
+};
+
+export const getInvoicesByCustomer = async (customerId: string): Promise<Invoice[]> => {
+    const response = await api.get(`/api/invoices?customer=${customerId}&limit=100`);
     return response.data.data || [];
 };
 

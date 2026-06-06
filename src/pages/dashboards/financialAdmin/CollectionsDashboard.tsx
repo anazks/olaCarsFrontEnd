@@ -593,9 +593,9 @@ const CollectionsDashboard = () => {
                                         <td className="py-4 px-3">
                                             <div 
                                                 className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
+                                                onClick={() => (entry.customerId || entry.driverId) && navigate(`${getRoutePrefix()}/customers/${entry.customerId || entry.driverId}`)}
                                             >
-                                                {entry.driverName}
+                                                {entry.customerName || entry.driverName}
                                             </div>
                                             <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>
                                                 <span 
@@ -604,13 +604,23 @@ const CollectionsDashboard = () => {
                                                 >
                                                     {entry.invoiceNumber}
                                                 </span>
-                                                {' • '}
-                                                <span 
-                                                    className="cursor-pointer hover:underline hover:text-blue-500"
-                                                    onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
-                                                >
-                                                    Fleet #{entry.fleetNumber}
-                                                </span>
+                                                {entry.driverName && entry.driverName !== 'N/A' && entry.driverName !== entry.customerName && (
+                                                    <>
+                                                        {' • '}
+                                                        <span className="opacity-70">Driver: {entry.driverName}</span>
+                                                    </>
+                                                )}
+                                                {entry.fleetNumber && entry.fleetNumber !== 'N/A' && (
+                                                    <>
+                                                        {' • '}
+                                                        <span 
+                                                            className="cursor-pointer hover:underline hover:text-blue-500"
+                                                            onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
+                                                        >
+                                                            Fleet #{entry.fleetNumber}
+                                                        </span>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
@@ -655,9 +665,9 @@ const CollectionsDashboard = () => {
                                         <td className="py-4 px-3">
                                             <div 
                                                 className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                onClick={() => entry.driverId && navigate(`${getRoutePrefix()}/customers/${entry.driverId}`)}
+                                                onClick={() => (entry.customerId || entry.driverId) && navigate(`${getRoutePrefix()}/customers/${entry.customerId || entry.driverId}`)}
                                             >
-                                                {entry.driverName}
+                                                {entry.customerName || entry.driverName}
                                             </div>
                                             <div className="text-[10px] font-medium tracking-wide mt-0.5" style={{ color: 'var(--text-muted)' }}>
                                                 <span 
@@ -666,13 +676,23 @@ const CollectionsDashboard = () => {
                                                 >
                                                     {entry.invoiceNumber}
                                                 </span>
-                                                {' • '}
-                                                <span 
-                                                    className="cursor-pointer hover:underline hover:text-blue-500"
-                                                    onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
-                                                >
-                                                    Fleet #{entry.fleetNumber}
-                                                </span>
+                                                {entry.driverName && entry.driverName !== 'N/A' && entry.driverName !== entry.customerName && (
+                                                    <>
+                                                        {' • '}
+                                                        <span className="opacity-70">Driver: {entry.driverName}</span>
+                                                    </>
+                                                )}
+                                                {entry.fleetNumber && entry.fleetNumber !== 'N/A' && (
+                                                    <>
+                                                        {' • '}
+                                                        <span 
+                                                            className="cursor-pointer hover:underline hover:text-blue-500"
+                                                            onClick={() => entry.vehicleId && navigate(`${getRoutePrefix()}/vehicles/${entry.vehicleId}`)}
+                                                        >
+                                                            Fleet #{entry.fleetNumber}
+                                                        </span>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
@@ -701,7 +721,7 @@ const CollectionsDashboard = () => {
                         <div className="relative flex-1 md:min-w-[300px]">
                             <input 
                                 type="text" 
-                                placeholder="Search driver, plate, fleet, ID..." 
+                                placeholder="Search customer, plate, fleet, ID..." 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full border py-2.5 pl-10 pr-4 rounded-xl font-medium text-sm shadow-sm outline-none focus:border-brand-lime transition-all"
@@ -740,7 +760,7 @@ const CollectionsDashboard = () => {
                                 </th>
                                 <th className="py-4 px-3">Sl No.</th>
                                 <th className="py-4 px-3">Invoice #</th>
-                                <th className="py-4 px-3">Driver / Customer</th>
+                                <th className="py-4 px-3">Customer Details</th>
                                 <th className="py-4 px-3">Fleet / Asset</th>
                                 <th className="py-4 px-3">Branch (Country)</th>
                                 <th className="py-4 px-3">Due Date</th>
@@ -765,9 +785,14 @@ const CollectionsDashboard = () => {
                                      </td>
                                      <td 
                                          className="py-4 px-3 font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                         onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
+                                         onClick={() => (item.customerId || item.driverId) && navigate(`${getRoutePrefix()}/customers/${item.customerId || item.driverId}`)}
                                      >
-                                         {item.driverName}
+                                         <div className="flex flex-col">
+                                             <span>{item.customerName || item.driverName}</span>
+                                             {item.driverName && item.driverName !== 'N/A' && item.driverName !== item.customerName && (
+                                                 <span className="text-[9px] font-medium text-dim mt-0.5">Driver: {item.driverName}</span>
+                                             )}
+                                         </div>
                                      </td>
                                      <td className="py-4 px-3">
                                          <div 

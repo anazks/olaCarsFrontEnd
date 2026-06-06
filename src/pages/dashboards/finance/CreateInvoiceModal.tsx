@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, DollarSign, Calendar, User, FileText, Tag, Percent } from 'lucide-react';
-import { createInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
-import { getAllDrivers } from '../../../services/driverService';
-import type { Driver } from '../../../services/driverService';
+import { createInvoice, getInvoicesByCustomer } from '../../../services/invoiceService';
+import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getAllTaxes } from '../../../services/taxService';
 import type { Tax } from '../../../services/taxService';
 import api from '../../../services/api';
@@ -23,32 +22,32 @@ interface Props {
 }
 
 const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
-    const [drivers, setDrivers] = useState<Driver[]>([]);
-    const [driverSearch, setDriverSearch] = useState('');
-    const [showDriverList, setShowDriverList] = useState(false);
-    const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerList, setShowCustomerList] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-    const [selectedDriverBalance, setSelectedDriverBalance] = useState<number>(0);
-    const [selectedDriverPrepayment, setSelectedDriverPrepayment] = useState<number>(0);
-    const [loadingDriverBalances, setLoadingDriverBalances] = useState(false);
+    const [selectedCustomerBalance, setSelectedCustomerBalance] = useState<number>(0);
+    const [selectedCustomerPrepayment, setSelectedCustomerPrepayment] = useState<number>(0);
+    const [loadingCustomerBalances, setLoadingCustomerBalances] = useState(false);
 
     useEffect(() => {
-        const fetchDriverBalances = async () => {
-            if (!selectedDriver) {
-                setSelectedDriverBalance(0);
-                setSelectedDriverPrepayment(0);
+        const fetchCustomerBalances = async () => {
+            if (!selectedCustomer) {
+                setSelectedCustomerBalance(0);
+                setSelectedCustomerPrepayment(0);
                 return;
             }
-            setLoadingDriverBalances(true);
+            setLoadingCustomerBalances(true);
             try {
                 const [invoicesData, paymentsData] = await Promise.all([
-                    getInvoicesByDriver(selectedDriver._id),
-                    api.get('/api/payments-received', { params: { driverId: selectedDriver._id, limit: 100 } })
+                    getInvoicesByCustomer(selectedCustomer._id),
+                    api.get('/api/payments-received', { params: { customerId: selectedCustomer._id, limit: 100 } })
                 ]);
 
                 // Calculate Outstanding Account Receivable Balance
                 const outstanding = invoicesData.reduce((sum: number, inv: any) => sum + (inv.balance || 0), 0);
-                setSelectedDriverBalance(outstanding);
+                setSelectedCustomerBalance(outstanding);
 
                 // Calculate Prepayment Credit (Extra Advance)
                 const paymentsList = paymentsData?.data?.data || paymentsData?.data || [];
@@ -59,16 +58,16 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                     return sum + applied;
                 }, 0);
                 const prepayment = Math.max(0, totalReceived - totalApplied);
-                setSelectedDriverPrepayment(prepayment);
+                setSelectedCustomerPrepayment(prepayment);
             } catch (err) {
-                console.error('Error fetching driver balances:', err);
+                console.error('Error fetching customer balances:', err);
             } finally {
-                setLoadingDriverBalances(false);
+                setLoadingCustomerBalances(false);
             }
         };
 
-        fetchDriverBalances();
-    }, [selectedDriver]);
+        fetchCustomerBalances();
+    }, [selectedCustomer]);
 
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState('');
@@ -85,10 +84,10 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
     const [selectedTax, setSelectedTax] = useState<Tax | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
-    const fetchDrivers = useCallback(async () => {
+    const fetchCustomers = useCallback(async () => {
         try {
-            const res = await getAllDrivers({ status: 'ACTIVE', limit: 200 });
-            setDrivers(res.data || (res as any).drivers || []);
+            const res = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
+            setCustomers(res.data || (res as any).customers || []);
         } catch { /* silent */ }
     }, []);
 
@@ -106,13 +105,13 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
     }, []);
 
     useEffect(() => { 
-        fetchDrivers(); 
+        fetchCustomers(); 
         fetchTaxes();
-    }, [fetchDrivers, fetchTaxes]);
+    }, [fetchCustomers, fetchTaxes]);
 
-    const filteredDrivers = drivers.filter(d =>
-        d.personalInfo?.fullName?.toLowerCase().includes(driverSearch.toLowerCase()) ||
-        d.driverId?.toLowerCase().includes(driverSearch.toLowerCase())
+    const filteredCustomers = customers.filter(c =>
+        c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
 
     // ── Calculations ──────────────────────────────────────────────────────────
@@ -143,7 +142,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
     // ── Submit ────────────────────────────────────────────────────────────────
     const saveInvoice = async (isDraft: boolean) => {
-        if (!selectedDriver) { toast.error('Please select a driver'); return; }
+        if (!selectedCustomer) { toast.error('Please select a customer'); return; }
         if (!dueDate) { toast.error('Due date is required'); return; }
         const validItems = lineItems.filter(i => i.name.trim() && parseFloat(i.unitPrice) > 0);
         if (validItems.length === 0) { toast.error('Add at least one valid line item with a price'); return; }
@@ -151,7 +150,8 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
         setSubmitting(true);
         try {
             await createInvoice({
-                driver: selectedDriver._id,
+                customer: selectedCustomer._id,
+                driver: selectedCustomer.driver?._id || undefined,
                 invoiceDate,
                 dueDate,
                 weekLabel: weekLabel || undefined,
@@ -201,7 +201,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                         </div>
                         <div>
                             <h2 className="text-base font-black tracking-tight" style={{ color: 'var(--text-main)' }}>New Invoice</h2>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Manual Driver Invoice</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Manual Customer Invoice</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors" style={{ color: 'var(--text-dim)' }}>
@@ -215,68 +215,68 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
                         {/* Top Meta Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Driver Selector */}
+                            {/* Customer Selector */}
                             <div className="md:col-span-2 space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
-                                    <User size={11} /> Bill To / Driver
+                                    <User size={11} /> Bill To / Customer
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        placeholder="Search driver by name or ID..."
-                                        value={selectedDriver ? `${selectedDriver.personalInfo?.fullName} (${selectedDriver.driverId})` : driverSearch}
-                                        onChange={e => { setDriverSearch(e.target.value); setSelectedDriver(null); setShowDriverList(true); }}
-                                        onFocus={() => setShowDriverList(true)}
+                                        placeholder="Search customer by name or ID..."
+                                        value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
+                                        onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
+                                        onFocus={() => setShowCustomerList(true)}
                                         className="w-full px-4 py-3 border rounded-2xl text-sm font-semibold outline-none transition-all"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
-                                    {showDriverList && filteredDrivers.length > 0 && !selectedDriver && (
+                                    {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
                                         <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                            {filteredDrivers.slice(0, 15).map(d => (
+                                            {filteredCustomers.slice(0, 15).map(c => (
                                                 <button
                                                     type="button"
-                                                    key={d._id}
-                                                    onMouseDown={() => { setSelectedDriver(d); setDriverSearch(''); setShowDriverList(false); }}
+                                                    key={c._id}
+                                                    onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
                                                     className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors"
                                                 >
                                                     <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
                                                         <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
-                                                            {d.personalInfo?.fullName?.slice(0, 2).toUpperCase()}
+                                                            {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{d.personalInfo?.fullName}</p>
-                                                        <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{d.driverId}</p>
+                                                        <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                        <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
                                                     </div>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
                                 </div>
-                                {selectedDriver && (
+                                {selectedCustomer && (
                                     <div className="flex flex-col gap-2 mt-1.5 p-4 rounded-2xl border" style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: 'var(--border-main)' }}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg border animate-pulse" style={{ background: 'var(--bg-input)', color: 'var(--brand-lime)', borderColor: 'var(--border-main)' }}>
-                                                    ✓ {selectedDriver.personalInfo?.fullName} · {selectedDriver.driverId}
+                                                    ✓ {selectedCustomer.name} · {selectedCustomer.customerId}
                                                 </span>
-                                                <button type="button" onClick={() => { setSelectedDriver(null); setDriverSearch(''); }} className="text-[10px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
+                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-[10px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
                                             </div>
-                                            {loadingDriverBalances && <span className="text-[9px] font-bold uppercase tracking-widest text-dim animate-pulse">Fetching Account Balances...</span>}
+                                            {loadingCustomerBalances && <span className="text-[9px] font-bold uppercase tracking-widest text-dim animate-pulse">Fetching Account Balances...</span>}
                                         </div>
                                         
-                                        {!loadingDriverBalances && (
+                                        {!loadingCustomerBalances && (
                                             <div className="grid grid-cols-2 gap-4 pt-2 border-t animate-in fade-in duration-300" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                                 <div className="p-3 rounded-xl bg-white/[0.01] border flex flex-col" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-dim block">Accounts Receivable (Due)</span>
-                                                    <span className={`text-xs font-black font-mono ${selectedDriverBalance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                                        ${selectedDriverBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    <span className={`text-xs font-black font-mono ${selectedCustomerBalance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                        ${selectedCustomerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </div>
                                                 <div className="p-3 rounded-xl bg-white/[0.01] border flex flex-col" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-dim block">Prepayment Credit (Extra)</span>
-                                                    <span className={`text-xs font-black font-mono ${selectedDriverPrepayment > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
-                                                        ${selectedDriverPrepayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    <span className={`text-xs font-black font-mono ${selectedCustomerPrepayment > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
+                                                        ${selectedCustomerPrepayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </div>
                                             </div>
@@ -393,7 +393,7 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                 </div>
                             </div>
                             
-                            {/* Zoho Style Add Row Button below table */}
+                            {/* Add Row Button below table */}
                             <div className="flex justify-start">
                                 <button 
                                     type="button" 
@@ -451,149 +451,120 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                     )}
                                 </div>
 
-                                {/* Tax */}
-                                <div className="space-y-2">
+                                {/* Tax Rate */}
+                                <div className="space-y-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
-                                        <Percent size={11} /> Tax Mode
+                                        <Percent size={11} /> VAT / Tax Rate
                                     </label>
                                     <select
-                                        value={selectedTax?._id || ''}
+                                        value={selectedTax ? selectedTax._id : ''}
                                         onChange={e => {
-                                            const selectedId = e.target.value;
-                                            const found = taxes.find(t => t._id === selectedId);
-                                            setSelectedTax(found || null);
+                                            const tax = taxes.find(t => t._id === e.target.value);
+                                            setSelectedTax(tax || null);
                                         }}
-                                        className="w-full px-4 py-2.5 border rounded-xl text-sm font-bold outline-none focus:border-brand-lime transition-colors cursor-pointer"
+                                        className="w-full px-4 py-3 border rounded-2xl text-xs font-bold outline-none cursor-pointer"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>No Tax (0%)</option>
+                                        <option value="">No Tax (0%)</option>
                                         {taxes.map(t => (
-                                            <option key={t._id} value={t._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                                                {t.name} ({t.rate}%)
-                                            </option>
+                                            <option key={t._id} value={t._id}>{t.name} ({t.rate}%)</option>
                                         ))}
                                     </select>
                                 </div>
 
                                 {/* Notes */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Internal Notes / Memo</label>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+                                        <FileText size={11} /> Internal Notes
+                                    </label>
                                     <textarea
                                         rows={3}
-                                        placeholder="Optional internal memo or context..."
+                                        placeholder="Add terms, bank details, or internal operational remarks..."
                                         value={notes}
                                         onChange={e => setNotes(e.target.value)}
-                                        className="w-full px-4 py-3 border rounded-2xl text-xs font-medium outline-none resize-none focus:border-brand-lime transition-colors"
+                                        className="w-full px-4 py-3 border rounded-2xl text-xs font-semibold outline-none resize-none"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
                                 </div>
                             </div>
 
-                            {/* Right: Totals Summary */}
-                            <div className="flex flex-col justify-start">
-                                <div className="border rounded-2xl overflow-hidden shadow-inner flex flex-col h-full" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                    <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>
-                                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Summary</p>
-                                        <DollarSign size={12} className="text-brand-lime" />
+                            {/* Right: Calculations Summary Box */}
+                            <div className="p-8 border rounded-3xl flex flex-col justify-between" style={{ background: 'rgba(255,255,255,0.01)', borderColor: 'var(--border-main)' }}>
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest border-b pb-3 mb-2" style={{ color: 'var(--text-dim)', borderColor: 'rgba(255,255,255,0.05)' }}>Invoice Summary</h4>
+                                    
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-semibold" style={{ color: 'var(--text-dim)' }}>Subtotal</span>
+                                        <span className="font-bold font-mono" style={{ color: 'var(--text-main)' }}>${fmt(subtotal)}</span>
                                     </div>
-                                    <div className="px-5 py-5 space-y-4 text-xs flex-1">
-                                        <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                            <span>Sub Total</span>
-                                            <span style={{ color: 'var(--text-main)' }}>${fmt(subtotal)}</span>
+                                    
+                                    {discountAmount > 0 && (
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="font-semibold text-rose-400">Discount ({discountType === 'PERCENTAGE' ? `${discountValue}%` : '$'})</span>
+                                            <span className="font-bold font-mono text-rose-400">-${fmt(discountAmount)}</span>
                                         </div>
-                                        {discountAmount > 0 && (
-                                            <div className="flex justify-between font-semibold text-rose-400">
-                                                <div className="flex flex-col">
-                                                    <span>Discount</span>
-                                                    <span className="text-[9px] opacity-60">{discountType === 'PERCENTAGE' ? `${discountValue}%` : 'Fixed Amount'}</span>
-                                                </div>
-                                                <span>− ${fmt(discountAmount)}</span>
-                                            </div>
-                                        )}
-                                        {taxAmount > 0 && (
-                                            <div className="flex justify-between font-semibold text-blue-400">
-                                                <div className="flex flex-col">
-                                                    <span>Tax</span>
-                                                    <span className="text-[9px] opacity-60">{taxRate}% GST/VAT</span>
-                                                </div>
-                                                <span>+ ${fmt(taxAmount)}</span>
-                                            </div>
-                                        )}
-                                        <div className="pt-4 border-t mt-2 space-y-3" style={{ borderColor: 'var(--border-main)' }}>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Total (USD)</span>
-                                                <span className="text-xl font-black font-mono tracking-tight text-white">${fmt(grandTotal)}</span>
-                                            </div>
-                                            {selectedDriverPrepayment > 0 && (
-                                                <>
-                                                    <div className="flex justify-between items-center text-[#C8E600]">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Prepayment Credit Applied</span>
-                                                        <span className="text-sm font-bold font-mono">− ${fmt(Math.min(grandTotal, selectedDriverPrepayment))}</span>
-                                                    </div>
-                                                    <div className="pt-3 border-t flex justify-between items-center border-dashed" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                                        <span className="text-sm font-black uppercase tracking-widest text-brand-lime">Net Estimated Due</span>
-                                                        <span className="text-2xl font-black font-mono tracking-tighter text-brand-lime">${fmt(Math.max(0, grandTotal - selectedDriverPrepayment))}</span>
-                                                    </div>
-                                                </>
-                                            )}
+                                    )}
+
+                                    {selectedTax && (
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="font-semibold" style={{ color: 'var(--text-dim)' }}>Tax ({selectedTax.name} - {selectedTax.rate}%)</span>
+                                            <span className="font-bold font-mono" style={{ color: 'var(--text-main)' }}>+${fmt(taxAmount)}</span>
                                         </div>
-                                    </div>
-                                    <div className="px-5 py-3 bg-white/5 border-t text-[9px] font-bold italic" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                        {selectedDriverPrepayment > 0 ? (
-                                            <span className="text-[#C8E600]">* Prepayment credit of ${fmt(Math.min(grandTotal, selectedDriverPrepayment))} will be automatically applied to settle this invoice upon creation.</span>
-                                        ) : (
-                                            <span>* This invoice will be generated in PENDING status.</span>
-                                        )}
+                                    )}
+                                </div>
+
+                                <div className="mt-8 pt-5 border-t flex items-end justify-between" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest block" style={{ color: 'var(--text-dim)' }}>Grand Total (USD)</span>
+                                        <span className="text-3xl font-black font-mono tracking-tighter" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </form>
 
-                {/* Sticky Footer */}
-                <div className="px-8 py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex flex-col">
-                        {selectedDriverPrepayment > 0 ? (
-                            <div className="flex items-center gap-4">
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Invoice</span>
-                                    <span className="text-sm font-bold text-white">${fmt(grandTotal)}</span>
-                                </div>
-                                <div className="w-px h-6 bg-white/10" />
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#C8E600]" style={{ color: 'var(--brand-lime)' }}>Net Estimated Due</span>
-                                    <span className="text-xl font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>${fmt(Math.max(0, grandTotal - selectedDriverPrepayment))}</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-main)' }}>Total Amount Due</span>
-                                <span className="text-xl font-black animate-in fade-in duration-300" style={{ color: 'var(--brand-lime)' }}>${fmt(grandTotal)}</span>
-                            </div>
+                {/* Footer Controls */}
+                <div className="flex items-center justify-between px-8 py-5 border-t flex-shrink-0" style={{ background: 'rgba(0,0,0,0.1)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        {grandTotal > 0 && (
+                            <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                Invoice Total: ${fmt(grandTotal)}
+                            </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={submitting}
+                            className="px-5 py-2.5 rounded-xl border text-[11px] font-black uppercase tracking-widest hover:bg-white/5 active:scale-95 disabled:opacity-20 transition-all cursor-pointer"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        >
+                            Cancel
+                        </button>
                         <button
                             type="button"
                             onClick={handleSaveDraft}
-                            disabled={submitting || grandTotal <= 0 || !selectedDriver || !dueDate}
-                            className="flex-1 sm:flex-none px-6 py-2.5 border rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                            disabled={submitting}
+                            className="px-5 py-2.5 rounded-xl border text-[11px] font-black uppercase tracking-widest hover:bg-white/5 active:scale-95 disabled:opacity-20 transition-all cursor-pointer"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
-                            Save as Draft
+                            Save Draft
                         </button>
                         <button
                             type="submit"
                             form="create-manual-invoice-form"
-                            disabled={submitting || grandTotal <= 0 || !selectedDriver || !dueDate}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-2.5 bg-brand-lime text-black font-black text-[11px] uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
+                            disabled={submitting}
+                            className="px-6 py-2.5 bg-brand-lime text-black rounded-xl font-black text-[11px] uppercase tracking-widest hover:scale-105 active:scale-95 disabled:opacity-20 disabled:scale-100 transition-all shadow-xl cursor-pointer"
+                            style={{ background: 'var(--brand-lime)' }}
                         >
-                            <FileText size={14} strokeWidth={2.5} />
-                            {submitting ? 'Processing...' : 'Save and Send'}
+                            {submitting ? 'Generating...' : 'Create Invoice'}
                         </button>
                     </div>
                 </div>
+
             </div>
         </div>
     );

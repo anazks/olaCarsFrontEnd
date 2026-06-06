@@ -12,8 +12,8 @@ import {
     createCreditNote, 
     type CreditNote 
 } from '../../../../services/creditNoteService';
-import { getAllDrivers } from '../../../../services/driverService';
-import { getInvoicesByDriver } from '../../../../services/invoiceService';
+import { getAllCustomers, type Customer } from '../../../../services/customerService';
+import { getInvoicesByCustomer } from '../../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
 const CreditNotes = () => {
@@ -41,13 +41,13 @@ const CreditNotes = () => {
     
     // Creation State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-    const [drivers, setDrivers] = useState<any[]>([]);
-    const [loadingDrivers, setLoadingDrivers] = useState<boolean>(false);
-    const [driverInvoices, setDriverInvoices] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
+    const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
     const [loadingInvoices, setLoadingInvoices] = useState<boolean>(false);
     
     // Issuance Form States
-    const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [reason, setReason] = useState<string>('');
@@ -107,44 +107,41 @@ const CreditNotes = () => {
         fetchCreditNotes();
     }, [fetchCreditNotes]);
 
-    // Fetch drivers for Issuance
+    // Fetch customers for Issuance
     useEffect(() => {
-        if (isCreateModalOpen && drivers.length === 0) {
-            const loadDrivers = async () => {
-                setLoadingDrivers(true);
+        if (isCreateModalOpen && customers.length === 0) {
+            const loadCustomers = async () => {
+                setLoadingCustomers(true);
                 try {
-                    const res = await getAllDrivers();
-                    // Adjust mapping structure based on typical driver response
-                    setDrivers(res?.data || res || []);
+                    const res = await getAllCustomers({ status: 'ACTIVE', limit: 300 });
+                    setCustomers(res?.data || res || []);
                 } catch (err) {
-                    console.error("Driver load error", err);
+                    console.error("Customer load error", err);
                 } finally {
-                    setLoadingDrivers(false);
+                    setLoadingCustomers(false);
                 }
             };
-            loadDrivers();
+            loadCustomers();
         }
-    }, [isCreateModalOpen, drivers.length]);
+    }, [isCreateModalOpen, customers.length]);
 
-    // Specific driver's invoices for the modal
+    // Specific customer's invoices for the modal
     const [invoiceSort] = useState<'date' | 'number'>('date');
     const [invoiceSortOrder] = useState<'asc' | 'desc'>('desc');
     const [invoiceSearch, setInvoiceSearch] = useState('');
     const [invoiceDateFilter, setInvoiceDateFilter] = useState('');
 
     useEffect(() => {
-        if (selectedDriverId) {
+        if (selectedCustomerId) {
             const loadInvoices = async () => {
                 setLoadingInvoices(true);
                 try {
-                    // Use getInvoicesByDriver to see all (Paid/Unpaid)
-                    const res = await getInvoicesByDriver(selectedDriverId);
+                    const res = await getInvoicesByCustomer(selectedCustomerId);
                     const invoices = res || [];
-                    setDriverInvoices(invoices);
+                    setCustomerInvoices(invoices);
                     
                     // Auto-select the first invoice if available
                     if (invoices.length > 0) {
-                        // Sort by date desc to get the most recent one (or adjust logic as needed)
                         const sorted = [...invoices].sort((a, b) => {
                             const dateA = new Date(a.dueDate || a.generatedAt).getTime();
                             const dateB = new Date(b.dueDate || b.generatedAt).getTime();
@@ -162,15 +159,15 @@ const CreditNotes = () => {
             setInvoiceSearch('');
             setInvoiceDateFilter('');
         } else {
-            setDriverInvoices([]);
+            setCustomerInvoices([]);
             setSelectedInvoiceId('');
         }
-    }, [selectedDriverId]);
+    }, [selectedCustomerId]);
 
-    const sortedDriverInvoices = useMemo(() => {
-        if (!Array.isArray(driverInvoices)) return [];
+    const sortedCustomerInvoices = useMemo(() => {
+        if (!Array.isArray(customerInvoices)) return [];
         
-        let filtered = [...driverInvoices];
+        let filtered = [...customerInvoices];
 
         // 1. Search Filter
         if (invoiceSearch.trim()) {
@@ -198,7 +195,7 @@ const CreditNotes = () => {
                     : a.invoiceNumber.localeCompare(b.invoiceNumber);
             }
         });
-    }, [driverInvoices, invoiceSort, invoiceSortOrder, invoiceSearch, invoiceDateFilter]);
+    }, [customerInvoices, invoiceSort, invoiceSortOrder, invoiceSearch, invoiceDateFilter]);
 
     const handleRowClick = (id: string) => {
         navigate(`./${id}`);
@@ -220,14 +217,12 @@ const CreditNotes = () => {
                 pages.push(i);
             }
         } else {
-            // Always include first page
             pages.push(1);
 
             if (currentPage > 3) {
                 pages.push('ellipsis-start');
             }
 
-            // Determine range around current page
             const start = Math.max(2, currentPage - 1);
             const end = Math.min(totalPages - 1, currentPage + 1);
 
@@ -249,7 +244,6 @@ const CreditNotes = () => {
                 pages.push('ellipsis-end');
             }
 
-            // Always include last page
             pages.push(totalPages);
         }
         return pages;
@@ -257,7 +251,7 @@ const CreditNotes = () => {
 
     const handleCreateCreditNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedDriverId || !amount || !reason) {
+        if (!selectedCustomerId || !amount || !reason) {
             toast.error("Fill mandatory fields.");
             return;
         }
@@ -269,15 +263,23 @@ const CreditNotes = () => {
         setSubmitting(true);
         try {
             const payload: any = {
-                driverId: selectedDriverId,
+                customerId: selectedCustomerId,
                 amount: Number(amount),
                 reason,
                 notes,
                 creditNoteDate
             };
+            
+            // Resolve linked driver if available
+            const selectedCust = customers.find(c => c._id === selectedCustomerId);
+            if (selectedCust?.driver?._id) {
+                payload.driverId = selectedCust.driver._id;
+            }
+
             if (selectedInvoiceId) {
                 payload.invoiceId = selectedInvoiceId;
             }
+            
             const res = await createCreditNote(payload);
             if (res.success) {
                 toast.success("Credit Note issued in registry!");
@@ -294,7 +296,7 @@ const CreditNotes = () => {
     };
 
     const resetForm = () => {
-        setSelectedDriverId('');
+        setSelectedCustomerId('');
         setSelectedInvoiceId('');
         setAmount('');
         setReason('');
@@ -304,8 +306,8 @@ const CreditNotes = () => {
 
     const selectedInvoiceData = useMemo(() => {
         if (!selectedInvoiceId) return null;
-        return driverInvoices.find(i => i._id === selectedInvoiceId) || null;
-    }, [driverInvoices, selectedInvoiceId]);
+        return customerInvoices.find(i => i._id === selectedInvoiceId) || null;
+    }, [customerInvoices, selectedInvoiceId]);
 
     const displayedNotes = creditNotes;
 
@@ -355,7 +357,7 @@ const CreditNotes = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" size={16} style={{ color: 'var(--text-dim)' }} />
                         <input
                             type="text"
-                            placeholder="Filter ledger registry by note No., operator key, or memo..."
+                            placeholder="Filter ledger registry by note No., customer name, or memo..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 rounded-2xl text-xs font-semibold border outline-none transition-all"
@@ -420,9 +422,9 @@ const CreditNotes = () => {
                                             CN Number <SortIcon field="creditNoteNumber" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('driverId')}>
+                                    <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('customerId')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Operator <SortIcon field="driverId" />
+                                            Customer <SortIcon field="customerId" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('creditNoteDate')}>
@@ -484,11 +486,11 @@ const CreditNotes = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 shadow-inner">
-                                                        <span className="text-indigo-400 text-[10px] font-black">{(note.driverId?.personalInfo?.fullName || 'OP').slice(0,2).toUpperCase()}</span>
+                                                        <span className="text-indigo-400 text-[10px] font-black">{(note.customerId?.name || note.driverId?.personalInfo?.fullName || 'CU').slice(0,2).toUpperCase()}</span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black leading-snug tracking-tight">{note.driverId?.personalInfo?.fullName || (note as any).name || 'Legacy Pool'}</span>
-                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">{note.driverId?.driverId || 'N/A'}</span>
+                                                        <span className="font-black leading-snug tracking-tight">{note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer'}</span>
+                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">{note.customerId?.customerId || note.driverId?.driverId || 'N/A'}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -589,89 +591,31 @@ const CreditNotes = () => {
 
                         <form onSubmit={handleCreateCreditNote} className="max-h-[70vh] overflow-y-auto p-6 space-y-5 custom-scrollbar">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>1. Target Operator *</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>1. Target Customer *</label>
                                 <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                                    <select required value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    <select required value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                         <option value="" style={{background: 'var(--bg-card)'}}>Choose Profile</option>
-                                        {loadingDrivers ? (
-                                            <option disabled style={{background: 'var(--bg-card)'}}>Loading drivers...</option>
-                                        ) : drivers.map(d => <option key={d._id} value={d._id} style={{background: 'var(--bg-card)'}}>{d.personalInfo?.fullName || 'Unnamed Driver'} ({d.driverId || 'N/A'})</option>)}
+                                        {loadingCustomers ? (
+                                            <option disabled style={{background: 'var(--bg-card)'}}>Loading customers...</option>
+                                        ) : customers.map(c => <option key={c._id} value={c._id} style={{background: 'var(--bg-card)'}}>{c.name || 'Unnamed Customer'} ({c.customerId || 'N/A'})</option>)}
                                     </select>
                                 </div>
                             </div>
 
-                            {selectedDriverId && (
+                            {selectedCustomerId && (
                                 <div className="space-y-1.5 p-3.5 border rounded-2xl animate-in zoom-in-95" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                    {/* 
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
-                                        <div className="flex items-center gap-1.5">
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    if (invoiceSort === 'date') setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc');
-                                                    else { setInvoiceSort('date'); setInvoiceSortOrder('desc'); }
-                                                }}
-                                                className={`text-[9px] px-2 py-0.5 rounded border transition-all ${invoiceSort === 'date' ? 'bg-brand-lime text-black border-brand-lime' : 'text-dim border-white/10'}`}
-                                            >
-                                                DATE {invoiceSort === 'date' && (invoiceSortOrder === 'asc' ? '↑' : '↓')}
-                                            </button>
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    if (invoiceSort === 'number') setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc');
-                                                    else { setInvoiceSort('number'); setInvoiceSortOrder('desc'); }
-                                                }}
-                                                className={`text-[9px] px-2 py-0.5 rounded border transition-all ${invoiceSort === 'number' ? 'bg-brand-lime text-black border-brand-lime' : 'text-dim border-white/10'}`}
-                                            >
-                                                NO. {invoiceSort === 'number' && (invoiceSortOrder === 'asc' ? '↑' : '↓')}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2 mb-2">
-                                        <div className="relative flex-1">
-                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={12} />
-                                            <input 
-                                                type="text"
-                                                placeholder="Search No..."
-                                                value={invoiceSearch}
-                                                onChange={e => setInvoiceSearch(e.target.value)}
-                                                className="w-full pl-8 pr-2 py-1.5 border rounded-lg text-[10px] font-bold outline-none"
-                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                            />
-                                            {invoiceSearch && (
-                                                <button onClick={() => setInvoiceSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-main"><X size={10}/></button>
-                                            )}
-                                        </div>
-                                        <div className="relative flex-1">
-                                            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim opacity-50" size={12} />
-                                            <input 
-                                                type="date"
-                                                value={invoiceDateFilter}
-                                                onChange={e => setInvoiceDateFilter(e.target.value)}
-                                                className="w-full pl-8 pr-2 py-1.5 border rounded-lg text-[10px] font-bold outline-none appearance-none"
-                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                            />
-                                            {invoiceDateFilter && (
-                                                <button onClick={() => setInvoiceDateFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-main"><X size={10}/></button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    */}
-
                                     <div className="mb-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
                                     </div>
 
                                     <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment ({sortedDriverInvoices.length} visible)</option>
+                                        <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment ({sortedCustomerInvoices.length} visible)</option>
                                         {loadingInvoices ? (
                                             <option disabled style={{background: 'var(--bg-card)'}}>Querying ledger...</option>
-                                        ) : sortedDriverInvoices.length === 0 ? (
+                                        ) : sortedCustomerInvoices.length === 0 ? (
                                             <option disabled style={{background: 'var(--bg-card)'}}>No matching invoices</option>
-                                        ) : sortedDriverInvoices.map(i => (
+                                        ) : sortedCustomerInvoices.map(i => (
                                             <option key={i._id} value={i._id} style={{background: 'var(--bg-card)'}}>
                                                 {i.invoiceNumber} — {i.status} (${i.balance} left) — {new Date(i.dueDate).toLocaleDateString()}
                                             </option>

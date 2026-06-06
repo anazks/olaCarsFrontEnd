@@ -3,7 +3,14 @@ import api from './api';
 export interface CreditNote {
     _id: string;
     creditNoteNumber: string;
-    driverId: {
+    customerId?: {
+        _id: string;
+        customerId?: string;
+        name?: string;
+        email?: string;
+        phone?: string;
+    };
+    driverId?: {
         _id: string;
         driverId?: string;
         personalInfo?: {
@@ -27,7 +34,8 @@ export interface CreditNote {
 }
 
 export interface CreateCreditNotePayload {
-    driverId: string;
+    customerId: string;
+    driverId?: string;
     invoiceId?: string;
     amount: number;
     reason: string;

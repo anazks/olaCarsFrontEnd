@@ -444,7 +444,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         <div className="relative flex-1 md:min-w-[300px]">
                             <input 
                                 type="text" 
-                                placeholder="Search ID, Driver, Plate or Fleet..." 
+                                placeholder="Search ID, Customer, Plate or Fleet..." 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full border py-2.5 pl-10 pr-4 rounded-xl font-medium text-sm shadow-sm outline-none focus:border-brand-lime transition-all"
@@ -514,7 +514,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 </th>
                                 <th className="py-4 px-3">Sl No.</th>
                                 <th className="py-4 px-3">Invoice Number</th>
-                                <th className="py-4 px-3">Driver Details</th>
+                                <th className="py-4 px-3">Customer Details</th>
                                 <th className="py-4 px-3">Vehicle / Fleet</th>
                                 <th className="py-4 px-3">Node Location</th>
                                 <th className="py-4 px-3">Due Date</th>
@@ -549,11 +549,14 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                             <td className="py-4 px-3">
                                                 <div 
                                                     className="font-bold cursor-pointer hover:underline text-blue-500 hover:text-blue-600"
-                                                    onClick={() => item.driverId && navigate(`${getRoutePrefix()}/customers/${item.driverId}`)}
+                                                    onClick={() => (item.customerId || item.driverId) && navigate(`${getRoutePrefix()}/customers/${item.customerId || item.driverId}`)}
                                                 >
-                                                    {item.driverName}
+                                                    {item.customerName || item.driverName}
                                                 </div>
-                                                <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.driverId?.substring(18) ? `ID: ...${item.driverId.substring(18)}` : ''}</div>
+                                                <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                                    {item.customerId ? `CUST ID: ...${item.customerId.substring(18)}` : item.driverId?.substring(18) ? `DRIV ID: ...${item.driverId.substring(18)}` : ''}
+                                                    {item.driverName && item.driverName !== 'N/A' && item.driverName !== item.customerName && ` • Driver: ${item.driverName}`}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-3">
                                                 <div 

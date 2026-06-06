@@ -4,10 +4,11 @@ import {
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
-    ArrowLeft, Edit2, Zap, Briefcase
+    ArrowLeft, Zap, Briefcase
 } from 'lucide-react';
-import { driverService, type Driver } from '../../../../services/driverService';
-import { getInvoicesByDriver, type Invoice } from '../../../../services/invoiceService';
+import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
+import { driverService } from '../../../../services/driverService';
+import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import { getAllCreditNotes, type CreditNote } from '../../../../services/creditNoteService';
 import api from '../../../../services/api';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
@@ -16,7 +17,7 @@ import toast from 'react-hot-toast';
 const CustomerDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [driver, setDriver] = useState<Driver | null>(null);
+    const [customer, setCustomer] = useState<Customer | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
@@ -27,14 +28,14 @@ const CustomerDetail = () => {
         if (!id) return;
         setLoading(true);
         try {
-            const [driverData, invoicesData, creditNotesData, paymentsData] = await Promise.all([
-                driverService.getDriverById(id),
-                getInvoicesByDriver(id),
-                getAllCreditNotes({ driverId: id }),
-                api.get('/api/payments-received', { params: { driverId: id, limit: 100 } })
+            const [customerData, invoicesData, creditNotesData, paymentsData] = await Promise.all([
+                getCustomerById(id),
+                getInvoicesByCustomer(id),
+                getAllCreditNotes({ customerId: id }),
+                api.get('/api/payments-received', { params: { customerId: id, limit: 100 } })
             ]);
 
-            setDriver(driverData);
+            setCustomer(customerData.data || customerData);
             setInvoices(invoicesData);
             setCreditNotes(creditNotesData?.data || []);
             setPayments(paymentsData?.data?.data || paymentsData?.data || []);
@@ -50,6 +51,35 @@ const CustomerDetail = () => {
         fetchData();
     }, [fetchData]);
 
+    const handleToggleStatus = async () => {
+        if (!customer) return;
+        const newStatus = customer.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+        const toastId = toast.loading(`Updating status to ${newStatus}...`);
+        try {
+            await updateCustomer(customer._id, { status: newStatus });
+            toast.success(`Customer status updated to ${newStatus}`, { id: toastId });
+            fetchData();
+        } catch (err: any) {
+            console.error('Failed to update customer status:', err);
+            toast.error(err.message || 'Failed to update status', { id: toastId });
+        }
+    };
+
+    const handleToggleDriverStatus = async () => {
+        if (!customer || !customer.driver) return;
+        const driverId = customer.driver._id;
+        const newStatus = customer.driver.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+        const toastId = toast.loading(`Updating driver status to ${newStatus}...`);
+        try {
+            await driverService.updateDriver(driverId, { status: newStatus });
+            toast.success(`Driver status updated to ${newStatus}`, { id: toastId });
+            fetchData();
+        } catch (err: any) {
+            console.error('Failed to update driver status:', err);
+            toast.error(err.message || 'Failed to update driver status', { id: toastId });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -59,7 +89,7 @@ const CustomerDetail = () => {
         );
     }
 
-    if (!driver) {
+    if (!customer) {
         return (
             <div className="container-responsive py-20 text-center space-y-6">
                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-3xl p-12 max-w-md mx-auto shadow-2xl">
@@ -85,11 +115,6 @@ const CustomerDetail = () => {
     const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
 
     const handleExportStatement = () => {
-        if (!driver) {
-            toast.error("No customer profile loaded to export");
-            return;
-        }
-
         const toastId = toast.loading("Generating Statement CSV...");
 
         try {
@@ -105,13 +130,12 @@ const CustomerDetail = () => {
             // Build Header metadata
             const metadataRows = [
                 ['CUSTOMER STATEMENT OF ACCOUNT', ''],
-                ['Customer Name', driver.personalInfo.fullName],
-                ['Customer ID', driver.driverId || 'TEMP-ID'],
-                ['Email', driver.personalInfo.email || 'N/A'],
-                ['Phone', driver.personalInfo.phone || 'N/A'],
-                ['Registered Date', new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()],
-                ['Account Status', driver.status || 'N/A'],
-                ['Assigned Vehicle', (driver.assignedVehicle as any)?.basicDetails ? `${(driver.assignedVehicle as any).basicDetails.make} ${(driver.assignedVehicle as any).basicDetails.model}` : 'None Assigned'],
+                ['Customer Name', customer.name],
+                ['Customer ID', customer.customerId || 'TEMP-ID'],
+                ['Email', customer.email || 'N/A'],
+                ['Phone', customer.phone || 'N/A'],
+                ['Registered Date', new Date(customer.createdAt).toLocaleDateString()],
+                ['Account Status', customer.status || 'N/A'],
                 ['Outstanding Balance', `$${outstandingBalance.toFixed(2)}`],
                 ['Prepayment Credit Balance', `$${prepaymentBalance.toFixed(2)}`],
                 ['', ''], // Empty row spacer
@@ -214,7 +238,7 @@ const CustomerDetail = () => {
             const link = document.createElement('a');
             link.href = url;
 
-            const safeName = driver.personalInfo.fullName.toLowerCase().replace(/\s+/g, '_');
+            const safeName = customer.name.toLowerCase().replace(/\s+/g, '_');
             const dateStr = new Date().toISOString().split('T')[0];
             const filename = `${safeName}_statement_${dateStr}.csv`;
 
@@ -234,14 +258,21 @@ const CustomerDetail = () => {
         if (!id) return;
         const toastId = toast.loading("Generating statement PDF from backend...");
         try {
-            const res = await api.get(`/api/driver/${id}/statement/pdf`, { responseType: 'blob' });
+            // Note: Update backend route to use customer-based statement if available, or call standard statement with fallback
+            const res = await api.get(`/api/customers/${id}/statement/pdf`, { responseType: 'blob' }).catch(async () => {
+                // Fallback to driver statement if customer endpoint isn't fully routed yet
+                if (customer.driver?._id) {
+                    return await api.get(`/api/driver/${customer.driver._id}/statement/pdf`, { responseType: 'blob' });
+                }
+                throw new Error("Statement PDF not available for non-driver customers yet.");
+            });
             const blob = new Blob([res.data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
             
             // Download PDF file
             const link = document.createElement('a');
             link.href = url;
-            const safeName = driver?.personalInfo?.fullName?.toLowerCase().replace(/\s+/g, '_') || 'customer';
+            const safeName = customer.name.toLowerCase().replace(/\s+/g, '_') || 'customer';
             const dateStr = new Date().toISOString().split('T')[0];
             link.setAttribute('download', `${safeName}_statement_${dateStr}.pdf`);
             document.body.appendChild(link);
@@ -251,7 +282,7 @@ const CustomerDetail = () => {
             toast.success("PDF statement downloaded successfully!", { id: toastId });
         } catch (err: any) {
             console.error("Failed to generate PDF:", err);
-            toast.error("Failed generating statement PDF document.", { id: toastId });
+            toast.error(err.message || "Failed generating statement PDF document.", { id: toastId });
         }
     };
 
@@ -261,7 +292,7 @@ const CustomerDetail = () => {
                 items={[
                     { label: 'Sales', path: '/admin/financial-admin/customers' },
                     { label: 'Customers', path: '/admin/financial-admin/customers' },
-                    { label: driver.personalInfo.fullName, active: true }
+                    { label: customer.name, active: true }
                 ]} 
             />
 
@@ -277,13 +308,13 @@ const CustomerDetail = () => {
                     </button>
                     <div>
                         <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {driver.personalInfo.fullName}
+                            {customer.name}
                         </h1>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{driver.driverId || 'TEMP-ID'}</span>
+                            <span className="text-xs font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{customer.customerId || 'TEMP-ID'}</span>
                             <span className="w-1 h-1 rounded-full bg-white/20" />
                             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                Registered {new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()}
+                                Registered {new Date(customer.createdAt).toLocaleDateString()}
                             </span>
                         </div>
                     </div>
@@ -299,11 +330,28 @@ const CustomerDetail = () => {
                     </button>
 
                     <button 
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        onClick={handleToggleStatus}
+                        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer ${
+                            customer.status === 'ACTIVE' 
+                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border-rose-500/20' 
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/20'
+                        }`}
                     >
-                        <Edit2 size={14} className="opacity-70" /> Edit Profile
+                        <Zap size={14} /> {customer.status === 'ACTIVE' ? 'Deactivate Customer' : 'Activate Customer'}
                     </button>
+
+                    {customer.driver && (
+                        <button 
+                            onClick={handleToggleDriverStatus}
+                            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer ${
+                                customer.driver.status === 'ACTIVE' 
+                                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border-rose-500/20' 
+                                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/20'
+                            }`}
+                        >
+                            <User size={14} /> {customer.driver.status === 'ACTIVE' ? 'Deactivate Driver' : 'Activate Driver'}
+                        </button>
+                    )}
 
                     <button 
                         onClick={handleExportStatement}
@@ -326,10 +374,10 @@ const CustomerDetail = () => {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <QuickStatCard 
-                    label="Account Status" 
-                    value={driver.status} 
+                    label="Customer Status" 
+                    value={customer.status} 
                     icon={<Zap size={16} />} 
-                    color={driver.status === 'ACTIVE' ? 'emerald' : 'rose'} 
+                    color={customer.status === 'ACTIVE' ? 'emerald' : 'rose'} 
                 />
                 <QuickStatCard 
                     label="Current Balance" 
@@ -350,7 +398,7 @@ const CustomerDetail = () => {
                 />
                 <QuickStatCard 
                     label="Branch" 
-                    value={(driver.branch as any)?.name || 'N/A'} 
+                    value={customer.branch?.name || 'N/A'} 
                     icon={<Briefcase size={16} />} 
                 />
             </div>
@@ -384,14 +432,14 @@ const CustomerDetail = () => {
             <div className="min-h-[400px]">
                 {activeTab === 'overview' && (
                     <OverviewTab 
-                        driver={driver} 
+                        customer={customer} 
                         prepaymentBalance={prepaymentBalance}
                         totalPaymentsReceived={totalPaymentsReceived}
                         totalApplied={totalApplied}
                         totalInvoiced={totalInvoiced}
                     />
                 )}
-                {activeTab === 'emi' && <EMITab driver={driver} invoices={invoices} />}
+                {activeTab === 'emi' && <EMITab customer={customer} invoices={invoices} />}
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
                 {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
@@ -405,13 +453,13 @@ const CustomerDetail = () => {
    ───────────────────────────────────────────────────────────────────────────── */
 
 const OverviewTab = ({ 
-    driver, 
+    customer, 
     prepaymentBalance, 
     totalPaymentsReceived, 
     totalApplied,
     totalInvoiced
 }: { 
-    driver: Driver;
+    customer: Customer;
     prepaymentBalance: number;
     totalPaymentsReceived: number;
     totalApplied: number;
@@ -422,10 +470,10 @@ const OverviewTab = ({
             {/* Personal Details */}
             <SectionCard title="Contact Information" icon={<Phone size={18} />}>
                 <div className="space-y-4 pt-2">
-                    <InfoRow label="Email Address" value={driver.personalInfo.email} icon={<Mail size={14} />} />
-                    <InfoRow label="Phone Number" value={driver.personalInfo.phone} icon={<Phone size={14} />} />
-                    <InfoRow label="WhatsApp" value={driver.personalInfo.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
-                    <InfoRow label="Nationality" value={driver.personalInfo.nationality || 'N/A'} icon={<MapPin size={14} />} />
+                    <InfoRow label="Email Address" value={customer.email} icon={<Mail size={14} />} />
+                    <InfoRow label="Phone Number" value={customer.phone} icon={<Phone size={14} />} />
+                    <InfoRow label="WhatsApp" value={customer.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
+                    <InfoRow label="Address" value={customer.address ? `${customer.address}, ${customer.city || ''}, ${customer.state || ''}, ${customer.country || ''}` : 'N/A'} icon={<MapPin size={14} />} />
                 </div>
             </SectionCard>
 
@@ -444,19 +492,29 @@ const OverviewTab = ({
             </SectionCard>
 
             {/* Emergency & Bank details */}
-            <SectionCard title="Account Details" icon={<User size={18} />}>
+            <SectionCard title="Driver Association" icon={<User size={18} />}>
                 <div className="space-y-4 pt-2">
-                    <div className="space-y-1">
-                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
-                        <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{driver.emergencyContact?.name || 'N/A'}</p>
-                        <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{driver.emergencyContact?.phone || 'N/A'} ({driver.emergencyContact?.relationship || 'Other'})</p>
-                    </div>
-                    <div className="space-y-1 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
-                        <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                            {(driver.assignedVehicle as any)?.basicDetails?.make} {(driver.assignedVehicle as any)?.basicDetails?.model || 'No vehicle assigned'}
-                        </p>
-                    </div>
+                    {customer.driver ? (
+                        <>
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Driver ID</p>
+                                <p className="text-xs font-bold text-white">{(customer.driver as any).driverId || 'TEMP-ID'}</p>
+                            </div>
+                            <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
+                                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{(customer.driver as any).emergencyContact?.name || 'N/A'}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{(customer.driver as any).emergencyContact?.phone || 'N/A'} ({(customer.driver as any).emergencyContact?.relationship || 'Other'})</p>
+                            </div>
+                            <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
+                                <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                    {(customer.driver as any).assignedVehicle?.basicDetails?.make} {(customer.driver as any).assignedVehicle?.basicDetails?.model || 'No vehicle assigned'}
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-xs font-medium text-dim">This customer is not registered as a driver and has no vehicle assignments.</p>
+                    )}
                 </div>
             </SectionCard>
         </div>
@@ -476,7 +534,7 @@ const OverviewTab = ({
                         Current Customer Prepayment Credit Balance (Extra): ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                     <span className="text-[9px] font-bold text-dim block italic mt-1">
-                        * This advance balance is stored securely as a prepayment credit and is automatically applied to future invoices generated for this driver.
+                        * This advance balance is stored securely as a prepayment credit and is automatically applied to future invoices generated for this customer.
                     </span>
                 </div>
             </div>
@@ -484,11 +542,11 @@ const OverviewTab = ({
     </div>
 );
 
-const EMITab = ({ driver, invoices }: { driver: Driver, invoices: Invoice[] }) => {
-    const rentTracking = driver.rentTracking || [];
-    const totalContract = rentTracking.reduce((s, i) => s + i.amount, 0);
-    const totalPaid = invoices.reduce((s, i) => s + (i.amountPaid || 0), 0);
-    const balance = invoices.reduce((s, i) => s + (i.balance || 0), 0);
+const EMITab = ({ customer, invoices }: { customer: Customer, invoices: Invoice[] }) => {
+    const rentTracking = customer.driver?.rentTracking || [];
+    const totalContract = rentTracking.reduce((s: number, i: any) => s + i.amount, 0);
+    const totalPaid = invoices.reduce((s: number, i: Invoice) => s + (i.amountPaid || 0), 0);
+    const balance = invoices.reduce((s: number, i: Invoice) => s + (i.balance || 0), 0);
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
@@ -514,7 +572,7 @@ const EMITab = ({ driver, invoices }: { driver: Driver, invoices: Invoice[] }) =
                             {rentTracking.length === 0 ? (
                                 <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No repayment plan generated for this customer yet.</td></tr>
                             ) : (
-                                rentTracking.map((item, idx) => {
+                                rentTracking.map((item: any, idx: number) => {
                                     const invoice = invoices.find(inv => inv.weekNumber === item.weekNumber);
                                     return (
                                         <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>

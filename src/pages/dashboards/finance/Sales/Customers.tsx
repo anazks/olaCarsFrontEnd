@@ -5,11 +5,14 @@ import type { RootState } from '../../../../store';
 import { setCustomersData } from '../../../../store/dashboardSlice';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
-    ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus
+    ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus,
+    X, User, Mail, Phone, MapPin, Building2, Globe, Check
 } from 'lucide-react';
-import { driverService, type Driver, type DriverFilters, type PaginationMetadata } from '../../../../services/driverService';
+import { getAllCustomers, createCustomer, type Customer, type CreateCustomerPayload } from '../../../../services/customerService';
+import type { PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
+import toast from 'react-hot-toast';
 
 const formatDate = (dateString?: string) => {
     if (!dateString) return '—';
@@ -21,15 +24,334 @@ const formatDate = (dateString?: string) => {
     return `${day}/${month}/${year}`;
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   CREATE CUSTOMER MODAL
+   ───────────────────────────────────────────────────────────────────────────── */
+
+interface CreateCustomerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    branches: Branch[];
+}
+
+const CreateCustomerModal = ({ isOpen, onClose, onSuccess, branches }: CreateCustomerModalProps) => {
+    const [submitting, setSubmitting] = useState(false);
+
+    // Form fields
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [whatsappNumber, setWhatsappNumber] = useState('');
+    const [branch, setBranch] = useState('');
+    const [address, setAddress] = useState('');
+    const [city, setCity] = useState('');
+    const [state, setState] = useState('');
+    const [country, setCountry] = useState('');
+    const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+
+    const resetForm = () => {
+        setName(''); setEmail(''); setPhone(''); setWhatsappNumber('');
+        setBranch(''); setAddress(''); setCity(''); setState('');
+        setCountry(''); setStatus('ACTIVE');
+    };
+
+    const handleClose = () => {
+        resetForm();
+        onClose();
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) { toast.error('Customer name is required'); return; }
+        if (!branch) { toast.error('Please select a branch'); return; }
+
+        setSubmitting(true);
+        const toastId = toast.loading('Creating customer...');
+        try {
+            const payload: CreateCustomerPayload = {
+                name: name.trim(),
+                email: email.trim() || undefined,
+                phone: phone.trim() || undefined,
+                whatsappNumber: whatsappNumber.trim() || undefined,
+                branch,
+                address: address.trim() || undefined,
+                city: city.trim() || undefined,
+                state: state.trim() || undefined,
+                country: country.trim() || undefined,
+                status,
+            };
+            await createCustomer(payload);
+            toast.success('Customer created successfully!', { id: toastId });
+            resetForm();
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || err.message || 'Failed to create customer', { id: toastId });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+        >
+            <div
+                className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-300 custom-scrollbar"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+            >
+                {/* Modal Header */}
+                <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-5 border-b" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.12)', border: '1px solid rgba(200,230,0,0.25)' }}>
+                            <UserPlus size={16} style={{ color: 'var(--brand-lime)' }} />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>New Customer</h2>
+                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: 'var(--text-dim)' }}>Fill in the details to register a new customer</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleClose}
+                        className="p-2 rounded-xl border transition-all hover:bg-white/10 active:scale-95"
+                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <form onSubmit={handleSubmit} className="px-8 py-6 space-y-6">
+
+                    {/* Status Toggle Banner */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Initial Status</p>
+                            <p className="text-xs font-bold mt-0.5" style={{ color: 'var(--text-main)' }}>
+                                {status === 'ACTIVE' ? 'Customer will be active and visible in all listings' : 'Customer will be created as inactive'}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setStatus(s => s === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                            className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 border ${status === 'ACTIVE' ? 'border-emerald-500/40' : 'border-white/10'}`}
+                            style={{ background: status === 'ACTIVE' ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)' }}
+                        >
+                            <span className={`absolute top-0.5 w-5 h-5 rounded-full transition-all duration-300 flex items-center justify-center ${status === 'ACTIVE' ? 'left-6 bg-emerald-500' : 'left-0.5 bg-white/20'}`}>
+                                {status === 'ACTIVE' && <Check size={10} className="text-white" />}
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* ── Section: Identity ── */}
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                            <User size={12} /> Identity
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Name */}
+                            <div className="sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                    Full Name <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Mohammed Al-Rashid"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    required
+                                    className="w-full px-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all focus:ring-2"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Section: Contact ── */}
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                            <Mail size={12} /> Contact Information
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>Email Address</label>
+                                <div className="relative">
+                                    <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <input
+                                        type="email"
+                                        placeholder="customer@example.com"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>Phone Number</label>
+                                <div className="relative">
+                                    <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <input
+                                        type="tel"
+                                        placeholder="+971 50 000 0000"
+                                        value={phone}
+                                        onChange={e => setPhone(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>WhatsApp Number</label>
+                                <div className="relative">
+                                    <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <input
+                                        type="tel"
+                                        placeholder="+971 50 000 0000"
+                                        value={whatsappNumber}
+                                        onChange={e => setWhatsappNumber(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Section: Branch & Location ── */}
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                            <Building2 size={12} /> Branch & Location
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Branch */}
+                            <div className="sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                    Assigned Branch <span className="text-rose-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <Building2 size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <select
+                                        value={branch}
+                                        onChange={e => setBranch(e.target.value)}
+                                        required
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none appearance-none cursor-pointer transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: branch ? 'var(--text-main)' : 'var(--text-dim)' }}
+                                    >
+                                        <option value="">Select a branch...</option>
+                                        {branches.map(b => (
+                                            <option key={b._id} value={b._id}>{b.name} — {b.city || b.country}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Address */}
+                            <div className="sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>Street Address</label>
+                                <div className="relative">
+                                    <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="123 Sheikh Zayed Road"
+                                        value={address}
+                                        onChange={e => setAddress(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>City</label>
+                                <input
+                                    type="text"
+                                    placeholder="Dubai"
+                                    value={city}
+                                    onChange={e => setCity(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>State / Emirate</label>
+                                <input
+                                    type="text"
+                                    placeholder="Dubai"
+                                    value={state}
+                                    onChange={e => setState(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>Country</label>
+                                <div className="relative">
+                                    <Globe size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="United Arab Emirates"
+                                        value={country}
+                                        onChange={e => setCountry(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Actions ── */}
+                    <div className="flex items-center justify-end gap-3 pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            disabled={submitting}
+                            className="px-5 py-2.5 rounded-xl text-xs font-bold border transition-all hover:bg-white/5 disabled:opacity-50"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting || !name.trim() || !branch}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ background: 'var(--brand-lime)' }}
+                        >
+                            {submitting ? (
+                                <><RefreshCw size={13} className="animate-spin" /> Creating...</>
+                            ) : (
+                                <><UserPlus size={13} /> Create Customer</>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN CUSTOMERS PAGE
+   ───────────────────────────────────────────────────────────────────────────── */
+
 const Customers = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const customersState = useSelector((state: RootState) => state.dashboard.customers);
 
-    const [drivers, setDrivers] = useState<Driver[]>(customersState.list);
+    const [customers, setCustomers] = useState<Customer[]>(customersState.list);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(!customersState.isLoaded);
     const [error, setError] = useState<string | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const isFirstMount = useRef(true);
 
     // Filters & Search
@@ -61,25 +383,12 @@ const Customers = () => {
         let start = Math.max(2, page - 1);
         let end = Math.min(totalPages - 1, page + 1);
 
-        if (page <= 3) {
-            end = 4;
-        }
-        if (page >= totalPages - 2) {
-            start = totalPages - 3;
-        }
+        if (page <= 3) { end = 4; }
+        if (page >= totalPages - 2) { start = totalPages - 3; }
 
-        if (start > 2) {
-            pages.push('...');
-        }
-
-        for (let i = start; i <= end; i++) {
-            pages.push(i);
-        }
-
-        if (end < totalPages - 1) {
-            pages.push('...');
-        }
-
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
         pages.push(totalPages);
         return pages;
     };
@@ -99,7 +408,7 @@ const Customers = () => {
         const fetchBranchesData = async () => {
             try {
                 const data = await getAllBranches();
-                setBranches(Array.isArray(data) ? data : []);
+                setBranches(Array.isArray(data) ? data : (data as any).data || []);
             } catch (error) {
                 console.error('Error fetching branches:', error);
             }
@@ -111,12 +420,7 @@ const Customers = () => {
         try {
             if (showLoadingSpinner) setLoading(true);
             setError(null);
-            const filters: DriverFilters = {
-                page,
-                limit,
-                sortBy,
-                sortOrder
-            };
+            const filters: any = { page, limit, sortBy, sortOrder };
 
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
             if (statusFilter !== 'ALL') filters.status = statusFilter;
@@ -124,19 +428,19 @@ const Customers = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
 
-            const res = await driverService.getAllDrivers(filters);
-            const driversList = res.data || [];
-            setDrivers(driversList);
+            const res = await getAllCustomers(filters);
+            const customersList = res.data || [];
+            setCustomers(customersList);
             setPagination(res.pagination);
 
             dispatch(setCustomersData({
-                list: driversList,
+                list: customersList,
                 pagination: res.pagination
             }));
         } catch (error: any) {
             console.error('Error fetching customers:', error);
             setError(error.message || 'Failed to load customers');
-            setDrivers([]);
+            setCustomers([]);
         } finally {
             setLoading(false);
         }
@@ -148,8 +452,7 @@ const Customers = () => {
 
         if (isFirstMount.current && isCacheFresh) {
             isFirstMount.current = false;
-            // Synchronize local states with Redux just in case
-            setDrivers(customersState.list);
+            setCustomers(customersState.list);
             setPagination(customersState.pagination);
             return;
         }
@@ -177,6 +480,7 @@ const Customers = () => {
         switch (status) {
             case 'ACTIVE':
             case 'APPROVED': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+            case 'INACTIVE':
             case 'REJECTED':
             case 'SUSPENDED': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
             default: return 'bg-white/5 text-dim border-white/10';
@@ -228,16 +532,16 @@ const Customers = () => {
                         </button>
 
                         <button
-                                onClick={() => navigate('../../shared/drivers/create')}
-                                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-lime text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300"
-                                style={{ background: 'var(--brand-lime)' }}
-                            >
-                                <UserPlus size={14} /> Add Customer
-                            </button>
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300"
+                            style={{ background: 'var(--brand-lime)' }}
+                        >
+                            <UserPlus size={14} /> Add Customer
+                        </button>
                     </div>
                 </div>
 
-                {/* Filters Section (Following Invoice Registry design) */}
+                {/* Filters Section */}
                 <div className="flex flex-col gap-3">
                     <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative flex-1">
@@ -261,7 +565,7 @@ const Customers = () => {
                                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="ALL">ALL STATUSES</option>
-                                    {['ACTIVE', 'PENDING REVIEW', 'APPROVED', 'SUSPENDED', 'REJECTED'].map(s => (
+                                    {['ACTIVE', 'INACTIVE'].map(s => (
                                         <option key={s} value={s}>{s}</option>
                                     ))}
                                 </select>
@@ -292,9 +596,7 @@ const Customers = () => {
                                 onChange={e => {
                                     const newStart = e.target.value;
                                     setStartDate(newStart);
-                                    if (endDate && newStart && newStart > endDate) {
-                                        setEndDate('');
-                                    }
+                                    if (endDate && newStart && newStart > endDate) { setEndDate(''); }
                                 }}
                                 className="bg-transparent text-xs font-bold outline-none cursor-pointer"
                                 style={{ color: 'var(--text-main)' }}
@@ -321,14 +623,14 @@ const Customers = () => {
                             <thead style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)' }}>
                                     <th className="py-4 px-6 text-left w-10">Sl No.</th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('personalInfo.fullName')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('name')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Customer Details <SortIcon field="personalInfo.fullName" />
+                                            Customer Details <SortIcon field="name" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('driverId')}>
+                                    <th className="py-4 px-6 text-left group cursor-pointer select-none" onClick={() => handleSort('customerId')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Customer ID <SortIcon field="driverId" />
+                                            Customer ID <SortIcon field="customerId" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left">
@@ -368,19 +670,32 @@ const Customers = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ) : drivers.length === 0 ? (
+                                ) : customers.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="py-20 text-center">
-                                            <div className="text-dim space-y-1 uppercase">
-                                                <p className="text-xs font-black tracking-widest">No customers found</p>
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.08)', border: '1px solid rgba(200,230,0,0.2)' }}>
+                                                    <Users size={28} style={{ color: 'var(--brand-lime)' }} />
+                                                </div>
+                                                <div className="text-dim space-y-1 uppercase">
+                                                    <p className="text-xs font-black tracking-widest">No customers found</p>
+                                                    <p className="text-[10px] font-semibold normal-case opacity-60">Try adjusting your filters or add a new customer</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsCreateModalOpen(true)}
+                                                    className="flex items-center gap-1.5 px-5 py-2.5 text-black font-black text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-all"
+                                                    style={{ background: 'var(--brand-lime)' }}
+                                                >
+                                                    <UserPlus size={13} /> Add First Customer
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
-                                    drivers.map((driver, index) => (
+                                    customers.map((customer, index) => (
                                         <tr 
-                                            key={driver._id} 
-                                            onClick={() => navigate(driver._id)}
+                                            key={customer._id} 
+                                            onClick={() => navigate(customer._id)}
                                             className="transition-colors cursor-pointer group"
                                             style={{ borderBottom: '1px solid var(--border-main)' }}
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
@@ -391,45 +706,45 @@ const Customers = () => {
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0 shadow-inner">
                                                         <span className="text-brand-lime text-[10px] font-black">
-                                                            {driver.personalInfo.fullName[0].toUpperCase()}
+                                                            {customer.name ? customer.name[0].toUpperCase() : 'C'}
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-black leading-snug tracking-tight text-white" style={{ color: 'var(--text-main)' }}>
-                                                            {driver.personalInfo.fullName}
+                                                            {customer.name}
                                                         </span>
                                                         <span className="text-[9px] font-black text-dim uppercase tracking-wider mt-0.5 opacity-60">
-                                                            Joined {formatDate(driver.createdAt || driver.appliedAt)}
+                                                            Joined {formatDate(customer.createdAt)}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="py-5 px-6 font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                {driver.driverId || 'TEMP-ID'}
+                                                {customer.customerId || 'TEMP-ID'}
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo.phone}</span>
-                                                    <span className="text-[9px] text-dim lowercase mt-0.5">{driver.personalInfo.email}</span>
+                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.phone || '—'}</span>
+                                                    <span className="text-[9px] text-dim lowercase mt-0.5">{customer.email || '—'}</span>
                                                 </div>
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>
-                                                        {(driver.branch as any)?.name || 'N/A'}
+                                                        {customer.branch?.name || 'N/A'}
                                                     </span>
                                                     <span className="text-[9px] font-black uppercase text-dim tracking-widest mt-0.5">
-                                                        {(driver.branch as any)?.city || (driver.branch as any)?.country || 'Global'}
+                                                        {customer.branch?.city || customer.branch?.country || 'Global'}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="py-5 px-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${getStatusColor(driver.status)}`}>
-                                                    {driver.status}
+                                                <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${getStatusColor(customer.status)}`}>
+                                                    {customer.status}
                                                 </span>
                                             </td>
                                             <td className="py-5 px-6 text-center text-dim font-bold">
-                                                {formatDate(driver.createdAt || driver.appliedAt)}
+                                                {formatDate(customer.createdAt)}
                                             </td>
                                             <td className="py-5 px-6 text-right">
                                                 <button className="p-2 bg-white/5 border border-white/10 text-dim hover:text-brand-lime hover:border-brand-lime/30 rounded-xl transition-all duration-300">
@@ -444,10 +759,10 @@ const Customers = () => {
                     </div>
 
                     {/* Pagination */}
-                    {!loading && drivers.length > 0 && pagination && pagination.totalPages >= 1 && (
+                    {!loading && customers.length > 0 && pagination && pagination.totalPages >= 1 && (
                         <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                             <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                                Showing {drivers.length} of {pagination.total} customers
+                                Showing {customers.length} of {pagination.total} customers
                             </p>
                             <div className="flex items-center gap-2">
                                 <button
@@ -491,6 +806,14 @@ const Customers = () => {
                     )}
                 </div>
             </div>
+
+            {/* Create Customer Modal */}
+            <CreateCustomerModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => fetchData(true)}
+                branches={branches}
+            />
         </div>
     );
 };

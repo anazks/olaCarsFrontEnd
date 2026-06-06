@@ -115,6 +115,7 @@ import StaffSalaries from './pages/dashboards/finance/StaffSalaries.tsx';
 import VoucherDashboard from './pages/dashboards/finance/VoucherDashboard';
 import ManualJournals from './pages/dashboards/finance/ManualJournals';
 import InvoiceList from './pages/dashboards/finance/InvoiceList';
+import CreateInvoicePage from './pages/dashboards/finance/CreateInvoicePage';
 import InvoiceDetail from './pages/dashboards/finance/InvoiceDetail';
 import FinancialAdminScraps from './pages/dashboards/financialAdmin/FinancialAdminScraps';
 import FinancialAdminWriteOffs from './pages/dashboards/financialAdmin/FinancialAdminWriteOffs';
@@ -264,6 +265,7 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
@@ -470,6 +472,7 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
               <Route path="financial-statements" element={<FinancialStatements />} />
@@ -561,6 +564,7 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
@@ -742,6 +746,7 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />

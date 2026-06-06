@@ -198,9 +198,11 @@ const InvoiceDetail = () => {
         }
         setSubmittingCN(true);
         try {
-            const driverId = typeof invoice.driver === 'object' ? invoice.driver._id : invoice.driver;
+            const driverId = typeof invoice.driver === 'object' ? invoice.driver?._id : invoice.driver;
+            const customerId = typeof invoice.customer === 'object' ? invoice.customer?._id : invoice.customer;
             await createCreditNote({
-                driverId,
+                customerId: customerId || '',
+                driverId: driverId || undefined,
                 invoiceId: invoice._id,
                 amount: Number(cnAmount),
                 reason: cnReason,

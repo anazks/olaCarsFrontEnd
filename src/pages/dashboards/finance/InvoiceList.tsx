@@ -9,7 +9,6 @@ import { getInvoicesRegistry, deleteInvoice, deleteAllInvoices } from '../../../
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import CreateInvoiceModal from './CreateInvoiceModal';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
 import { getUserRole } from '../../../utils/auth';
@@ -21,7 +20,6 @@ const InvoiceList = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showBulkUpload, setShowBulkUpload] = useState(false);
 
@@ -233,7 +231,7 @@ const InvoiceList = () => {
                         </button>
 
                         <button
-                            onClick={() => setShowCreateModal(true)}
+                            onClick={() => navigate('./create')}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                         >
@@ -315,9 +313,9 @@ const InvoiceList = () => {
                                             Description / Type
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[20%] group cursor-pointer select-none" onClick={() => handleSort('driver')}>
+                                    <th className="py-4 px-6 text-left w-[20%] group cursor-pointer select-none" onClick={() => handleSort('customer')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Driver Details <SortIcon field="driver" />
+                                            Customer Details <SortIcon field="customer" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
@@ -428,15 +426,15 @@ const InvoiceList = () => {
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0 shadow-inner">
                                                         <span className="text-brand-lime text-[10px] font-black">
-                                                            {(invoice.driver?.personalInfo?.fullName || 'OP').slice(0, 2).toUpperCase()}
+                                                            {((invoice.customer as any)?.name || invoice.driver?.personalInfo?.fullName || 'CU').slice(0, 2).toUpperCase()}
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black leading-snug tracking-tight">
-                                                            {invoice.driver?.personalInfo?.fullName || 'System Pool'}
+                                                        <span className="font-black leading-snug tracking-tight" style={{ color: 'var(--text-main)' }}>
+                                                            {(invoice.customer as any)?.name || invoice.driver?.personalInfo?.fullName || 'System Pool'}
                                                         </span>
                                                         <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">
-                                                            {invoice.driver?.driverId || 'N/A'}
+                                                            {(invoice.customer as any)?.customerId || invoice.driver?.driverId || 'N/A'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -468,10 +466,10 @@ const InvoiceList = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                                        {invoice.driver?.branch?.name || 'N/A'}
+                                                        {(invoice.customer as any)?.branch?.name || invoice.driver?.branch?.name || 'N/A'}
                                                     </span>
                                                     <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
-                                                        {invoice.driver?.branch?.country || 'N/A'}
+                                                        {(invoice.customer as any)?.branch?.city || (invoice.customer as any)?.branch?.country || invoice.driver?.branch?.country || 'N/A'}
                                                     </span>
                                                 </div>
                                             </td>
@@ -560,15 +558,7 @@ const InvoiceList = () => {
                 </div>
             </div>
 
-            {showCreateModal && (
-                <CreateInvoiceModal
-                    onClose={() => setShowCreateModal(false)}
-                    onSuccess={() => {
-                        setShowCreateModal(false);
-                        fetchData();
-                    }}
-                />
-            )}
+
 
             {showSettingsModal && (
                 <InvoiceSettingsModal

@@ -8,10 +8,6 @@ import {
     Edit2, 
     X, 
     Save, 
-    CheckCircle2, 
-    Wallet,
-    CreditCard,
-    ArrowUpRight,
     Loader2,
     RefreshCw,
     ChevronDown,
@@ -96,7 +92,7 @@ const ManageBankAccounts = () => {
 
     const fetchAccountingCodes = useCallback(async () => {
         try {
-            const res = await getAllAccountingCodes({ limit: 1000 });
+            const res = (await getAllAccountingCodes({ limit: 1000 })) as any;
             const list = Array.isArray(res) ? res : (res?.data || []);
             setAccountingCodes(list);
         } catch (err) {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Landmark, Calendar, User, FolderOpen, Coins, HelpCircle } from 'lucide-react';
-import { getAllDrivers, type Driver } from '../../../../services/driverService';
+import { getAllCustomers, type Customer } from '../../../../services/customerService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
-import { getPendingInvoicesByDriver, type Invoice } from '../../../../services/invoiceService';
+import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '../../../../components/common/SearchableSelect';
@@ -24,14 +24,14 @@ interface SelectedInvoiceItem {
 }
 
 const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
-    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
 
     // Form Inputs
-    const [driverSearch, setDriverSearch] = useState('');
-    const [showDriverList, setShowDriverList] = useState(false);
-    const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerList, setShowCustomerList] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     const [amount, setAmount] = useState<string>('');
     const [depositedTo, setDepositedTo] = useState<string>('');
@@ -51,13 +51,13 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     const fetchData = useCallback(async () => {
         try {
-            const [driverRes, branchRes, codesRes] = await Promise.all([
-                getAllDrivers({ status: 'ACTIVE', limit: 300 }),
+            const [customerRes, branchRes, codesRes] = await Promise.all([
+                getAllCustomers({ status: 'ACTIVE', limit: 300 }),
                 getAllBranches({ limit: 100 }),
                 getAllAccountingCodes()
             ]);
 
-            setDrivers(driverRes.data || (driverRes as any).drivers || []);
+            setCustomers(customerRes.data || (customerRes as any).customers || []);
             setBranches(branchRes.data || []);
             setAccountingCodes(codesRes || []);
         } catch (err) {
@@ -70,8 +70,8 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
         if (isOpen) {
             fetchData();
             // Reset fields
-            setSelectedDriver(null);
-            setDriverSearch('');
+            setSelectedCustomer(null);
+            setCustomerSearch('');
             setAmount('');
             setDepositedTo('');
             setPaymentDate(new Date().toISOString().split('T')[0]);
@@ -83,18 +83,19 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
         }
     }, [isOpen, fetchData]);
 
-    // Fetch outstanding invoices when driver changes
+    // Fetch outstanding invoices when customer changes
     useEffect(() => {
-        const fetchDriverInvoices = async () => {
-            if (!selectedDriver) {
+        const fetchCustomerInvoices = async () => {
+            if (!selectedCustomer) {
                 setOutstandingInvoices([]);
                 return;
             }
             setLoadingInvoices(true);
             try {
-                const res = await getPendingInvoicesByDriver(selectedDriver._id);
+                const res = await getInvoicesByCustomer(selectedCustomer._id);
                 if (res) {
-                    const formatted = res.map((inv: Invoice) => ({
+                    const pending = res.filter((inv: Invoice) => inv.status !== 'PAID' && inv.status !== 'CANCELLED');
+                    const formatted = pending.map((inv: Invoice) => ({
                         invoiceId: inv._id,
                         invoiceNumber: inv.invoiceNumber,
                         totalAmountDue: inv.totalAmountDue,
@@ -111,8 +112,8 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
             }
         };
 
-        fetchDriverInvoices();
-    }, [selectedDriver]);
+        fetchCustomerInvoices();
+    }, [selectedCustomer]);
 
     // Handlers
     const handleInvoiceAmountChange = (index: number, val: string) => {
@@ -153,7 +154,7 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedDriver) { toast.error('Please select a Customer / Driver'); return; }
+        if (!selectedCustomer) { toast.error('Please select a Customer'); return; }
         if (!amount || parseFloat(amount) <= 0) { toast.error('Please enter a valid Amount'); return; }
         if (!depositedTo) { toast.error('Please select a Deposit Bank/Cash Account'); return; }
         if (!selectedBranch) { toast.error('Please select a branch'); return; }
@@ -161,7 +162,8 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
         setSubmitting(true);
         try {
             const payload = {
-                driverId: selectedDriver._id,
+                customerId: selectedCustomer._id,
+                driverId: selectedCustomer.driver?._id || undefined,
                 amountReceived: parseFloat(amount),
                 paymentDate,
                 paymentMethod,
@@ -195,17 +197,17 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
     // Filter to only show bank/cash accounts (ASSETS)
     const assetAccounts = accountingCodes.filter(acc => acc.category === 'ASSET');
 
-    // Search filter for drivers
-    const filteredDrivers = drivers.filter(d =>
-        d.personalInfo?.fullName?.toLowerCase().includes(driverSearch.toLowerCase()) ||
-        d.driverId?.toLowerCase().includes(driverSearch.toLowerCase())
+    // Search filter for customers
+    const filteredCustomers = customers.filter(c =>
+        c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-md transition-opacity duration-300"
+                className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
                 onClick={onClose}
             />
 
@@ -230,7 +232,7 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     </div>
                     <div>
                         <h2 className="text-lg font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Record Payment Received</h2>
-                        <p className="text-[10px] font-semibold text-dim">Settle outstanding driver invoices or record payment receipts</p>
+                        <p className="text-[10px] font-semibold text-dim">Settle outstanding customer invoices or record payment receipts</p>
                     </div>
                 </div>
 
@@ -238,48 +240,48 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     {/* Grid Form */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         
-                        {/* Customer / Driver */}
+                        {/* Customer */}
                         <div className="space-y-2 relative">
                             <label className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5">
-                                <User size={12} className="text-brand-lime" /> Customer / Driver *
+                                <User size={12} className="text-brand-lime" /> Customer *
                             </label>
                             <input
                                 type="text"
-                                placeholder="Search driver by name or ID..."
-                                value={selectedDriver ? `${selectedDriver.personalInfo?.fullName} (${selectedDriver.driverId})` : driverSearch}
-                                onChange={e => { setDriverSearch(e.target.value); setSelectedDriver(null); setShowDriverList(true); }}
-                                onFocus={() => setShowDriverList(true)}
+                                placeholder="Search customer by name or ID..."
+                                value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
+                                onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
+                                onFocus={() => setShowCustomerList(true)}
                                 className="w-full px-4 py-3 border rounded-2xl text-xs font-semibold outline-none transition-all"
                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />
-                            {showDriverList && filteredDrivers.length > 0 && !selectedDriver && (
+                            {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
                                 <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                    {filteredDrivers.slice(0, 15).map(d => (
+                                    {filteredCustomers.slice(0, 15).map(c => (
                                         <button
                                             type="button"
-                                            key={d._id}
-                                            onMouseDown={() => { setSelectedDriver(d); setDriverSearch(''); setShowDriverList(false); }}
+                                            key={c._id}
+                                            onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
                                             className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors"
                                         >
                                             <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
                                                 <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
-                                                    {d.personalInfo?.fullName?.slice(0, 2).toUpperCase()}
+                                                    {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
                                                 </span>
                                             </div>
                                             <div>
-                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{d.personalInfo?.fullName}</p>
-                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{d.driverId}</p>
+                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
                                             </div>
                                         </button>
                                     ))}
                                 </div>
                             )}
-                            {selectedDriver && (
+                            {selectedCustomer && (
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg border" style={{ background: 'var(--bg-input)', color: 'var(--brand-lime)', borderColor: 'var(--border-main)' }}>
-                                        ✓ {selectedDriver.personalInfo?.fullName} · {selectedDriver.driverId}
+                                        ✓ {selectedCustomer.name} · {selectedCustomer.customerId}
                                     </span>
-                                    <button type="button" onClick={() => { setSelectedDriver(null); setDriverSearch(''); }} className="text-[9px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
+                                    <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-[9px] font-black text-rose-400 hover:text-rose-300">✕ Change</button>
                                 </div>
                             )}
                         </div>
@@ -397,10 +399,10 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     <div className="border rounded-[2rem] overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                         <div className="px-5 py-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>
                             <div>
-                                <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Settle Driver Invoices</h4>
+                                <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Settle Customer Invoices</h4>
                                 <p className="text-[10px] font-medium text-dim mt-0.5">Apply payment to unpaid manual or auto-generated invoices</p>
                             </div>
-                            {selectedDriver && outstandingInvoices.length > 0 && (
+                            {selectedCustomer && outstandingInvoices.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={autoApplyFunds}
@@ -412,9 +414,9 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
                         </div>
 
                         <div className="p-4 overflow-x-auto">
-                            {!selectedDriver ? (
+                            {!selectedCustomer ? (
                                 <div className="py-8 text-center text-xs text-dim italic">
-                                    Please search and select a Driver to retrieve outstanding invoices.
+                                    Please search and select a Customer to retrieve outstanding invoices.
                                 </div>
                             ) : loadingInvoices ? (
                                 <div className="py-8 text-center text-xs text-brand-lime font-black uppercase tracking-widest">

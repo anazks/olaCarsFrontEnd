@@ -18,6 +18,12 @@ interface DriverReference {
     name?: string;
 }
 
+interface CustomerReference {
+    _id: string;
+    customerId?: string;
+    name?: string;
+}
+
 interface DepositedAccountReference {
     _id: string;
     code: string;
@@ -27,7 +33,8 @@ interface DepositedAccountReference {
 interface PaymentReceived {
     _id: string;
     paymentNumber: string;
-    driverId: DriverReference;
+    customerId?: CustomerReference;
+    driverId?: DriverReference;
     amountReceived: number;
     paymentDate: string;
     paymentMethod: string;
@@ -114,16 +121,22 @@ const PaymentReceivedDetailModal = ({ payment, onClose }: Props) => {
                             <User className="text-brand-lime" size={18} />
                         </div>
                         <div>
-                            <span className="text-[9px] font-black uppercase text-dim block tracking-widest">Customer / Operator</span>
+                            <span className="text-[9px] font-black uppercase text-dim block tracking-widest">Customer</span>
                             <span className="text-xs font-black text-white block mt-0.5" style={{ color: 'var(--text-main)' }}>
-                                {typeof payment.driverId === 'object' && payment.driverId ? (
+                                {typeof payment.customerId === 'object' && payment.customerId ? (
+                                    payment.customerId.name || 'N/A'
+                                ) : typeof payment.driverId === 'object' && payment.driverId ? (
                                     payment.driverId.personalInfo?.fullName || payment.driverId.name || 'N/A'
                                 ) : (
-                                    String(payment.driverId || 'N/A')
+                                    String(payment.customerId || payment.driverId || 'N/A')
                                 )}
                             </span>
                             <span className="text-[9px] font-mono uppercase text-dim block mt-0.5">
-                                Driver ID: {typeof payment.driverId === 'object' && payment.driverId ? (payment.driverId.driverId || 'N/A') : 'N/A'}
+                                {typeof payment.customerId === 'object' && payment.customerId ? (
+                                    `Customer ID: ${payment.customerId.customerId || 'N/A'}`
+                                ) : (
+                                    `Driver ID: ${typeof payment.driverId === 'object' && payment.driverId ? (payment.driverId.driverId || 'N/A') : 'N/A'}`
+                                )}
                             </span>
                         </div>
                     </div>
