@@ -12,6 +12,11 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
         },
+        PENDING_FINANCE_APPROVAL: {
+            bg: 'rgba(245, 158, 11, 0.1)',
+            text: '#f59e0b',
+            border: 'rgba(245, 158, 11, 0.3)',
+        },
         APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
@@ -304,8 +309,8 @@ const WorkshopPurchaseRequestList = () => {
                             <tbody className={loading ? 'opacity-40 transition-opacity' : ''}>
                                 {requests.map((req) => {
                                     const isAudited = req.merchandiserPrice !== undefined && req.merchandiserPrice !== null;
-                                    const unitCost = isAudited ? req.merchandiserPrice : (req.part?.unitCost || 0);
-                                    const auditedCostSum = isAudited ? (req.merchandiserTotalAmount || 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
+                                    const unitCost = isAudited ? (req.merchandiserPrice ?? 0) : (req.part?.unitCost || 0);
+                                    const auditedCostSum = isAudited ? (req.merchandiserTotalAmount ?? 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
                                     return (
                                         <tr
                                             key={req._id}

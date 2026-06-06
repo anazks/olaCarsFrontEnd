@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
     Building2, 
     Plus, 
@@ -12,8 +13,10 @@ import {
     CreditCard,
     ArrowUpRight,
     Loader2,
-    Filter,
-    RefreshCw
+    RefreshCw,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
@@ -23,6 +26,7 @@ import {
     deleteBankAccount
 } from '../../../services/bankAccountService';
 import type { BankAccount } from '../../../services/bankAccountService';
+import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageBankAccounts = () => {
@@ -31,43 +35,104 @@ const ManageBankAccounts = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [search, setSearch] = useState('');
+    const [accountingCodes, setAccountingCodes] = useState<any[]>([]);
+    const [selectedCodeId, setSelectedCodeId] = useState<string>('NEW');
+
+    // Pagination, Sorting & Search States
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    const [sortBy, setSortBy] = useState<'bankName' | 'accountHolderName' | 'currentBalance' | 'createdAt'>('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(10);
+    const [pagination, setPagination] = useState<{ total: number; page: number; limit: number; totalPages: number } | null>(null);
 
     const [formData, setFormData] = useState<Partial<BankAccount>>({
         bankName: '',
         accountNumber: '',
-        accountHolderName: '',
+        accountHolderName: 'Ola Cars Corporate',
         swiftCode: '',
         ifscCode: '',
         branchName: '',
         currency: 'USD',
-        initialBalance: 0
+        initialBalance: 0,
+        accountType: 'Bank',
+        accountName: '',
+        accountCode: '',
+        description: ''
     });
 
-    useEffect(() => {
-        fetchAccounts();
-    }, []);
-
-    const fetchAccounts = async () => {
+    const fetchAccounts = useCallback(async () => {
+        setLoading(true);
         try {
-            const res = await getAllBankAccounts();
+            const params: any = {
+                page: currentPage,
+                limit,
+                sortBy,
+                sortOrder,
+            };
+            if (searchQuery.trim()) {
+                params.search = searchQuery.trim();
+            }
+            if (statusFilter !== 'ALL') {
+                params.status = statusFilter;
+            }
+            const res = await getAllBankAccounts(params);
             setAccounts(res.data || []);
-        } catch (error) {
+            setPagination(res.pagination || null);
+        } catch {
             toast.error('Failed to load bank accounts');
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, limit, sortBy, sortOrder, searchQuery, statusFilter]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchAccounts();
+        }, searchQuery ? 500 : 0);
+        return () => clearTimeout(timer);
+    }, [fetchAccounts, searchQuery]);
+
+    const fetchAccountingCodes = useCallback(async () => {
+        try {
+            const res = await getAllAccountingCodes({ limit: 1000 });
+            const list = Array.isArray(res) ? res : (res?.data || []);
+            setAccountingCodes(list);
+        } catch (err) {
+            console.error('Failed to load accounting codes', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAccountingCodes();
+    }, [fetchAccountingCodes]);
+
+    const filteredCodes = useMemo(() => {
+        return accountingCodes.filter((code: any) => {
+            if (formData.accountType === 'Credit Card') {
+                return code.accountType === 'Credit Card' || 
+                       (code.category === 'LIABILITY' && (code.accountType?.includes('Credit Card') || code.accountType?.includes('Liability')));
+            } else {
+                return code.accountType === 'Bank' || 
+                       (code.category === 'ASSET' && (code.accountType === 'Bank' || code.code?.startsWith('1.1.02')));
+            }
+        });
+    }, [accountingCodes, formData.accountType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
         try {
+            const payload = {
+                ...formData,
+                accountHolderName: formData.accountHolderName || 'Ola Cars Corporate'
+            };
             if (editingAccount) {
-                await updateBankAccount(editingAccount._id, formData);
+                await updateBankAccount(editingAccount._id, payload);
                 toast.success('Account updated successfully');
             } else {
-                await createBankAccount(formData);
+                await createBankAccount(payload);
                 toast.success('Account created successfully');
             }
             fetchAccounts();
@@ -86,45 +151,71 @@ const ManageBankAccounts = () => {
             await deleteBankAccount(id);
             toast.success('Account deleted successfully');
             fetchAccounts();
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete account');
         }
     };
 
     const handleEdit = (account: BankAccount) => {
         setEditingAccount(account);
+        const codeId = account.accountingCode?._id || account.accountingCode || 'NEW';
+        setSelectedCodeId(typeof codeId === 'string' ? codeId : codeId.toString());
         setFormData({
             bankName: account.bankName,
             accountNumber: account.accountNumber,
-            accountHolderName: account.accountHolderName,
-            swiftCode: account.swiftCode,
-            ifscCode: account.ifscCode,
-            branchName: account.branchName,
+            accountHolderName: account.accountHolderName || 'Ola Cars Corporate',
+            swiftCode: account.swiftCode || '',
+            ifscCode: account.ifscCode || '',
+            branchName: account.branchName || '',
             currency: account.currency,
-            initialBalance: account.initialBalance
+            initialBalance: account.initialBalance,
+            accountType: account.accountType || 'Bank',
+            accountName: account.accountName || '',
+            accountCode: account.accountCode || '',
+            description: account.description || ''
         });
         setIsModalOpen(true);
     };
 
     const resetForm = () => {
         setEditingAccount(null);
+        setSelectedCodeId('NEW');
         setFormData({
             bankName: '',
             accountNumber: '',
-            accountHolderName: '',
+            accountHolderName: 'Ola Cars Corporate',
             swiftCode: '',
             ifscCode: '',
             branchName: '',
             currency: 'USD',
-            initialBalance: 0
+            initialBalance: 0,
+            accountType: 'Bank',
+            accountName: '',
+            accountCode: '',
+            description: ''
         });
     };
 
-    const filteredAccounts = accounts.filter(acc => 
-        acc.bankName.toLowerCase().includes(search.toLowerCase()) ||
-        acc.accountNumber.includes(search) ||
-        acc.accountHolderName.toLowerCase().includes(search.toLowerCase())
-    );
+    const handleSort = (field: 'bankName' | 'accountHolderName' | 'currentBalance' | 'createdAt') => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+        setCurrentPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: 'bankName' | 'accountHolderName' | 'currentBalance' | 'createdAt' }) => {
+        if (sortBy !== field) return <ChevronDown size={10} className="opacity-20 ml-1 inline-block" />;
+        return <span className={`inline-block ml-1 transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: 'var(--brand-lime)' }} /></span>;
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     return (
         <div className="container-responsive py-10 space-y-10 min-h-screen" style={{ color: 'var(--text-main)' }}>
@@ -161,124 +252,89 @@ const ManageBankAccounts = () => {
                 </div>
             </div>
 
-            {/* Global Liquidity Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <div className="border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-lime/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="absolute -top-4 -right-4 w-32 h-32 bg-lime/5 rounded-full blur-3xl group-hover:bg-lime/10 transition-all" />
-                    <div className="relative z-10 space-y-4">
-                        <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center">
-                            <Wallet className="text-lime" size={24} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>Total Liquidity</p>
-                            <h2 className="text-4xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
-                                <span className="text-lime text-2xl mr-2">$</span>
-                                {accounts.reduce((sum, acc) => sum + (acc.currentBalance || 0), 0).toLocaleString()}
-                            </h2>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-lime">
-                            <ArrowUpRight size={14} />
-                            <span>Aggregated across {accounts.length} endpoints</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div className="border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-blue-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="absolute -top-4 -right-4 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all" />
-                    <div className="relative z-10 space-y-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                            <CheckCircle2 className="text-blue-500" size={24} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>Active Settlement</p>
-                            <h2 className="text-4xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
-                                {accounts.filter(a => a.status === 'ACTIVE').length}
-                                <span className="text-sm font-bold text-dim ml-2">/ {accounts.length}</span>
-                            </h2>
-                        </div>
-                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Synchronized with core ledger</p>
-                    </div>
-                </div>
-
-                <div className="hidden xl:block border rounded-[2.5rem] p-8 relative overflow-hidden group transition-all hover:border-white/20" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="relative z-10 flex flex-col justify-center h-full space-y-2 text-center">
-                        <Building2 size={32} className="mx-auto text-dim opacity-20" />
-                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Institutional Banking</p>
-                        <p className="text-xs font-medium px-6 leading-relaxed" style={{ color: 'var(--text-dim)' }}>Register multiple accounts to separate operational expenses from investment capital.</p>
-                    </div>
-                </div>
-            </div>
 
             {/* Filtering Controls */}
-            <div className="flex flex-col md:flex-row gap-4 items-center p-2 rounded-[2rem] border" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
+            <div className="flex flex-col md:flex-row gap-4 items-center p-2 rounded-[2rem] border w-full" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
                 <div className="relative flex-1 w-full group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-lime transition-colors" size={20} />
                     <input 
                         type="text" 
-                        placeholder="Search by institution name or account fragments..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by institution name, holder, or account fragments..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
                         className="w-full bg-transparent py-5 pl-16 pr-6 text-sm font-medium outline-none transition-all placeholder:text-gray-500"
                         style={{ color: 'var(--text-main)' }}
                     />
                 </div>
-                <div className="px-4 border-l h-10 flex items-center" style={{ borderColor: 'var(--border-main)' }}>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/5" style={{ color: 'var(--text-dim)' }}>
-                        <Filter size={14} /> Filter View
-                    </button>
+                <div className="px-6 border-l flex items-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-dim">Status:</span>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value as any);
+                            setCurrentPage(1);
+                        }}
+                        className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                        style={{ color: 'var(--text-main)' }}
+                    >
+                        <option value="ALL">All Accounts</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                    </select>
                 </div>
             </div>
 
             {/* Accounts Workspace (Tabular Form) */}
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-32 gap-6">
-                    <div className="w-16 h-16 border-4 border-lime border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[10px] text-lime font-black uppercase tracking-[0.4em]">Querying Bank API...</p>
+                    <div className="w-16 h-16 border-4 border-lime border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
+                    <p className="text-[10px] text-lime font-black uppercase tracking-[0.4em]" style={{ color: 'var(--brand-lime)' }}>Querying Bank API...</p>
                 </div>
-            ) : filteredAccounts.length > 0 ? (
+            ) : accounts.length > 0 ? (
                 <div className="rounded-[2rem] border overflow-hidden transition-all shadow-2xl shadow-black/20" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Institution</th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Beneficiary</th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Account Details</th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Balance</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Account Details</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Bank & Number</th>
+                                    <th className="px-6 py-5">
+                                        <button onClick={() => handleSort('currentBalance')} className="flex items-center justify-end w-full gap-1.5 text-[10px] font-black uppercase tracking-widest text-dim outline-none hover:text-lime transition-colors">
+                                            Balance <SortIcon field="currentBalance" />
+                                        </button>
+                                    </th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-center">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                {filteredAccounts.map((account) => (
+                                {accounts.map((account) => (
                                     <tr key={account._id} className="hover:bg-lime/5 transition-colors group">
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black border border-lime/10">
-                                                    <CreditCard size={18} />
+                                                    <Building2 size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{account.bankName}</p>
-                                                    <p className="text-[10px] font-bold" style={{ color: 'var(--text-dim)' }}>{account.branchName || 'Headquarters'}</p>
+                                                    <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{account.accountName || account.bankName}</p>
+                                                    <p className="text-[10px] font-bold text-dim flex items-center gap-1.5 mt-0.5">
+                                                        <span className="font-mono text-[9px] px-1.5 py-0.5 bg-white/5 border border-white/10 rounded">{account.accountCode || '—'}</span>
+                                                        <span className="uppercase text-[9px] tracking-wider text-lime">{account.accountType || 'Bank'}</span>
+                                                    </p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{account.accountHolderName}</p>
-                                            <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>Legal Beneficiary</p>
+                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{account.bankName}</p>
+                                            <p className="text-xs font-mono font-bold text-dim mt-0.5">{account.accountNumber}</p>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <p className="text-xs font-mono font-bold" style={{ color: 'var(--text-main)' }}>{account.accountNumber}</p>
-                                            <p className="text-[10px] font-bold text-lime uppercase tracking-widest">{account.swiftCode || account.ifscCode || 'DIRECT'}</p>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex flex-col items-end">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[10px] font-black text-lime">{account.currency}</span>
-                                                    <span className="text-lg font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString()}</span>
-                                                </div>
-                                                <p className="text-[9px] font-bold italic" style={{ color: 'var(--text-dim)' }}>Open: ${account.initialBalance.toLocaleString()}</p>
-                                            </div>
+                                            <span className="text-[10px] font-black text-lime mr-1">{account.currency}</span>
+                                            <span className="text-md font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </td>
                                         <td className="px-6 py-5 text-center">
                                             <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
@@ -312,6 +368,56 @@ const ManageBankAccounts = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination footer */}
+                    {pagination && pagination.totalPages > 1 && (
+                        <div className="px-6 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>
+                                Showing <span className="text-lime font-black">{accounts.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                    className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-black/20 rounded-xl border border-white/5">
+                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                        let pageNum = currentPage;
+                                        if (pagination.totalPages <= 5) pageNum = i + 1;
+                                        else if (currentPage <= 3) pageNum = i + 1;
+                                        else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
+                                        else pageNum = currentPage - 2 + i;
+                                        
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-lime text-black' : 'hover:bg-white/5 opacity-50'}`}
+                                                style={{ color: currentPage === pageNum ? '#000' : 'var(--text-main)', backgroundColor: currentPage === pageNum ? 'var(--brand-lime)' : '' }}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === pagination.totalPages || loading}
+                                    className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="border rounded-[4rem] p-32 text-center space-y-8" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
@@ -349,11 +455,104 @@ const ManageBankAccounts = () => {
                         <form onSubmit={handleSubmit} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Institution Name</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Select Account Type</label>
+                                    <select 
+                                        value={formData.accountType}
+                                        onChange={e => {
+                                            const type = e.target.value as any;
+                                            setSelectedCodeId('NEW');
+                                            setFormData(prev => ({ 
+                                                ...prev, 
+                                                accountType: type,
+                                                accountCode: '',
+                                                accountName: '',
+                                                currency: 'USD'
+                                            }));
+                                        }}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    >
+                                        <option value="Bank">Bank</option>
+                                        <option value="Credit Card">Credit Card</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Link to Chart of Accounts Code</label>
+                                    <select 
+                                        value={selectedCodeId}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setSelectedCodeId(val);
+                                            if (val === 'NEW') {
+                                                setFormData(prev => ({ ...prev, accountCode: '', accountName: '', currency: 'USD' }));
+                                            } else {
+                                                const matched = filteredCodes.find((c: any) => c._id === val);
+                                                if (matched) {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        accountCode: matched.code,
+                                                        accountName: matched.name,
+                                                        currency: matched.currency || 'USD'
+                                                    }));
+                                                }
+                                            }
+                                        }}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    >
+                                        <option value="NEW">-- Create New Accounting Code --</option>
+                                        {filteredCodes.map(code => (
+                                            <option key={code._id} value={code._id}>{code.code} - {code.name} ({code.currency || 'USD'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Code</label>
                                     <input 
                                         required
                                         type="text" 
-                                        placeholder="e.g. Goldman Sachs"
+                                        placeholder="e.g. 1020"
+                                        value={formData.accountCode}
+                                        onChange={e => setFormData({ ...formData, accountCode: e.target.value })}
+                                        disabled={selectedCodeId !== 'NEW'}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Name</label>
+                                    <input 
+                                        required
+                                        type="text" 
+                                        placeholder="e.g. Chase Operations Checking"
+                                        value={formData.accountName}
+                                        onChange={e => setFormData({ ...formData, accountName: e.target.value })}
+                                        disabled={selectedCodeId !== 'NEW'}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Base Currency</label>
+                                    <select 
+                                        value={formData.currency}
+                                        onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    >
+                                        <option value="USD">USD - US Dollar</option>
+                                        <option value="EUR">EUR - Euro</option>
+                                        <option value="GBP">GBP - British Pound</option>
+                                        <option value="AED">AED - UAE Dirham</option>
+                                        <option value="INR">INR - Indian Rupee</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Bank Name</label>
+                                    <input 
+                                        required
+                                        type="text" 
+                                        placeholder="e.g. JPMorgan Chase"
                                         value={formData.bankName}
                                         onChange={e => setFormData({ ...formData, bankName: e.target.value })}
                                         className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all"
@@ -361,16 +560,43 @@ const ManageBankAccounts = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Reference</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Number</label>
                                     <input 
                                         required
                                         type="text" 
-                                        placeholder="Identification Number"
+                                        placeholder="Identification / Card / Account Number"
                                         value={formData.accountNumber}
                                         onChange={e => setFormData({ ...formData, accountNumber: e.target.value })}
                                         className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
                                         style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>IFSC / SWIFT Routing Code</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Routing Code"
+                                        value={formData.ifscCode}
+                                        onChange={e => setFormData({ ...formData, ifscCode: e.target.value, swiftCode: e.target.value })}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Initial Deposit / Balance</label>
+                                    <div className="relative">
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-lime font-black">$</div>
+                                        <input 
+                                            required
+                                            type="number" 
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={formData.initialBalance || ''}
+                                            onChange={e => setFormData({ ...formData, initialBalance: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                            className="w-full border rounded-2xl px-12 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Legal Beneficiary Name</label>
@@ -395,47 +621,16 @@ const ManageBankAccounts = () => {
                                         style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Routing Protocol (SWIFT/IFSC)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Routing Code"
-                                        value={formData.swiftCode || formData.ifscCode}
-                                        onChange={e => setFormData({ ...formData, swiftCode: e.target.value })}
-                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description / Notes</label>
+                                    <textarea 
+                                        placeholder="Enter account description or notes..."
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-medium focus:border-lime outline-none transition-all"
                                         style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        rows={3}
                                     />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Base Currency</label>
-                                    <select 
-                                        value={formData.currency}
-                                        onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                                        className="w-full border rounded-2xl px-6 py-4 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
-                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                    >
-                                        <option value="USD">USD - US Dollar</option>
-                                        <option value="EUR">EUR - Euro</option>
-                                        <option value="GBP">GBP - British Pound</option>
-                                        <option value="AED">AED - UAE Dirham</option>
-                                        <option value="INR">INR - Indian Rupee</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Initial Deposit</label>
-                                    <div className="relative">
-                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-lime font-black">$</div>
-                                        <input 
-                                            required
-                                            type="number" 
-                                            step="0.01"
-                                            placeholder="0.00"
-                                            value={formData.initialBalance || ''}
-                                            onChange={e => setFormData({ ...formData, initialBalance: e.target.value === '' ? 0 : Number(e.target.value) })}
-                                            className="w-full border rounded-2xl px-12 py-4 text-sm font-mono font-bold focus:border-lime outline-none transition-all"
-                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                        />
-                                    </div>
                                 </div>
                             </div>
 

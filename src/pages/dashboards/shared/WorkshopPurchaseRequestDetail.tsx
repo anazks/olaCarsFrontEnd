@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWorkshopProcurementRequestById, approveProcurementRequest, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { 
     ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
     User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink
@@ -12,6 +12,12 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
     const styles = {
         PENDING: {
+            bg: 'rgba(245, 158, 11, 0.1)',
+            text: '#f59e0b',
+            border: 'rgba(245, 158, 11, 0.3)',
+            icon: <Clock size={14} />
+        },
+        PENDING_FINANCE_APPROVAL: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
@@ -83,20 +89,6 @@ const WorkshopPurchaseRequestDetail = () => {
     useEffect(() => {
         fetchRequestDetails();
     }, [fetchRequestDetails]);
-
-    const handleAction = async (status: 'APPROVED' | 'REJECTED') => {
-        if (!request) return;
-        setActionLoading(status);
-        try {
-            await approveProcurementRequest(request._id, { status });
-            toast.success(status === 'APPROVED' ? 'Request Approved' : 'Request Rejected');
-            fetchRequestDetails();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to update request');
-        } finally {
-            setActionLoading(null);
-        }
-    };
 
     const openActionModal = (type: 'APPROVE' | 'REJECT') => {
         setActionType(type);

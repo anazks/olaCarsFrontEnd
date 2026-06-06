@@ -14,10 +14,15 @@ export interface BankAccount {
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: string;
     updatedAt: string;
+    accountType?: 'Bank' | 'Credit Card';
+    accountName?: string;
+    accountCode?: string;
+    description?: string;
+    accountingCode?: any;
 }
 
-export const getAllBankAccounts = async () => {
-    const response = await api.get('/api/bank-accounts');
+export const getAllBankAccounts = async (params?: any) => {
+    const response = await api.get('/api/bank-accounts', { params });
     return response.data;
 };
 

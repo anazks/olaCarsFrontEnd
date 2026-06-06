@@ -14,8 +14,11 @@ export interface CreateTaxPayload {
     rate: number;
 }
 
-export const getAllTaxes = async (): Promise<Tax[]> => {
-    const response = await api.get('/api/tax');
+export const getAllTaxes = async (params?: any): Promise<Tax[] & { data?: Tax[]; pagination?: any }> => {
+    const response = await api.get('/api/tax', { params });
+    if (params && (params.page || params.limit || params.search)) {
+        return response.data;
+    }
     return response.data.data || response.data;
 };
 

@@ -168,6 +168,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                 { label: t('sidebar.items.intelligenceReports'), path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
                 { label: t('sidebar.items.financialStatements'), path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
                 { label: t('sidebar.items.manualJournals'), path: '/admin/financial-admin/manual-journals', permission: 'JOURNAL_VIEW' },
+                { label: t('sidebar.items.banking'), path: '/admin/financial-admin/banking' },
             ]
         },
         {
@@ -214,8 +215,18 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             path: '/admin/financial-admin/alerts'
         },
         {
-            id: 'settings',
+            id: 'account-settings',
             label: t('sidebar.sections.accountSettings'),
+            icon: <Settings size={22} />,
+            subItems: [
+                { label: t('sidebar.items.chartOfAccounts'), path: '/admin/financial-admin/chart-of-accounts' },
+                { label: t('sidebar.items.taxManagement'), path: '/admin/financial-admin/taxes' },
+                { label: t('sidebar.items.bankAccounts'), path: '/admin/financial-admin/bank-accounts' },
+            ]
+        },
+        {
+            id: 'settings',
+            label: t('sidebar.sections.settings'),
             icon: <Settings size={22} />,
             subItems: [
                 { label: t('sidebar.items.branchManagement'), path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },

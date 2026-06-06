@@ -173,7 +173,17 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
                 { label: t('sidebar.items.generalLedger'), path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: t('sidebar.items.intelligenceReports'), path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
                 { label: t('sidebar.items.financialStatements'), path: '/admin/admin/financial-statements', permission: 'REPORTS_VIEW' },
-                { label: t('sidebar.items.taxes'), path: '/admin/admin/taxes' },
+                { label: t('sidebar.items.banking'), path: '/admin/admin/banking' },
+            ]
+        },
+        {
+            id: 'account-settings',
+            label: t('sidebar.sections.accountSettings'),
+            icon: <Settings size={22} />,
+            subItems: [
+                { label: t('sidebar.items.chartOfAccounts'), path: '/admin/admin/chart-of-accounts' },
+                { label: t('sidebar.items.taxManagement'), path: '/admin/admin/taxes' },
+                { label: t('sidebar.items.bankAccounts'), path: '/admin/admin/bank-accounts' },
             ]
         },
         {

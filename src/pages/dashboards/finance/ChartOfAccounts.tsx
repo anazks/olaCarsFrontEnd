@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List, Upload } from 'lucide-react';
+import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List, Upload, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode, updateAccountingCode, deleteAccountingCode } from '../../../services/accountingService';
 import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } from '../../../services/accountingService';
 import { getUserRole } from '../../../utils/auth';
@@ -43,6 +44,14 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     
     // Filters
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
+
+    // Pagination, Sorting & Search States
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'code' | 'name' | 'category' | 'createdAt'>('code');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(10);
+    const [pagination, setPagination] = useState<{ total: number; page: number; limit: number; totalPages: number } | null>(null);
 
     // Add Form State
     const [newCode, setNewCode] = useState<CreateAccountingCodePayload>({
@@ -92,18 +101,65 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllAccountingCodes();
-            setCodes(Array.isArray(data) ? data : []);
+            if (isEmbedded) {
+                const data = await getAllAccountingCodes();
+                setCodes(Array.isArray(data) ? data : []);
+                setPagination(null);
+            } else {
+                const params: any = {
+                    page: currentPage,
+                    limit,
+                    sortBy,
+                    sortOrder,
+                };
+                if (searchQuery.trim()) {
+                    params.search = searchQuery.trim();
+                }
+                if (activeCategoryFilter !== 'ALL') {
+                    params.category = activeCategoryFilter;
+                }
+                const response = await getAllAccountingCodes(params);
+                setCodes(Array.isArray(response.data) ? response.data : []);
+                setPagination(response.pagination || null);
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch accounting codes');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isEmbedded, currentPage, limit, sortBy, sortOrder, searchQuery, activeCategoryFilter]);
 
     useEffect(() => {
-        fetchCodes();
-    }, [fetchCodes]);
+        if (isEmbedded) {
+            fetchCodes();
+            return;
+        }
+        const timer = setTimeout(() => {
+            fetchCodes();
+        }, searchQuery ? 500 : 0);
+        return () => clearTimeout(timer);
+    }, [fetchCodes, searchQuery, activeCategoryFilter, currentPage, isEmbedded]);
+
+    const handleSort = (field: 'code' | 'name' | 'category' | 'createdAt') => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+        setCurrentPage(1);
+    };
+
+    const SortIcon = ({ field }: { field: 'code' | 'name' | 'category' | 'createdAt' }) => {
+        if (sortBy !== field) return <ChevronDown size={10} className="opacity-20 ml-1 inline-block" />;
+        return <span className={`inline-block ml-1 transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}><ChevronDown size={14} style={{ color: 'var(--brand-lime)' }} /></span>;
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     const handleCreateCode = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -694,6 +750,24 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 </div>
             )}
 
+            {/* Search and Filters */}
+            {!isEmbedded && (
+                <div className="relative w-full">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input
+                        type="text"
+                        placeholder="Search by code, name, or account type..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-medium"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                </div>
+            )}
+
             {/* Filter Tabs */}
             <div className="flex flex-wrap gap-1 p-1 rounded-xl w-max" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)' }}>
                 {(['ALL', ...CATEGORIES] as const).map((cat) => {
@@ -702,7 +776,10 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                     return (
                         <button
                             key={cat}
-                            onClick={() => setActiveCategoryFilter(cat)}
+                            onClick={() => {
+                                setActiveCategoryFilter(cat);
+                                setCurrentPage(1);
+                            }}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
                             style={{
                                 background: isActive ? 'rgba(200,230,0,0.15)' : 'transparent',
@@ -711,12 +788,14 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                             }}
                         >
                             {cat}
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{
-                                background: isActive ? 'rgba(200,230,0,0.2)' : 'var(--bg-sidebar)',
-                                color: isActive ? '#C8E600' : 'var(--text-dim)',
-                            }}>
-                                {count}
-                            </span>
+                            {isEmbedded && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{
+                                    background: isActive ? 'rgba(200,230,0,0.2)' : 'var(--bg-sidebar)',
+                                    color: isActive ? '#C8E600' : 'var(--text-dim)',
+                                }}>
+                                    {count}
+                                </span>
+                            )}
                         </button>
                     )
                 })}
@@ -739,12 +818,36 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Code</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Name</th>
+                                    <th className="px-6 py-4">
+                                        {isEmbedded ? (
+                                            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Code</span>
+                                        ) : (
+                                            <button onClick={() => handleSort('code')} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                Code <SortIcon field="code" />
+                                            </button>
+                                        )}
+                                    </th>
+                                    <th className="px-6 py-4">
+                                        {isEmbedded ? (
+                                            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Name</span>
+                                        ) : (
+                                            <button onClick={() => handleSort('name')} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                Name <SortIcon field="name" />
+                                            </button>
+                                        )}
+                                    </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Account Type</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Spanish Name</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Parent Account</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
+                                    <th className="px-6 py-4">
+                                        {isEmbedded ? (
+                                            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</span>
+                                        ) : (
+                                            <button onClick={() => handleSort('category')} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                Category <SortIcon field="category" />
+                                            </button>
+                                        )}
+                                    </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
@@ -823,6 +926,56 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         </table>
                     )}
                 </div>
+
+                {/* Pagination footer */}
+                {!isEmbedded && pagination && pagination.totalPages > 1 && (
+                    <div className="px-6 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                            Showing <span className="text-lime font-black">{filteredCodes.length}</span> of <span className="text-white font-black">{pagination.total}</span> records
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1 || loading}
+                                className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-black/20 rounded-xl border border-white/5">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (pagination.totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-lime text-black' : 'hover:bg-white/5 opacity-50'}`}
+                                            style={{ color: currentPage === pageNum ? '#000' : 'var(--text-main)', backgroundColor: currentPage === pageNum ? 'var(--brand-lime)' : '' }}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === pagination.totalPages || loading}
+                                className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                style={{ color: 'var(--text-main)' }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
             <BulkAccountingCodeUpload
                 isOpen={isBulkUploadOpen}

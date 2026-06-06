@@ -145,6 +145,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                 { label: t('sidebar.items.financeDashboard'), path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: t('sidebar.items.taxManagement'), path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
                 { label: t('sidebar.items.chartOfAccounts'), path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
+                { label: t('sidebar.items.banking'), path: '/admin/country-manager/banking' },
             ]
         },
         {
