@@ -1,0 +1,5102 @@
+[
+  {
+    "key": "management.agreements.history.title",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.noVersions",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.version",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.info",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.createdBy",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.date",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.statusLabels.${selectedVersion.status}",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.history.previewPlaceholder",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementHistory.tsx"
+  },
+  {
+    "key": "management.agreements.list.toast.generating",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.toast.success",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.toast.failed",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.searchPlaceholder",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.common.allCountries",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.createBtn",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.title",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.country",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.type",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.version",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.status",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.table.lastUpdated",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.noAgreements",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.statusLabels.${agreement.status}",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.actions.edit",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.actions.download",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "management.agreements.list.actions.history",
+    "defaultValue": null,
+    "file": "components\\agreements\\AgreementList.tsx"
+  },
+  {
+    "key": "common.alerts",
+    "defaultValue": null,
+    "file": "components\\dashboard\\AlertNotificationCenter.tsx"
+  },
+  {
+    "key": "common.notifications",
+    "defaultValue": null,
+    "file": "components\\dashboard\\AlertNotificationCenter.tsx"
+  },
+  {
+    "key": "sidebar.items.finOverview",
+    "defaultValue": "Finance Overview",
+    "file": "components\\dashboard\\sidebars\\BranchFinStaffSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.branchOverview",
+    "defaultValue": "Branch Overview",
+    "file": "components\\dashboard\\sidebars\\BranchManagerSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.opsOverview",
+    "defaultValue": "Operations Overview",
+    "file": "components\\dashboard\\sidebars\\BranchOpStaffSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.nationalDashboard",
+    "defaultValue": "National Dashboard",
+    "file": "components\\dashboard\\sidebars\\CountryManagerSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.dashboard",
+    "defaultValue": "Dashboard",
+    "file": "components\\dashboard\\sidebars\\ExecutiveSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.dashboard",
+    "defaultValue": "Dashboard",
+    "file": "components\\dashboard\\sidebars\\FinancialAdminSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.manageVehicles",
+    "defaultValue": "Manage Vehicles",
+    "file": "components\\dashboard\\sidebars\\FinancialAdminSidebar.tsx"
+  },
+  {
+    "key": "sidebar.items.opsOverview",
+    "defaultValue": "Operations Overview",
+    "file": "components\\dashboard\\sidebars\\OperationalAdminSidebar.tsx"
+  },
+  {
+    "key": "common.accessPanel",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.admin",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.operationalAdmin",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.operationalAdmin",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.financialAdmin",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.financialAdmin",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.countryManager",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.branchManager",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.branchOpStaff",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.operationStaff",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.branchFinStaff",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.financeStaff",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "roles.workshopStaff",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "common.lightMode",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "common.darkMode",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "common.settings",
+    "defaultValue": null,
+    "file": "components\\dashboard\\TopBar.tsx"
+  },
+  {
+    "key": "login.roleAdmin",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleOperationalAdmin",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleFinancialAdmin",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleCountryManager",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleBranchManager",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleBranchOpStaff",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.roleBranchFinStaff",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.loginFailed",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "common.lightMode",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "common.darkMode",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.staffPortal",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.signInMessage",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.role",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.emailLabel",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.emailPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.password",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "login.accessDashboard",
+    "defaultValue": null,
+    "file": "pages\\admin\\AdminLogin.tsx"
+  },
+  {
+    "key": "management.finAdmins.fetchFailed",
+    "defaultValue": "Failed to fetch financial admins",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": "Operation failed",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": "Delete failed",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.startDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.endDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.name",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.created",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.${admin.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.saveChanges",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.finAdmins.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.delete.confirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.common.delete.submit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.fetchFailed",
+    "defaultValue": "Failed to fetch operational admins",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": "Operation failed",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": "Delete failed",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.startDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.endDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.name",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.created",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.${admin.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.saveChanges",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.opAdmins.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.delete.confirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.common.delete.submit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+  },
+  {
+    "key": "management.threshold.loadingFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "common.refresh",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.loading",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.label",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.helperText",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.success",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.saving",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.saveBtn",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.noteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "management.threshold.noteText",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\admin\\POThresholdPage.tsx"
+  },
+  {
+    "key": "dashboards.branchFin.stats.cashOnHand",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\BranchFinStaffDashboard.tsx"
+  },
+  {
+    "key": "dashboards.branchFin.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\BranchFinStaffDashboard.tsx"
+  },
+  {
+    "key": "dashboards.branchFin.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\BranchFinStaffDashboard.tsx"
+  },
+  {
+    "key": "dashboards.branchOp.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\BranchOpStaffDashboard.tsx"
+  },
+  {
+    "key": "dashboards.branchOp.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\BranchOpStaffDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.totalBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.activeNationwide",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.nationalGoal",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.fleetUtilization",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.totalStaff",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.acrossRegions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.complianceFlags",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.stats.regulatoryAudits",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.performance.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.performance.yield",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.country.performance.alerts",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\CountryManagerDashboard.tsx"
+  },
+  {
+    "key": "dashboards.common.refreshData",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\ExecutiveDashboard.tsx"
+  },
+  {
+    "key": "management.drivers.bulkUpload.title",
+    "defaultValue": "Bulk Driver Upload",
+    "file": "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+  },
+  {
+    "key": "management.drivers.bulkUpload.subtitle",
+    "defaultValue": "Upload CSV or TXT files to create multiple driver applications at once",
+    "file": "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneTitle",
+    "defaultValue": "Drop your Excel, CSV or TXT file here",
+    "file": "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneSubtitle",
+    "defaultValue": "or click to browse. Supports .xlsx, .xls, .csv and .txt",
+    "file": "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+  },
+  {
+    "key": "common.cancel",
+    "defaultValue": "Cancel",
+    "file": "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+  },
+  {
+    "key": "management.vehicles.bulkUpload.title",
+    "defaultValue": "Bulk Vehicle Upload",
+    "file": "pages\\dashboards\\shared\\BulkVehicleUpload.tsx"
+  },
+  {
+    "key": "management.vehicles.bulkUpload.subtitle",
+    "defaultValue": "Upload CSV or TXT files to create multiple vehicle records at once",
+    "file": "pages\\dashboards\\shared\\BulkVehicleUpload.tsx"
+  },
+  {
+    "key": "common.dashboardSettings",
+    "defaultValue": "Dashboard Settings",
+    "file": "pages\\dashboards\\shared\\DashboardSettings.tsx"
+  },
+  {
+    "key": "target.hub.badge",
+    "defaultValue": "Strategy & Leadership",
+    "file": "pages\\dashboards\\shared\\DirectivesHub.tsx"
+  },
+  {
+    "key": "target.hub.description",
+    "defaultValue": "Centralized command center for delegating qualitative tasks and setting quantitative objectives across your organization.",
+    "file": "pages\\dashboards\\shared\\DirectivesHub.tsx"
+  },
+  {
+    "key": "management.drivers.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "common.refresh",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.bulkUploadBtn",
+    "defaultValue": "Bulk Upload",
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.newBtn",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.filters.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.filters.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.statusLabels.${status}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.filters.branch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.filters.from",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.filters.to",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.table.driver",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "common.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.table.license",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.table.applied",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "common.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.empty.noDrivers",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.statusLabels.${driver.status}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.table.expiry",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.drivers.pagination.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\DriverList.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.insuranceManagement",
+    "defaultValue": "Insurance Management",
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.insuranceManagementDesc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.selectPlan",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.selectPlanPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.selectPlanPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.policyNumber",
+    "defaultValue": "Policy Number",
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.validFrom",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.validTo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "common.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveInsurance",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\InsuranceManagementModal.tsx"
+  },
+  {
+    "key": "management.agreements.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.versionControl.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.versionControl.description",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.tiptap.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.tiptap.description",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.auditTrail.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.agreements.cards.auditTrail.description",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageAgreements.tsx"
+  },
+  {
+    "key": "management.branches.fetchFailed",
+    "defaultValue": "Failed to fetch branches",
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholderBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.advancedFilters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.maintenance",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.country",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.allCountries",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.resetFilters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.location",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.country",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.branchManager",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.${branch.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.branches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.pagination.previous",
+    "defaultValue": "Previous",
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.pagination.next",
+    "defaultValue": "Next",
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.branchName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.branchCode",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.city",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.state",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.countryManager",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.selectCountryManager",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmail",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.address",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.status.maintenance",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branches.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranches.tsx"
+  },
+  {
+    "key": "management.branchManagers.fetchFailed",
+    "defaultValue": "Failed to fetch branch managers",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.unknownBranch",
+    "defaultValue": "Unknown Branch",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": "All Branches",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.startDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.endDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.status.${manager.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmailLabel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.selectBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.twoFactorAuth",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.branchManagers.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.fetchFailed",
+    "defaultValue": "Failed to fetch country managers",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": "Operation failed",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": "Delete failed",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.country",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.allCountries",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.startDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.endDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.name",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.phoneEmail",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.country",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.created",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.noPhone",
+    "defaultValue": "No phone",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.${manager.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.country",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.twoFactorEnabled",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.saveChanges",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.countryManagers.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.delete.confirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.delete.submit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.totalStaff",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.activeAccounts",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.totalBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedFrom",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedTo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "Fleet #",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.loading",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.noPhone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.${staff.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.updateInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.enterFullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmailLabel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.selectBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.financeStaff.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+  },
+  {
+    "key": "management.insurances.fetchFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.saveFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.statusLabels.ACTIVE",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.statusLabels.EXPIRED",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.statusLabels.CANCELLED",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.policyType",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.all",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.INDIVIDUAL",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.FLEET",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.coverage",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.all",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.COMPREHENSIVE",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.THIRD_PARTY",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.table.providerPolicy",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.table.typeCoverage",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.table.docs",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.${ins.policyType || 'INDIVIDUAL'}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.${ins.coverageType || 'COMPREHENSIVE'}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.statusLabels.${ins.status || 'UNKNOWN'}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.view",
+    "defaultValue": "View",
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.download",
+    "defaultValue": "Download",
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.pagination.previous",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.pagination.next",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.policyInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.policyType",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.INDIVIDUAL",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.types.FLEET",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.coverage",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.COMPREHENSIVE",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.coverage.THIRD_PARTY",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.policyDoc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.clickToChange",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.uploadDoc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.form.docTypes",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.insurances.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageInsurances.tsx"
+  },
+  {
+    "key": "management.merchendiser.title",
+    "defaultValue": "Manage Merchendisers",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.merchendiser.subtitle",
+    "defaultValue": "Register, view, and configure credentials and status for global merchandiser staff",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.merchendiser.add",
+    "defaultValue": "Add Merchendiser",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.merchendiser.stats.total",
+    "defaultValue": "Total Merchendisers",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.merchendiser.stats.active",
+    "defaultValue": "Active Accounts",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.status.${merch.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "common.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "common.save",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+  },
+  {
+    "key": "management.operationStaff.fetchFailed",
+    "defaultValue": "Failed to fetch data",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.refreshData",
+    "defaultValue": "Refresh data",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.totalStaff",
+    "defaultValue": "Total Staff",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.activeAccounts",
+    "defaultValue": "Active Accounts",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.totalBranches",
+    "defaultValue": "Total Branches",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedDateFrom",
+    "defaultValue": "Joined From",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedDateTo",
+    "defaultValue": "Joined To",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.loading",
+    "defaultValue": "Loading operation staff...",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.noPhone",
+    "defaultValue": "No phone",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.${staff.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.edit",
+    "defaultValue": "Edit",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.delete.title",
+    "defaultValue": "Delete",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmailLabel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "defaultValue": "New Password (Optional)",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.selectBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.operationStaff.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+  },
+  {
+    "key": "management.suppliers.fetchFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.categories.Other",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.categories.Other",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.specifyCategory",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.categories.all",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.clickToAdd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.table.supplierInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.table.contactPerson",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.table.contactDetails",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.status.inactive",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.edit",
+    "defaultValue": "Edit",
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.delete.title",
+    "defaultValue": "Delete",
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.pagination.previous",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.pagination.next",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.name",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.namePlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.contactPerson",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.contactPersonPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.email",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.emailPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.categories.Other",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.customCategory",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.customCategoryPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.address",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.addressPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.form.statusToggle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.suppliers.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageSuppliers.tsx"
+  },
+  {
+    "key": "management.workshopManager.fetchFailed",
+    "defaultValue": "Failed to fetch data",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.title",
+    "defaultValue": "Workshop Managers",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.subtitle",
+    "defaultValue": "Manage workshop managers across branches",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.refreshData",
+    "defaultValue": "Refresh data",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.add",
+    "defaultValue": "Add Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.stats.totalManagers",
+    "defaultValue": "Total Managers",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.stats.activeAccounts",
+    "defaultValue": "Active Accounts",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.stats.totalBranches",
+    "defaultValue": "Total Branches",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.joinedDateFrom",
+    "defaultValue": "Joined From",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.joinedDateTo",
+    "defaultValue": "Joined To",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.loading",
+    "defaultValue": "Loading workshop managers...",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.notFound",
+    "defaultValue": "No Workshop Managers found",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.noPhone",
+    "defaultValue": "No phone",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.${manager.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.edit",
+    "defaultValue": "Edit",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.delete.title",
+    "defaultValue": "Delete",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.modalTitleCreate",
+    "defaultValue": "Add Workshop Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.modalTitleEdit",
+    "defaultValue": "Edit Workshop Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.subtitle",
+    "defaultValue": "Create a new manager account",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.modalTitleEdit",
+    "defaultValue": "Edit Workshop Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmailLabel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.selectBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.createButton",
+    "defaultValue": "Create Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.updateButton",
+    "defaultValue": "Update Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.deleteTitle",
+    "defaultValue": "Delete Manager",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopManager.deleteConfirm",
+    "defaultValue": "Are you sure you want to delete this manager?",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+  },
+  {
+    "key": "management.workshopStaff.fetchFailed",
+    "defaultValue": "Failed to fetch data",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.deleteFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.refreshData",
+    "defaultValue": "Refresh data",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.add",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.totalStaff",
+    "defaultValue": "Total Staff",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.activeAccounts",
+    "defaultValue": "Active Accounts",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.stats.totalBranches",
+    "defaultValue": "Total Branches",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedDateFrom",
+    "defaultValue": "Joined From",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.joinedDateTo",
+    "defaultValue": "Joined To",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.table.contact",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.table.branchInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.table.actions",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.loading",
+    "defaultValue": "Loading workshop staff...",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.notFound",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.noPhone",
+    "defaultValue": "No phone",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.${staff.status.toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "common.unblock",
+    "defaultValue": "Unblock",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.edit",
+    "defaultValue": "Edit",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.delete.title",
+    "defaultValue": "Delete",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.showing",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.of",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.records",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.modalTitleCreate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.modalTitleEdit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "defaultValue": "Basic Details",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "defaultValue": "Permissions",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.fullName",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.officialEmailLabel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.password",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.phone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.assignBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.selectBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.active",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.suspended",
+    "defaultValue": "Suspended",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.status.locked",
+    "defaultValue": "Locked",
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.createButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.updateButton",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.deleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.workshopStaff.deleteConfirm",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.delete.confirmSubmit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "management.common.modal.cancel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+  },
+  {
+    "key": "common.notifications",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\NotificationsPage.tsx"
+  },
+  {
+    "key": "management.purchaseBills.fetchFailed",
+    "defaultValue": "Failed to fetch payments",
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.loading",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.common.tryAgain",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.empty.noBills",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.empty.refine",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.table.dateMethod",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.table.description",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.table.amount",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.common.noDescription",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.purchaseBills.statusLabels.${p.status}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+  },
+  {
+    "key": "management.common.status.${(status || '').toLowerCase()}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.fetchFailed",
+    "defaultValue": "Failed to fetch purchase orders",
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.subtitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.filters",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.createBtn",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.searchPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.allStatuses",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.status.waiting",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.status.approved",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.status.rejected",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.branches.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.allBranches",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.suppliers.title",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.allSuppliers",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.billingStatus",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.allOrders",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.billedOnly",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.notBilled",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.onboardingStatus",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.anyUsage",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.unusedOnly",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.alreadyUsed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.startDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.endDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.resetAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.empty.noOrders",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.empty.refine",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.poDetails",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.common.table.status",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.totalAmount",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.sourceInfo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.timeline",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.explore",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.billed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.modded",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.uniqueItems",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.unknownVendor",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.unknownBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.table.explore",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+  },
+  {
+    "key": "reports.title",
+    "defaultValue": "Operational Reports",
+    "file": "pages\\dashboards\\shared\\Reports.tsx"
+  },
+  {
+    "key": "reports.subtitle",
+    "defaultValue": "Comprehensive analytics and financial tracking",
+    "file": "pages\\dashboards\\shared\\Reports.tsx"
+  },
+  {
+    "key": "sidebar.items.financialAdmins",
+    "defaultValue": "Financial Admins",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.countryManagers",
+    "defaultValue": "Country Managers",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.branchManagers",
+    "defaultValue": "Branch Managers",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.financeStaff",
+    "defaultValue": "Finance Staff",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.groundOpsStaff",
+    "defaultValue": "Ground Ops Staff",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.workshopManagers",
+    "defaultValue": "Workshop Managers",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.workshopStaff",
+    "defaultValue": "Workshop Staff",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.items.merchendisers",
+    "defaultValue": "Merchendisers",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "common.manage",
+    "defaultValue": "Manage",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "sidebar.sections.staffManagement",
+    "defaultValue": "Staff Management",
+    "file": "pages\\dashboards\\shared\\StaffManagement.tsx"
+  },
+  {
+    "key": "management.vehicles.statusLabels.${status}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.empty.noVehicles",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.backToList",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.onboardingPipeline",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.vehicleOverview",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.make",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.model",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.year",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.categories.${c}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.fuel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.fuelTypes.${f}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.transmission",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.transmissions.${tOption}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.colour",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.seats",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.body",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.bodyTypes.${b}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.engineNumber",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.odometer",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.condition",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.make",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.model",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.year",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.categories.${vehicle.basicDetails.category}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.fuel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.fuelTypes.${vehicle.basicDetails.fuelType}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.transmission",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.transmissions.${vehicle.basicDetails.transmission}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.colour",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.seats",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.body",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.engineNumber",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.odometer",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.units.km",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.units.km",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.condition",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.purchaseInformation",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vendor",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.purchaseDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.price",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.method",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.assignedBranch",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.insurancePolicy",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.provider",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.policyNumber",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.type",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.coverage",
+    "defaultValue": "Coverage Type",
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.validFrom",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.validTo",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveInsurance",
+    "defaultValue": "Update Insurance",
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveInsurance",
+    "defaultValue": "Add Insurance",
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.gpsTracking",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.gpsConfiguration",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.common.status.disabled",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.geofenceZone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.all",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.speedLimit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.units.kmh",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.idleAlert",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.syncFreq",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.units.hrs",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.accountingValuation",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.sellingValue",
+    "defaultValue": "Current Selling Value",
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.currency.usd",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.lastInspection",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.result",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.inspectionPassed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.date",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.highlights",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.vehicleInspection",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.checklist.${item.name}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.viewAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.onboardingMeta",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.onboardedBy",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.createdDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.lastUpdate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.imports",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.yes",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.no",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.step1",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.step1Desc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.make",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.model",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.year",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.category",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.categories.${c}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.fuel",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.fuelTypes.${f}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.transmission",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.transmissions.${tOption}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.body",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.search",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.bodyTypes.${b}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.engineCapacity",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.colour",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.engineNumber",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.odometer",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveSpecs",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.step2",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.step2Desc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.documents.${df.key}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.search",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.uploadAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.fillAll",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.submitForReview",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.purchaseOrders.filters.anyUsage",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.submitForReview",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.search",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.countryOfOrigin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.shippingReference",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.portOfEntry",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.customsDeclaration",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.arrivalDate",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.shippingCost",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.customsDuty",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.portHandling",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.approveProceedInspection",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveProgress",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.inspectionFailedTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairNotesPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.sendToRepair",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairCompleteTitle",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "common.notes",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.reInspect",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.accountingSetup",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.depreciation",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.usefulLife",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.residualValue",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveAccounting",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.gpsConfiguration",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.geofenceZone",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.speedLimit",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.idleAlert",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.syncFreq",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.activateGps",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.branchManagerApproval",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.messages.waitingAuthorityDesc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.approvalNotesPlaceholder",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.approveProceed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.messages.waitingAuthority",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.messages.waitingAuthorityDesc",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.approvalPending",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.statusHistory",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.audit.empty",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.history.statusUpdated",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.statusLabels.${h.status}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.history.updatedBy",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleDetail.tsx"
+  },
+  {
+    "key": "management.common.operationFailed",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.title",
+    "defaultValue": "Vehicle Fleet",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.subtitle",
+    "defaultValue": "Manage and monitor all company vehicles.",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "sidebar.items.insuranceManagement",
+    "defaultValue": "Insurance",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "sidebar.items.drivers",
+    "defaultValue": "Drivers",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.onboardingBtn",
+    "defaultValue": "Add Vehicle",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.searchPlaceholder",
+    "defaultValue": "Search by Make, Model, Plate No, or Fleet #...",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.advancedFilters",
+    "defaultValue": "More Filters",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.table.category",
+    "defaultValue": "Category",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.filters.allCategories",
+    "defaultValue": "All Categories",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.categories.${cat}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.table.fuelType",
+    "defaultValue": "Fuel Type",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.filters.allFuelTypes",
+    "defaultValue": "All Fuel Types",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.fuelTypes.${fuel}",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.common.modal.branchName",
+    "defaultValue": "Branch",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.filters.allBranches",
+    "defaultValue": "All Branches",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.common.resetFilters",
+    "defaultValue": "Clear All Filters",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.table.vehicle",
+    "defaultValue": "Vehicle Details",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.table.vin",
+    "defaultValue": "Plate No / Reg",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "common.status",
+    "defaultValue": "Status",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.table.price",
+    "defaultValue": "Value",
+    "file": "pages\\dashboards\\shared\\VehicleList.tsx"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.vin",
+    "defaultValue": null,
+    "file": "pages\\dashboards\\shared\\VehicleWorkshopHistory.tsx"
+  }
+]

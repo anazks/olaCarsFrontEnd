@@ -1,0 +1,512 @@
+[
+  {
+    "key": "common.alerts",
+    "en": "Alerts",
+    "es": "Alertas"
+  },
+  {
+    "key": "management.finAdmins.fetchFailed",
+    "en": "Failed to fetch financial admins",
+    "es": "Error al obtener financial admins"
+  },
+  {
+    "key": "management.common.tabs.details",
+    "en": "Basic Details",
+    "es": "Detalles Básicos"
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "en": "Permissions",
+    "es": "Permisos"
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "en": "New Password (Optional)",
+    "es": "Nueva Contraseña (Opcional)"
+  },
+  {
+    "key": "management.opAdmins.fetchFailed",
+    "en": "Failed to fetch operational admins",
+    "es": "Error al obtener operational admins"
+  },
+  {
+    "key": "management.threshold.loadingFailed",
+    "en": "Failed to fetch threshold",
+    "es": "Error al obtener el umbral"
+  },
+  {
+    "key": "management.drivers.bulkUpload.title",
+    "en": "Bulk Driver Upload",
+    "es": "Bulk Driver Upload"
+  },
+  {
+    "key": "management.drivers.bulkUpload.subtitle",
+    "en": "Upload CSV or TXT files to create multiple driver applications at once",
+    "es": "Upload CSV or TXT files to create multiple driver applications at once"
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneTitle",
+    "en": "Drop your Excel, CSV or TXT file here",
+    "es": "Arrastre su archivo Excel, CSV o TXT aquí"
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneSubtitle",
+    "en": "or click to browse. Supports .xlsx, .xls, .csv and .txt",
+    "es": "or click to browse. Supports .xlsx, .xls, .csv and .txt"
+  },
+  {
+    "key": "management.vehicles.bulkUpload.title",
+    "en": "Bulk Vehicle Upload",
+    "es": "Bulk Vehicle Upload"
+  },
+  {
+    "key": "management.vehicles.bulkUpload.subtitle",
+    "en": "Upload CSV or TXT files to create multiple vehicle records at once",
+    "es": "Upload CSV or TXT files to create multiple vehicle records at once"
+  },
+  {
+    "key": "target.hub.badge",
+    "en": "Strategy & Leadership",
+    "es": "Estrategia y Liderazgo"
+  },
+  {
+    "key": "target.hub.description",
+    "en": "Centralized command center for delegating qualitative tasks and setting quantitative objectives across your organization.",
+    "es": "Centro de comando centralizado para delegar tareas cualitativas y establecer objetivos cuantitativos en toda su organización."
+  },
+  {
+    "key": "management.drivers.bulkUploadBtn",
+    "en": "Bulk Upload",
+    "es": "Carga Masiva"
+  },
+  {
+    "key": "management.branches.fetchFailed",
+    "en": "Failed to fetch branches",
+    "es": "Error al obtener branches"
+  },
+  {
+    "key": "management.common.modal.countryManager",
+    "en": "Country Manager",
+    "es": "Gerente de País"
+  },
+  {
+    "key": "management.common.modal.selectCountryManager",
+    "en": "Select a Country Manager",
+    "es": "Seleccionar un Gerente de País"
+  },
+  {
+    "key": "management.branchManagers.fetchFailed",
+    "en": "Failed to fetch branch managers",
+    "es": "Error al obtener branch managers"
+  },
+  {
+    "key": "management.branchManagers.unknownBranch",
+    "en": "Unknown Branch",
+    "es": "Sucursal Desconocida"
+  },
+  {
+    "key": "management.common.allBranches",
+    "en": "All Branches",
+    "es": "Todas las Sucursales"
+  },
+  {
+    "key": "management.countryManagers.fetchFailed",
+    "en": "Failed to fetch country managers",
+    "es": "Error al obtener country managers"
+  },
+  {
+    "key": "management.countryManagers.noPhone",
+    "en": "No phone",
+    "es": "Sin teléfono"
+  },
+  {
+    "key": "Fleet #",
+    "en": "Fleet #",
+    "es": "Nº de Flota"
+  },
+  {
+    "key": "management.common.loading",
+    "en": "Loading",
+    "es": "Cargando"
+  },
+  {
+    "key": "management.common.noPhone",
+    "en": "No phone",
+    "es": "Sin teléfono"
+  },
+  {
+    "key": "management.common.modal.updateInfo",
+    "en": "Update Info for",
+    "es": "Actualizar información de"
+  },
+  {
+    "key": "management.common.modal.enterFullName",
+    "en": "Enter full name",
+    "es": "Ingrese el nombre completo"
+  },
+  {
+    "key": "management.common.view",
+    "en": "View",
+    "es": "View"
+  },
+  {
+    "key": "management.common.download",
+    "en": "Download",
+    "es": "Download"
+  },
+  {
+    "key": "management.merchendiser.title",
+    "en": "Manage Merchendisers",
+    "es": "Manage Merchendisers"
+  },
+  {
+    "key": "management.merchendiser.subtitle",
+    "en": "Register, view, and configure credentials and status for global merchandiser staff",
+    "es": "Register, view, and configure credentials and status for global merchandiser staff"
+  },
+  {
+    "key": "management.merchendiser.add",
+    "en": "Add Merchendiser",
+    "es": "Agregar Comercializador"
+  },
+  {
+    "key": "management.merchendiser.stats.total",
+    "en": "Total Merchendisers",
+    "es": "Comercializadores Totales"
+  },
+  {
+    "key": "management.merchendiser.stats.active",
+    "en": "Active Accounts",
+    "es": "Cuentas Activas"
+  },
+  {
+    "key": "management.operationStaff.fetchFailed",
+    "en": "Failed to fetch data",
+    "es": "Error al obtener data"
+  },
+  {
+    "key": "management.common.refreshData",
+    "en": "Refresh data",
+    "es": "Refresh data"
+  },
+  {
+    "key": "management.common.stats.totalStaff",
+    "en": "Total Staff",
+    "es": "Personal Total"
+  },
+  {
+    "key": "management.common.stats.activeAccounts",
+    "en": "Active Accounts",
+    "es": "Cuentas Activas"
+  },
+  {
+    "key": "management.common.stats.totalBranches",
+    "en": "Total Branches",
+    "es": "Sucursales Totales"
+  },
+  {
+    "key": "management.common.joinedDateFrom",
+    "en": "Joined From",
+    "es": "Unido Desde"
+  },
+  {
+    "key": "management.common.joinedDateTo",
+    "en": "Joined To",
+    "es": "Unido Hasta"
+  },
+  {
+    "key": "management.operationStaff.loading",
+    "en": "Loading operation staff...",
+    "es": "Cargando personal de operaciones..."
+  },
+  {
+    "key": "management.common.edit",
+    "en": "Edit",
+    "es": "Editar"
+  },
+  {
+    "key": "management.common.delete.title",
+    "en": "Delete",
+    "es": "Delete"
+  },
+  {
+    "key": "management.operationStaff.modalTitleEdit",
+    "en": "Edit Ground Ops Staff",
+    "es": "Editar Personal de Operaciones"
+  },
+  {
+    "key": "management.operationStaff.createButton",
+    "en": "Create Staff",
+    "es": "Crear Personal"
+  },
+  {
+    "key": "management.operationStaff.updateButton",
+    "en": "Save Changes",
+    "es": "Guardar Cambios"
+  },
+  {
+    "key": "management.operationStaff.deleteTitle",
+    "en": "Delete Account?",
+    "es": "¿Eliminar Cuenta?"
+  },
+  {
+    "key": "management.workshopManager.fetchFailed",
+    "en": "Failed to fetch data",
+    "es": "Error al obtener data"
+  },
+  {
+    "key": "management.workshopManager.title",
+    "en": "Workshop Managers",
+    "es": "Workshop Managers"
+  },
+  {
+    "key": "management.workshopManager.subtitle",
+    "en": "Manage workshop managers across branches",
+    "es": "Manage workshop managers across branches"
+  },
+  {
+    "key": "management.workshopManager.add",
+    "en": "Add Manager",
+    "es": "Agregar Gerente"
+  },
+  {
+    "key": "management.common.stats.totalManagers",
+    "en": "Total Managers",
+    "es": "Gerentes Totales"
+  },
+  {
+    "key": "management.workshopManager.loading",
+    "en": "Loading workshop managers...",
+    "es": "Cargando gerentes de taller..."
+  },
+  {
+    "key": "management.workshopManager.notFound",
+    "en": "No Workshop Managers found",
+    "es": "No se encontraron registros"
+  },
+  {
+    "key": "management.workshopManager.modalTitleCreate",
+    "en": "Add Workshop Manager",
+    "es": "Agregar Workshop Manager"
+  },
+  {
+    "key": "management.workshopManager.modalTitleEdit",
+    "en": "Edit Workshop Manager",
+    "es": "Editar Workshop Manager"
+  },
+  {
+    "key": "management.workshopManager.createButton",
+    "en": "Create Manager",
+    "es": "Crear Manager"
+  },
+  {
+    "key": "management.workshopManager.updateButton",
+    "en": "Update Manager",
+    "es": "Actualizar Manager"
+  },
+  {
+    "key": "management.workshopManager.deleteTitle",
+    "en": "Delete Manager",
+    "es": "¿Eliminar Manager?"
+  },
+  {
+    "key": "management.workshopManager.deleteConfirm",
+    "en": "Are you sure you want to delete this manager?",
+    "es": "¿Está seguro de que desea eliminar esto?"
+  },
+  {
+    "key": "management.workshopStaff.fetchFailed",
+    "en": "Failed to fetch data",
+    "es": "Error al obtener data"
+  },
+  {
+    "key": "management.purchaseBills.fetchFailed",
+    "en": "Failed to fetch payments",
+    "es": "Error al obtener payments"
+  },
+  {
+    "key": "management.common.tryAgain",
+    "en": "Try Again",
+    "es": "Intentar otra vez"
+  },
+  {
+    "key": "management.common.noDescription",
+    "en": "No description",
+    "es": "Sin descripción"
+  },
+  {
+    "key": "management.purchaseOrders.fetchFailed",
+    "en": "Failed to fetch purchase orders",
+    "es": "Error al obtener purchase orders"
+  },
+  {
+    "key": "management.common.status.waiting",
+    "en": "Waiting",
+    "es": "Esperando"
+  },
+  {
+    "key": "management.common.status.approved",
+    "en": "Approved",
+    "es": "Aprobado"
+  },
+  {
+    "key": "management.common.status.rejected",
+    "en": "Rejected",
+    "es": "Rechazado"
+  },
+  {
+    "key": "management.common.allSuppliers",
+    "en": "All Suppliers",
+    "es": "Todos los Proveedores"
+  },
+  {
+    "key": "reports.title",
+    "en": "Operational Reports",
+    "es": "Operational Reports"
+  },
+  {
+    "key": "reports.subtitle",
+    "en": "Comprehensive analytics and financial tracking",
+    "es": "Comprehensive analytics and financial tracking"
+  },
+  {
+    "key": "sidebar.items.workshopManagers",
+    "en": "Workshop Managers",
+    "es": "Gerentes de Taller"
+  },
+  {
+    "key": "sidebar.items.merchendisers",
+    "en": "Merchendisers",
+    "es": "Comercializadores"
+  },
+  {
+    "key": "common.manage",
+    "en": "Manage",
+    "es": "Gestionar"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.coverage",
+    "en": "Coverage Type",
+    "es": "Tipo de Cobertura"
+  },
+  {
+    "key": "common.all",
+    "en": "All",
+    "es": "Todo"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.sellingValue",
+    "en": "Current Selling Value",
+    "es": "Valor de Venta Actual"
+  },
+  {
+    "key": "common.yes",
+    "en": "Yes",
+    "es": "Sí"
+  },
+  {
+    "key": "common.no",
+    "en": "No",
+    "es": "No"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveProgress",
+    "en": "Save Progress",
+    "es": "Guardar Progreso"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.inspectionFailedTitle",
+    "en": "Inspection Failed",
+    "es": "Inspección Fallida"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairNotesPlaceholder",
+    "en": "Describe repair work required...",
+    "es": "Describa el trabajo de reparación requerido..."
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairCompleteTitle",
+    "en": "Repair Complete",
+    "es": "Reparación Completada"
+  },
+  {
+    "key": "common.notes",
+    "en": "Notes",
+    "es": "Notas"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.approvalNotesPlaceholder",
+    "en": "Enter approval/rejection notes...",
+    "es": "Ingrese notas de aprobación/rechazo..."
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.approvalPending",
+    "en": "Approval Pending",
+    "es": "Aprobación Pendiente"
+  },
+  {
+    "key": "management.audit.empty",
+    "en": "No status history found.",
+    "es": "No se encontró historial de estado."
+  },
+  {
+    "key": "management.vehicles.table.fuelType",
+    "en": "Fuel Type",
+    "es": "Tipo de Combustible"
+  },
+  {
+    "key": "common.unblock",
+    "en": "Unblock",
+    "es": "Desbloquear"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.condition",
+    "en": "Condition",
+    "es": "Condition"
+  },
+  {
+    "key": "sidebar.sections.staff",
+    "en": "Staff",
+    "es": "Personal"
+  },
+  {
+    "key": "sidebar.sections.administration",
+    "en": "Administration",
+    "es": "Administración"
+  },
+  {
+    "key": "sidebar.items.balanceSheet",
+    "en": "Balance Sheet",
+    "es": "Balance General"
+  },
+  {
+    "key": "sidebar.items.bankAccounts",
+    "en": "Bank Accounts",
+    "es": "Cuentas Bancarias"
+  },
+  {
+    "key": "management.vehicles.table.condition",
+    "en": "Condition",
+    "es": "Condición"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.documents.customsClearanceCertificate",
+    "en": "Customs Clearance Certificate",
+    "es": "Despacho de Aduanas"
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.documents.importPermit",
+    "en": "Import Permit",
+    "es": "Permiso de Importación"
+  },
+  {
+    "key": "management.vehicles.documents.customsClearanceCertificate",
+    "en": "Customs Clearance Certificate",
+    "es": "Despacho de Aduanas"
+  },
+  {
+    "key": "management.vehicles.documents.importPermit",
+    "en": "Import Permit",
+    "es": "Permiso de Importación"
+  }
+]

@@ -85,9 +85,18 @@ export const getWorkshopProcurementRequestById = async (
 };
 
 export const approveProcurementRequest = async (
-    id: string, 
+    id: string,
     data: { status: 'APPROVED' | 'REJECTED', supplier?: string, rejectionReason?: string, quantity?: number }
 ) => {
     const response = await api.put(`/api/workshop-procurement/${id}/approve`, data);
     return response.data.data || response.data;
 };
+
+export const financeApproveProcurementRequest = async (
+    id: string,
+    data: { status: 'APPROVED' | 'REJECTED', note?: string }
+) => {
+    const response = await api.put(`/api/workshop-procurement/${id}/finance-approve`, data);
+    return response.data.data || response.data;
+};
+

@@ -664,22 +664,20 @@ const ManageWorkshopStaff = () => {
                                                 placeholder="email@example.com"
                                             />
                                         </div>
-                                        {modalMode === 'create' && (
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                                    {t('management.common.modal.password')}
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    required
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                    className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime font-bold"
-                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                    placeholder="••••••••"
-                                                />
-                                            </div>
-                                        )}
+                                         <div className="space-y-2">
+                                             <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                                 {t('management.common.modal.password')}{modalMode === 'edit' && ' (Leave blank to keep current)'}
+                                             </label>
+                                             <input
+                                                 type="password"
+                                                 required={modalMode === 'create'}
+                                                 value={formData.password}
+                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                 className="w-full px-4 py-3 rounded-xl outline-none transition-all focus:ring-2 focus:ring-lime font-bold"
+                                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                 placeholder={modalMode === 'create' ? "••••••••" : "Leave blank to keep current"}
+                                             />
+                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
                                                 {t('management.common.modal.phone')}

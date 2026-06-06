@@ -81,57 +81,57 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
-            label: t('sidebar.items.finOverview', 'Finance Overview'),
+            label: t('sidebar.items.finOverview'),
             icon: <LayoutGrid size={22} />,
             subItems: [
-                { label: 'Executive Dashboard', path: '/admin/branch-fin-staff' },
-                { label: 'Collections Dashboard', path: '/admin/branch-fin-staff/collections/dashboard' },
-                { label: 'Fleet Dashboard', path: '/admin/branch-fin-staff/driver-performance' },
-                { label: 'Finance Dashboard', path: '/admin/branch-fin-staff/finance-dashboard' },
+                { label: t('sidebar.items.executiveDashboard'), path: '/admin/branch-fin-staff' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/branch-fin-staff/collections/dashboard' },
+                { label: t('sidebar.items.fleetDashboard'), path: '/admin/branch-fin-staff/driver-performance' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/branch-fin-staff/finance-dashboard' },
             ]
         },
         {
             id: 'collections',
-            label: 'Collections',
+            label: t('sidebar.sections.collections'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Collections Dashboard', path: '/admin/branch-fin-staff/collections/dashboard' },
-                { label: 'Overdue Payments', path: '/admin/branch-fin-staff/collections/overdue' },
-                { label: 'Upcoming Payments', path: '/admin/branch-fin-staff/collections/upcoming' },
-                { label: 'Invoices Ledger', path: '/admin/branch-fin-staff/collections/invoices' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/branch-fin-staff/collections/dashboard' },
+                { label: t('sidebar.items.overduePayments'), path: '/admin/branch-fin-staff/collections/overdue' },
+                { label: t('sidebar.items.upcomingPayments'), path: '/admin/branch-fin-staff/collections/upcoming' },
+                { label: t('sidebar.items.invoicesLedger'), path: '/admin/branch-fin-staff/collections/invoices' },
             ]
         },
         {
             id: 'finance',
-            label: 'Finance',
+            label: t('sidebar.sections.finance'),
             icon: <Calculator size={22} />,
             subItems: [
-                { label: 'General Ledger', path: '/admin/branch-fin-staff/ledger' },
-                { label: 'Finance Dashboard', path: '/admin/branch-fin-staff/finance-dashboard' },
-                { label: 'Financial Statements', path: '/admin/branch-fin-staff/financial-statements' },
-                { label: 'Add Journal Entry', path: '/admin/branch-fin-staff/ledger?action=create' },
+                { label: t('sidebar.items.generalLedger'), path: '/admin/branch-fin-staff/ledger' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/branch-fin-staff/finance-dashboard' },
+                { label: t('sidebar.items.financialStatements'), path: '/admin/branch-fin-staff/financial-statements' },
+                { label: t('sidebar.items.addJournalEntry'), path: '/admin/branch-fin-staff/ledger?action=create' },
             ]
         },
         {
             id: 'operations',
-            label: 'Operations',
+            label: t('sidebar.sections.operations'),
             icon: <Car size={22} />,
             subItems: [
-                { label: 'Assigned Missions', path: '/admin/branch-fin-staff/my-tasks' },
-                { label: 'Directives & Delegation', path: '/admin/branch-fin-staff/directives' },
-                { label: 'Accident Reports', path: '/admin/branch-fin-staff/accident-reports' },
-                { label: 'Manage Vehicles', path: '/admin/branch-fin-staff/vehicles' },
-                { label: 'Manage Drivers', path: '/admin/branch-fin-staff/drivers' },
-                { label: 'Fleet Performance', path: '/admin/branch-fin-staff/driver-performance' },
+                { label: t('sidebar.items.assignedMissions'), path: '/admin/branch-fin-staff/my-tasks' },
+                { label: t('sidebar.items.directivesDelegation'), path: '/admin/branch-fin-staff/directives' },
+                { label: t('sidebar.items.accidentReports'), path: '/admin/branch-fin-staff/accident-reports' },
+                { label: t('sidebar.items.manageVehicles'), path: '/admin/branch-fin-staff/vehicles' },
+                { label: t('sidebar.items.manageDrivers'), path: '/admin/branch-fin-staff/drivers' },
+                { label: t('sidebar.items.fleetPerformance'), path: '/admin/branch-fin-staff/driver-performance' },
             ]
         },
         {
             id: 'settings',
-            label: 'Settings',
+            label: t('sidebar.sections.settings'),
             icon: <Settings size={22} />,
             subItems: [
-                { label: 'System Preferences', path: '/admin/branch-fin-staff/dashboard-settings' },
-                { label: 'System Bulk Uploads', path: '/admin/branch-fin-staff/bulk-uploads' },
+                { label: t('sidebar.items.systemPreferences'), path: '/admin/branch-fin-staff/dashboard-settings' },
+                { label: t('sidebar.items.systemBulkUploads'), path: '/admin/branch-fin-staff/bulk-uploads' },
             ]
         },
     ];
@@ -159,7 +159,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                     <button
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
-                        title="Close Sidebar"
+                        title={t('sidebar.items.closeSidebar')}
                     >
                         <X size={22} />
                     </button>
@@ -279,9 +279,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
-                            >
-                                Logout
-                            </button>
+                            >{t('sidebar.items.logout')}</button>
                         </div>
                     )}
                 </div>

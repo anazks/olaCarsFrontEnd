@@ -92,136 +92,136 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
-            label: t('sidebar.items.dashboard', 'Dashboard'),
+            label: t('sidebar.items.dashboard'),
             icon: <LayoutGrid size={22} />,
             subItems: [
-                { label: 'Executive Dashboard', path: '/admin/financial-admin' },
-                { label: 'Collections Dashboard', path: '/admin/financial-admin/collections/dashboard' },
-                { label: 'Fleet Dashboard', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
-                { label: 'W-Group', path: '/admin/financial-admin/wgroup-dashboard', badge: 'BETA' },
+                { label: t('sidebar.items.executiveDashboard'), path: '/admin/financial-admin' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/financial-admin/collections/dashboard' },
+                { label: t('sidebar.items.fleetDashboard'), path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.wGroup'), path: '/admin/financial-admin/wgroup-dashboard', badge: 'BETA' },
             ]
         },
         {
             id: 'fleet',
-            label: 'Fleet',
+            label: t('sidebar.sections.fleet'),
             icon: <Car size={22} />,
             subItems: [
-                { label: t('sidebar.items.manageVehicles', 'Manage Vehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Pending Entry Vehicles', path: '/admin/financial-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Vehicle Lease Settings', path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
-                { label: 'Fleet Performance', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.manageVehicles'), path: '/admin/financial-admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.pendingEntryVehicles'), path: '/admin/financial-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.vehicleLeaseSettings'), path: '/admin/financial-admin/vehicle-lease-settings', permission: 'LEASE_VIEW' },
+                { label: t('sidebar.items.fleetPerformance'), path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
             id: 'drivers',
-            label: 'Drivers',
+            label: t('sidebar.sections.drivers'),
             icon: <Users size={22} />,
             subItems: [
-                { label: 'Driver List', path: '/admin/financial-admin/drivers', permission: 'DRIVER_VIEW' },
-                { label: 'Driver Performance', path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.driverList'), path: '/admin/financial-admin/drivers', permission: 'DRIVER_VIEW' },
+                { label: t('sidebar.items.driverPerformance'), path: '/admin/financial-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
             id: 'collections',
-            label: 'Collections',
+            label: t('sidebar.sections.collections'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Collections Dashboard', path: '/admin/financial-admin/collections/dashboard' },
-                { label: 'Overdue Payments', path: '/admin/financial-admin/collections/overdue' },
-                { label: 'Upcoming Payments', path: '/admin/financial-admin/collections/upcoming' },
-                { label: 'Invoices Ledger', path: '/admin/financial-admin/collections/invoices' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/financial-admin/collections/dashboard' },
+                { label: t('sidebar.items.overduePayments'), path: '/admin/financial-admin/collections/overdue' },
+                { label: t('sidebar.items.upcomingPayments'), path: '/admin/financial-admin/collections/upcoming' },
+                { label: t('sidebar.items.invoicesLedger'), path: '/admin/financial-admin/collections/invoices' },
             ]
         },
         {
             id: 'sales',
-            label: 'Sales',
+            label: t('sidebar.sections.sales'),
             icon: <ShoppingCart size={22} />,
             subItems: [
-                { label: 'Customers', path: '/admin/financial-admin/customers' },
-                { label: 'Invoices', path: '/admin/financial-admin/invoices' },
-                { label: 'Payments Received', path: '/admin/financial-admin/payments-received' },
-                ...(currentUser?.role !== 'admin' ? [{ label: 'Credit Notes', path: '/admin/financial-admin/credit-notes' }] : []),
+                { label: t('sidebar.items.customers'), path: '/admin/financial-admin/customers' },
+                { label: t('sidebar.items.invoices'), path: '/admin/financial-admin/invoices' },
+                { label: t('sidebar.items.paymentsReceived'), path: '/admin/financial-admin/payments-received' },
+                ...(currentUser?.role !== 'admin' ? [{ label: t('sidebar.items.creditNotes'), path: '/admin/financial-admin/credit-notes' }] : []),
             ]
         },
         {
             id: 'purchases',
-            label: 'Purchases',
+            label: t('sidebar.sections.purchases'),
             icon: <ShoppingBag size={22} />,
             subItems: [
-                { label: 'Vendors', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
-                { label: 'Expenses', path: '/admin/financial-admin/expenses' },
-                { label: 'Purchase Orders', path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
-                { label: 'Purchase Requests', path: '/admin/financial-admin/workshop-purchase-requests', permission: 'PURCHASE_ORDER_VIEW' },
-                { label: 'Bills', path: '/admin/financial-admin/bills' },
-                { label: 'Payments Made', path: '/admin/financial-admin/payments-made' },
+                { label: t('sidebar.items.vendors'), path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: t('sidebar.items.expenses'), path: '/admin/financial-admin/expenses' },
+                { label: t('sidebar.items.purchaseOrders'), path: '/admin/financial-admin/purchase-orders', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: t('sidebar.items.purchaseRequests'), path: '/admin/financial-admin/workshop-purchase-requests', permission: 'PURCHASE_ORDER_VIEW' },
+                { label: t('sidebar.items.bills'), path: '/admin/financial-admin/bills' },
+                { label: t('sidebar.items.paymentsMade'), path: '/admin/financial-admin/payments-made' },
             ]
         },
         {
             id: 'accounting',
-            label: 'Accounting',
+            label: t('sidebar.sections.accounting'),
             icon: <Calculator size={22} />,
             subItems: [
-                { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
-                { label: 'Payment Requests', path: '/admin/financial-admin/payment-requests' },
-                { label: 'General Ledger', path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
-                { label: 'Intelligence Reports', path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
-                { label: 'Financial Statements', path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
-                { label: 'Manual Journals', path: '/admin/financial-admin/manual-journals', permission: 'JOURNAL_VIEW' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.paymentRequests'), path: '/admin/financial-admin/payment-requests' },
+                { label: t('sidebar.items.generalLedger'), path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },
+                { label: t('sidebar.items.intelligenceReports'), path: '/admin/financial-admin/reports', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.financialStatements'), path: '/admin/financial-admin/financial-statements', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.manualJournals'), path: '/admin/financial-admin/manual-journals', permission: 'JOURNAL_VIEW' },
             ]
         },
         {
             id: 'insurance',
-            label: 'Insurance',
+            label: t('sidebar.sections.insurance'),
             icon: <Shield size={22} />,
             subItems: [
-                { label: 'All Insurance', path: '/admin/financial-admin/vehicle-policies' },
-                { label: 'Claims', path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
-                { label: 'Providers', path: '/admin/financial-admin/insurances' },
+                { label: t('sidebar.items.allInsurance'), path: '/admin/financial-admin/vehicle-policies' },
+                { label: t('sidebar.items.claims'), path: '/admin/financial-admin/insurance-claims', permission: 'INSURANCE_CLAIM_VIEW' },
+                { label: t('sidebar.items.providers'), path: '/admin/financial-admin/insurances' },
             ]
         },
         {
             id: 'staff',
-            label: 'Staff & Human Resources',
+            label: t('sidebar.sections.staffHumanResources'),
             icon: <Users size={22} />,
             subItems: [
-                { label: 'Staff Management', path: '/admin/financial-admin/staff-management', permission: 'STAFF_VIEW' },
-                { label: 'Staff Performance', path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Directives & Delegation', path: '/admin/financial-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
-                // { label: 'Task Delegation', path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Accident Reports', path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
+                { label: t('sidebar.items.staffManagement'), path: '/admin/financial-admin/staff-management', permission: 'STAFF_VIEW' },
+                { label: t('sidebar.items.staffPerformance'), path: '/admin/financial-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.directivesDelegation'), path: '/admin/financial-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
+                // { label: t('sidebar.items.taskDelegation'), path: '/admin/financial-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.accidentReports'), path: '/admin/financial-admin/accident-reports', permission: 'STAFF_VIEW' },
             ]
         },
         {
             id: 'workshop-management',
-            label: 'Workshop Management',
+            label: t('sidebar.sections.workshopManagement'),
             icon: <Wrench size={22} />,
             subItems: [
-                { label: 'Scraps', path: '/admin/financial-admin/scraps' },
-                { label: 'Write Offs', path: '/admin/financial-admin/write-offs' }
+                { label: t('sidebar.items.scraps'), path: '/admin/financial-admin/scraps' },
+                { label: t('sidebar.items.writeOffs'), path: '/admin/financial-admin/write-offs' }
             ]
         },
         {
             id: 'gps',
-            label: 'GPS',
+            label: t('sidebar.sections.gps'),
             icon: <Crosshair size={22} />,
             subItems: []
         },
         {
             id: 'alerts',
-            label: 'Alerts',
+            label: t('sidebar.sections.alerts'),
             icon: <Bell size={22} />,
             path: '/admin/financial-admin/alerts'
         },
         {
             id: 'settings',
-            label: 'Account Settings',
+            label: t('sidebar.sections.accountSettings'),
             icon: <Settings size={22} />,
             subItems: [
-                { label: 'Branch Management', path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
-                { label: 'Manage Suppliers', path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
-                { label: 'Settings', path: '/admin/financial-admin/dashboard-settings' },
-                { label: 'System Bulk Uploads', path: '/admin/financial-admin/bulk-uploads' },
+                { label: t('sidebar.items.branchManagement'), path: '/admin/financial-admin/manage-branches', permission: 'BRANCH_VIEW' },
+                { label: t('sidebar.items.manageSuppliers'), path: '/admin/financial-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: t('sidebar.sections.settings'), path: '/admin/financial-admin/dashboard-settings' },
+                { label: t('sidebar.items.systemBulkUploads'), path: '/admin/financial-admin/bulk-uploads' },
             ]
         },
     ];
@@ -250,7 +250,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                     <button
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
-                        title="Close Sidebar"
+                        title={t('sidebar.items.closeSidebar')}
                     >
                         <X size={22} />
                     </button>
@@ -379,9 +379,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
-                            >
-                                Logout
-                            </button>
+                            >{t('sidebar.items.logout')}</button>
                         </div>
                     )}
                 </div>

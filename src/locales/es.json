@@ -25,7 +25,14 @@
     "edit": "Editar",
     "view": "Ver",
     "status": "Estado",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "alerts": "Alertas",
+    "manage": "Gestionar",
+    "all": "Todo",
+    "yes": "Sí",
+    "no": "No",
+    "notes": "Notas",
+    "unblock": "Desbloquear"
   },
   "roles": {
     "admin": "Administrador",
@@ -70,15 +77,33 @@
       "localOperations": "Operaciones Locales",
       "operationalTasks": "Tareas Operativas",
       "financialTasks": "Tareas Financieras",
-      "generalLedgerTax": "Libro Mayor e Impuestos"
+      "generalLedgerTax": "Libro Mayor e Impuestos",
+      "staff": "Personal",
+      "administration": "Administración",
+      "dashboard": "Panel",
+      "staffHr": "Personal y RRHH",
+      "staffHumanResources": "Personal y Recursos Humanos",
+      "collections": "Cobros",
+      "sales": "Ventas",
+      "purchases": "Compras",
+      "accounting": "Contabilidad",
+      "accounts": "Cuentas",
+      "insurance": "Seguros",
+      "alerts": "Alertas",
+      "settings": "Configuración",
+      "accountSettings": "Configuración de Cuenta",
+      "fleet": "Flota",
+      "drivers": "Conductores",
+      "gps": "GPS",
+      "workshopManagement": "Gestión de Taller"
     },
     "items": {
       "dashboard": "Tablero",
-      "opsOverview": "Resumen de Ops",
-      "finOverview": "Resumen Fin",
+      "opsOverview": "Vista General de Operaciones",
+      "finOverview": "Vista General Financiera",
       "financeOverview": "Resumen de Finanzas",
-      "nationalDashboard": "Tablero Nacional",
-      "branchOverview": "Resumen de Sucursal",
+      "nationalDashboard": "Panel Nacional",
+      "branchOverview": "Vista General de Sucursal",
       "operationalAdmins": "Administradores Operativos",
       "financialAdmins": "Administradores Financieros",
       "countryManagers": "Gerentes de País",
@@ -94,7 +119,7 @@
       "purchaseBills": "Facturas de Compra",
       "manageVehicles": "Gestionar Vehículos",
       "drivers": "Conductores",
-      "legalAgreements": "Contratos Legales",
+      "legalAgreements": "Acuerdos Legales",
       "insuranceManagement": "Gestión de Seguros",
       "collectionsBoard": "Tablero de Cobros",
       "gpsRiskDashboard": "Tablero de GPS y Riesgos",
@@ -106,7 +131,7 @@
       "importRecords": "Importar Registros",
       "assignments": "Asignaciones",
       "insuranceClaims": "Seguros y Reclamaciones",
-      "financeDashboard": "Tablero de Finanzas",
+      "financeDashboard": "Panel de Finanzas",
       "taxManagement": "Gestión de Impuestos",
       "chartOfAccounts": "Plan de Cuentas",
       "generalLedger": "Libro Mayor",
@@ -138,7 +163,56 @@
       "billingInvoices": "Facturación y Facturas",
       "taxCompliance": "Cumplimiento Tributario",
       "payoutRegistry": "Registro de Pagos",
-      "riskAudit": "Auditoría de Riesgos"
+      "riskAudit": "Auditoría de Riesgos",
+      "workshopManagers": "Gerentes de Taller",
+      "merchendisers": "Comercializadores",
+      "balanceSheet": "Balance General",
+      "bankAccounts": "Cuentas Bancarias",
+      "executiveDashboard": "Panel Ejecutivo",
+      "collectionsDashboard": "Panel de Cobros",
+      "fleetDashboard": "Panel de Flota",
+      "wGroup": "W-Group",
+      "staffManagement": "Gestión de Personal",
+      "staffPerformance": "Rendimiento del Personal",
+      "directivesDelegation": "Directivas y Delegación",
+      "manageSuppliers": "Gestionar Proveedores",
+      "pendingEntryVehicles": "Vehículos Pendientes de Ingreso",
+      "manageDrivers": "Gestionar Conductores",
+      "intelligenceReports": "Informes de Inteligencia",
+      "accidentReports": "Informes de Accidentes",
+      "alertsManagement": "Gestión de Alertas",
+      "overduePayments": "Pagos Vencidos",
+      "upcomingPayments": "Pagos Próximos",
+      "invoicesLedger": "Libro Mayor de Facturas",
+      "customers": "Clientes",
+      "paymentsReceived": "Pagos Recibidos",
+      "creditNotes": "Notas de Crédito",
+      "vendors": "Proveedores",
+      "expenses": "Gastos",
+      "purchaseRequests": "Solicitudes de Compra",
+      "bills": "Facturas de Compra",
+      "paymentsMade": "Pagos Realizados",
+      "financialStatements": "Estados Financieros",
+      "taxes": "Impuestos",
+      "allInsurance": "Todos los Seguros",
+      "claims": "Reclamaciones",
+      "providers": "Proveedores de Seguros",
+      "systemPreferences": "Preferencias del Sistema",
+      "systemBulkUploads": "Cargas Masivas del Sistema",
+      "logout": "Cerrar Sesión",
+      "assignedMissions": "Misiones Asignadas",
+      "fleetPerformance": "Rendimiento de Flota",
+      "supportDesk": "Mesa de Ayuda",
+      "paymentRequests": "Solicitudes de Pago",
+      "driverList": "Lista de Conductores",
+      "driverPerformance": "Rendimiento de Conductores",
+      "vehicleLeaseSettings": "Configuración de Arrendamiento",
+      "branchManagement": "Gestión de Sucursales",
+      "manualJournals": "Asientos Manuales",
+      "scraps": "Desechos",
+      "writeOffs": "Baja de Activos",
+      "addJournalEntry": "Agregar Asiento Contable",
+      "taskDelegation": "Delegación de Tareas"
     }
   },
   "dashboards": {
@@ -395,12 +469,16 @@
         "enabled": "Habilitado",
         "disabled": "Deshabilitado",
         "inactive": "Inactivo",
-        "maintenance": "Mantenimiento"
+        "maintenance": "Mantenimiento",
+        "waiting": "Esperando",
+        "approved": "Aprobado",
+        "rejected": "Rechazado"
       },
       "delete": {
         "confirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
         "submit": "Eliminar",
-        "confirmSubmit": "Confirmar Eliminación"
+        "confirmSubmit": "Confirmar Eliminación",
+        "title": "Eliminar"
       },
       "pagination": {
         "previous": "Anterior",
@@ -428,8 +506,36 @@
         "twoFactorAuth": "Autenticación de Dos Factores",
         "create": "Crear",
         "branchManager": "Gerente de Sucursal",
-        "selectBranchManager": "Seleccionar un gerente de sucursal"
-      }
+        "selectBranchManager": "Seleccionar un gerente de sucursal",
+        "newPasswordOptional": "Nueva Contraseña (Opcional)",
+        "keepPasswordInfo": "Deja en blanco para mantener la contraseña actual.",
+        "countryManager": "Gerente de País",
+        "selectCountryManager": "Seleccionar un Gerente de País",
+        "updateInfo": "Actualizar información de",
+        "enterFullName": "Ingrese el nombre completo"
+      },
+      "tabs": {
+        "details": "Detalles Básicos",
+        "permissions": "Permisos"
+      },
+      "allBranches": "Todas las Sucursales",
+      "loading": "Cargando",
+      "noPhone": "Sin teléfono",
+      "view": "Ver",
+      "download": "Descargar",
+      "refreshData": "Actualizar datos",
+      "stats": {
+        "totalStaff": "Personal Total",
+        "activeAccounts": "Cuentas Activas",
+        "totalBranches": "Sucursales Totales",
+        "totalManagers": "Gerentes Totales"
+      },
+      "joinedDateFrom": "Unido Desde",
+      "joinedDateTo": "Unido Hasta",
+      "edit": "Editar",
+      "tryAgain": "Intentar otra vez",
+      "noDescription": "Sin descripción",
+      "allSuppliers": "Todos los Proveedores"
     },
     "branches": {
       "title": "Gestionar Sucursales",
@@ -442,7 +548,8 @@
       "createButton": "Crear Sucursal",
       "updateButton": "Actualizar Sucursal",
       "deleteTitle": "Confirmar Eliminación",
-      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar {{name}}? Todos los datos asociados se eliminarán permanentemente."
+      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar {{name}}? Todos los datos asociados se eliminarán permanentemente.",
+      "fetchFailed": "Error al obtener sucursales"
     },
     "branchManagers": {
       "title": "Gestionar Gerentes de Sucursal",
@@ -455,7 +562,9 @@
       "createButton": "Crear Gerente",
       "updateButton": "Actualizar Gerente",
       "deleteTitle": "Confirmar Eliminación",
-      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar a {{name}}? Esto desactivará permanentemente su acceso al sistema."
+      "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar a {{name}}? Esto desactivará permanentemente su acceso al sistema.",
+      "fetchFailed": "Error al obtener gerentes de sucursal",
+      "unknownBranch": "Sucursal Desconocida"
     },
     "financeStaff": {
       "title": "Gestionar Personal de Finanzas",
@@ -481,7 +590,9 @@
       "createButton": "Crear Personal",
       "updateButton": "Guardar Cambios",
       "deleteTitle": "¿Eliminar Cuenta?",
-      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
+      "fetchFailed": "Error al obtener personal de operaciones",
+      "loading": "Cargando personal de operaciones..."
     },
     "workshopStaff": {
       "title": "Gestionar Personal del Taller",
@@ -494,7 +605,8 @@
       "createButton": "Crear Personal",
       "updateButton": "Guardar Cambios",
       "deleteTitle": "¿Eliminar Cuenta?",
-      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Está seguro de que desea eliminar a {{name}}? Esta acción no se puede deshacer.",
+      "fetchFailed": "Error al obtener datos"
     },
     "opAdmins": {
       "title": "Gestionar Administradores Operativos",
@@ -505,7 +617,8 @@
       "modalTitleCreate": "Agregar Administrador Operativo",
       "modalTitleEdit": "Editar Administrador Operativo",
       "deleteTitle": "¿Eliminar Administrador?",
-      "createButton": "Crear Administrador"
+      "createButton": "Crear Administrador",
+      "fetchFailed": "Error al obtener administradores operativos"
     },
     "finAdmins": {
       "title": "Gestionar Administradores Financieros",
@@ -516,7 +629,8 @@
       "modalTitleCreate": "Agregar Administrador Financiero",
       "modalTitleEdit": "Editar Administrador Financiero",
       "deleteTitle": "¿Eliminar Administrador?",
-      "createButton": "Crear Administrador"
+      "createButton": "Crear Administrador",
+      "fetchFailed": "Error al obtener administradores financieros"
     },
     "countryManagers": {
       "title": "Gestionar Gerentes de País",
@@ -527,7 +641,9 @@
       "modalTitleCreate": "Agregar Gerente de País",
       "modalTitleEdit": "Editar Gerente de País",
       "deleteTitle": "¿Eliminar Gerente de País?",
-      "createButton": "Crear Gerente"
+      "createButton": "Crear Gerente",
+      "fetchFailed": "Error al obtener gerentes de país",
+      "noPhone": "Sin teléfono"
     },
     "suppliers": {
       "title": "Gestionar Proveedores",
@@ -719,7 +835,8 @@
       },
       "pagination": {
         "reviewing": "Revisando {{count}} de {{total}} registros"
-      }
+      },
+      "fetchFailed": "Error al obtener órdenes de compra"
     },
     "purchaseBills": {
       "title": "Facturas de Compra",
@@ -740,7 +857,8 @@
       "empty": {
         "noBills": "No se encontraron facturas",
         "refine": "Ajuste sus filtros o términos de búsqueda"
-      }
+      },
+      "fetchFailed": "Error al obtener pagos"
     },
     "vehicles": {
       "title": "Gestionar Vehículos",
@@ -765,7 +883,9 @@
         "vin": "Nº de Placa",
         "year": "Año",
         "category": "Categoría",
-        "price": "Precio"
+        "price": "Precio",
+        "fuelType": "Tipo de Combustible",
+        "condition": "Condición"
       },
       "empty": {
         "noVehicles": "No se encontraron vehículos",
@@ -827,7 +947,7 @@
           "numberPlateRear": "Matrícula (Trasera)",
           "roadworthinessCertificate": "Certificado de Idoneidad",
           "transferOfOwnership": "Transferencia de Propiedad",
-          "customsClearanceCertificate": "Despacho de Aduanas",
+          "customsClearanceCertificate": "Certificado de Despacho de Aduanas",
           "importPermit": "Permiso de Importación",
           "odometerPhoto": "Foto del Odómetro",
           "exteriorPhotos": "Fotos Exteriores",
@@ -950,7 +1070,10 @@
           "validFrom": "Válido Desde",
           "validTo": "Válido Hasta",
           "selectPlan": "Seleccionar Plan *",
-          "selectPlanPlaceholder": "Seleccionar un Plan de Seguro"
+          "selectPlanPlaceholder": "Seleccionar un Plan de Seguro",
+          "coverage": "Tipo de Cobertura",
+          "sellingValue": "Valor de Venta Actual",
+          "condition": "Condición"
         },
         "actions": {
           "backToList": "Volver a la Lista",
@@ -976,14 +1099,20 @@
           "pullMaintenance": "Llevar a Mantenimiento",
           "suspendVehicle": "Suspender Vehículo",
           "transfer": "Transferir Sucursal",
-          "retire": "Retirar Vehículo"
+          "retire": "Retirar Vehículo",
+          "saveProgress": "Guardar Progreso",
+          "approvalPending": "Aprobación Pendiente"
         },
         "messages": {
           "awaitingManager": "Esperando Revisión del Gerente",
           "awaitingManagerDesc": "Solo un Gerente de Sucursal o de País puede aprobar documentos para este vehículo.",
           "waitingAuthority": "Esperando Aprobación de la Autoridad",
           "waitingAuthorityDesc": "Solo el Gerente de Sucursal o el Gerente de País pueden aprobar este vehículo."
-        }
+        },
+        "inspectionFailedTitle": "Inspección Fallida",
+        "repairNotesPlaceholder": "Describa el trabajo de reparación requerido...",
+        "repairCompleteTitle": "Reparación Completada",
+        "approvalNotesPlaceholder": "Ingrese notas de aprobación/rechazo..."
       },
       "documents": {
         "purchaseReceipt": "Recibo de Compra",
@@ -993,7 +1122,7 @@
         "numberPlateRear": "Placa de Matrícula (Trasera)",
         "roadworthinessCertificate": "Certificado de Idoneidad",
         "transferOfOwnership": "Transferencia de Propiedad",
-        "customsClearanceCertificate": "Despacho de Aduanas",
+        "customsClearanceCertificate": "Certificado de Despacho de Aduanas",
         "importPermit": "Permiso de Importación",
         "odometerPhoto": "Foto del Odómetro",
         "exteriorPhotos": "Fotos Exteriores",
@@ -1023,6 +1152,10 @@
         "AC System": "Sistema de AA",
         "Exhaust System": "Sistema de Escape",
         "Suspension": "Suspensión"
+      },
+      "bulkUpload": {
+        "title": "Carga masiva de vehículos",
+        "subtitle": "Cargue archivos CSV o TXT para crear varios registros de vehículos a la vez"
       }
     },
     "drivers": {
@@ -1060,7 +1193,14 @@
         "ACTIVE": "Activo",
         "SUSPENDED": "Suspendido",
         "REJECTED": "Rechazado"
-      }
+      },
+      "bulkUpload": {
+        "title": "Carga masiva de conductores",
+        "subtitle": "Cargue archivos CSV o TXT para crear varias solicitudes de conductor a la vez",
+        "dropzoneTitle": "Arrastre su archivo Excel, CSV o TXT aquí",
+        "dropzoneSubtitle": "o haga clic para buscar. Admite .xlsx, .xls, .csv y .txt"
+      },
+      "bulkUploadBtn": "Carga Masiva"
     },
     "threshold": {
       "title": "Umbral de Orden de Compra",
@@ -1072,15 +1212,53 @@
       "saving": "Guardando...",
       "saveBtn": "Guardar Cambios",
       "noteTitle": "Nota Importante",
-      "noteText": "Cambiar el umbral de la orden de compra es una acción global. Los nuevos umbrales entran en vigor inmediatamente para todas las presentaciones de órdenes de compra posteriores. Las órdenes pendientes estarán sujetas al umbral que estaba activo en el momento de su presentación."
+      "noteText": "Cambiar el umbral de la orden de compra es una acción global. Los nuevos umbrales entran en vigor inmediatamente para todas las presentaciones de órdenes de compra posteriores. Las órdenes pendientes estarán sujetas al umbral que estaba activo en el momento de su presentación.",
+      "loadingFailed": "Error al obtener el umbral"
     },
     "tax": {
       "title": "Impuesto"
+    },
+    "merchendiser": {
+      "title": "Gestionar Comercializadores",
+      "subtitle": "Registrar, ver y configurar credenciales y estados para el personal de comercialización global",
+      "add": "Agregar Comercializador",
+      "stats": {
+        "total": "Comercializadores Totales",
+        "active": "Cuentas Activas"
+      }
+    },
+    "workshopManager": {
+      "fetchFailed": "Error al obtener data",
+      "title": "Gerentes de Taller",
+      "subtitle": "Gestionar gerentes de taller en todas las sucursales",
+      "add": "Agregar Gerente",
+      "loading": "Cargando gerentes de taller...",
+      "notFound": "No se encontraron registros",
+      "modalTitleCreate": "Agregar Gerente de Taller",
+      "modalTitleEdit": "Editar Gerente de Taller",
+      "createButton": "Crear Gerente",
+      "updateButton": "Actualizar Gerente",
+      "deleteTitle": "Eliminar Gerente",
+      "deleteConfirm": "¿Está seguro de que desea eliminar a este gerente?"
+    },
+    "audit": {
+      "empty": "No se encontró historial de estado."
     }
   },
   "language": {
     "switchLanguage": "Cambiar Idioma",
     "english": "Inglés",
     "spanish": "Español"
+  },
+  "target": {
+    "hub": {
+      "badge": "Estrategia y Liderazgo",
+      "description": "Centro de comando centralizado para delegar tareas cualitativas y establecer objetivos cuantitativos en toda su organización."
+    }
+  },
+  "Fleet #": "Nº de Flota",
+  "reports": {
+    "title": "Informes Operativos",
+    "subtitle": "Análisis integral y seguimiento financiero"
   }
 }

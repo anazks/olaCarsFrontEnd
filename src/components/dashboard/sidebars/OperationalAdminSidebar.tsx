@@ -81,68 +81,68 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
-            label: t('sidebar.items.opsOverview', 'Operations Overview'),
+            label: t('sidebar.items.opsOverview'),
             icon: <LayoutGrid size={22} />,
             subItems: [
-                { label: 'Executive Dashboard', path: '/admin/operational-admin' },
-                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
-                { label: 'Fleet Dashboard', path: '/admin/operational-admin/driver-performance' },
-                { label: 'Finance Dashboard', path: '/admin/operational-admin/finance-dashboard' },
+                { label: t('sidebar.items.executiveDashboard'), path: '/admin/operational-admin' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/operational-admin/collections/dashboard' },
+                { label: t('sidebar.items.fleetDashboard'), path: '/admin/operational-admin/driver-performance' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/operational-admin/finance-dashboard' },
             ]
         },
         {
             id: 'staff',
-            label: 'Staff & HR',
+            label: t('sidebar.sections.staffHr'),
             icon: <Users size={22} />,
             subItems: [
-                { label: 'Staff Management', path: '/admin/operational-admin/staff-management', permission: 'STAFF_VIEW' },
-                { label: 'Staff Performance', path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Directives & Delegation', path: '/admin/operational-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
-                // { label: 'Task Delegation', path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.staffManagement'), path: '/admin/operational-admin/staff-management', permission: 'STAFF_VIEW' },
+                { label: t('sidebar.items.staffPerformance'), path: '/admin/operational-admin/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.directivesDelegation'), path: '/admin/operational-admin/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
+                // { label: t('sidebar.items.taskDelegation'), path: '/admin/operational-admin/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
             id: 'administration',
-            label: 'Administration',
+            label: t('sidebar.sections.administration'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Manage Branches', path: '/admin/operational-admin/manage-branches', permission: 'BRANCH_VIEW' },
-                { label: 'Manage Suppliers', path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: t('sidebar.items.manageBranches'), path: '/admin/operational-admin/manage-branches', permission: 'BRANCH_VIEW' },
+                { label: t('sidebar.items.manageSuppliers'), path: '/admin/operational-admin/manage-suppliers', permission: 'SUPPLIER_VIEW' },
             ]
         },
         {
             id: 'operations',
-            label: 'Operations',
+            label: t('sidebar.sections.operations'),
             icon: <Car size={22} />,
             subItems: [
-                { label: 'Manage Vehicles', path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Pending Entry Vehicles', path: '/admin/operational-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Manage Drivers', path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
-                { label: 'Fleet Performance', path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Legal Agreements', path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
-                { label: 'Intelligence Reports', path: '/admin/operational-admin/reports', permission: 'REPORTS_VIEW' },
-                { label: 'Alerts Management', path: '/admin/operational-admin/alerts' },
+                { label: t('sidebar.items.manageVehicles'), path: '/admin/operational-admin/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.pendingEntryVehicles'), path: '/admin/operational-admin/pending-vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.manageDrivers'), path: '/admin/operational-admin/drivers', permission: 'DRIVER_VIEW' },
+                { label: t('sidebar.items.fleetPerformance'), path: '/admin/operational-admin/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.legalAgreements'), path: '/admin/operational-admin/agreements', permission: 'AGREEMENT_VIEW' },
+                { label: t('sidebar.items.intelligenceReports'), path: '/admin/operational-admin/reports', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.alertsManagement'), path: '/admin/operational-admin/alerts' },
            
-                { label: 'Accident Reports', path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' }, ]
+                { label: t('sidebar.items.accidentReports'), path: '/admin/operational-admin/accident-reports', permission: 'STAFF_VIEW' }, ]
         },
         {
             id: 'collections',
-            label: 'Collections',
+            label: t('sidebar.sections.collections'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Collections Dashboard', path: '/admin/operational-admin/collections/dashboard' },
-                { label: 'Overdue Payments', path: '/admin/operational-admin/collections/overdue' },
-                { label: 'Upcoming Payments', path: '/admin/operational-admin/collections/upcoming' },
-                { label: 'Invoices Ledger', path: '/admin/operational-admin/collections/invoices' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/operational-admin/collections/dashboard' },
+                { label: t('sidebar.items.overduePayments'), path: '/admin/operational-admin/collections/overdue' },
+                { label: t('sidebar.items.upcomingPayments'), path: '/admin/operational-admin/collections/upcoming' },
+                { label: t('sidebar.items.invoicesLedger'), path: '/admin/operational-admin/collections/invoices' },
             ]
         },
         {
             id: 'settings',
-            label: 'Settings',
+            label: t('sidebar.sections.settings'),
             icon: <Settings size={22} />,
             subItems: [
-                { label: 'System Preferences', path: '/admin/operational-admin/dashboard-settings' },
-                { label: 'System Bulk Uploads', path: '/admin/operational-admin/bulk-uploads' },
+                { label: t('sidebar.items.systemPreferences'), path: '/admin/operational-admin/dashboard-settings' },
+                { label: t('sidebar.items.systemBulkUploads'), path: '/admin/operational-admin/bulk-uploads' },
             ]
         },
     ];
@@ -170,7 +170,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                     <button 
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
-                        title="Close Sidebar"
+                        title={t('sidebar.items.closeSidebar')}
                     >
                         <X size={22} />
                     </button>
@@ -290,9 +290,7 @@ const OperationalAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: 
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
-                            >
-                                Logout
-                            </button>
+                            >{t('sidebar.items.logout')}</button>
                         </div>
                     )}
                 </div>

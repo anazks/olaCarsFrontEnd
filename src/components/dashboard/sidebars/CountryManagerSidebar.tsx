@@ -83,77 +83,77 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
-            label: t('sidebar.items.nationalDashboard', 'National Dashboard'),
+            label: t('sidebar.items.nationalDashboard'),
             icon: <LayoutGrid size={22} />,
             path: '/admin/country-manager'
         },
         {
             id: 'staff',
-            label: 'Staff & HR',
+            label: t('sidebar.sections.staffHr'),
             icon: <Users size={22} />,
             subItems: [
-                { label: 'Staff Management', path: '/admin/country-manager/staff-management', permission: 'STAFF_VIEW' },
-                { label: 'Staff Performance', path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Directives & Delegation', path: '/admin/country-manager/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
-                // { label: 'Task Delegation', path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.staffManagement'), path: '/admin/country-manager/staff-management', permission: 'STAFF_VIEW' },
+                { label: t('sidebar.items.staffPerformance'), path: '/admin/country-manager/staff-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.directivesDelegation'), path: '/admin/country-manager/directives', permission: 'STAFF_PERFORMANCE_VIEW' },
+                // { label: t('sidebar.items.taskDelegation'), path: '/admin/country-manager/task-delegation', permission: 'STAFF_PERFORMANCE_VIEW' },
             ]
         },
         {
             id: 'administration',
-            label: 'Administration',
+            label: t('sidebar.sections.administration'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Manage Branches', path: '/admin/country-manager/manage-branches', permission: 'BRANCH_VIEW' },
-                { label: 'Manage Suppliers', path: '/admin/country-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
+                { label: t('sidebar.items.manageBranches'), path: '/admin/country-manager/manage-branches', permission: 'BRANCH_VIEW' },
+                { label: t('sidebar.items.manageSuppliers'), path: '/admin/country-manager/manage-suppliers', permission: 'SUPPLIER_VIEW' },
             ]
         },
         {
             id: 'operations',
-            label: 'Operations',
+            label: t('sidebar.sections.operations'),
             icon: <Car size={22} />,
             subItems: [
-                { label: 'Assigned Missions', path: '/admin/country-manager/my-tasks' },
-                { label: 'Insurance Management', path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
-                { label: 'Manage Vehicles', path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Pending Entry Vehicles', path: '/admin/country-manager/pending-vehicles', permission: 'VEHICLE_VIEW' },
-                { label: 'Manage Drivers', path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
-                { label: 'Fleet Performance', path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
-                { label: 'Legal Agreements', path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
-                { label: 'Intelligence Reports', path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
-                { label: 'Alerts Management', path: '/admin/country-manager/alerts' },
+                { label: t('sidebar.items.assignedMissions'), path: '/admin/country-manager/my-tasks' },
+                { label: t('sidebar.items.insuranceManagement'), path: '/admin/country-manager/insurances', permission: 'INSURANCE_VIEW' },
+                { label: t('sidebar.items.manageVehicles'), path: '/admin/country-manager/vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.pendingEntryVehicles'), path: '/admin/country-manager/pending-vehicles', permission: 'VEHICLE_VIEW' },
+                { label: t('sidebar.items.manageDrivers'), path: '/admin/country-manager/drivers', permission: 'DRIVER_VIEW' },
+                { label: t('sidebar.items.fleetPerformance'), path: '/admin/country-manager/driver-performance', permission: 'STAFF_PERFORMANCE_VIEW' },
+                { label: t('sidebar.items.legalAgreements'), path: '/admin/country-manager/agreements', permission: 'AGREEMENT_VIEW' },
+                { label: t('sidebar.items.intelligenceReports'), path: '/admin/country-manager/reports', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.alertsManagement'), path: '/admin/country-manager/alerts' },
 
-                { label: 'Accident Reports', path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },]
+                { label: t('sidebar.items.accidentReports'), path: '/admin/country-manager/accident-reports', permission: 'STAFF_VIEW' },]
         },
         {
             id: 'collections',
-            label: 'Collections',
+            label: t('sidebar.sections.collections'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Collections Dashboard', path: '/admin/country-manager/collections/dashboard' },
-                { label: 'Overdue Payments', path: '/admin/country-manager/collections/overdue' },
-                { label: 'Upcoming Payments', path: '/admin/country-manager/collections/upcoming' },
-                { label: 'Invoices Ledger', path: '/admin/country-manager/collections/invoices' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/country-manager/collections/dashboard' },
+                { label: t('sidebar.items.overduePayments'), path: '/admin/country-manager/collections/overdue' },
+                { label: t('sidebar.items.upcomingPayments'), path: '/admin/country-manager/collections/upcoming' },
+                { label: t('sidebar.items.invoicesLedger'), path: '/admin/country-manager/collections/invoices' },
             ]
         },
         {
             id: 'finance',
-            label: 'Finance',
+            label: t('sidebar.sections.finance'),
             icon: <Calculator size={22} />,
             subItems: [
-                { label: 'Payment Requests', path: '/admin/country-manager/payment-requests' },
-                { label: 'General Ledger', path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
-                { label: 'Finance Dashboard', path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
-                { label: 'Tax Management', path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
-                { label: 'Chart of Accounts', path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
+                { label: t('sidebar.items.paymentRequests'), path: '/admin/country-manager/payment-requests' },
+                { label: t('sidebar.items.generalLedger'), path: '/admin/country-manager/ledger', permission: 'LEDGER_VIEW' },
+                { label: t('sidebar.items.financeDashboard'), path: '/admin/country-manager/finance-dashboard', permission: 'REPORTS_VIEW' },
+                { label: t('sidebar.items.taxManagement'), path: '/admin/country-manager/taxes', permission: 'TAX_VIEW' },
+                { label: t('sidebar.items.chartOfAccounts'), path: '/admin/country-manager/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
             ]
         },
         {
             id: 'settings',
-            label: 'Settings',
+            label: t('sidebar.sections.settings'),
             icon: <Settings size={22} />,
             subItems: [
-                { label: 'System Preferences', path: '/admin/country-manager/dashboard-settings' },
-                { label: 'System Bulk Uploads', path: '/admin/country-manager/bulk-uploads' },
+                { label: t('sidebar.items.systemPreferences'), path: '/admin/country-manager/dashboard-settings' },
+                { label: t('sidebar.items.systemBulkUploads'), path: '/admin/country-manager/bulk-uploads' },
             ]
         },
     ];
@@ -181,7 +181,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                     <button
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
-                        title="Close Sidebar"
+                        title={t('sidebar.items.closeSidebar')}
                     >
                         <X size={22} />
                     </button>
@@ -301,9 +301,7 @@ const CountryManagerSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Co
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
-                            >
-                                Logout
-                            </button>
+                            >{t('sidebar.items.logout')}</button>
                         </div>
                     )}
                 </div>

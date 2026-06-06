@@ -1,0 +1,959 @@
+[
+  {
+    "key": "common.alerts",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "components\\dashboard\\AlertNotificationCenter.tsx"
+    ]
+  },
+  {
+    "key": "management.finAdmins.fetchFailed",
+    "englishVal": "Failed to fetch financial admins",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx"
+    ]
+  },
+  {
+    "key": "management.common.tabs.details",
+    "englishVal": "Basic Details",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx",
+      "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx",
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx",
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx",
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.tabs.permissions",
+    "englishVal": "Permissions",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx",
+      "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx",
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx",
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx",
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.modal.newPasswordOptional",
+    "englishVal": "New Password (Optional)",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx",
+      "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx",
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx",
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx",
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.opAdmins.fetchFailed",
+    "englishVal": "Failed to fetch operational admins",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx"
+    ]
+  },
+  {
+    "key": "management.threshold.loadingFailed",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\admin\\POThresholdPage.tsx"
+    ]
+  },
+  {
+    "key": "management.drivers.bulkUpload.title",
+    "englishVal": "Bulk Driver Upload",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+    ]
+  },
+  {
+    "key": "management.drivers.bulkUpload.subtitle",
+    "englishVal": "Upload CSV or TXT files to create multiple driver applications at once",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+    ]
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneTitle",
+    "englishVal": "Drop your Excel, CSV or TXT file here",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+    ]
+  },
+  {
+    "key": "management.drivers.bulkUpload.dropzoneSubtitle",
+    "englishVal": "or click to browse. Supports .xlsx, .xls, .csv and .txt",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkDriverUpload.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.bulkUpload.title",
+    "englishVal": "Bulk Vehicle Upload",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkVehicleUpload.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.bulkUpload.subtitle",
+    "englishVal": "Upload CSV or TXT files to create multiple vehicle records at once",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\BulkVehicleUpload.tsx"
+    ]
+  },
+  {
+    "key": "target.hub.badge",
+    "englishVal": "Strategy & Leadership",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\DirectivesHub.tsx"
+    ]
+  },
+  {
+    "key": "target.hub.description",
+    "englishVal": "Centralized command center for delegating qualitative tasks and setting quantitative objectives across your organization.",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\DirectivesHub.tsx"
+    ]
+  },
+  {
+    "key": "management.drivers.bulkUploadBtn",
+    "englishVal": "Bulk Upload",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\DriverList.tsx"
+    ]
+  },
+  {
+    "key": "management.branches.fetchFailed",
+    "englishVal": "Failed to fetch branches",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranches.tsx"
+    ]
+  },
+  {
+    "key": "management.common.modal.countryManager",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranches.tsx"
+    ]
+  },
+  {
+    "key": "management.common.modal.selectCountryManager",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranches.tsx"
+    ]
+  },
+  {
+    "key": "management.branchManagers.fetchFailed",
+    "englishVal": "Failed to fetch branch managers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.branchManagers.unknownBranch",
+    "englishVal": "Unknown Branch",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.common.allBranches",
+    "englishVal": "All Branches",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx",
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx",
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "management.countryManagers.fetchFailed",
+    "englishVal": "Failed to fetch country managers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.countryManagers.noPhone",
+    "englishVal": "No phone",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx"
+    ]
+  },
+  {
+    "key": "Fleet #",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.loading",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.noPhone",
+    "englishVal": "No phone",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.modal.updateInfo",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.modal.enterFullName",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.view",
+    "englishVal": "View",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageInsurances.tsx"
+    ]
+  },
+  {
+    "key": "management.common.download",
+    "englishVal": "Download",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageInsurances.tsx"
+    ]
+  },
+  {
+    "key": "management.merchendiser.title",
+    "englishVal": "Manage Merchendisers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+    ]
+  },
+  {
+    "key": "management.merchendiser.subtitle",
+    "englishVal": "Register, view, and configure credentials and status for global merchandiser staff",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+    ]
+  },
+  {
+    "key": "management.merchendiser.add",
+    "englishVal": "Add Merchendiser",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+    ]
+  },
+  {
+    "key": "management.merchendiser.stats.total",
+    "englishVal": "Total Merchendisers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+    ]
+  },
+  {
+    "key": "management.merchendiser.stats.active",
+    "englishVal": "Active Accounts",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageMerchendisers.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.fetchFailed",
+    "englishVal": "Failed to fetch data",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.refreshData",
+    "englishVal": "Refresh data",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.stats.totalStaff",
+    "englishVal": "Total Staff",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.stats.activeAccounts",
+    "englishVal": "Active Accounts",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.stats.totalBranches",
+    "englishVal": "Total Branches",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.joinedDateFrom",
+    "englishVal": "Joined From",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.joinedDateTo",
+    "englishVal": "Joined To",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.loading",
+    "englishVal": "Loading operation staff...",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.edit",
+    "englishVal": "Edit",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageSuppliers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.common.delete.title",
+    "englishVal": "Delete",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageSuppliers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.modalTitleEdit",
+    "englishVal": null,
+    "spanishVal": "Editar Personal de Operaciones",
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.createButton",
+    "englishVal": null,
+    "spanishVal": "Crear Personal",
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.updateButton",
+    "englishVal": null,
+    "spanishVal": "Guardar Cambios",
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.operationStaff.deleteTitle",
+    "englishVal": null,
+    "spanishVal": "¿Eliminar Cuenta?",
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.fetchFailed",
+    "englishVal": "Failed to fetch data",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.title",
+    "englishVal": "Workshop Managers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.subtitle",
+    "englishVal": "Manage workshop managers across branches",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.add",
+    "englishVal": "Add Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.common.stats.totalManagers",
+    "englishVal": "Total Managers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.loading",
+    "englishVal": "Loading workshop managers...",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.notFound",
+    "englishVal": "No Workshop Managers found",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.modalTitleCreate",
+    "englishVal": "Add Workshop Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.modalTitleEdit",
+    "englishVal": "Edit Workshop Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.createButton",
+    "englishVal": "Create Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.updateButton",
+    "englishVal": "Update Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.deleteTitle",
+    "englishVal": "Delete Manager",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopManager.deleteConfirm",
+    "englishVal": "Are you sure you want to delete this manager?",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx"
+    ]
+  },
+  {
+    "key": "management.workshopStaff.fetchFailed",
+    "englishVal": "Failed to fetch data",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.purchaseBills.fetchFailed",
+    "englishVal": "Failed to fetch payments",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.tryAgain",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.noDescription",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseBillList.tsx"
+    ]
+  },
+  {
+    "key": "management.purchaseOrders.fetchFailed",
+    "englishVal": "Failed to fetch purchase orders",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.status.waiting",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.status.approved",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.status.rejected",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "management.common.allSuppliers",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\PurchaseOrderList.tsx"
+    ]
+  },
+  {
+    "key": "reports.title",
+    "englishVal": "Operational Reports",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\Reports.tsx"
+    ]
+  },
+  {
+    "key": "reports.subtitle",
+    "englishVal": "Comprehensive analytics and financial tracking",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\Reports.tsx"
+    ]
+  },
+  {
+    "key": "sidebar.items.workshopManagers",
+    "englishVal": "Workshop Managers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\StaffManagement.tsx"
+    ]
+  },
+  {
+    "key": "sidebar.items.merchendisers",
+    "englishVal": "Merchendisers",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\StaffManagement.tsx"
+    ]
+  },
+  {
+    "key": "common.manage",
+    "englishVal": "Manage",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\StaffManagement.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.coverage",
+    "englishVal": "Coverage Type",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "common.all",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.sellingValue",
+    "englishVal": "Current Selling Value",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "common.yes",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "common.no",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.saveProgress",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.inspectionFailedTitle",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairNotesPlaceholder",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.repairCompleteTitle",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "common.notes",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.approvalNotesPlaceholder",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.actions.approvalPending",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.audit.empty",
+    "englishVal": null,
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.table.fuelType",
+    "englishVal": "Fuel Type",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleList.tsx"
+    ]
+  },
+  {
+    "key": "common.unblock",
+    "englishVal": "Unblock",
+    "spanishVal": null,
+    "hasDefaultInCode": true,
+    "files": [
+      "pages\\dashboards\\admin\\ManageFinancialAdmins.tsx",
+      "pages\\dashboards\\admin\\ManageOperationalAdmins.tsx",
+      "pages\\dashboards\\shared\\ManageBranchManagers.tsx",
+      "pages\\dashboards\\shared\\ManageCountryManagers.tsx",
+      "pages\\dashboards\\shared\\ManageFinanceStaff.tsx",
+      "pages\\dashboards\\shared\\ManageOperationStaff.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopManagers.tsx",
+      "pages\\dashboards\\shared\\ManageWorkshopStaff.tsx"
+    ]
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.labels.condition",
+    "englishVal": "Condition",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": [
+      "pages\\dashboards\\shared\\VehicleDetail.tsx",
+      "pages\\dashboards\\shared\\VehicleDetail.tsx"
+    ]
+  },
+  {
+    "key": "sidebar.sections.staff",
+    "englishVal": "Staff",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "sidebar.sections.administration",
+    "englishVal": "Administration",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "sidebar.items.balanceSheet",
+    "englishVal": "Balance Sheet",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "sidebar.items.bankAccounts",
+    "englishVal": "Bank Accounts",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "management.vehicles.table.condition",
+    "englishVal": "Condition",
+    "spanishVal": null,
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.documents.customsClearanceCertificate",
+    "englishVal": null,
+    "spanishVal": "Despacho de Aduanas",
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "management.vehicles.vehicleDetail.documents.importPermit",
+    "englishVal": null,
+    "spanishVal": "Permiso de Importación",
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "management.vehicles.documents.customsClearanceCertificate",
+    "englishVal": null,
+    "spanishVal": "Despacho de Aduanas",
+    "hasDefaultInCode": false,
+    "files": []
+  },
+  {
+    "key": "management.vehicles.documents.importPermit",
+    "englishVal": null,
+    "spanishVal": "Permiso de Importación",
+    "hasDefaultInCode": false,
+    "files": []
+  }
+]

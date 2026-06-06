@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, ShieldCheck, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, ShieldCheck, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, User, Unlock } from 'lucide-react';
 import {
     getAllMerchendisers,
     createMerchendiser,
@@ -186,6 +186,18 @@ const ManageMerchendisers = () => {
             setFormError(err.response?.data?.message || err.message || 'Operation failed');
         } finally {
             setFormLoading(false);
+        }
+    };
+
+    const handleUnblock = async (merch: MerchendiseUser) => {
+        try {
+            await updateMerchendiser({
+                id: merch._id,
+                status: 'ACTIVE'
+            });
+            fetchData();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Operation failed');
         }
     };
 
@@ -421,6 +433,18 @@ const ManageMerchendisers = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {merch.status === 'LOCKED' && (
+                                                    <HasPermission permission="STAFF_EDIT">
+                                                        <button
+                                                            onClick={() => handleUnblock(merch)}
+                                                            className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
+                                                            style={{ color: 'var(--brand-lime)' }}
+                                                            title={t('common.unblock', { defaultValue: 'Unblock' })}
+                                                        >
+                                                            <Unlock size={18} />
+                                                        </button>
+                                                    </HasPermission>
+                                                )}
                                                 <HasPermission permission="STAFF_EDIT">
                                                     <button
                                                         onClick={() => openEditModal(merch)}

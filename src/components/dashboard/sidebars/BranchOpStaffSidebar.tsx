@@ -81,43 +81,43 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
-            label: t('sidebar.items.opsOverview', 'Operations Overview'),
+            label: t('sidebar.items.opsOverview'),
             icon: <LayoutGrid size={22} />,
             path: '/admin/branch-op-staff'
         },
         {
             id: 'operations',
-            label: 'Operations',
+            label: t('sidebar.sections.operations'),
             icon: <Car size={22} />,
             subItems: [
-                { label: 'Assigned Missions', path: '/admin/branch-op-staff/my-tasks' },
-                { label: 'Directives & Delegation', path: '/admin/branch-op-staff/directives' },
-                { label: 'Accident Reports', path: '/admin/branch-op-staff/accident-reports' },
-                { label: 'Manage Vehicles', path: '/admin/branch-op-staff/vehicles' },
-                { label: 'Pending Entry Vehicles', path: '/admin/branch-op-staff/pending-vehicles' },
-                { label: 'Manage Drivers', path: '/admin/branch-op-staff/drivers' },
-                { label: 'Fleet Performance', path: '/admin/branch-op-staff/driver-performance' },
-                { label: 'Support Desk', path: '/admin/branch-op-staff/complaints' },
+                { label: t('sidebar.items.assignedMissions'), path: '/admin/branch-op-staff/my-tasks' },
+                { label: t('sidebar.items.directivesDelegation'), path: '/admin/branch-op-staff/directives' },
+                { label: t('sidebar.items.accidentReports'), path: '/admin/branch-op-staff/accident-reports' },
+                { label: t('sidebar.items.manageVehicles'), path: '/admin/branch-op-staff/vehicles' },
+                { label: t('sidebar.items.pendingEntryVehicles'), path: '/admin/branch-op-staff/pending-vehicles' },
+                { label: t('sidebar.items.manageDrivers'), path: '/admin/branch-op-staff/drivers' },
+                { label: t('sidebar.items.fleetPerformance'), path: '/admin/branch-op-staff/driver-performance' },
+                { label: t('sidebar.items.supportDesk'), path: '/admin/branch-op-staff/complaints' },
             ]
         },
         {
             id: 'collections',
-            label: 'Collections',
+            label: t('sidebar.sections.collections'),
             icon: <Library size={22} />,
             subItems: [
-                { label: 'Collections Dashboard', path: '/admin/branch-op-staff/collections/dashboard' },
-                { label: 'Overdue Payments', path: '/admin/branch-op-staff/collections/overdue' },
-                { label: 'Upcoming Payments', path: '/admin/branch-op-staff/collections/upcoming' },
-                { label: 'Invoices Ledger', path: '/admin/branch-op-staff/collections/invoices' },
+                { label: t('sidebar.items.collectionsDashboard'), path: '/admin/branch-op-staff/collections/dashboard' },
+                { label: t('sidebar.items.overduePayments'), path: '/admin/branch-op-staff/collections/overdue' },
+                { label: t('sidebar.items.upcomingPayments'), path: '/admin/branch-op-staff/collections/upcoming' },
+                { label: t('sidebar.items.invoicesLedger'), path: '/admin/branch-op-staff/collections/invoices' },
             ]
         },
         {
             id: 'settings',
-            label: 'Settings',
+            label: t('sidebar.sections.settings'),
             icon: <Settings size={22} />,
             subItems: [
-                { label: 'System Preferences', path: '/admin/branch-op-staff/dashboard-settings' },
-                { label: 'System Bulk Uploads', path: '/admin/branch-op-staff/bulk-uploads' },
+                { label: t('sidebar.items.systemPreferences'), path: '/admin/branch-op-staff/dashboard-settings' },
+                { label: t('sidebar.items.systemBulkUploads'), path: '/admin/branch-op-staff/bulk-uploads' },
             ]
         },
     ];
@@ -145,7 +145,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                     <button 
                         onClick={toggleSidebar}
                         className="lg:hidden text-[var(--sidebar-text)] hover:text-[var(--text-main)] p-1.5 hover:bg-[var(--sidebar-hover)] rounded-md transition-colors cursor-pointer"
-                        title="Close Sidebar"
+                        title={t('sidebar.items.closeSidebar')}
                     >
                         <X size={22} />
                     </button>
@@ -265,9 +265,7 @@ const BranchOpStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Bra
                             <button
                                 onClick={handleLogout}
                                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 px-2 py-0.5 rounded mt-1 inline-block w-fit"
-                            >
-                                Logout
-                            </button>
+                            >{t('sidebar.items.logout')}</button>
                         </div>
                     )}
                 </div>

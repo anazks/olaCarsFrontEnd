@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWorkshopProcurementRequestById, approveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, approveProcurementRequest, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { 
     ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
-    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getUserRole } from '../../../utils/auth';
+import { getUserRole, getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
@@ -15,12 +15,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
-            icon: <Clock size={14} />
-        },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(234, 88, 12, 0.1)',
-            text: '#ea580c',
-            border: 'rgba(234, 88, 12, 0.3)',
             icon: <Clock size={14} />
         },
         APPROVED: {
@@ -66,6 +60,12 @@ const WorkshopPurchaseRequestDetail = () => {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const role = getUserRole();
+    const userRole = role || '';
+
+    const [userId, setUserId] = useState<string>('');
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [actionType, setActionType] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+    const [actionNote, setActionNote] = useState('');
 
     const fetchRequestDetails = useCallback(async () => {
         if (!id) return;
@@ -103,6 +103,32 @@ const WorkshopPurchaseRequestDetail = () => {
             setActionLoading(null);
         }
     };
+
+    const openActionModal = (type: 'APPROVE' | 'REJECT') => {
+        setActionType(type);
+        setActionNote('');
+        setIsActionModalOpen(true);
+    };
+
+    const submitAction = async () => {
+        if (!request) return;
+        setActionLoading(actionType);
+        try {
+            const apiStatus = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+            await financeApproveProcurementRequest(request._id, {
+                status: apiStatus,
+                note: actionNote
+            });
+            toast.success(actionType === 'APPROVE' ? 'Request Approved' : 'Request Rejected');
+            setIsActionModalOpen(false);
+            fetchRequestDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to update request');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
 
     if (loading) {
         return (
@@ -395,19 +421,19 @@ const WorkshopPurchaseRequestDetail = () => {
                             </p>
                             <div className="flex gap-3">
                                 <button 
-                                    onClick={() => handleAction('REJECTED')}
-                                    disabled={!!actionLoading}
+                                    onClick={() => openActionModal('REJECT')}
+                                    disabled={actionLoading !== null}
                                     className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
                                 >
-                                    {actionLoading === 'REJECTED' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                                    {actionLoading === 'REJECT' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
                                     Reject
                                 </button>
                                 <button 
-                                    onClick={() => handleAction('APPROVED')}
-                                    disabled={!!actionLoading}
+                                    onClick={() => openActionModal('APPROVE')}
+                                    disabled={actionLoading !== null}
                                     className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
                                 >
-                                    {actionLoading === 'APPROVED' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                    {actionLoading === 'APPROVE' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                     Approve Request
                                 </button>
                             </div>
@@ -474,21 +500,21 @@ const WorkshopPurchaseRequestDetail = () => {
                                 onClick={() => setIsActionModalOpen(false)}
                                 className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:bg-white/5 cursor-pointer bg-transparent"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
-                                disabled={actionLoading}
+                                disabled={actionLoading !== null}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={submitAction}
-                                disabled={actionLoading || (actionType === 'REJECT' && !actionNote.trim())}
+                                disabled={actionLoading !== null || (actionType === 'REJECT' && !actionNote.trim())}
                                 className="flex-1 py-3 rounded-xl text-sm font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center cursor-pointer border-none"
                                 style={{
                                     background: actionType === 'REJECT' ? '#ef4444' : '#C8E600',
                                     color: actionType === 'REJECT' ? 'white' : '#0A0A0A',
-                                    opacity: (actionLoading || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
+                                    opacity: (actionLoading !== null || (actionType === 'REJECT' && !actionNote.trim())) ? 0.5 : 1
                                 }}
                             >
-                                {actionLoading ? (
+                                {actionLoading !== null ? (
                                     <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                 ) : (
                                     actionType === 'REJECT' ? 'Reject' : 'Approve'

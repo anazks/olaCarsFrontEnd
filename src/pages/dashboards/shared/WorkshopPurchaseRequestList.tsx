@@ -12,11 +12,6 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
         },
-        PENDING_FINANCE_APPROVAL: {
-            bg: 'rgba(234, 88, 12, 0.1)',
-            text: '#ea580c',
-            border: 'rgba(234, 88, 12, 0.3)',
-        },
         APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
@@ -170,10 +165,10 @@ const WorkshopPurchaseRequestList = () => {
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                         className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none cursor-pointer ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}
-                        style={{ 
-                            background: showAdvancedFilters ? '' : 'var(--bg-card)', 
-                            borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)', 
-                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)' 
+                        style={{
+                            background: showAdvancedFilters ? '' : 'var(--bg-card)',
+                            borderColor: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--border-main)',
+                            color: showAdvancedFilters ? 'var(--brand-lime)' : 'var(--text-dim)'
                         }}
                     >
                         <Filter size={14} /> Filters
@@ -258,14 +253,14 @@ const WorkshopPurchaseRequestList = () => {
 
             {/* Error Message */}
             {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-left-2 duration-300" 
+                <div className="flex items-center gap-3 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-left-2 duration-300"
                     style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
                     <AlertTriangle size={18} /> {error}
                 </div>
             )}
 
             {/* Table Section */}
-            <div className="rounded-2xl overflow-hidden border transition-colors duration-300 shadow-2xl" 
+            <div className="rounded-2xl overflow-hidden border transition-colors duration-300 shadow-2xl"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="overflow-x-auto">
                     {loading && requests.length === 0 ? (
@@ -285,8 +280,8 @@ const WorkshopPurchaseRequestList = () => {
                             <thead>
                                 <tr className="transition-colors duration-300" style={{ background: 'rgba(255,255,255,0.01)' }}>
                                     <th className="px-6 py-5">
-                                        <button onClick={() => handleSort('requestNumber')} 
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors cursor-pointer" 
+                                        <button onClick={() => handleSort('requestNumber')}
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors cursor-pointer"
                                             style={{ color: 'var(--text-dim)' }}>
                                             Request No <SortIcon field="requestNumber" />
                                         </button>
@@ -295,15 +290,15 @@ const WorkshopPurchaseRequestList = () => {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-center" style={{ color: 'var(--text-dim)' }}>Quantity</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Unit Cost</th>
                                     <th className="px-6 py-5">
-                                        <button onClick={() => handleSort('totalCost')} 
+                                        <button onClick={() => handleSort('merchandiserTotalAmount')}
                                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors cursor-pointer"
                                             style={{ color: 'var(--text-dim)' }}>
-                                            Total Cost <SortIcon field="totalCost" />
+                                            Audited Cost Sum <SortIcon field="merchandiserTotalAmount" />
                                         </button>
                                     </th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Source Branch & Creator</th>
                                     <th className="px-6 py-5">
-                                        <button onClick={() => handleSort('createdAt')} 
+                                        <button onClick={() => handleSort('createdAt')}
                                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest outline-none hover:text-[#C8E600] transition-colors cursor-pointer"
                                             style={{ color: 'var(--text-dim)' }}>
                                             Timeline <SortIcon field="createdAt" />
@@ -314,7 +309,9 @@ const WorkshopPurchaseRequestList = () => {
                             </thead>
                             <tbody className={loading ? 'opacity-40 transition-opacity' : ''}>
                                 {requests.map((req) => {
-                                    const totalCost = (req.quantity || 0) * (req.part?.unitCost || 0);
+                                    const isAudited = req.merchandiserPrice !== undefined && req.merchandiserPrice !== null;
+                                    const unitCost = isAudited ? req.merchandiserPrice : (req.part?.unitCost || 0);
+                                    const auditedCostSum = isAudited ? (req.merchandiserTotalAmount || 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
                                     return (
                                         <tr
                                             key={req._id}
@@ -343,11 +340,16 @@ const WorkshopPurchaseRequestList = () => {
                                                 {req.quantity}
                                             </td>
                                             <td className="px-6 py-6 text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                ${(req.part?.unitCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                <div className="flex flex-col">
+                                                    <span>${(unitCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    {isAudited && (
+                                                        <span className="text-[9px] text-[var(--brand-lime)] font-black uppercase tracking-tighter mt-0.5">Audited</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-6">
                                                 <span className="text-sm font-black text-[var(--brand-lime)]" style={{ color: 'var(--brand-lime)' }}>
-                                                    ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    ${auditedCostSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-6">
@@ -392,12 +394,12 @@ const WorkshopPurchaseRequestList = () => {
 
                 {/* Pagination Controls */}
                 {pagination && (
-                    <div className="px-8 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" 
+                    <div className="px-8 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4"
                         style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                             Showing {requests.length} of {pagination.total} requests
                         </div>
-                        
+
                         {pagination.totalPages > 1 && (
                             <div className="flex items-center gap-2">
                                 <button
@@ -408,7 +410,7 @@ const WorkshopPurchaseRequestList = () => {
                                 >
                                     <ChevronLeft size={20} className="group-active:-translate-x-1 transition-transform" />
                                 </button>
-                                
+
                                 <div className="flex items-center gap-1.5 px-3 py-1 bg-black/20 rounded-2xl border border-white/5">
                                     {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
                                         let pageNum = currentPage;
@@ -416,14 +418,14 @@ const WorkshopPurchaseRequestList = () => {
                                         else if (currentPage <= 3) pageNum = i + 1;
                                         else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
                                         else pageNum = currentPage - 2 + i;
-                                        
+
                                         return (
                                             <button
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`w-10 h-10 rounded-xl text-xs font-black transition-all cursor-pointer ${currentPage === pageNum ? 'bg-[#C8E600] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
-                                                style={{ 
-                                                    color: currentPage === pageNum ? '#000' : 'var(--text-main)' 
+                                                style={{
+                                                    color: currentPage === pageNum ? '#000' : 'var(--text-main)'
                                                 }}
                                             >
                                                 {pageNum}
@@ -431,7 +433,7 @@ const WorkshopPurchaseRequestList = () => {
                                         );
                                     })}
                                 </div>
-                                
+
                                 <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === pagination.totalPages || loading}

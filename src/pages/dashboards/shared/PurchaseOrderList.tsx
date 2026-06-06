@@ -283,7 +283,7 @@ const PurchaseOrderList = () => {
                                 className="w-full px-4 py-3 rounded-xl outline-none text-xs font-bold"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
-                                <option value="ALL">{t('management.common.filters.allStatuses')}</option>
+                                <option value="ALL">{t('management.common.allStatuses')}</option>
                                 <option value="REQUESTED">Requested</option>
                                 <option value="MANAGER_APPROVED">Manager Approved</option>
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>

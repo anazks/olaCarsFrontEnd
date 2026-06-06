@@ -26,7 +26,13 @@
     "view": "View",
     "status": "Status",
     "actions": "Actions",
-    "unblock": "Unblock"
+    "unblock": "Unblock",
+    "alerts": "Alerts",
+    "manage": "Manage",
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "notes": "Notes"
   },
   "roles": {
     "admin": "Admin",
@@ -73,12 +79,28 @@
       "localOperations": "Local Operations",
       "operationalTasks": "Operational Tasks",
       "financialTasks": "Financial Tasks",
-      "generalLedgerTax": "General Ledger & Tax"
+      "generalLedgerTax": "General Ledger & Tax",
+      "dashboard": "Dashboard",
+      "staffHr": "Staff & HR",
+      "staffHumanResources": "Staff & Human Resources",
+      "collections": "Collections",
+      "sales": "Sales",
+      "purchases": "Purchases",
+      "accounting": "Accounting",
+      "accounts": "Accounts",
+      "insurance": "Insurance",
+      "alerts": "Alerts",
+      "settings": "Settings",
+      "accountSettings": "Account Settings",
+      "fleet": "Fleet",
+      "drivers": "Drivers",
+      "gps": "GPS",
+      "workshopManagement": "Workshop Management"
     },
     "items": {
       "dashboard": "Dashboard",
-      "opsOverview": "Ops Overview",
-      "finOverview": "Fin Overview",
+      "opsOverview": "Operations Overview",
+      "finOverview": "Finance Overview",
       "financeOverview": "Finance Overview",
       "nationalDashboard": "National Dashboard",
       "branchOverview": "Branch Overview",
@@ -143,7 +165,54 @@
       "taxCompliance": "Tax Compliance",
       "payoutRegistry": "Payout Registry",
       "riskAudit": "Risk Audit",
-      "bankAccounts": "Bank Accounts"
+      "bankAccounts": "Bank Accounts",
+      "workshopManagers": "Workshop Managers",
+      "merchendisers": "Merchandisers",
+      "executiveDashboard": "Executive Dashboard",
+      "collectionsDashboard": "Collections Dashboard",
+      "fleetDashboard": "Fleet Dashboard",
+      "wGroup": "W-Group",
+      "staffManagement": "Staff Management",
+      "staffPerformance": "Staff Performance",
+      "directivesDelegation": "Directives & Delegation",
+      "manageSuppliers": "Manage Suppliers",
+      "pendingEntryVehicles": "Pending Entry Vehicles",
+      "manageDrivers": "Manage Drivers",
+      "intelligenceReports": "Intelligence Reports",
+      "accidentReports": "Accident Reports",
+      "alertsManagement": "Alerts Management",
+      "overduePayments": "Overdue Payments",
+      "upcomingPayments": "Upcoming Payments",
+      "invoicesLedger": "Invoices Ledger",
+      "customers": "Customers",
+      "paymentsReceived": "Payments Received",
+      "creditNotes": "Credit Notes",
+      "vendors": "Vendors",
+      "expenses": "Expenses",
+      "purchaseRequests": "Purchase Requests",
+      "bills": "Bills",
+      "paymentsMade": "Payments Made",
+      "financialStatements": "Financial Statements",
+      "taxes": "Taxes",
+      "allInsurance": "All Insurance",
+      "claims": "Claims",
+      "providers": "Providers",
+      "systemPreferences": "System Preferences",
+      "systemBulkUploads": "System Bulk Uploads",
+      "logout": "Logout",
+      "assignedMissions": "Assigned Missions",
+      "fleetPerformance": "Fleet Performance",
+      "supportDesk": "Support Desk",
+      "paymentRequests": "Payment Requests",
+      "driverList": "Driver List",
+      "driverPerformance": "Driver Performance",
+      "vehicleLeaseSettings": "Vehicle Lease Settings",
+      "branchManagement": "Branch Management",
+      "manualJournals": "Manual Journals",
+      "scraps": "Scraps",
+      "writeOffs": "Write Offs",
+      "addJournalEntry": "Add Journal Entry",
+      "taskDelegation": "Task Delegation"
     }
   },
   "dashboards": {
@@ -400,12 +469,16 @@
         "enabled": "Enabled",
         "disabled": "Disabled",
         "inactive": "Inactive",
-        "maintenance": "Maintenance"
+        "maintenance": "Maintenance",
+        "waiting": "Waiting",
+        "approved": "Approved",
+        "rejected": "Rejected"
       },
       "delete": {
         "confirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
         "submit": "Delete",
-        "confirmSubmit": "Confirm Delete"
+        "confirmSubmit": "Confirm Delete",
+        "title": "Delete"
       },
       "pagination": {
         "previous": "Previous",
@@ -433,8 +506,36 @@
         "twoFactorAuth": "Two-Factor Authentication",
         "create": "Create",
         "branchManager": "Branch Manager",
-        "selectBranchManager": "Select a Branch Manager"
-      }
+        "selectBranchManager": "Select a Branch Manager",
+        "newPasswordOptional": "New Password (Optional)",
+        "keepPasswordInfo": "Leave blank to keep the existing password.",
+        "countryManager": "Country Manager",
+        "selectCountryManager": "Select a Country Manager",
+        "updateInfo": "Update Info for",
+        "enterFullName": "Enter full name"
+      },
+      "tabs": {
+        "details": "Basic Details",
+        "permissions": "Permissions"
+      },
+      "allBranches": "All Branches",
+      "loading": "Loading",
+      "noPhone": "No phone",
+      "view": "View",
+      "download": "Download",
+      "refreshData": "Refresh data",
+      "stats": {
+        "totalStaff": "Total Staff",
+        "activeAccounts": "Active Accounts",
+        "totalBranches": "Total Branches",
+        "totalManagers": "Total Managers"
+      },
+      "joinedDateFrom": "Joined From",
+      "joinedDateTo": "Joined To",
+      "edit": "Edit",
+      "tryAgain": "Try Again",
+      "noDescription": "No description",
+      "allSuppliers": "All Suppliers"
     },
     "branches": {
       "title": "Manage Branches",
@@ -447,7 +548,8 @@
       "createButton": "Create Branch",
       "updateButton": "Update Branch",
       "deleteTitle": "Confirm Deletion",
-      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? All associated data will be permanently removed."
+      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? All associated data will be permanently removed.",
+      "fetchFailed": "Failed to fetch branches"
     },
     "branchManagers": {
       "title": "Manage Branch Managers",
@@ -460,7 +562,9 @@
       "createButton": "Create Manager",
       "updateButton": "Update Manager",
       "deleteTitle": "Confirm Deletion",
-      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? This will permanently disable their access to the system."
+      "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? This will permanently disable their access to the system.",
+      "fetchFailed": "Failed to fetch branch managers",
+      "unknownBranch": "Unknown Branch"
     },
     "financeStaff": {
       "title": "Manage Finance Staff",
@@ -482,7 +586,13 @@
       "notFound": "No operation staff found",
       "clickToAdd": "Click \"Add Operation Staff\" to create one",
       "modalTitleCreate": "Add Operation Staff",
-      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+      "fetchFailed": "Failed to fetch data",
+      "loading": "Loading operation staff...",
+      "modalTitleEdit": "Edit Ground Ops Staff",
+      "createButton": "Create Staff",
+      "updateButton": "Save Changes",
+      "deleteTitle": "Delete Account?"
     },
     "workshopStaff": {
       "title": "Manage Workshop Staff",
@@ -495,7 +605,8 @@
       "createButton": "Create Staff",
       "updateButton": "Save Changes",
       "deleteTitle": "Delete Account?",
-      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+      "fetchFailed": "Failed to fetch data"
     },
     "opAdmins": {
       "title": "Manage Operational Admins",
@@ -506,7 +617,8 @@
       "modalTitleCreate": "Add Operational Admin",
       "modalTitleEdit": "Edit Operational Admin",
       "deleteTitle": "Delete Admin?",
-      "createButton": "Create Admin"
+      "createButton": "Create Admin",
+      "fetchFailed": "Failed to fetch operational admins"
     },
     "finAdmins": {
       "title": "Manage Financial Admins",
@@ -517,7 +629,8 @@
       "modalTitleCreate": "Add Financial Admin",
       "modalTitleEdit": "Edit Financial Admin",
       "deleteTitle": "Delete Admin?",
-      "createButton": "Create Admin"
+      "createButton": "Create Admin",
+      "fetchFailed": "Failed to fetch financial admins"
     },
     "countryManagers": {
       "title": "Manage Country Managers",
@@ -528,7 +641,9 @@
       "modalTitleCreate": "Add Country Manager",
       "modalTitleEdit": "Edit Country Manager",
       "deleteTitle": "Delete Country Manager?",
-      "createButton": "Create Manager"
+      "createButton": "Create Manager",
+      "fetchFailed": "Failed to fetch country managers",
+      "noPhone": "No phone"
     },
     "suppliers": {
       "title": "Manage Suppliers",
@@ -720,7 +835,8 @@
       },
       "pagination": {
         "reviewing": "Reviewing {{count}} of {{total}} records"
-      }
+      },
+      "fetchFailed": "Failed to fetch purchase orders"
     },
     "purchaseBills": {
       "title": "Purchase Bills",
@@ -741,7 +857,8 @@
       "empty": {
         "noBills": "No bills found",
         "refine": "Adjust your filters or search terms"
-      }
+      },
+      "fetchFailed": "Failed to fetch payments"
     },
     "vehicles": {
       "title": "Manage Vehicles",
@@ -767,7 +884,8 @@
         "year": "Year",
         "category": "Category",
         "condition": "Condition",
-        "price": "Price"
+        "price": "Price",
+        "fuelType": "Fuel Type"
       },
       "empty": {
         "noVehicles": "No vehicles found",
@@ -831,7 +949,9 @@
           "transferOfOwnership": "Transfer of Ownership",
           "odometerPhoto": "Odometer Photo",
           "exteriorPhotos": "Exterior Photos",
-          "interiorPhotos": "Interior Photos"
+          "interiorPhotos": "Interior Photos",
+          "customsClearanceCertificate": "Customs Clearance Certificate",
+          "importPermit": "Import Permit"
         },
         "checklist": {
           "Engine Oil Level": "Engine Oil Level",
@@ -951,7 +1071,9 @@
           "validFrom": "Valid From",
           "validTo": "Valid To",
           "selectPlan": "Select Plan *",
-          "selectPlanPlaceholder": "Select an Insurance Plan"
+          "selectPlanPlaceholder": "Select an Insurance Plan",
+          "coverage": "Coverage Type",
+          "sellingValue": "Current Selling Value"
         },
         "actions": {
           "backToList": "Back to List",
@@ -977,14 +1099,20 @@
           "pullMaintenance": "Pull to Maintenance",
           "suspendVehicle": "Suspend Vehicle",
           "transfer": "Transfer Branch",
-          "retire": "Retire Vehicle"
+          "retire": "Retire Vehicle",
+          "saveProgress": "Save Progress",
+          "approvalPending": "Approval Pending"
         },
         "messages": {
           "awaitingManager": "Awaiting Manager Review",
           "awaitingManagerDesc": "Only a Branch or Country Manager can approve documents for this vehicle.",
           "waitingAuthority": "Waiting for Authority Approval",
           "waitingAuthorityDesc": "Only Branch Manager or Country Manager can approve this vehicle."
-        }
+        },
+        "inspectionFailedTitle": "Inspection Failed",
+        "repairNotesPlaceholder": "Describe repair work required...",
+        "repairCompleteTitle": "Repair Complete",
+        "approvalNotesPlaceholder": "Enter approval/rejection notes..."
       },
       "documents": {
         "purchaseReceipt": "Purchase Receipt",
@@ -996,7 +1124,9 @@
         "transferOfOwnership": "Transfer of Ownership",
         "odometerPhoto": "Odometer Photo",
         "exteriorPhotos": "Exterior Photos",
-        "interiorPhotos": "Interior Photos"
+        "interiorPhotos": "Interior Photos",
+        "customsClearanceCertificate": "Customs Clearance Certificate",
+        "importPermit": "Import Permit"
       },
       "checklist": {
         "Engine Oil Level": "Engine Oil Level",
@@ -1022,6 +1152,10 @@
         "AC System": "AC System",
         "Exhaust System": "Exhaust System",
         "Suspension": "Suspension"
+      },
+      "bulkUpload": {
+        "title": "Bulk Vehicle Upload",
+        "subtitle": "Upload CSV or TXT files to create multiple vehicle records at once"
       }
     },
     "drivers": {
@@ -1059,7 +1193,14 @@
         "ACTIVE": "Active",
         "SUSPENDED": "Suspended",
         "REJECTED": "Rejected"
-      }
+      },
+      "bulkUpload": {
+        "title": "Bulk Driver Upload",
+        "subtitle": "Upload CSV or TXT files to create multiple driver applications at once",
+        "dropzoneTitle": "Drop your Excel, CSV or TXT file here",
+        "dropzoneSubtitle": "or click to browse. Supports .xlsx, .xls, .csv and .txt"
+      },
+      "bulkUploadBtn": "Bulk Upload"
     },
     "threshold": {
       "title": "Purchase Order Threshold",
@@ -1071,15 +1212,53 @@
       "saving": "Saving...",
       "saveBtn": "Save Changes",
       "noteTitle": "Important Note",
-      "noteText": "Changing the purchase order threshold is a global action. New thresholds take effect immediately for all subsequent purchase order submissions. Pending orders will be subject to the threshold that was active at the time of their submission."
+      "noteText": "Changing the purchase order threshold is a global action. New thresholds take effect immediately for all subsequent purchase order submissions. Pending orders will be subject to the threshold that was active at the time of their submission.",
+      "loadingFailed": "Failed to fetch threshold"
     },
     "tax": {
       "title": "Tax"
+    },
+    "merchendiser": {
+      "title": "Manage Merchandisers",
+      "subtitle": "Register, view, and configure credentials and status for global merchandiser staff",
+      "add": "Add Merchandiser",
+      "stats": {
+        "total": "Total Merchandisers",
+        "active": "Active Accounts"
+      }
+    },
+    "workshopManager": {
+      "fetchFailed": "Failed to fetch data",
+      "title": "Workshop Managers",
+      "subtitle": "Manage workshop managers across branches",
+      "add": "Add Manager",
+      "loading": "Loading workshop managers...",
+      "notFound": "No Workshop Managers found",
+      "modalTitleCreate": "Add Workshop Manager",
+      "modalTitleEdit": "Edit Workshop Manager",
+      "createButton": "Create Manager",
+      "updateButton": "Update Manager",
+      "deleteTitle": "Delete Manager",
+      "deleteConfirm": "Are you sure you want to delete this manager?"
+    },
+    "audit": {
+      "empty": "No status history found."
     }
   },
   "language": {
     "switchLanguage": "Switch Language",
     "english": "English",
     "spanish": "Spanish"
+  },
+  "target": {
+    "hub": {
+      "badge": "Strategy & Leadership",
+      "description": "Centralized command center for delegating qualitative tasks and setting quantitative objectives across your organization."
+    }
+  },
+  "Fleet #": "Fleet #",
+  "reports": {
+    "title": "Operational Reports",
+    "subtitle": "Comprehensive analytics and financial tracking"
   }
 }

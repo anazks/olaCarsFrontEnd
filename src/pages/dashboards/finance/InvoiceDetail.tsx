@@ -60,7 +60,7 @@ const InvoiceDetail = () => {
 
             // Fetch Ledger entries for this invoice
             try {
-                const ledgerRes = await getLedgerEntries({ search: res.invoiceNumber });
+                const ledgerRes = await getLedgerEntries({ search: res.invoiceNumber, exact: true });
                 setLedgerEntries(ledgerRes.data || []);
             } catch (e) {
                 console.error("Error loading ledger entries:", e);
