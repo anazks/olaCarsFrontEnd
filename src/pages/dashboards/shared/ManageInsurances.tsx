@@ -22,6 +22,9 @@ const   ManageInsurances = () => {
     const [error, setError] = useState<string | null>(null);
 
     // Server-side filtering & pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
     const [filters, setFilters] = useState({
         page: 1,
         limit: 10,
@@ -32,6 +35,23 @@ const   ManageInsurances = () => {
         sortBy: 'createdAt',
         sortOrder: 'desc' as 'asc' | 'desc'
     });
+
+    // Debounce search query to prevent backend request storms
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // Sync debounced search to filters state and reset page
+    useEffect(() => {
+        setFilters(prev => ({
+            ...prev,
+            search: debouncedSearchQuery,
+            page: 1
+        }));
+    }, [debouncedSearchQuery]);
     const [pagination, setPagination] = useState({
         total: 0,
         page: 1,
@@ -205,8 +225,8 @@ const   ManageInsurances = () => {
                             placeholder={t('management.common.searchPlaceholder')}
                             className="w-full pl-12 pr-4 py-3 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime"
                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                            value={filters.search}
-                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
                     <button
@@ -262,14 +282,17 @@ const   ManageInsurances = () => {
                         </div>
                         <div className="flex items-end pb-0.5">
                             <button
-                                onClick={() => setFilters({
-                                    ...filters,
-                                    search: '',
-                                    status: undefined,
-                                    policyType: undefined,
-                                    coverageType: undefined,
-                                    page: 1
-                                })}
+                                onClick={() => {
+                                    setSearchQuery('');
+                                    setFilters({
+                                        ...filters,
+                                        search: '',
+                                        status: undefined,
+                                        policyType: undefined,
+                                        coverageType: undefined,
+                                        page: 1
+                                    });
+                                }}
                                 className="w-full py-2 rounded-lg text-sm font-bold transition-all hover:bg-white/5"
                                 style={{ border: '1px solid var(--border-main)', color: 'var(--text-dim)' }}
                             >
@@ -410,7 +433,7 @@ const   ManageInsurances = () => {
                                     ))}
                                 </div>
                                 <button
-                                    disabled={filters.page === pagination.totalPages}
+                                    disabled={filters.page >= (pagination.totalPages || 1)}
                                     onClick={() => handlePageChange(filters.page + 1)}
                                     className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
                                     style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
