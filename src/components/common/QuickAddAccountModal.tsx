@@ -48,10 +48,18 @@ export const QuickAddAccountModal = ({
 
         setSubmitting(true);
         try {
+            const categoryToType: Record<string, string> = {
+                INCOME: 'Income',
+                EXPENSE: 'Expense',
+                ASSET: 'Cash',
+                LIABILITY: 'Accounts Payable',
+                EQUITY: 'Equity'
+            };
             const result = await createAccountingCode({
                 code: formData.code.trim(),
                 name: formData.name.trim(),
-                category: formData.category as AccountingCategory
+                category: formData.category as AccountingCategory,
+                accountType: categoryToType[formData.category] || 'Income'
             });
             toast.success(`Account ${formData.code} - "${formData.name}" created successfully!`);
             

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List } from 'lucide-react';
+import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List, Upload } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode, updateAccountingCode, deleteAccountingCode } from '../../../services/accountingService';
 import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } from '../../../services/accountingService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import BulkAccountingCodeUpload from './BulkAccountingCodeUpload';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -16,23 +17,68 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
 
 const CATEGORIES: AccountingCategory[] = ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
 
+const ACCOUNT_TYPES = [
+    'Income', 'Expense', 'Cash', 'Accounts Receivable', 'Fixed Asset',
+    'Other Current Asset', 'Accounts Payable', 'Other Current Liability', 'Equity',
+    'Other Expense', 'Other Liability', 'Stock', 'Cost Of Goods Sold', 'Output Tax',
+    'Input Tax', 'Bank', 'Non Current Liability', 'Other Income', 'Other Asset'
+];
+
+const mapAccountTypeToCategory = (type: string): AccountingCategory => {
+    const t = type.toLowerCase().trim();
+    if (['income', 'other income', 'ncome'].includes(t)) return 'INCOME';
+    if (['expense', 'other expense', 'cost of goods sold'].includes(t)) return 'EXPENSE';
+    if (['equity', 'stock'].includes(t)) return 'EQUITY';
+    if (['liability', 'other liability', 'other current liability', 'non current liability', 'non current liab', 'accounts payable', 'output tax'].includes(t)) return 'LIABILITY';
+    return 'ASSET';
+};
+
 const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [codes, setCodes] = useState<AccountingCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAddRouteActive, setIsAddRouteActive] = useState(false);
+    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const navigate = useNavigate();
     
     // Filters
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
 
     // Add Form State
-    const [newCode, setNewCode] = useState<CreateAccountingCodePayload>({ code: '', name: '', category: 'INCOME' });
+    const [newCode, setNewCode] = useState<CreateAccountingCodePayload>({
+        code: '',
+        name: '',
+        category: 'INCOME',
+        accountType: 'Income',
+        description: '',
+        mileageRate: 0,
+        mileageUnit: '',
+        isMileage: false,
+        accountNumber: '',
+        accountStatus: 'Active',
+        currency: 'USD',
+        parentAccount: '',
+        cuentaEspanol: ''
+    });
     const [creating, setCreating] = useState(false);
 
     // Edit Form State
     const [editingCode, setEditingCode] = useState<AccountingCode | null>(null);
-    const [editPayload, setEditPayload] = useState<CreateAccountingCodePayload>({ code: '', name: '', category: 'INCOME' });
+    const [editPayload, setEditPayload] = useState<CreateAccountingCodePayload>({
+        code: '',
+        name: '',
+        category: 'INCOME',
+        accountType: 'Income',
+        description: '',
+        mileageRate: 0,
+        mileageUnit: '',
+        isMileage: false,
+        accountNumber: '',
+        accountStatus: 'Active',
+        currency: 'USD',
+        parentAccount: '',
+        cuentaEspanol: ''
+    });
     const [isEditing, setIsEditing] = useState(false);
 
     // Delete State
@@ -64,8 +110,27 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         setCreating(true);
         setError(null);
         try {
-            await createAccountingCode(newCode);
-            setNewCode({ code: '', name: '', category: 'INCOME' });
+            const payload = {
+                ...newCode,
+                category: mapAccountTypeToCategory(newCode.accountType || 'Income'),
+                parentAccount: newCode.parentAccount || null
+            };
+            await createAccountingCode(payload);
+            setNewCode({
+                code: '',
+                name: '',
+                category: 'INCOME',
+                accountType: 'Income',
+                description: '',
+                mileageRate: 0,
+                mileageUnit: '',
+                isMileage: false,
+                accountNumber: '',
+                accountStatus: 'Active',
+                currency: 'USD',
+                parentAccount: '',
+                cuentaEspanol: ''
+            });
             setIsAddRouteActive(false);
             await fetchCodes();
         } catch (err: any) {
@@ -77,7 +142,21 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
     const handleEditClick = (code: AccountingCode) => {
         setEditingCode(code);
-        setEditPayload({ code: code.code, name: code.name, category: code.category });
+        setEditPayload({
+            code: code.code,
+            name: code.name,
+            category: code.category,
+            accountType: code.accountType || 'Income',
+            description: code.description || '',
+            mileageRate: code.mileageRate || 0,
+            mileageUnit: code.mileageUnit || '',
+            isMileage: !!code.isMileage,
+            accountNumber: code.accountNumber || '',
+            accountStatus: code.accountStatus || 'Active',
+            currency: code.currency || 'USD',
+            parentAccount: typeof code.parentAccount === 'object' && code.parentAccount ? code.parentAccount._id : (code.parentAccount || ''),
+            cuentaEspanol: code.cuentaEspanol || ''
+        });
         setIsAddRouteActive(false);
     };
 
@@ -88,7 +167,12 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         setError(null);
         try {
             const targetId = editingCode._id || (editingCode as any).id;
-            await updateAccountingCode(targetId, editPayload);
+            const payload = {
+                ...editPayload,
+                category: mapAccountTypeToCategory(editPayload.accountType || 'Income'),
+                parentAccount: editPayload.parentAccount || null
+            };
+            await updateAccountingCode(targetId, payload);
             setEditingCode(null);
             await fetchCodes();
         } catch (err: any) {
@@ -118,7 +202,58 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         }
     };
 
-    const filteredCodes = codes.filter(c => activeCategoryFilter === 'ALL' || c.category === activeCategoryFilter);
+    const getHierarchicalCodes = (flatCodes: AccountingCode[]): (AccountingCode & { depth: number })[] => {
+        const idToChildren: Record<string, AccountingCode[]> = {};
+        const roots: AccountingCode[] = [];
+        const idToCode: Record<string, AccountingCode> = {};
+
+        flatCodes.forEach(c => {
+            const id = c._id || (c as any).id;
+            if (id) idToCode[id] = c;
+        });
+
+        flatCodes.forEach(c => {
+            const parentId = c.parentAccount
+                ? (typeof c.parentAccount === 'object'
+                    ? (c.parentAccount._id || (c.parentAccount as any).id)
+                    : String(c.parentAccount))
+                : null;
+
+            if (parentId && idToCode[parentId]) {
+                if (!idToChildren[parentId]) {
+                    idToChildren[parentId] = [];
+                }
+                idToChildren[parentId].push(c);
+            } else {
+                roots.push(c);
+            }
+        });
+
+        roots.sort((a, b) => a.code.localeCompare(b.code));
+
+        const result: (AccountingCode & { depth: number })[] = [];
+
+        const traverse = (node: AccountingCode, depth: number) => {
+            result.push({ ...node, depth });
+            const nodeId = node._id || (node as any).id;
+            if (nodeId && idToChildren[nodeId]) {
+                const children = idToChildren[nodeId];
+                children.sort((a, b) => a.code.localeCompare(b.code));
+                children.forEach(child => {
+                    traverse(child, depth + 1);
+                });
+            }
+        };
+
+        roots.forEach(root => {
+            traverse(root, 0);
+        });
+
+        return result;
+    };
+
+    const hierarchicalCodes = getHierarchicalCodes(codes);
+    const filteredCodes = hierarchicalCodes.filter(c => activeCategoryFilter === 'ALL' || c.category === activeCategoryFilter);
 
     return (
         <div className={isEmbedded ? "space-y-6" : "container-responsive space-y-6"}>
@@ -142,13 +277,22 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {canManageCodes && !isAddRouteActive && (
-                        <button
-                            onClick={() => setIsAddRouteActive(true)}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                            style={{ backgroundColor: 'var(--brand-lime)' }}
-                        >
-                            <Plus size={14} strokeWidth={3} /> Add Code
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setIsBulkUploadOpen(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide border transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer hover:bg-white/5"
+                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <Upload size={14} /> Bulk Upload
+                            </button>
+                            <button
+                                onClick={() => setIsAddRouteActive(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                                style={{ backgroundColor: 'var(--brand-lime)' }}
+                            >
+                                <Plus size={14} strokeWidth={3} /> Add Code
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -170,7 +314,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         </button>
                     </div>
                     <form onSubmit={handleCreateCode} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Code</label>
                                 <input
@@ -196,19 +340,134 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Category</label>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Account Type</label>
                                 <select
                                     required
-                                    value={newCode.category}
-                                    onChange={e => setNewCode({ ...newCode, category: e.target.value as AccountingCategory })}
+                                    value={newCode.accountType}
+                                    onChange={e => setNewCode({ ...newCode, accountType: e.target.value, category: mapAccountTypeToCategory(e.target.value) })}
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
                                     style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    {CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                    {ACCOUNT_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Parent Account</label>
+                                <select
+                                    value={newCode.parentAccount || ''}
+                                    onChange={e => setNewCode({ ...newCode, parentAccount: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">— None —</option>
+                                    {codes.map(c => (
+                                        <option key={c._id} value={c._id}>{c.code} - {c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Cuenta en Español</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Caja Menuda"
+                                    value={newCode.cuentaEspanol || ''}
+                                    onChange={e => setNewCode({ ...newCode, cuentaEspanol: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Account #</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 1010-01"
+                                    value={newCode.accountNumber || ''}
+                                    onChange={e => setNewCode({ ...newCode, accountNumber: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Currency</label>
+                                <input
+                                    type="text"
+                                    placeholder="USD"
+                                    value={newCode.currency || 'USD'}
+                                    onChange={e => setNewCode({ ...newCode, currency: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Status</label>
+                                <select
+                                    value={newCode.accountStatus || 'Active'}
+                                    onChange={e => setNewCode({ ...newCode, accountStatus: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Description</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter description..."
+                                    value={newCode.description || ''}
+                                    onChange={e => setNewCode({ ...newCode, description: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div className="flex items-center pt-8">
+                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!newCode.isMileage}
+                                        onChange={e => setNewCode({ ...newCode, isMileage: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300 text-lime focus:ring-lime"
+                                    />
+                                    Is Mileage Account
+                                </label>
+                            </div>
+                            {newCode.isMileage && (
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-main)' }}>Rate</label>
+                                        <input
+                                            type="number"
+                                            step="0.001"
+                                            value={newCode.mileageRate || 0}
+                                            onChange={e => setNewCode({ ...newCode, mileageRate: Number(e.target.value) })}
+                                            className="w-full px-3 py-2 rounded-xl outline-none text-xs"
+                                            style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-main)' }}>Unit</label>
+                                        <select
+                                            value={newCode.mileageUnit || ''}
+                                            onChange={e => setNewCode({ ...newCode, mileageUnit: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-xl outline-none text-xs"
+                                            style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">None</option>
+                                            <option value="KM">KM</option>
+                                            <option value="MI">MI</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="flex justify-end pt-4">
                             <button
@@ -234,7 +493,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         </button>
                     </div>
                     <form onSubmit={handleUpdateCode} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Code</label>
                                 <input
@@ -260,19 +519,134 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Category</label>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Account Type</label>
                                 <select
                                     required
-                                    value={editPayload.category}
-                                    onChange={e => setEditPayload({ ...editPayload, category: e.target.value as AccountingCategory })}
+                                    value={editPayload.accountType}
+                                    onChange={e => setEditPayload({ ...editPayload, accountType: e.target.value, category: mapAccountTypeToCategory(e.target.value) })}
                                     className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
                                     style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                 >
-                                    {CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                    {ACCOUNT_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Parent Account</label>
+                                <select
+                                    value={editPayload.parentAccount || ''}
+                                    onChange={e => setEditPayload({ ...editPayload, parentAccount: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">— None —</option>
+                                    {codes.filter(c => c._id !== (editingCode?._id || (editingCode as any)?.id)).map(c => (
+                                        <option key={c._id} value={c._id}>{c.code} - {c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Cuenta en Español</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Placa y Permiso..."
+                                    value={editPayload.cuentaEspanol || ''}
+                                    onChange={e => setEditPayload({ ...editPayload, cuentaEspanol: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Account #</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 1010-01"
+                                    value={editPayload.accountNumber || ''}
+                                    onChange={e => setEditPayload({ ...editPayload, accountNumber: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Currency</label>
+                                <input
+                                    type="text"
+                                    placeholder="USD"
+                                    value={editPayload.currency || 'USD'}
+                                    onChange={e => setEditPayload({ ...editPayload, currency: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Status</label>
+                                <select
+                                    value={editPayload.accountStatus || 'Active'}
+                                    onChange={e => setEditPayload({ ...editPayload, accountStatus: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Description</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter description..."
+                                    value={editPayload.description || ''}
+                                    onChange={e => setEditPayload({ ...editPayload, description: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
+                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div className="flex items-center pt-8">
+                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer" style={{ color: 'var(--text-main)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!editPayload.isMileage}
+                                        onChange={e => setEditPayload({ ...editPayload, isMileage: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300 text-lime focus:ring-lime"
+                                    />
+                                    Is Mileage Account
+                                </label>
+                            </div>
+                            {editPayload.isMileage && (
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-main)' }}>Rate</label>
+                                        <input
+                                            type="number"
+                                            step="0.001"
+                                            value={editPayload.mileageRate || 0}
+                                            onChange={e => setEditPayload({ ...editPayload, mileageRate: Number(e.target.value) })}
+                                            className="w-full px-3 py-2 rounded-xl outline-none text-xs"
+                                            style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-main)' }}>Unit</label>
+                                        <select
+                                            value={editPayload.mileageUnit || ''}
+                                            onChange={e => setEditPayload({ ...editPayload, mileageUnit: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-xl outline-none text-xs"
+                                            style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">None</option>
+                                            <option value="KM">KM</option>
+                                            <option value="MI">MI</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="flex justify-end pt-4">
                             <button
@@ -367,6 +741,9 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Code</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Name</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Account Type</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Spanish Name</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Parent Account</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Category</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
@@ -375,13 +752,30 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 {filteredCodes.map((c) => {
                                     const style = CATEGORY_STYLES[c.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
                                     const codeId = c._id || (c as any).id;
+                                    const parentVal = c.parentAccount
+                                        ? (typeof c.parentAccount === 'object' && 'name' in c.parentAccount
+                                            ? `${c.parentAccount.code} - ${c.parentAccount.name}`
+                                            : String(c.parentAccount))
+                                        : '—';
                                     return (
                                         <tr key={codeId} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4">
                                                 <div className="font-mono text-sm font-bold" style={{ color: 'var(--text-main)' }}>{c.code}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="font-medium text-sm" style={{ color: 'var(--text-main)' }}>{c.name}</div>
+                                                <div className="font-medium text-sm flex items-center gap-1.5" style={{ color: 'var(--text-main)', paddingLeft: `${c.depth * 20}px` }}>
+                                                    {c.depth > 0 && <span className="opacity-45 text-[11px] font-mono select-none" style={{ color: 'var(--text-dim)' }}>↳</span>}
+                                                    {c.name}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>
+                                                {c.accountType || '—'}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-dim)' }}>
+                                                {c.cuentaEspanol || '—'}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-dim)' }}>
+                                                {parentVal}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
@@ -430,6 +824,14 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                     )}
                 </div>
             </div>
+            <BulkAccountingCodeUpload
+                isOpen={isBulkUploadOpen}
+                onClose={() => setIsBulkUploadOpen(false)}
+                onSuccess={() => {
+                    setIsBulkUploadOpen(false);
+                    fetchCodes();
+                }}
+            />
         </div>
     );
 };

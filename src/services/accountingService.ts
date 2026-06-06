@@ -7,6 +7,16 @@ export interface AccountingCode {
     code: string;
     name: string;
     category: AccountingCategory;
+    accountType?: string;
+    description?: string;
+    mileageRate?: number;
+    mileageUnit?: string;
+    isMileage?: boolean;
+    accountNumber?: string;
+    accountStatus?: string;
+    currency?: string;
+    parentAccount?: string | { _id: string; code: string; name: string } | null;
+    cuentaEspanol?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -15,6 +25,16 @@ export interface CreateAccountingCodePayload {
     code: string;
     name: string;
     category: AccountingCategory;
+    accountType?: string;
+    description?: string;
+    mileageRate?: number;
+    mileageUnit?: string;
+    isMileage?: boolean;
+    accountNumber?: string;
+    accountStatus?: string;
+    currency?: string;
+    parentAccount?: string | null;
+    cuentaEspanol?: string;
 }
 
 export const getAllAccountingCodes = async (): Promise<AccountingCode[]> => {
@@ -34,4 +54,9 @@ export const updateAccountingCode = async (id: string, payload: Partial<CreateAc
 
 export const deleteAccountingCode = async (id: string): Promise<void> => {
     await api.delete(`/api/accounting-code/${id}`);
+};
+
+export const bulkUpsertAccountingCodes = async (codes: Partial<CreateAccountingCodePayload>[]): Promise<any> => {
+    const response = await api.post('/api/accounting-code/bulk', { codes });
+    return response.data.data || response.data;
 };
