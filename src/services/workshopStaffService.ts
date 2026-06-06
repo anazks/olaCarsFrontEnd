@@ -6,6 +6,7 @@ export interface WorkshopStaff {
     email: string;
     phone: string;
     branchId: any; // Can be object or string depending on population
+    workshopId?: any;
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions: string[];
@@ -42,7 +43,7 @@ export interface CreateWorkshopStaffPayload {
     email: string;
     password: string;
     phone: string;
-    branchId: string;
+    workshopId: string;
     status?: string;
     permissions?: string[];
 }
@@ -53,7 +54,7 @@ export interface UpdateWorkshopStaffPayload {
     email?: string;
     password?: string;
     phone?: string;
-    branchId?: string;
+    workshopId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions?: string[];
 }
