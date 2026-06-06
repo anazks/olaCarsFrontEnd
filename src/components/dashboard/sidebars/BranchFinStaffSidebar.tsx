@@ -106,6 +106,7 @@ const BranchFinStaffSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Br
             label: 'Finance',
             icon: <Calculator size={22} />,
             subItems: [
+                { label: 'Chart of Accounts', path: '/admin/branch-fin-staff/chart-of-accounts' },
                 { label: 'General Ledger', path: '/admin/branch-fin-staff/ledger' },
                 { label: 'Finance Dashboard', path: '/admin/branch-fin-staff/finance-dashboard' },
                 { label: 'Financial Statements', path: '/admin/branch-fin-staff/financial-statements' },

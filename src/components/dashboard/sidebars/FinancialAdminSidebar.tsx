@@ -162,6 +162,7 @@ const FinancialAdminSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Fi
             label: 'Accounting',
             icon: <Calculator size={22} />,
             subItems: [
+                { label: 'Chart of Accounts', path: '/admin/financial-admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
                 { label: 'Finance Dashboard', path: '/admin/financial-admin/finance-dashboard', permission: 'REPORTS_VIEW' },
                 { label: 'Payment Requests', path: '/admin/financial-admin/payment-requests' },
                 { label: 'General Ledger', path: '/admin/financial-admin/ledger', permission: 'LEDGER_VIEW' },

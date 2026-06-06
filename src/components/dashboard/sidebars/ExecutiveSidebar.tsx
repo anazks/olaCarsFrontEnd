@@ -170,6 +170,7 @@ const ExecutiveSidebar = ({ isSidebarCollapsed = false, toggleSidebar }: Executi
             label: 'Accounts',
             icon: <Calculator size={22} />,
             subItems: [
+                { label: 'Chart of Accounts', path: '/admin/admin/chart-of-accounts', permission: 'ACCOUNTING_CODE_VIEW' },
                 { label: 'General Ledger', path: '/admin/admin/ledger', permission: 'LEDGER_VIEW' },
                 { label: 'Intelligence Reports', path: '/admin/admin/reports', permission: 'REPORTS_VIEW' },
                 { label: 'Financial Statements', path: '/admin/admin/financial-statements', permission: 'REPORTS_VIEW' },
