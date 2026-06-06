@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { downloadFile } from '../../../utils/fileDownloader';
+import { getUserRole } from '../../../utils/auth';
+import { API_ROLE_TO_ROUTE } from '../../../services/authService';
 
 const formatDate = (dateString?: string | Date) => {
     if (!dateString) return '-';
@@ -29,6 +31,8 @@ const formatDate = (dateString?: string | Date) => {
 const VehiclePolicyList = () => {
     useTranslation();
     const navigate = useNavigate();
+    const role = getUserRole();
+    const baseRoute = (role && API_ROLE_TO_ROUTE[role]) || '/admin/financial-admin';
     const [policies, setPolicies] = useState<VehiclePolicy[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -60,6 +64,7 @@ const VehiclePolicyList = () => {
         setError('');
         try {
             const data = await getAllVehiclePolicies(filters);
+            console.log('Vehicle policies data from backend:', data);
             if (data.success) {
                 setPolicies(data.data);
                 if (data.pagination) setPagination(data.pagination);
@@ -190,7 +195,7 @@ const VehiclePolicyList = () => {
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {policies.map(policy => (
-                                    <tr key={policy._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`/admin/financial-admin/vehicle-policies/${policy._id}`)}>
+                                    <tr key={policy._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(`${baseRoute}/vehicle-policies/${policy._id}`)}>
                                         <td className="px-6 py-4">
                                             <div className="font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                 <Car size={16} className="text-lime" />
@@ -265,7 +270,7 @@ const VehiclePolicyList = () => {
                                                     <span className="text-[10px] italic" style={{ color: 'var(--text-dim)' }}>No Cert</span>
                                                 )}
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/vehicle-policies/${policy._id}`); }}
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`${baseRoute}/vehicle-policies/${policy._id}`); }}
                                                     className="mt-2 px-3 py-1.5 rounded bg-black/5 dark:bg-white/10 text-neutral-800 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-black/10 dark:hover:bg-white/20 transition-colors flex items-center justify-center gap-1 w-full"
                                                 >
                                                     <Eye size={12} /> View Details

@@ -554,7 +554,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                                 <div className="mt-1 flex justify-end">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); navigate(detailPath, { state: { from: location.pathname } }); }}
-                                                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm"
+                                                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm border border-white/10"
                                                         style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}
                                                         title="View Details"
                                                     >
