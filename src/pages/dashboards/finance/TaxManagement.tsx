@@ -6,6 +6,38 @@ import type { Tax, CreateTaxPayload } from '../../../services/taxService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
+// Parses API/backend errors into a clean user-facing message.
+// Specifically handles MongoDB E11000 duplicate key errors.
+const parseApiError = (err: any, fallback: string): string => {
+    const message: string =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        '';
+
+    // MongoDB duplicate key error — e.g.:
+    // "E11000 duplicate key error collection: ... index: name_1 dup key: { name: \"vat\" }"
+    if (
+        message.includes('E11000') ||
+        message.toLowerCase().includes('duplicate key') ||
+        err?.response?.status === 409
+    ) {
+        // Try to extract the field name from the index hint (e.g. "name_1" → "name")
+        const indexMatch = message.match(/index:\s*(\w+)_1/);
+        const fieldName = indexMatch ? indexMatch[1] : 'name';
+        // Try to extract the duplicate value from dup key block
+        const valueMatch = message.match(/dup key:\s*\{[^:]+:\s*"([^"]+)"/);
+        const dupValue = valueMatch ? valueMatch[1] : null;
+
+        if (dupValue) {
+            return `A tax profile named "${dupValue}" already exists. Please use a different name.`;
+        }
+        return `A tax profile with this ${fieldName} already exists. Please use a different name.`;
+    }
+
+    return message || fallback;
+};
+
 const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [taxes, setTaxes] = useState<Tax[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,15 +127,24 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             setError('Tax percentage must be a whole number greater than 0');
             return;
         }
+        // Case-insensitive duplicate name check
+        const trimmedName = newTax.name.trim();
+        const isDuplicate = taxes.some(
+            t => t.name.trim().toLowerCase() === trimmedName.toLowerCase()
+        );
+        if (isDuplicate) {
+            setError(`A tax profile named "${trimmedName}" already exists. Tax names must be unique (case-insensitive).`);
+            return;
+        }
         setCreating(true);
         setError(null);
         try {
-            await createTax(newTax);
+            await createTax({ ...newTax, name: trimmedName });
             setNewTax({ name: '', rate: 0 });
             setIsAddRouteActive(false);
             await fetchTaxes();
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to create tax');
+            setError(parseApiError(err, 'Failed to create tax'));
         } finally {
             setCreating(false);
         }
@@ -116,16 +157,25 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             setError('Tax percentage must be a whole number greater than 0');
             return;
         }
+        // Case-insensitive duplicate name check (exclude the tax being edited)
+        const trimmedName = newTax.name.trim();
+        const isDuplicate = taxes.some(
+            t => t._id !== editingTaxId && t.name.trim().toLowerCase() === trimmedName.toLowerCase()
+        );
+        if (isDuplicate) {
+            setError(`A tax profile named "${trimmedName}" already exists. Tax names must be unique (case-insensitive).`);
+            return;
+        }
         setCreating(true);
         setError(null);
         try {
-            await updateTax(editingTaxId, { name: newTax.name, rate: newTax.rate });
+            await updateTax(editingTaxId, { name: trimmedName, rate: newTax.rate });
             setNewTax({ name: '', rate: 0 });
             setEditingTaxId(null);
             setIsAddRouteActive(false);
             await fetchTaxes();
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || 'Failed to update tax');
+            setError(parseApiError(err, 'Failed to update tax'));
         } finally {
             setCreating(false);
         }
