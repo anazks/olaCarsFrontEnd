@@ -10,7 +10,6 @@ const ManualJournals = () => {
     const [journals, setJournals] = useState<ManualJournal[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showCreateModal, setShowCreateModal] = useState(false);
     const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
 
     // Expandable journal lines cache

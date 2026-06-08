@@ -53,7 +53,7 @@ const AccountingCodeDetails = () => {
         setLoading(true);
         try {
             // 1. Fetch the accounting code details
-            const allCodes = await getAllAccountingCodes();
+            const allCodes = await getAllAccountingCodes() as AccountingCode[];
             const foundCode = allCodes.find(c => c._id === id || (c as any).id === id);
             
             if (!foundCode) {

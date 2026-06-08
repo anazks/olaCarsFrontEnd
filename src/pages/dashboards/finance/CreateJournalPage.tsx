@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, X, AlertCircle, Calculator, Building2, UserPlus, BookOpen, Search, ChevronDown, Check, User } from 'lucide-react';
+import { Plus, Trash2, Save, X, AlertCircle, Calculator, Building2, UserPlus, Search, ChevronDown, Check, User } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode } from '../../../services/accountingService';
 import { createManualJournal } from '../../../services/ledgerService';
 import { getAllBranches, createBranch } from '../../../services/branchService';
@@ -16,7 +16,7 @@ import type { CountryManager } from '../../../services/countryManagerService';
 import type { Customer } from '../../../services/customerService';
 
 // Custom Dropdown Hook to handle click outside
-function useClickOutside(ref: React.RefObject<HTMLElement>, handler: () => void) {
+function useClickOutside(ref: React.RefObject<any>, handler: () => void) {
     useEffect(() => {
         const listener = (event: MouseEvent | TouchEvent) => {
             if (!ref.current || ref.current.contains(event.target as Node)) {
