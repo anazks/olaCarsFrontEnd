@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { getManualJournals, getLedgerEntries } from '../../../services/ledgerService';
 import type { ManualJournal, LedgerEntry } from '../../../services/ledgerService';
-import CreateJournalEntry from './CreateJournalEntry';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { useNavigate } from 'react-router-dom';
 
 const ManualJournals = () => {
+    const navigate = useNavigate();
     const [journals, setJournals] = useState<ManualJournal[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -126,7 +127,7 @@ const ManualJournals = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => navigate('new')}
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
                         style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                     >
@@ -358,26 +359,6 @@ const ManualJournals = () => {
                 </div>
             )}
 
-            {/* Create Journal Modal Container */}
-            {showCreateModal && (
-                <div
-                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
-                    onClick={() => setShowCreateModal(false)}
-                >
-                    <div
-                        className="relative w-full max-w-5xl my-8 transform transition-all"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <CreateJournalEntry
-                            onClose={() => setShowCreateModal(false)}
-                            onSuccess={() => {
-                                setShowCreateModal(false);
-                                fetchJournals();
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

@@ -61,6 +61,17 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, onAdd
                         />
                     </div>
                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                        {onAddNew && (
+                            <div
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    onAddNew();
+                                }}
+                                className="px-4 py-2.5 bg-white/[0.02] border-b border-[var(--border-main)]/20 hover:bg-[#C8E600] group cursor-pointer transition-colors text-[#C8E600] hover:text-black text-xs font-bold flex items-center gap-1.5"
+                            >
+                                <Plus size={14} /> Add New Code
+                            </div>
+                        )}
                         {filteredCodes.length > 0 ? (
                             filteredCodes.map(code => (
                                 <div
@@ -159,6 +170,13 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         { accountingCode: '', type: 'CREDIT', amount: 0, description: '' }
     ]);
 
+    const closeBranchModal = () => {
+        setShowBranchModal(false);
+        if (header.branch === 'ADD_NEW') {
+            setHeader(prev => ({ ...prev, branch: branches[0]?._id || '' }));
+        }
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -177,7 +195,11 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                 }
 
                 if (branchesRes.status === 'fulfilled') {
-                    setBranches(branchesRes.value.data || []);
+                    const branchList = branchesRes.value.data || [];
+                    setBranches(branchList);
+                    if (branchList.length > 0) {
+                        setHeader(prev => ({ ...prev, branch: branchList[0]._id }));
+                    }
                 } else {
                     console.error("Failed to load branches:", branchesRes.reason);
                 }
@@ -224,7 +246,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
             const branchesData = await getAllBranches();
             setBranches(branchesData.data || []);
             // Auto select
-            setHeader({ ...header, branch: res._id });
+            setHeader(prev => ({ ...prev, branch: res._id }));
             setShowBranchModal(false);
             setNewBranch({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' });
         } catch (err: any) {
@@ -440,13 +462,22 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 required
                                 disabled={branches.length === 0}
                                 value={header.branch}
-                                onChange={e => setHeader({ ...header, branch: e.target.value })}
+                                onChange={e => {
+                                    if (e.target.value === 'ADD_NEW') {
+                                        setShowBranchModal(true);
+                                    } else {
+                                        setHeader({ ...header, branch: e.target.value });
+                                    }
+                                }}
                                 className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-3 text-sm text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="" className="bg-[var(--bg-card)]">{branches.length === 0 ? 'No Branches Available' : 'Select Branch'}</option>
                                 {branches.map(b => (
                                     <option key={b._id} value={b._id} className="bg-[var(--bg-card)]">{b.name} ({b.country})</option>
                                 ))}
+                                {branches.length > 0 && (
+                                    <option value="ADD_NEW" className="bg-[var(--bg-card)] text-[#C8E600] font-bold">+ Add New Branch</option>
+                                )}
                             </select>
                             {branches.length > 0 && (
                                 <button type="button" onClick={() => setShowBranchModal(true)} className="px-3 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl hover:brightness-110 text-dim transition-all flex items-center justify-center" title="Quick Add Branch">
@@ -470,7 +501,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
 
                 {/* Lines Table */}
                 <div className="rounded-xl border border-[var(--border-main)] overflow-hidden">
-                    <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                    <div className="min-h-[200px] max-h-[350px] overflow-y-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-[var(--bg-input)]">
                                 <tr>
@@ -484,8 +515,8 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                             </thead>
                             <tbody className="divide-y divide-[var(--border-main)]">
                                 {lines.map((line, index) => (
-                                    <tr key={index} className="hover:bg-[var(--bg-input)]" style={{ position: 'relative', zIndex: openDropdownIndex === index ? 1000 : 1 }}>
-                                        <td className="p-2 w-1/4 relative">
+                                    <tr key={index} className="hover:bg-[var(--bg-input)]">
+                                        <td className="p-2 w-1/4 relative" style={{ zIndex: openDropdownIndex === index ? 10000 : 1 }}>
                                             <AccountSelector
                                                 codes={accountingCodes}
                                                 selectedId={line.accountingCode}
@@ -644,7 +675,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                     <div className="bg-[var(--bg-card)] rounded-2xl p-6 w-full max-w-2xl border border-[var(--border-main)] shadow-2xl relative" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2"><Building2 size={20} className="text-[#C8E600]" /> Quick Add Branch</h3>
-                            <button onClick={() => setShowBranchModal(false)} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
+                            <button onClick={closeBranchModal} className="p-2 hover:bg-[var(--bg-input)] rounded-lg text-dim hover:text-[var(--text-main)] transition-colors"><X size={18} /></button>
                         </div>
                         {quickCreateError && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg text-sm flex items-center gap-2"><AlertCircle size={16} />{quickCreateError}</div>}
                         <form onSubmit={handleCreateBranch} className="space-y-4">
@@ -749,7 +780,7 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4 border-t border-[var(--border-main)]">
-                                <button type="button" onClick={() => setShowBranchModal(false)} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
+                                <button type="button" onClick={closeBranchModal} className="flex-1 py-2.5 rounded-lg text-sm bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] transition-colors">Cancel</button>
                                 <button type="submit" disabled={quickCreateLoading} className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-[#C8E600] text-black hover:brightness-110 transition-colors disabled:opacity-50">{quickCreateLoading ? 'Saving...' : 'Save Branch'}</button>
                             </div>
                         </form>

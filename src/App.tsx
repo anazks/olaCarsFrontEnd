@@ -120,6 +120,7 @@ import BalanceSheet from "./pages/dashboards/finance/BalanceSheet";
 import StaffSalaries from "./pages/dashboards/finance/StaffSalaries.tsx";
 import VoucherDashboard from "./pages/dashboards/finance/VoucherDashboard";
 import ManualJournals from "./pages/dashboards/finance/ManualJournals";
+import CreateJournalPage from "./pages/dashboards/finance/CreateJournalPage";
 import InvoiceList from "./pages/dashboards/finance/InvoiceList";
 import InvoiceDetail from "./pages/dashboards/finance/InvoiceDetail";
 import FinancialAdminScraps from "./pages/dashboards/financialAdmin/FinancialAdminScraps";
@@ -377,6 +378,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
+              <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
@@ -832,6 +834,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
+              <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
@@ -1011,6 +1014,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
+              <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
@@ -1393,6 +1397,7 @@ function App() {
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
+              <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
