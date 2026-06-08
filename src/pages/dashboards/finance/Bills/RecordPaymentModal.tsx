@@ -37,7 +37,7 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, bill }: RecordPaymentM
 
     const fetchCodes = async () => {
         try {
-            const codes = await getAllAccountingCodes();
+            const codes = await getAllAccountingCodes() as AccountingCode[];
             // Filter for Bank/Cash accounts if possible, or show all
             setAccountingCodes(codes.filter(c => c.category === 'ASSET' || c.category === 'EQUITY'));
         } catch (err) {
@@ -202,7 +202,7 @@ const RecordPaymentModal = ({ isOpen, onClose, onSuccess, bill }: RecordPaymentM
                 defaultCategory="ASSET"
                 onSuccess={async (newAcc) => {
                     try {
-                        const codes = await getAllAccountingCodes();
+                        const codes = await getAllAccountingCodes() as AccountingCode[];
                         setAccountingCodes(codes.filter(c => c.category === 'ASSET' || c.category === 'EQUITY'));
                         setPaymentData(prev => ({ ...prev, accountingCode: newAcc._id }));
                     } catch (err) {
