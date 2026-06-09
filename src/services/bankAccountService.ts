@@ -40,3 +40,8 @@ export const deleteBankAccount = async (id: string) => {
     const response = await api.delete(`/api/bank-accounts/${id}`);
     return response.data;
 };
+
+export const getBankAccountById = async (id: string) => {
+    const response = await api.get(`/api/bank-accounts/${id}`);
+    return response.data;
+};

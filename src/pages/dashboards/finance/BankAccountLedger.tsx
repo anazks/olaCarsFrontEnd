@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     BookMarked, 
@@ -10,34 +10,26 @@ import {
     User,
     Upload,
     FileSpreadsheet,
-    Info
+    Info,
+    Coins,
+    Building2,
+    Plus
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllAccountingCodes } from '../../../services/accountingService';
-import type { AccountingCode } from '../../../services/accountingService';
-import { getLedgerEntries } from '../../../services/ledgerService';
-import type { LedgerEntry } from '../../../services/ledgerService';
+import { getBankAccountById, type BankAccount } from '../../../services/bankAccountService';
+import { getLedgerEntries, type LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-    'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
-    'EXPENSE': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' }, // Red
-    'ASSET': { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6', border: 'rgba(59,130,246,0.3)' }, // Blue
-    'LIABILITY': { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: 'rgba(249,115,22,0.3)' }, // Orange
-    'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
-};
-
-const AccountingCodeDetails = () => {
+const BankAccountLedger = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    
-    const [code, setCode] = useState<AccountingCode | null>(null);
+
+    const [account, setAccount] = useState<BankAccount | null>(null);
     const [entries, setEntries] = useState<LedgerEntry[]>([]);
-    
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
@@ -52,27 +44,26 @@ const AccountingCodeDetails = () => {
         if (!id) return;
         setLoading(true);
         try {
-            // 1. Fetch the accounting code details
-            const allCodes = await getAllAccountingCodes() as AccountingCode[];
-            const foundCode = allCodes.find(c => c._id === id || (c as any).id === id);
-            
-            if (!foundCode) {
-                setError("Accounting code not found.");
-                setLoading(false);
-                return;
-            }
-            setCode(foundCode);
+            // 1. Fetch the bank account details
+            const res = await getBankAccountById(id);
+            const accountData = res.data || res;
+            setAccount(accountData);
 
-            // 2. Fetch the ledger entries for this code
-            const filters = {
-                accountingCode: id,
-                page,
-                limit
-            };
-            const ledgerRes = await getLedgerEntries(filters);
-            setEntries(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
-            if (ledgerRes.pagination) {
-                setPagination(ledgerRes.pagination);
+            // 2. Fetch the ledger entries for this linked code
+            const accCodeId = accountData.accountingCode?._id || accountData.accountingCode;
+            if (accCodeId) {
+                const filters = {
+                    accountingCode: typeof accCodeId === 'object' ? accCodeId._id : accCodeId,
+                    page,
+                    limit
+                };
+                const ledgerRes = await getLedgerEntries(filters);
+                setEntries(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
+                if (ledgerRes.pagination) {
+                    setPagination(ledgerRes.pagination);
+                }
+            } else {
+                setEntries([]);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch details');
@@ -107,7 +98,7 @@ const AccountingCodeDetails = () => {
         try {
             const { getInvoices } = await import('../../../services/invoiceService');
             const response = await getInvoices({ search: invoiceNumber });
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const basePath = location.pathname.split('/bank-accounts/')[0];
             if (response.data && response.data.length > 0) {
                 const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
                 navigate(`${basePath}/invoices/${invoice._id}`);
@@ -115,7 +106,7 @@ const AccountingCodeDetails = () => {
                 navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
             }
         } catch (err) {
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const basePath = location.pathname.split('/bank-accounts/')[0];
             navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
         }
     };
@@ -124,7 +115,7 @@ const AccountingCodeDetails = () => {
         try {
             const { getAllBills } = await import('../../../services/billService');
             const response = await getAllBills({ search: billNumber });
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const basePath = location.pathname.split('/bank-accounts/')[0];
             if (response.success && response.data && response.data.length > 0) {
                 const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
                 navigate(`${basePath}/bills/${bill._id}`);
@@ -132,7 +123,7 @@ const AccountingCodeDetails = () => {
                 navigate(`${basePath}/bills`, { state: { search: billNumber } });
             }
         } catch (err) {
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const basePath = location.pathname.split('/bank-accounts/')[0];
             navigate(`${basePath}/bills`, { state: { search: billNumber } });
         }
     };
@@ -182,7 +173,7 @@ const AccountingCodeDetails = () => {
         return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
     };
 
-    if (loading && !code) {
+    if (loading && !account) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
@@ -190,7 +181,7 @@ const AccountingCodeDetails = () => {
         );
     }
 
-    if (error || !code) {
+    if (error || !account) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
                 <AlertTriangle size={48} className="text-red-500" />
@@ -202,8 +193,6 @@ const AccountingCodeDetails = () => {
             </div>
         );
     }
-
-    const style = CATEGORY_STYLES[code.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
 
     // Derived statistics (calculated locally for this page's view)
     const totalDebit = entries.reduce((sum, entry) => {
@@ -217,14 +206,12 @@ const AccountingCodeDetails = () => {
     }, 0);
 
     return (
-        <div className="container-responsive space-y-6 pb-20 animate-fade-in">
+        <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
             <Breadcrumbs 
                 items={[
-                    { label: 'Finance', path: '../../finance-dashboard' },
-                    window.location.pathname.includes('/bank-accounts/')
-                        ? { label: 'Bank Accounts', path: '../bank-accounts' }
-                        : { label: 'Chart of Accounts', path: '../chart-of-accounts' },
-                    { label: code.code, active: true }
+                    { label: 'Finance', path: '#' },
+                    { label: 'Bank Accounts', path: '../bank-accounts' },
+                    { label: `${account.accountName || account.bankName} Ledger`, active: true }
                 ]} 
             />
 
@@ -240,37 +227,47 @@ const AccountingCodeDetails = () => {
                     </button>
                     <div className="flex items-center gap-3 mb-1">
                         <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                            <BookMarked size={28} style={{ color: 'var(--brand-lime)' }} />
-                            {code.name}
+                            {account.accountType === 'Cash' ? (
+                                <Coins size={28} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                            ) : (
+                                <Building2 size={28} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                            )}
+                            {account.accountName || account.bankName}
                         </h1>
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-                            {code.category}
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderColor: 'rgba(59,130,246,0.3)' }}>
+                            {account.accountType || 'Bank'}
                         </span>
                     </div>
-                    <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
+                    <p className="text-sm font-mono text-white/50">Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 
-                {/* Stats */}
-                <div className="flex items-center gap-6 mt-4 sm:mt-0">
-                    <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Debit</div>
-                        <div className="text-xl font-mono font-bold text-red-400">
-                            {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
+                    <button 
+                        onClick={() => setIsImportModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        <Upload size={14} strokeWidth={3} /> Import Statement
+                    </button>
+
+                    <div className="flex items-center gap-6 border-l border-white/10 pl-6">
+                        <div className="text-right">
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Debit</div>
+                            <div className="text-xl font-mono font-bold text-red-400">
+                                {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
                         </div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Credit</div>
-                        <div className="text-xl font-mono font-bold text-green-400">
-                            {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        <div className="text-right">
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Credit</div>
+                            <div className="text-xl font-mono font-bold text-green-400">
+                                {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
                         </div>
-                    </div>
-                    <div className="text-right pl-6 border-l border-white/10">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-brand-lime mb-1" style={{ color: 'var(--brand-lime)' }}>Net Movement</div>
-                        <div className="text-xl font-mono font-black" style={{ color: 'var(--text-main)' }}>
-                            {Math.abs(totalCredit - totalDebit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            <span className="text-xs font-normal ml-1 text-white/40">
-                                {totalCredit > totalDebit ? '(Cr)' : totalCredit < totalDebit ? '(Dr)' : ''}
-                            </span>
+                        <div className="text-right pl-6 border-l border-white/10">
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-brand-lime mb-1" style={{ color: 'var(--brand-lime)' }}>Ledger Balance</div>
+                            <div className="text-xl font-mono font-black" style={{ color: 'var(--text-main)' }}>
+                                {account.currency || 'USD'} {account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -326,7 +323,7 @@ const AccountingCodeDetails = () => {
                                             className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
-                                                const basePath = location.pathname.split('/chart-of-accounts/')[0];
+                                                const basePath = location.pathname.split('/bank-accounts/')[0];
                                                 navigate(`${basePath}/ledger/${entry._id}`);
                                             }}
                                         >
@@ -424,15 +421,16 @@ const AccountingCodeDetails = () => {
                     </div>
                 )}
             </div>
+
             {/* Import Statement Modal Workspace */}
             {isImportModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0" onClick={() => setIsImportModalOpen(false)} />
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsImportModalOpen(false)} />
                     <div className="relative border rounded-[2.5rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
                                 <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Import Bank Statement</h2>
-                                <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime">Reconcile Ledger Items</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Reconcile Ledger Items</p>
                             </div>
                         </div>
 
@@ -441,7 +439,7 @@ const AccountingCodeDetails = () => {
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Account</label>
                                 <input 
                                     type="text" 
-                                    value={`${code.name} (${code.code})`}
+                                    value={`${account.accountName || account.bankName} (${account.accountCode || 'N/A'})`}
                                     disabled
                                     className="w-full border rounded-2xl px-4 py-3 text-sm font-bold opacity-60"
                                     style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
@@ -472,14 +470,14 @@ const AccountingCodeDetails = () => {
 
                             <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-xs text-dim bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
                                 <Info size={16} className="text-lime flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-lime)' }} />
-                                <span className="leading-relaxed">Ola Cars uses smart matching filters to link imported bank entries with recorded supplier bills and client invoices automatically.</span>
+                                <span className="leading-relaxed font-semibold">Ola Cars uses smart matching filters to link imported bank entries with recorded supplier bills and client invoices automatically.</span>
                             </div>
 
                             <div className="pt-4 flex gap-3">
                                 <button 
                                     type="button"
                                     onClick={() => setIsImportModalOpen(false)}
-                                    className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border"
+                                    className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border cursor-pointer"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel
@@ -487,7 +485,7 @@ const AccountingCodeDetails = () => {
                                 <button 
                                     type="submit"
                                     disabled={importing}
-                                    className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md"
+                                    className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
                                     style={{ backgroundColor: 'var(--brand-lime)' }}
                                 >
                                     {importing ? (
@@ -505,4 +503,4 @@ const AccountingCodeDetails = () => {
     );
 };
 
-export default AccountingCodeDetails;
+export default BankAccountLedger;

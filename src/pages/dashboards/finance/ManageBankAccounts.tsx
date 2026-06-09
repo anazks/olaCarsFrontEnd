@@ -14,7 +14,9 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    Eye
+    Eye,
+    Coins,
+    CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
@@ -67,17 +69,9 @@ const ManageBankAccounts = () => {
             toast.error('This bank account is not linked to any accounting code.');
             return;
         }
-        let basePath = window.location.pathname;
-        if (basePath.includes('/bank-accounts')) {
-            basePath = basePath.split('/bank-accounts')[0];
-        } else if (basePath.includes('/dashboard-settings')) {
-            basePath = basePath.split('/dashboard-settings')[0];
-        } else {
-            basePath = basePath.replace(/\/$/, '');
-        }
-        navigate(`${basePath}/bank-accounts/${accCodeId}`);
+        const basePath = window.location.pathname.split('/bank-accounts')[0];
+        navigate(`${basePath}/bank-accounts/${account._id}/ledger`);
     };
-
     const fetchAccounts = useCallback(async () => {
         setLoading(true);
         try {
@@ -129,6 +123,9 @@ const ManageBankAccounts = () => {
             if (formData.accountType === 'Credit Card') {
                 return code.accountType === 'Credit Card' || 
                        (code.category === 'LIABILITY' && (code.accountType?.includes('Credit Card') || code.accountType?.includes('Liability')));
+            } else if (formData.accountType === 'Cash' || formData.accountType === 'Bank') {
+                return code.accountType === 'Bank' || code.accountType === 'Cash' || code.category === 'Cash' ||
+                       (code.category === 'ASSET' && (code.accountType === 'Bank' || code.accountType === 'Cash' || code.code?.startsWith('1.1.02') || code.name?.toLowerCase().includes('cash')));
             } else {
                 return code.accountType === 'Bank' || 
                        (code.category === 'ASSET' && (code.accountType === 'Bank' || code.code?.startsWith('1.1.02')));
@@ -333,7 +330,13 @@ const ManageBankAccounts = () => {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black border border-lime/10">
-                                                    <Building2 size={18} />
+                                                    {account.accountType === 'Cash' ? (
+                                                        <Coins size={18} />
+                                                    ) : account.accountType === 'Credit Card' ? (
+                                                        <CreditCard size={18} />
+                                                    ) : (
+                                                        <Building2 size={18} />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{account.accountName || account.bankName}</p>
@@ -504,43 +507,57 @@ const ManageBankAccounts = () => {
                                             style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                         >
                                             <option value="Bank">Bank</option>
+                                            <option value="Cash">Cash</option>
                                             <option value="Credit Card">Credit Card</option>
                                         </select>
                                     </div>
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:col-span-2">
-                                    <label className="sm:w-36 text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: 'var(--text-dim)' }}>Chart of Accounts</label>
-                                    <div className="flex-1">
-                                        <select 
-                                            value={selectedCodeId}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setSelectedCodeId(val);
-                                                if (val === 'NEW') {
-                                                    setFormData(prev => ({ ...prev, accountCode: '', accountName: '', currency: 'USD' }));
-                                                } else {
-                                                    const matched = filteredCodes.find((c: any) => c._id === val);
-                                                    if (matched) {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            accountCode: matched.code,
-                                                            accountName: matched.name,
-                                                            currency: matched.currency || 'USD'
-                                                        }));
-                                                    }
-                                                }
-                                            }}
-                                            className="w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
-                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                        >
-                                            <option value="NEW">-- Create New Accounting Code --</option>
-                                            {filteredCodes.map(code => (
-                                                <option key={code._id} value={code._id}>{code.code} - {code.name} ({code.currency || 'USD'})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
+                                     <div className="sm:w-36 flex flex-col shrink-0">
+                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Chart of Accounts</label>
+                                         <button 
+                                             type="button"
+                                             onClick={() => {
+                                                 const basePath = window.location.pathname.split('/bank-accounts')[0];
+                                                 navigate(`${basePath}/chart-of-accounts`, { state: { openAddForm: true } });
+                                             }}
+                                             className="text-[9px] font-black text-brand-lime hover:underline text-left mt-1.5 uppercase tracking-wider cursor-pointer"
+                                             style={{ color: 'var(--brand-lime)' }}
+                                         >
+                                             + Create Code
+                                         </button>
+                                     </div>
+                                     <div className="flex-1">
+                                         <select 
+                                             value={selectedCodeId}
+                                             onChange={e => {
+                                                 const val = e.target.value;
+                                                 setSelectedCodeId(val);
+                                                 if (val === 'NEW') {
+                                                     setFormData(prev => ({ ...prev, accountCode: '', accountName: '', currency: 'USD' }));
+                                                 } else {
+                                                     const matched = filteredCodes.find((c: any) => c._id === val);
+                                                     if (matched) {
+                                                         setFormData(prev => ({
+                                                             ...prev,
+                                                             accountCode: matched.code,
+                                                             accountName: matched.name,
+                                                             currency: matched.currency || 'USD'
+                                                         }));
+                                                     }
+                                                 }
+                                             }}
+                                             className="w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                             style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                         >
+                                             <option value="NEW">-- Create New Accounting Code --</option>
+                                             {filteredCodes.map(code => (
+                                                 <option key={code._id} value={code._id}>{code.code} - {code.name} ({code.currency || 'USD'})</option>
+                                             ))}
+                                         </select>
+                                     </div>
+                                 </div>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                     <label className="sm:w-36 text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: 'var(--text-dim)' }}>Account Code</label>
@@ -722,6 +739,7 @@ const ManageBankAccounts = () => {
                     </div>
                 </div>
             )}
+
 
 
         </div>

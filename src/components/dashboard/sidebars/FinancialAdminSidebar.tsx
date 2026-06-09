@@ -263,7 +263,6 @@ const FinancialAdminSidebar = ({
         {
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/financial-admin/finance-dashboard",
-          permission: "REPORTS_VIEW",
         },
         {
           label: t("sidebar.items.paymentRequests"),
@@ -272,22 +271,18 @@ const FinancialAdminSidebar = ({
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/financial-admin/ledger",
-          permission: "LEDGER_VIEW",
         },
         {
           label: t("sidebar.items.intelligenceReports"),
           path: "/admin/financial-admin/reports",
-          permission: "REPORTS_VIEW",
         },
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",
-          permission: "REPORTS_VIEW",
         },
         {
           label: t("sidebar.items.manualJournals"),
           path: "/admin/financial-admin/manual-journals",
-          permission: "JOURNAL_VIEW",
         },
         {
           label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
