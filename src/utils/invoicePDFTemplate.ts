@@ -102,10 +102,25 @@ export const generateInvoiceHTML = (invoice: any, driver: any, vehicle: any) => 
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 500; color: #111;">Weekly Vehicle Rent</td>
-                        <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 600; text-align: right; color: #111;">$${(invoice.baseAmount || 0).toLocaleString()}</td>
-                    </tr>
+                    ${invoice.lineItems && invoice.lineItems.length > 0 ?
+                        invoice.lineItems.map((item: any) => `
+                            <tr>
+                                <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 500; color: #111;">
+                                    ${item.name}
+                                    ${item.description ? `<br/><span style="font-size: 9pt; color: #666;">${item.description}</span>` : ''}
+                                </td>
+                                <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 600; text-align: right; color: #111;">$${(item.total || item.unitPrice * item.qty).toLocaleString()}</td>
+                            </tr>
+                        `).join('')
+                        : `
+                            <tr>
+                                <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 500; color: #111;">
+                                    ${invoice.invoiceType === 'WORKSHOP' ? 'Workshop Service Bill' : 'Weekly Vehicle Rent'}
+                                </td>
+                                <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 600; text-align: right; color: #111;">$${(invoice.baseAmount || 0).toLocaleString()}</td>
+                            </tr>
+                        `
+                    }
                     ${(invoice.carryOverAmount || 0) > 0 ? `
                     <tr>
                         <td style="padding: 15pt 5pt; border-bottom: 1px solid #eee; font-size: 12pt; font-weight: 500; color: #111;">

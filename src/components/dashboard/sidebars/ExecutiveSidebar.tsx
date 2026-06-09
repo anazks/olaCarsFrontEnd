@@ -98,6 +98,10 @@ const ExecutiveSidebar = ({
       label: t("sidebar.sections.dashboard"),
       icon: <LayoutGrid size={22} />,
       subItems: [
+        {
+          label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
+          path: "/admin/admin/dashboard-hub",
+        },
         { label: t("sidebar.items.executiveDashboard"), path: "/admin/admin" },
         {
           label: t("sidebar.items.collectionsDashboard"),
