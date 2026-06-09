@@ -70,7 +70,6 @@ const ManageWorkshopManagers = () => {
 
   const currentUser = getUser();
   const currentRole = getUserRole()?.toLowerCase();
-  const isBranchManager = currentRole === "branchmanager";
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,7 +130,7 @@ const ManageWorkshopManagers = () => {
 
       if (searchQuery.trim()) filters.search = searchQuery.trim();
       if (statusFilter !== "ALL") filters.status = statusFilter;
-      if (workshopFilter !== "ALL") filters.workshopId = workshopFilter;
+      if (workshopFilter !== "ALL") filters.branchId = workshopFilter;
       if (startDate) filters.startDate = startDate;
       if (endDate) filters.endDate = endDate;
 
@@ -200,9 +199,9 @@ const ManageWorkshopManagers = () => {
       password: "",
       phone: manager.phone || "",
       workshopId:
-        typeof manager.workshopId === "object"
-          ? manager.workshopId?._id || ""
-          : manager.workshopId,
+        typeof manager.branchId === "object"
+          ? manager.branchId?._id || ""
+          : manager.branchId,
       status: manager.status,
       permissions: manager.permissions || [],
     });
@@ -228,7 +227,7 @@ const ManageWorkshopManagers = () => {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          workshopId: formData.workshopId,
+          branchId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };
@@ -239,7 +238,7 @@ const ManageWorkshopManagers = () => {
           fullName: formData.fullName,
           email: formData.email,
           phone: formData.phone,
-          workshopId: formData.workshopId,
+          branchId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };
@@ -773,10 +772,10 @@ const ManageWorkshopManagers = () => {
                           className="text-lime"
                           style={{ color: "var(--brand-lime)" }}
                         />
-                        {typeof manager.workshopId === "object"
-                          ? manager.workshopId?.name
-                          : workshops.find((w) => w._id === manager.workshopId)
-                              ?.name || manager.workshopId}
+                        {typeof manager.branchId === "object"
+                          ? manager.branchId?.name
+                          : workshops.find((w) => w._id === manager.branchId)
+                              ?.name || manager.branchId}
                       </div>
                     </td>
                     <td className="px-6 py-4">

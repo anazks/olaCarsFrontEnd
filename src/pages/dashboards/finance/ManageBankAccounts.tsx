@@ -27,7 +27,6 @@ import {
 } from '../../../services/bankAccountService';
 import type { BankAccount } from '../../../services/bankAccountService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
-import { getLedgerEntries } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageBankAccounts = () => {

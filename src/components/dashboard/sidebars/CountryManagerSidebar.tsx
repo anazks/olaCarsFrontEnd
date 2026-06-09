@@ -235,15 +235,22 @@ const CountryManagerSidebar = ({
           path: "/admin/country-manager/finance-dashboard",
           permission: "REPORTS_VIEW",
         },
-        {
-          label: t("sidebar.items.taxManagement"),
-          path: "/admin/country-manager/taxes",
-          permission: "TAX_VIEW",
-        },
+      ],
+    },
+    {
+      id: "accounting-settings",
+      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
+      icon: <Settings size={22} />,
+      subItems: [
         {
           label: t("sidebar.items.chartOfAccounts"),
           path: "/admin/country-manager/chart-of-accounts",
           permission: "ACCOUNTING_CODE_VIEW",
+        },
+        {
+          label: t("sidebar.items.taxManagement"),
+          path: "/admin/country-manager/taxes",
+          permission: "TAX_VIEW",
         },
       ],
     },

@@ -197,8 +197,16 @@ const CreateInvoicePage = () => {
         : Math.round((afterDiscount + taxAmount) * 100) / 100;
 
     // ── Line Item Helpers ─────────────────────────────────────────────────────
-    const updateItem = (idx: number, field: keyof LineItem, val: any) => {
-        setLineItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+    const updateItem = (idx: number, fieldOrObj: keyof LineItem | Partial<LineItem>, val?: any) => {
+        setLineItems(prev => prev.map((item, i) => {
+            if (i === idx) {
+                if (typeof fieldOrObj === 'object' && fieldOrObj !== null) {
+                    return { ...item, ...fieldOrObj };
+                }
+                return { ...item, [fieldOrObj as keyof LineItem]: val };
+            }
+            return item;
+        }));
     };
 
     const addItem = () => setLineItems(prev => [...prev, defaultItem()]);
@@ -234,7 +242,7 @@ const CreateInvoicePage = () => {
                 status: isDraft ? 'DRAFT' : 'PENDING'
             });
             toast.success(isDraft ? 'Draft invoice saved!' : 'Manual invoice created!');
-            navigate('../');
+            navigate('../invoices');
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to create invoice');
         } finally {
@@ -256,7 +264,7 @@ const CreateInvoicePage = () => {
     return (
         <div className="container-responsive space-y-6 pb-12 select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
             {/* Standard Header / Breadcrumbs - matching other registry pages */}
-            <Breadcrumbs items={[{ label: 'Invoices', path: '../' }, { label: 'New Invoice', active: true }]} />
+            <Breadcrumbs items={[{ label: 'Invoices', path: '../invoices' }, { label: 'New Invoice', active: true }]} />
             
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 animate-in fade-in duration-500">
                 <div>
@@ -268,7 +276,7 @@ const CreateInvoicePage = () => {
                 </div>
                 <button 
                     type="button" 
-                    onClick={() => navigate('../')} 
+                    onClick={() => navigate('../invoices')} 
                     className="px-4 py-2 border rounded-xl text-xs font-bold transition-all duration-300 hover:bg-white/5 active:scale-95 cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 >
@@ -463,11 +471,14 @@ const CreateInvoicePage = () => {
                                                                 type="button"
                                                                 key={part._id}
                                                                 onMouseDown={() => {
-                                                                    updateItem(idx, 'name', part.partName);
-                                                                    updateItem(idx, 'description', `Part: ${part.partNumber} - Category: ${part.category}`);
-                                                                    updateItem(idx, 'unitPrice', String(part.unitCost || 0));
-                                                                    updateItem(idx, 'inventoryPart', part._id);
-                                                                    updateItem(idx, 'isCustom', false);
+                                                                    updateItem(idx, {
+                                                                        name: part.partName,
+                                                                        description: `Part: ${part.partNumber} - Category: ${part.category}`,
+                                                                        unitPrice: String(part.unitCost || 0),
+                                                                        inventoryPart: part._id,
+                                                                        isCustom: false,
+                                                                        tax: part.taxId?._id || part.taxId || ''
+                                                                    });
                                                                 }}
                                                                 className="w-full text-left px-3 py-2 hover:bg-white/5 flex flex-col gap-0.5 border-b last:border-b-0"
                                                                 style={{ borderColor: 'rgba(255,255,255,0.03)' }}
@@ -671,7 +682,7 @@ const CreateInvoicePage = () => {
                 <div className="flex gap-3 justify-end pt-2">
                     <button
                         type="button"
-                        onClick={() => navigate('../')}
+                        onClick={() => navigate('../invoices')}
                         disabled={submitting}
                         className="px-6 py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest hover:bg-white/5 active:scale-95 disabled:opacity-20 transition-all duration-300 cursor-pointer"
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
@@ -837,11 +848,14 @@ const CreateInvoicePage = () => {
                                 if (partModalRowIndex !== null) {
                                     const newPart = res.data?.data || res.data?.part;
                                     if (newPart) {
-                                        updateItem(partModalRowIndex, 'name', newPart.partName);
-                                        updateItem(partModalRowIndex, 'description', `Part: ${newPart.partNumber} - Category: ${newPart.category}`);
-                                        updateItem(partModalRowIndex, 'unitPrice', String(newPart.unitCost || 0));
-                                        updateItem(partModalRowIndex, 'inventoryPart', newPart._id);
-                                        updateItem(partModalRowIndex, 'isCustom', false);
+                                        updateItem(partModalRowIndex, {
+                                            name: newPart.partName,
+                                            description: `Part: ${newPart.partNumber} - Category: ${newPart.category}`,
+                                            unitPrice: String(newPart.unitCost || 0),
+                                            inventoryPart: newPart._id,
+                                            isCustom: false,
+                                            tax: newPart.taxId?._id || newPart.taxId || ''
+                                        });
                                     }
                                 }
                             } catch (err: any) {

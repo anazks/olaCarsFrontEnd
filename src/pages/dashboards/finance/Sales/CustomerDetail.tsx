@@ -28,17 +28,24 @@ const CustomerDetail = () => {
         if (!id) return;
         setLoading(true);
         try {
-            const [customerData, invoicesData, creditNotesData, paymentsData] = await Promise.all([
-                getCustomerById(id),
-                getInvoicesByCustomer(id),
-                getAllCreditNotes({ customerId: id }),
-                api.get('/api/payments-received', { params: { customerId: id, limit: 100 } })
+            // Fetch customer first — this is the critical call
+            const customerData = await getCustomerById(id);
+            const resolvedCustomer = customerData.data || customerData;
+            setCustomer(resolvedCustomer);
+
+            // Use the actual customer _id for related data queries
+            const customerId = resolvedCustomer._id || id;
+
+            // Fetch related data in parallel, but don't let one failure block the rest
+            const [invoicesResult, creditNotesResult, paymentsResult] = await Promise.allSettled([
+                getInvoicesByCustomer(customerId),
+                getAllCreditNotes({ customerId }),
+                api.get('/api/payments-received', { params: { customerId, limit: 100 } })
             ]);
 
-            setCustomer(customerData.data || customerData);
-            setInvoices(invoicesData);
-            setCreditNotes(creditNotesData?.data || []);
-            setPayments(paymentsData?.data?.data || paymentsData?.data || []);
+            setInvoices(invoicesResult.status === 'fulfilled' ? invoicesResult.value : []);
+            setCreditNotes(creditNotesResult.status === 'fulfilled' ? (creditNotesResult.value?.data || []) : []);
+            setPayments(paymentsResult.status === 'fulfilled' ? (paymentsResult.value?.data?.data || paymentsResult.value?.data || []) : []);
         } catch (error) {
             console.error('Error fetching customer detail data:', error);
             toast.error('Failed to load customer details');
@@ -508,7 +515,7 @@ const OverviewTab = ({
                             <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
                                 <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                    {(customer.driver as any).assignedVehicle?.basicDetails?.make} {(customer.driver as any).assignedVehicle?.basicDetails?.model || 'No vehicle assigned'}
+                                    {(customer.driver as any).currentVehicle?.basicDetails?.make} {(customer.driver as any).currentVehicle?.basicDetails?.model || 'No vehicle assigned'}
                                 </p>
                             </div>
                         </>

@@ -53,7 +53,7 @@ const AccountingCodeDetails = () => {
         setLoading(true);
         try {
             // 1. Fetch the accounting code details
-            const allCodes = await getAllAccountingCodes();
+            const allCodes = await getAllAccountingCodes() as AccountingCode[];
             const foundCode = allCodes.find(c => c._id === id || (c as any).id === id);
             
             if (!foundCode) {
@@ -221,7 +221,9 @@ const AccountingCodeDetails = () => {
             <Breadcrumbs 
                 items={[
                     { label: 'Finance', path: '../../finance-dashboard' },
-                    { label: 'Chart of Accounts', path: '../chart-of-accounts' },
+                    window.location.pathname.includes('/bank-accounts/')
+                        ? { label: 'Bank Accounts', path: '../bank-accounts' }
+                        : { label: 'Chart of Accounts', path: '../chart-of-accounts' },
                     { label: code.code, active: true }
                 ]} 
             />
