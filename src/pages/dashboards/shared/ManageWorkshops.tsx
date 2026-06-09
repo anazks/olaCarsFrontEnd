@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+
 import { Plus, RefreshCw, Trash2, Edit2, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Breadcrumbs from "../../../components/dashboard/shared/Breadcrumbs";
@@ -25,7 +25,6 @@ interface Branch {
 
 const ManageWorkshops = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -49,7 +48,7 @@ const ManageWorkshops = () => {
     name: "",
     code: "",
     branchId: "",
-    status: "ACTIVE" as const,
+    status: "ACTIVE" as "ACTIVE" | "INACTIVE" | "SUSPENDED",
   });
 
   const [deleteTarget, setDeleteTarget] = useState<Workshop | null>(null);

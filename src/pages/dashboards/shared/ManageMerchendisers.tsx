@@ -18,6 +18,7 @@ import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
+import { validatePhoneDetails } from '../../../utils/phoneValidation';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -154,6 +155,43 @@ const ManageMerchendisers = () => {
         e.preventDefault();
         setFormLoading(true);
         setFormError(null);
+
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            setFormError(t('management.merchendiser.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+            setFormLoading(false);
+            return;
+        }
+
+        // Validate phone number using the centralized helper if provided
+        const cleanedPhone = formData.phone ? formData.phone.replace(/\D/g, '') : '';
+        const isPhoneEmpty = !cleanedPhone || cleanedPhone.length <= 4;
+
+        if (!isPhoneEmpty) {
+            const phoneValidation = validatePhoneDetails(formData.phone);
+            if (!phoneValidation.isValid) {
+                let errorMsg = '';
+                switch (phoneValidation.errorKey) {
+                    case 'REPEATED_DIGITS':
+                        errorMsg = t('management.merchendiser.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                        break;
+                    case 'TOO_SHORT':
+                        errorMsg = t('management.merchendiser.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                        break;
+                    case 'TOO_LONG':
+                        errorMsg = t('management.merchendiser.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                        break;
+                    case 'INVALID_FORMAT':
+                    default:
+                        errorMsg = t('management.merchendiser.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                        break;
+                }
+                setFormError(errorMsg);
+                setFormLoading(false);
+                return;
+            }
+        }
 
         try {
             if (modalMode === 'create') {
@@ -621,7 +659,7 @@ const ManageMerchendisers = () => {
                                             Contact Phone
                                         </label>
                                         <PhoneInput
-                                            country={'in'}
+                                            country={'pa'}
                                             value={formData.phone}
                                             onChange={phone => setFormData({ ...formData, phone })}
                                             containerStyle={{ width: '100%' }}
