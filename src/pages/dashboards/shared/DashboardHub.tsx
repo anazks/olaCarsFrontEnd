@@ -16,12 +16,14 @@ import {
     ShieldAlert,
     FileText,
     BookOpen,
-    ShoppingBag
+    ShoppingBag,
+    Calendar,
+    FilterX
 } from 'lucide-react';
 import {
     ResponsiveContainer,
-    LineChart,
-    Line,
+    AreaChart,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -32,22 +34,14 @@ import OlaLoader from '../../../components/common/OlaLoader';
 import { getFinancialDashboardSummary } from '../../../services/dashboardService';
 import { getAllBranches } from '../../../services/branchService';
 import { getLedgerEntries } from '../../../services/ledgerService';
+import { useTheme } from '../../../context/ThemeContext';
 
 const DashboardHub = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-
-    const [loading, setLoading] = useState(true);
-    const [summaryData, setSummaryData] = useState<any>(null);
-    const [branches, setBranches] = useState<any[]>([]);
-    const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
-    const [error, setError] = useState<string | null>(null);
-
-    // Determine the base route prefix dynamically based on the current location path
-    const basePrefix = location.pathname.startsWith('/admin/financial-admin')
-        ? '/admin/financial-admin'
-        : '/admin/admin';
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     // Helper to calculate date range for the last month
     const getOneMonthAgo = () => {
@@ -60,14 +54,24 @@ const DashboardHub = () => {
         return new Date().toISOString().split('T')[0];
     };
 
+    const [loading, setLoading] = useState(true);
+    const [summaryData, setSummaryData] = useState<any>(null);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
+    const [endDate, setEndDate] = useState<string>(getToday());
+
+    // Determine the base route prefix dynamically based on the current location path
+    const basePrefix = location.pathname.startsWith('/admin/financial-admin')
+        ? '/admin/financial-admin'
+        : '/admin/admin';
+
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const startDate = getOneMonthAgo();
-            const endDate = getToday();
-
-            // Run requests in parallel
+            // Run requests in parallel using dynamic state dates
             const [summaryRes, branchesRes, ledgerRes] = await Promise.all([
                 getFinancialDashboardSummary({ startDate, endDate }),
                 getAllBranches({ limit: 100 }),
@@ -87,7 +91,7 @@ const DashboardHub = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [startDate, endDate]);
 
     // Dynamically calculate active branch names for lines (up to top 4)
     const activeBranchNames = useMemo(() => {
@@ -98,21 +102,35 @@ const DashboardHub = () => {
     // Aggregate ledger revenue details by day and branch
     const performanceData = useMemo(() => {
         const data = [];
-        const now = new Date();
-        const datesList: string[] = [];
         const dailyMap: Record<string, Record<string, number>> = {};
+        const datesList: string[] = [];
 
-        // 1. Initialize 30 days of empty records
-        for (let i = 29; i >= 0; i--) {
-            const d = new Date(now);
-            d.setDate(now.getDate() - i);
-            const dateKey = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Parse dates safely matching selected range
+        let start = new Date(startDate + 'T00:00:00');
+        let end = new Date(endDate + 'T00:00:00');
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+            // fallback to last 30 days
+            const now = new Date();
+            start = new Date(now);
+            start.setDate(now.getDate() - 29);
+            end = now;
+        }
+
+        // Loop through dates from start to end (inclusive)
+        const curr = new Date(start);
+        let limit = 0;
+        while (curr <= end && limit < 366) {
+            const dateKey = curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             datesList.push(dateKey);
             dailyMap[dateKey] = {};
             
             activeBranchNames.forEach(name => {
                 dailyMap[dateKey][name] = 0;
             });
+            
+            curr.setDate(curr.getDate() + 1);
+            limit++;
         }
 
         // 2. Map branch ids to names for fast lookup
@@ -171,7 +189,7 @@ const DashboardHub = () => {
         }
 
         return data;
-    }, [branches, ledgerEntries, activeBranchNames]);
+    }, [branches, ledgerEntries, activeBranchNames, startDate, endDate]);
 
     const monthlyRevenue = summaryData?.stats?.monthlyRevenue || 0;
     const outstandingCollections = summaryData?.stats?.outstandingCollections || 0;
@@ -277,13 +295,63 @@ const DashboardHub = () => {
                         Ecosystem control center and specialized dashboard navigator
                     </p>
                 </div>
-                <button
-                    onClick={fetchData}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-lime text-black rounded-lg text-xs font-bold transition-all hover:bg-lime/90 cursor-pointer shadow-sm"
-                >
-                    <RefreshCw size={13} />
-                    <span>{t('common.refresh', 'Refresh')}</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* Date Range Inputs */}
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors w-full sm:w-auto justify-between sm:justify-start" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2">
+                            <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setStartDate(val);
+                                    if (endDate && val > endDate) {
+                                        setEndDate(val);
+                                    }
+                                }}
+                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors"
+                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
+                            />
+                            <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                min={startDate}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (startDate && val < startDate) {
+                                        setEndDate(startDate);
+                                    } else {
+                                        setEndDate(val);
+                                    }
+                                }}
+                                className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors"
+                                style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                        {(startDate !== getOneMonthAgo() || endDate !== getToday()) && (
+                            <button 
+                                onClick={() => {
+                                    setStartDate(getOneMonthAgo());
+                                    setEndDate(getToday());
+                                }} 
+                                className="ml-1 text-red-500 hover:text-red-600 cursor-pointer"
+                                title="Reset filter"
+                            >
+                                <FilterX size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={fetchData}
+                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-lime text-black rounded-lg text-xs font-bold transition-all hover:bg-lime/90 cursor-pointer shadow-sm w-full sm:w-auto"
+                    >
+                        <RefreshCw size={13} />
+                        <span>{t('common.refresh', 'Refresh')}</span>
+                    </button>
+                </div>
             </div>
 
             {/* Error Notification */}
@@ -447,7 +515,19 @@ const DashboardHub = () => {
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                {activeBranchNames.map((name, idx) => {
+                                    const color = lineColors[idx % lineColors.length];
+                                    const gradId = `areaGrad-${idx}`;
+                                    return (
+                                        <linearGradient key={gradId} id={gradId} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                                            <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                        </linearGradient>
+                                    );
+                                })}
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" opacity={0.1} vertical={false} />
                             <XAxis dataKey="date" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
                             <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
@@ -461,18 +541,24 @@ const DashboardHub = () => {
                                 }}
                             />
                             <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '5px' }} />
-                            {activeBranchNames.map((name, idx) => (
-                                <Line
-                                    key={name}
-                                    type="monotone"
-                                    dataKey={name}
-                                    stroke={lineColors[idx % lineColors.length]}
-                                    strokeWidth={2.5}
-                                    dot={false}
-                                    activeDot={{ r: 4 }}
-                                />
-                            ))}
-                        </LineChart>
+                            {activeBranchNames.map((name, idx) => {
+                                const color = lineColors[idx % lineColors.length];
+                                const gradId = `areaGrad-${idx}`;
+                                return (
+                                    <Area
+                                        key={name}
+                                        type="monotone"
+                                        dataKey={name}
+                                        stroke={color}
+                                        strokeWidth={2.5}
+                                        fillOpacity={1}
+                                        fill={`url(#${gradId})`}
+                                        dot={false}
+                                        activeDot={{ r: 4 }}
+                                    />
+                                );
+                            })}
+                        </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </div>
