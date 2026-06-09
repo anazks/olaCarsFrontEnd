@@ -9,13 +9,15 @@ interface QuickAddAccountModalProps {
     onClose: () => void;
     onSuccess: (newAccount: AccountingCode) => void;
     defaultCategory?: AccountingCategory;
+    defaultAccountType?: string;
 }
 
 export const QuickAddAccountModal = ({
     isOpen,
     onClose,
     onSuccess,
-    defaultCategory = 'EXPENSE'
+    defaultCategory = 'EXPENSE',
+    defaultAccountType
 }: QuickAddAccountModalProps) => {
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -55,11 +57,15 @@ export const QuickAddAccountModal = ({
                 LIABILITY: 'Accounts Payable',
                 EQUITY: 'Equity'
             };
+            const selectedType = (formData.category === defaultCategory && defaultAccountType)
+                ? defaultAccountType
+                : (categoryToType[formData.category] || 'Income');
+
             const result = await createAccountingCode({
                 code: formData.code.trim(),
                 name: formData.name.trim(),
                 category: formData.category as AccountingCategory,
-                accountType: categoryToType[formData.category] || 'Income'
+                accountType: selectedType
             });
             toast.success(`Account ${formData.code} - "${formData.name}" created successfully!`);
             
