@@ -14,7 +14,9 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    Eye
+    Eye,
+    Coins,
+    CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
@@ -61,7 +63,6 @@ const ManageBankAccounts = () => {
         accountCode: '',
         description: ''
     });
-
     const handleViewTransactions = (account: BankAccount) => {
         const accCodeId = account.accountingCode?._id || account.accountingCode;
         if (!accCodeId) {
@@ -71,7 +72,6 @@ const ManageBankAccounts = () => {
         const basePath = window.location.pathname.split('/bank-accounts')[0];
         navigate(`${basePath}/chart-of-accounts/${accCodeId}`);
     };
-
     const fetchAccounts = useCallback(async () => {
         setLoading(true);
         try {
@@ -123,6 +123,9 @@ const ManageBankAccounts = () => {
             if (formData.accountType === 'Credit Card') {
                 return code.accountType === 'Credit Card' || 
                        (code.category === 'LIABILITY' && (code.accountType?.includes('Credit Card') || code.accountType?.includes('Liability')));
+            } else if (formData.accountType === 'Cash' || formData.accountType === 'Bank') {
+                return code.accountType === 'Bank' || code.accountType === 'Cash' || code.category === 'Cash' ||
+                       (code.category === 'ASSET' && (code.accountType === 'Bank' || code.accountType === 'Cash' || code.code?.startsWith('1.1.02') || code.name?.toLowerCase().includes('cash')));
             } else {
                 return code.accountType === 'Bank' || 
                        (code.category === 'ASSET' && (code.accountType === 'Bank' || code.code?.startsWith('1.1.02')));
@@ -327,7 +330,13 @@ const ManageBankAccounts = () => {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black border border-lime/10">
-                                                    <Building2 size={18} />
+                                                    {account.accountType === 'Cash' ? (
+                                                        <Coins size={18} />
+                                                    ) : account.accountType === 'Credit Card' ? (
+                                                        <CreditCard size={18} />
+                                                    ) : (
+                                                        <Building2 size={18} />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{account.accountName || account.bankName}</p>
@@ -498,6 +507,7 @@ const ManageBankAccounts = () => {
                                             style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                         >
                                             <option value="Bank">Bank</option>
+                                            <option value="Cash">Cash</option>
                                             <option value="Credit Card">Credit Card</option>
                                         </select>
                                     </div>

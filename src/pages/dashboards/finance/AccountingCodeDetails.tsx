@@ -244,15 +244,6 @@ const AccountingCodeDetails = () => {
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
                             {code.category}
                         </span>
-                        {(code.category === 'ASSET' || code.category === 'LIABILITY') && (
-                            <button
-                                onClick={() => setIsImportModalOpen(true)}
-                                className="ml-4 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide border border-brand-lime hover:bg-lime/10 text-brand-lime transition-all cursor-pointer"
-                                style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
-                            >
-                                <Upload size={14} /> Import Statement
-                            </button>
-                        )}
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>

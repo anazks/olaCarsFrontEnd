@@ -277,27 +277,39 @@ const ExecutiveSidebar = ({
       icon: <Calculator size={22} />,
       subItems: [
         {
+          label: t("sidebar.items.financeDashboard"),
+          path: "/admin/admin/finance-dashboard",
+        },
+        {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/admin/ledger",
-          permission: "LEDGER_VIEW",
         },
         {
           label: t("sidebar.items.intelligenceReports"),
           path: "/admin/admin/reports",
-          permission: "REPORTS_VIEW",
         },
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/admin/financial-statements",
-          permission: "REPORTS_VIEW",
         },
         {
-          label: t("sidebar.items.chartOfAccounts"),
-          path: "/admin/admin/chart-of-accounts",
+          label: t("sidebar.items.manualJournals"),
+          path: "/admin/admin/manual-journals",
         },
         {
           label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
           path: "/admin/admin/fixed-assets",
+        },
+      ],
+    },
+    {
+      id: "accounting-settings",
+      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
+      icon: <Settings size={22} />,
+      subItems: [
+        {
+          label: t("sidebar.items.chartOfAccounts"),
+          path: "/admin/admin/chart-of-accounts",
         },
         {
           label: t("sidebar.items.taxManagement"),
