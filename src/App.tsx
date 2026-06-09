@@ -102,6 +102,7 @@ import DriverPerformanceDashboard from "./pages/dashboards/shared/DriverPerforma
 import StaffPerformanceDashboard from "./pages/dashboards/shared/StaffPerformanceDashboard";
 import StaffPerformanceDetails from "./pages/dashboards/shared/StaffPerformanceDetails";
 import WGroupDashboard from "./pages/dashboards/WGroupDashboard";
+import DashboardHub from "./pages/dashboards/shared/DashboardHub";
 import DriverDashboard from "./pages/dashboards/driver/DriverDashboard";
 import AgreementSignPage from "./pages/dashboards/driver/AgreementSignPage";
 import NotificationsPage from "./pages/dashboards/shared/NotificationsPage";
@@ -200,6 +201,7 @@ function App() {
               element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}
             >
               <Route index element={<ExecutiveDashboard />} />
+              <Route path="dashboard-hub" element={<DashboardHub />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
@@ -649,6 +651,7 @@ function App() {
               }
             >
               <Route index element={<FinancialAdminDashboard />} />
+              <Route path="dashboard-hub" element={<DashboardHub />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}

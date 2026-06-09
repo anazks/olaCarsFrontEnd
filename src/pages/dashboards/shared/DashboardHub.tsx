@@ -1,0 +1,336 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+    LayoutGrid,
+    Activity,
+    DollarSign,
+    Briefcase,
+    Car,
+    TrendingUp,
+    Calculator,
+    Users,
+    ArrowUpRight,
+    ArrowRight,
+    RefreshCw,
+    ShieldAlert,
+    FileText,
+    BookOpen,
+    ShoppingBag
+} from 'lucide-react';
+import OlaLoader from '../../../components/common/OlaLoader';
+import { getFinancialDashboardSummary } from '../../../services/dashboardService';
+
+const DashboardHub = () => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const [loading, setLoading] = useState(true);
+    const [summaryData, setSummaryData] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Determine the base route prefix dynamically based on the current location path
+    const basePrefix = location.pathname.startsWith('/admin/financial-admin')
+        ? '/admin/financial-admin'
+        : '/admin/admin';
+
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getFinancialDashboardSummary();
+            setSummaryData(data);
+        } catch (err: any) {
+            console.error('DashboardHub: Failed to load summary data', err);
+            setError('Could not load live dashboard statistics.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    if (loading) {
+        return <OlaLoader fullScreen size="lg" />;
+    }
+
+    const monthlyRevenue = summaryData?.stats?.monthlyRevenue || 0;
+    const outstandingCollections = summaryData?.stats?.outstandingCollections || 0;
+
+    // Define dashboard navigation items
+    const dashboards = [
+        {
+            title: t('sidebar.items.executiveDashboard', 'Executive Dashboard'),
+            description: t('dashboardHub.executiveDesc', 'Real-time master telemetry, operations overview, and executive insights across all branch locations.'),
+            path: `${basePrefix}`,
+            icon: <Activity className="text-emerald-500" size={20} />,
+            iconBg: 'bg-emerald-500/10',
+            borderColor: 'hover:border-emerald-500',
+            glowColor: 'group-hover:bg-emerald-500/20'
+        },
+        {
+            title: t('sidebar.items.collectionsDashboard', 'Collections Dashboard'),
+            description: t('dashboardHub.collectionsDesc', 'Monitor client invoice compliance, pending payments, overdue accounts, and collection forecasting.'),
+            path: `${basePrefix}/collections/dashboard`,
+            icon: <TrendingUp className="text-[#C8E600]" size={20} />,
+            iconBg: 'bg-[#C8E600]/10',
+            borderColor: 'hover:border-[#C8E600]',
+            glowColor: 'group-hover:bg-[#C8E600]/20'
+        },
+        {
+            title: t('sidebar.items.fleetDashboard', 'Fleet Dashboard'),
+            description: t('dashboardHub.fleetDesc', 'Detailed driver scorecards, lease payment history, vehicle allocation, and operating performance.'),
+            path: `${basePrefix}/driver-performance`,
+            icon: <Car className="text-blue-500" size={20} />,
+            iconBg: 'bg-blue-500/10',
+            borderColor: 'hover:border-blue-500',
+            glowColor: 'group-hover:bg-blue-500/20'
+        },
+        {
+            title: t('sidebar.items.financeDashboard', 'Finance Dashboard'),
+            description: t('dashboardHub.financeDesc', 'Access financial statements, balance sheets, general ledgers, taxes, and accounting profiles.'),
+            path: `${basePrefix}/finance-dashboard`,
+            icon: <Calculator className="text-purple-500" size={20} />,
+            iconBg: 'bg-purple-500/10',
+            borderColor: 'hover:border-purple-500',
+            glowColor: 'group-hover:bg-purple-500/20'
+        },
+        {
+            title: t('sidebar.items.wGroup', 'W-Group'),
+            description: t('dashboardHub.wGroupDesc', 'Consolidated group account tracking, enterprise management, and inter-entity sub-account stats.'),
+            path: `${basePrefix}/wgroup-dashboard`,
+            icon: <Users className="text-orange-500" size={20} />,
+            iconBg: 'bg-orange-500/10',
+            borderColor: 'hover:border-orange-500',
+            glowColor: 'group-hover:bg-orange-500/20',
+            badge: 'BETA'
+        }
+    ];
+
+    // Define quick operations actions
+    const quickActions = [
+        {
+            title: t('dashboardHub.actions.registerVehicle', 'Register Vehicle'),
+            description: t('dashboardHub.actions.registerVehicleDesc', 'Add new fleet asset'),
+            path: `${basePrefix}/vehicles/create`,
+            icon: <Car className="text-blue-500" size={16} />,
+            iconBg: 'bg-blue-500/10'
+        },
+        {
+            title: t('dashboardHub.actions.createInvoice', 'Create Invoice'),
+            description: t('dashboardHub.actions.createInvoiceDesc', 'Issue client bill'),
+            path: `${basePrefix}/invoices/create`,
+            icon: <FileText className="text-emerald-500" size={16} />,
+            iconBg: 'bg-emerald-500/10'
+        },
+        {
+            title: t('dashboardHub.actions.createJournal', 'New Journal Entry'),
+            description: t('dashboardHub.actions.createJournalDesc', 'Log ledger adjustments'),
+            path: `${basePrefix}/manual-journals/new`,
+            icon: <BookOpen className="text-purple-500" size={16} />,
+            iconBg: 'bg-purple-500/10'
+        },
+        {
+            title: t('dashboardHub.actions.createPO', 'Create Purchase Order'),
+            description: t('dashboardHub.actions.createPODesc', 'Order parts or stock'),
+            path: `${basePrefix}/purchase-orders/create`,
+            icon: <ShoppingBag className="text-orange-500" size={16} />,
+            iconBg: 'bg-orange-500/10'
+        }
+    ];
+
+    return (
+        <div
+            className="transition-colors duration-300 space-y-5 flex flex-col"
+            style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
+        >
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3" style={{ borderColor: 'var(--border-main)' }}>
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
+                        <LayoutGrid className="text-[#C8E600]" size={24} />
+                        {t('sidebar.items.dashboard', 'Dashboard Hub')}
+                    </h1>
+                    <p className="font-medium text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                        Ecosystem control center and specialized dashboard navigator
+                    </p>
+                </div>
+                <button
+                    onClick={fetchData}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-lime text-black rounded-lg text-xs font-bold transition-all hover:bg-lime/90 cursor-pointer shadow-sm"
+                >
+                    <RefreshCw size={13} />
+                    <span>{t('common.refresh', 'Refresh')}</span>
+                </button>
+            </div>
+
+            {/* Error Notification */}
+            {error && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-red-500/10 border-red-500/20 text-red-500 text-xs">
+                    <ShieldAlert size={16} />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {/* Top Stat Cards Grid */}
+            <div className="grid grid-cols-2 gap-4 w-full">
+                {/* Monthly Revenue Card */}
+                <div
+                    className="rounded-2xl p-4 shadow-sm border flex flex-col justify-between transition-all hover:-translate-y-0.5 duration-300 relative overflow-hidden"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10" />
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
+                            <DollarSign size={16} />
+                        </div>
+                        <div className="px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-0.5 bg-emerald-500/10 text-emerald-500">
+                            <ArrowUpRight size={12} /> +12.3%
+                        </div>
+                    </div>
+                    <div className="mt-3 relative z-10">
+                        <div className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monthlyRevenue)}
+                        </div>
+                        <div className="text-[10px] font-bold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                            {t('dashboards.common.monthlyRevenue', 'Monthly Revenue')}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pending Collections Card */}
+                <div
+                    className="rounded-2xl p-4 shadow-sm border flex flex-col justify-between transition-all hover:-translate-y-0.5 duration-300 relative overflow-hidden"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 rounded-full blur-2xl -mr-10 -mt-10" />
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20">
+                            <Briefcase size={16} />
+                        </div>
+                        <div className="px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-0.5 bg-orange-500/10 text-orange-500">
+                            <ArrowUpRight size={12} /> +8.1%
+                        </div>
+                    </div>
+                    <div className="mt-3 relative z-10">
+                        <div className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(outstandingCollections)}
+                        </div>
+                        <div className="text-[10px] font-bold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                            {t('dashboards.common.pendingCollections', 'Pending Collections')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dashboard Navigator Section */}
+            <div className="space-y-3">
+                <div>
+                    <h2 className="text-sm font-black tracking-tight uppercase" style={{ color: 'var(--text-main)' }}>
+                        {t('dashboardHub.navigatorTitle', 'Dashboard Navigator')}
+                    </h2>
+                    <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                        Select a specialized console to manage operations, fleet compliance, or financial books
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {dashboards.map((dash, index) => (
+                        <div
+                            key={index}
+                            onClick={() => navigate(dash.path)}
+                            className={`group relative rounded-2xl border p-4 flex flex-col justify-between shadow-sm cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${dash.borderColor}`}
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                        >
+                            {/* Accent Glow Background */}
+                            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-12 -mt-12 opacity-30 transition-all duration-300 ${dash.glowColor}`} />
+
+                            <div className="space-y-3 relative z-10">
+                                <div className="flex justify-between items-center">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border border-[var(--border-main)]/50 ${dash.iconBg}`}>
+                                        {dash.icon}
+                                    </div>
+                                    {dash.badge && (
+                                        <span className="px-1.5 py-0.5 text-[8px] font-extrabold bg-[#C8E600] text-black rounded-md tracking-wider">
+                                            {dash.badge}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-bold transition-colors truncate" title={dash.title} style={{ color: 'var(--text-main)' }}>
+                                        {dash.title}
+                                    </h3>
+                                    <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--text-dim)' }}>
+                                        {dash.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 mt-3 flex items-center text-[10px] font-black uppercase tracking-wider border-t border-[var(--border-main)]/30 relative z-10" style={{ color: 'var(--text-main)' }}>
+                                <span className="group-hover:text-lime transition-colors">Access Console</span>
+                                <ArrowRight size={12} className="ml-1.5 group-hover:translate-x-1 group-hover:text-lime transition-all" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Quick Actions Section */}
+            <div className="space-y-3">
+                <div>
+                    <h2 className="text-sm font-black tracking-tight uppercase" style={{ color: 'var(--text-main)' }}>
+                        {t('dashboardHub.quickActionsTitle', 'Quick Operations')}
+                    </h2>
+                    <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                        Launch common operational workflows instantly
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {quickActions.map((action, index) => (
+                        <div
+                            key={index}
+                            onClick={() => navigate(action.path)}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-main)] hover:border-lime bg-[var(--bg-card)] cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm group"
+                        >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${action.iconBg}`}>
+                                {action.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-xs font-bold truncate group-hover:text-lime transition-colors" style={{ color: 'var(--text-main)' }}>
+                                    {action.title}
+                                </h3>
+                                <p className="text-[9px] truncate" style={{ color: 'var(--text-dim)' }}>
+                                    {action.description}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .fade-in-up {
+                    animation: fadeInUp 0.4s ease-out forwards;
+                }
+                /* Hide scrollbar for the main layout element */
+                main::-webkit-scrollbar {
+                    display: none !important;
+                }
+                main {
+                    -ms-overflow-style: none !important;  /* IE and Edge */
+                    scrollbar-width: none !important;  /* Firefox */
+                }
+            `}</style>
+        </div>
+    );
+};
+
+export default DashboardHub;
