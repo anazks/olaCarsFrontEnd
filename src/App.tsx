@@ -399,6 +399,10 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route
+                path="bank-accounts/:id"
+                element={<AccountingCodeDetails />}
+              />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />
@@ -858,6 +862,10 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route
+                path="bank-accounts/:id"
+                element={<AccountingCodeDetails />}
+              />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />

@@ -346,7 +346,7 @@ const BankingOverview = () => {
             return;
         }
         const basePath = window.location.pathname.split('/banking')[0];
-        navigate(`${basePath}/chart-of-accounts/${account.accountingCodeId}`);
+        navigate(`${basePath}/bank-accounts/${account.accountingCodeId}`);
     };
 
     const handleImportSubmit = (e: React.FormEvent) => {

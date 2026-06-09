@@ -68,8 +68,15 @@ const ManageBankAccounts = () => {
             toast.error('This bank account is not linked to any accounting code.');
             return;
         }
-        const basePath = window.location.pathname.split('/bank-accounts')[0];
-        navigate(`${basePath}/chart-of-accounts/${accCodeId}`);
+        let basePath = window.location.pathname;
+        if (basePath.includes('/bank-accounts')) {
+            basePath = basePath.split('/bank-accounts')[0];
+        } else if (basePath.includes('/dashboard-settings')) {
+            basePath = basePath.split('/dashboard-settings')[0];
+        } else {
+            basePath = basePath.replace(/\/$/, '');
+        }
+        navigate(`${basePath}/bank-accounts/${accCodeId}`);
     };
 
     const fetchAccounts = useCallback(async () => {

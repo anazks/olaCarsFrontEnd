@@ -290,12 +290,19 @@ const FinancialAdminSidebar = ({
           permission: "JOURNAL_VIEW",
         },
         {
-          label: t("sidebar.items.chartOfAccounts"),
-          path: "/admin/financial-admin/chart-of-accounts",
-        },
-        {
           label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
           path: "/admin/financial-admin/fixed-assets",
+        },
+      ],
+    },
+    {
+      id: "accounting-settings",
+      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
+      icon: <Settings size={22} />,
+      subItems: [
+        {
+          label: t("sidebar.items.chartOfAccounts"),
+          path: "/admin/financial-admin/chart-of-accounts",
         },
         {
           label: t("sidebar.items.taxManagement"),
