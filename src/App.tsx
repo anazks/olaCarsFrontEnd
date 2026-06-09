@@ -63,6 +63,7 @@ import VehicleLeaseSettings from "./pages/dashboards/financialAdmin/VehicleLease
 import CollectionsDashboard from "./pages/dashboards/financialAdmin/CollectionsDashboard";
 import CollectionsLedgerView from "./pages/dashboards/financialAdmin/CollectionsLedgerView";
 import ManageBankAccounts from "./pages/dashboards/finance/ManageBankAccounts";
+import BankAccountLedger from "./pages/dashboards/finance/BankAccountLedger";
 import TargetManagement from "./pages/dashboards/shared/TargetManagement";
 import TaskManagement from "./pages/dashboards/shared/TaskManagement";
 import DirectivesHub from "./pages/dashboards/shared/DirectivesHub";
@@ -399,6 +400,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route path="bank-accounts/:id/ledger" element={<BankAccountLedger />} />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />
@@ -858,6 +860,7 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route path="bank-accounts/:id/ledger" element={<BankAccountLedger />} />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />

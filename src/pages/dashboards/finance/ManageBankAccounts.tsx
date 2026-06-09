@@ -63,6 +63,7 @@ const ManageBankAccounts = () => {
         accountCode: '',
         description: ''
     });
+
     const handleViewTransactions = (account: BankAccount) => {
         const accCodeId = account.accountingCode?._id || account.accountingCode;
         if (!accCodeId) {
@@ -70,7 +71,7 @@ const ManageBankAccounts = () => {
             return;
         }
         const basePath = window.location.pathname.split('/bank-accounts')[0];
-        navigate(`${basePath}/chart-of-accounts/${accCodeId}`);
+        navigate(`${basePath}/bank-accounts/${account._id}/ledger`);
     };
     const fetchAccounts = useCallback(async () => {
         setLoading(true);
@@ -514,37 +515,50 @@ const ManageBankAccounts = () => {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:col-span-2">
-                                    <label className="sm:w-36 text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: 'var(--text-dim)' }}>Chart of Accounts</label>
-                                    <div className="flex-1">
-                                        <select 
-                                            value={selectedCodeId}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setSelectedCodeId(val);
-                                                if (val === 'NEW') {
-                                                    setFormData(prev => ({ ...prev, accountCode: '', accountName: '', currency: 'USD' }));
-                                                } else {
-                                                    const matched = filteredCodes.find((c: any) => c._id === val);
-                                                    if (matched) {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            accountCode: matched.code,
-                                                            accountName: matched.name,
-                                                            currency: matched.currency || 'USD'
-                                                        }));
-                                                    }
-                                                }
-                                            }}
-                                            className="w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
-                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                        >
-                                            <option value="NEW">-- Create New Accounting Code --</option>
-                                            {filteredCodes.map(code => (
-                                                <option key={code._id} value={code._id}>{code.code} - {code.name} ({code.currency || 'USD'})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
+                                     <div className="sm:w-36 flex flex-col shrink-0">
+                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Chart of Accounts</label>
+                                         <button 
+                                             type="button"
+                                             onClick={() => {
+                                                 const basePath = window.location.pathname.split('/bank-accounts')[0];
+                                                 navigate(`${basePath}/chart-of-accounts`, { state: { openAddForm: true } });
+                                             }}
+                                             className="text-[9px] font-black text-brand-lime hover:underline text-left mt-1.5 uppercase tracking-wider cursor-pointer"
+                                             style={{ color: 'var(--brand-lime)' }}
+                                         >
+                                             + Create Code
+                                         </button>
+                                     </div>
+                                     <div className="flex-1">
+                                         <select 
+                                             value={selectedCodeId}
+                                             onChange={e => {
+                                                 const val = e.target.value;
+                                                 setSelectedCodeId(val);
+                                                 if (val === 'NEW') {
+                                                     setFormData(prev => ({ ...prev, accountCode: '', accountName: '', currency: 'USD' }));
+                                                 } else {
+                                                     const matched = filteredCodes.find((c: any) => c._id === val);
+                                                     if (matched) {
+                                                         setFormData(prev => ({
+                                                             ...prev,
+                                                             accountCode: matched.code,
+                                                             accountName: matched.name,
+                                                             currency: matched.currency || 'USD'
+                                                         }));
+                                                     }
+                                                 }
+                                             }}
+                                             className="w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:border-lime outline-none transition-all appearance-none"
+                                             style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                         >
+                                             <option value="NEW">-- Create New Accounting Code --</option>
+                                             {filteredCodes.map(code => (
+                                                 <option key={code._id} value={code._id}>{code.code} - {code.name} ({code.currency || 'USD'})</option>
+                                             ))}
+                                         </select>
+                                     </div>
+                                 </div>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                     <label className="sm:w-36 text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: 'var(--text-dim)' }}>Account Code</label>
@@ -726,6 +740,7 @@ const ManageBankAccounts = () => {
                     </div>
                 </div>
             )}
+
 
 
         </div>

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List, Upload, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode, updateAccountingCode, deleteAccountingCode } from '../../../services/accountingService';
 import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } from '../../../services/accountingService';
@@ -41,6 +41,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [isAddRouteActive, setIsAddRouteActive] = useState(false);
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     
     // Filters
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
@@ -139,6 +140,13 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         }, searchQuery ? 500 : 0);
         return () => clearTimeout(timer);
     }, [fetchCodes, searchQuery, activeCategoryFilter, currentPage, isEmbedded]);
+
+    useEffect(() => {
+        if (location.state?.openAddForm) {
+            setIsAddRouteActive(true);
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location, navigate]);
 
     const handleSort = (field: 'code' | 'name' | 'category' | 'createdAt') => {
         if (sortBy === field) {
