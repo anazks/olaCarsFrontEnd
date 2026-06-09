@@ -520,7 +520,7 @@ const InvoiceDetail = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {invoice.invoiceType === 'MANUAL' && invoice.lineItems && invoice.lineItems.length > 0 ? (
+                                {invoice.lineItems && invoice.lineItems.length > 0 ? (
                                     invoice.lineItems.map((item, idx) => (
                                         <tr key={idx} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4">
@@ -539,8 +539,12 @@ const InvoiceDetail = () => {
                                 ) : (
                                     <tr className="hover:bg-white/5 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>Weekly Vehicle Rent Lease Rate</div>
-                                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>Base lease rate evaluation for cycle period.</div>
+                                            <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
+                                                {invoice.invoiceType === 'WORKSHOP' ? 'Workshop Service Bill' : 'Weekly Vehicle Rent Lease Rate'}
+                                            </div>
+                                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                                {invoice.invoiceType === 'WORKSHOP' ? 'Workshop service execution bill details.' : 'Base lease rate evaluation for cycle period.'}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>${invoice.baseAmount?.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>1</td>
