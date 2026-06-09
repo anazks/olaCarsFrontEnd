@@ -68,3 +68,14 @@ export const deleteCustomer = async (id: string) => {
     const res = await api.delete(`/api/customers/${id}`);
     return res.data;
 };
+
+export interface BulkCustomerUploadResult {
+    created: Array<{ row: number; id: string; customerId: string; name: string; driver?: any; vehicle?: any }>;
+    errors: Array<{ row: number; message: string }>;
+    warnings: Array<{ row: number; message: string }>;
+}
+
+export const bulkCreateCustomers = async (customers: any[], branch?: string): Promise<{ message: string; data: BulkCustomerUploadResult }> => {
+    const response = await api.post('/api/customers/bulk', { customers, branch });
+    return response.data;
+};

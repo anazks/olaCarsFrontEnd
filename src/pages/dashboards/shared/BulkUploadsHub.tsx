@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText } from 'lucide-react';
+import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -10,8 +10,9 @@ import toast from 'react-hot-toast';
 import BulkUploadJournal from '../finance/BulkUploadJournal';
 import BulkInvoiceUpload from './BulkInvoiceUpload';
 import BulkSupplierUpload from './BulkSupplierUpload';
+import BulkCustomerUpload from './BulkCustomerUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -23,7 +24,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -102,6 +103,42 @@ const BulkUploadsHub = () => {
                     'FLEET-5501', '2026-01-15', '8-765-4321', '99'
                 ]
             ];
+        } else if (type === 'customer') {
+            fileName = 'customer_bulk_template.csv';
+            headers = [
+                'Created Time', 'Last Modified Time', 'Display Name', 'Customer Number', 'Company Name',
+                'Salutation', 'First Name', 'Last Name', 'Phone', 'Currency Code', 'Notes', 'Website',
+                'Status', 'Created By', 'Accounts Receivable', 'Opening Balance', 'Opening Balance Exchange Rate',
+                'Location ID', 'Location Name', 'Bank Account Payment', 'Portal Enabled', 'Credit Limit',
+                'Customer Sub Type', 'Billing Attention', 'Billing Address', 'Billing Street2', 'Billing City',
+                'Billing State', 'Billing Country', 'Billing County', 'Billing Code', 'Billing Phone',
+                'Billing Fax', 'Billing Latitude', 'Billing Longitude', 'Shipping Attention', 'Shipping Address',
+                'Shipping Street2', 'Shipping City', 'Shipping State', 'Shipping Country', 'Shipping County',
+                'Shipping Code', 'Shipping Phone', 'Shipping Fax', 'Shipping Latitude', 'Shipping Longitude',
+                'Skype Identity', 'Facebook', 'Twitter', 'Department', 'Designation', 'Price List',
+                'Payment Terms', 'Payment Terms Label', 'Tax Type', 'Last Sync Time', 'Owner Name',
+                'Primary Contact ID', 'EmailID', 'MobilePhone', 'Contact ID', 'Contact Name', 'Contact Type',
+                'Taxable', 'Tax Name', 'Tax Percentage', 'Contact Address ID', 'Company ID',
+                'CF.FLEET NO', 'CF.ACTIVE DATE', 'CF.VEHICLE NO :', 'CF.END DATE', 'CF.SECTION'
+            ];
+            rows = [
+                [
+                    '2026-06-01 10:00:00', '2026-06-01 10:05:00', 'Carlos Rodriguez', 'CUST-001', 'Rodriguez Transport S.A.',
+                    'Mr.', 'Carlos', 'Rodriguez', '+50766001122', 'USD', 'Fleet driver', '',
+                    'Active', 'Admin', '', '0', '1',
+                    '', '', '', 'FALSE', '',
+                    'Individual', 'Carlos Rodriguez', 'Calle 50', 'Apt 12B', 'Panama City',
+                    'Panama', 'Panama', '', '0801', '+50766001122',
+                    '', '', '', '', '',
+                    '', '', '', '', '',
+                    '', '', '', '', '',
+                    '', '', '', 'Operations', 'Driver', '',
+                    '7', 'Net 7', '', '', 'Admin',
+                    '', 'carlos@example.com', '+50766001123', '', 'Carlos Rodriguez', 'Customer',
+                    'No', '', '', '', 'COMP-OLA-01',
+                    'FLEET-001', '2026-01-15', 'KAA 123A', '', 'A'
+                ]
+            ];
         }
 
         if (format === 'xlsx') {
@@ -149,7 +186,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">6</p>
+                        <p className="text-base font-black text-main">7</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -226,6 +263,62 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+
+                {/* CARD 2: CUSTOMERS */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                         background: 'var(--bg-card)', 
+                         borderColor: 'var(--border-main)' 
+                     }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                                <UserCheck size={20} style={{ color: '#10b981' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Customer Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Import Zoho-format customer contacts. Rows with Vehicle No. auto-create linked Driver records and associate vehicles by plate number.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('customer', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('customer', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('customer')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
 
                 {/* CARD 3: DATA MIGRATION */}
                 <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
@@ -527,6 +620,12 @@ const BulkUploadsHub = () => {
 
             <BulkSupplierUpload
                 isOpen={activeModal === 'supplier'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkCustomerUpload
+                isOpen={activeModal === 'customer'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
             />
