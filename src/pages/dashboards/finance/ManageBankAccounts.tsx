@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Building2, 
     Plus, 
@@ -32,6 +33,7 @@ import { getLedgerEntries } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const ManageBankAccounts = () => {
+    const navigate = useNavigate();
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,68 +66,14 @@ const ManageBankAccounts = () => {
         description: ''
     });
 
-    // Transactions Modal & Search States
-    const [isTxModalOpen, setIsTxModalOpen] = useState(false);
-    const [selectedAccountForTx, setSelectedAccountForTx] = useState<BankAccount | null>(null);
-    const [txEntries, setTxEntries] = useState<any[]>([]);
-    const [txLoading, setTxLoading] = useState(false);
-    const [txSearch, setTxSearch] = useState('');
-    const [txTypeFilter, setTxTypeFilter] = useState<'ALL' | 'DEBIT' | 'CREDIT'>('ALL');
-    const [txPage, setTxPage] = useState(1);
-    const [txPagination, setTxPagination] = useState<any>(null);
-    const [txSummary, setTxSummary] = useState({ totalDebit: 0, totalCredit: 0, netMovement: 0 });
-
-    const fetchTransactions = useCallback(async () => {
-        if (!selectedAccountForTx) return;
-        setTxLoading(true);
-        try {
-            const accCodeId = selectedAccountForTx.accountingCode?._id || selectedAccountForTx.accountingCode;
-            if (!accCodeId) {
-                toast.error('This bank account is not linked to any accounting code.');
-                setTxLoading(false);
-                return;
-            }
-            const params: any = {
-                accountingCode: accCodeId,
-                page: txPage,
-                limit: 10
-            };
-            if (txSearch.trim()) {
-                params.search = txSearch.trim();
-            }
-            if (txTypeFilter !== 'ALL') {
-                params.type = txTypeFilter;
-            }
-            const res = await getLedgerEntries(params);
-            setTxEntries(res.data || []);
-            setTxSummary(res.summary || { totalDebit: 0, totalCredit: 0, netMovement: 0 });
-            setTxPagination(res.pagination || null);
-        } catch (error) {
-            console.error('Failed to load ledger transactions', error);
-            toast.error('Failed to load transactions');
-        } finally {
-            setTxLoading(false);
-        }
-    }, [selectedAccountForTx, txPage, txSearch, txTypeFilter]);
-
-    useEffect(() => {
-        if (isTxModalOpen && selectedAccountForTx) {
-            const timer = setTimeout(() => {
-                fetchTransactions();
-            }, txSearch ? 400 : 0);
-            return () => clearTimeout(timer);
-        }
-    }, [txSearch, txTypeFilter, txPage, isTxModalOpen, selectedAccountForTx, fetchTransactions]);
-
     const handleViewTransactions = (account: BankAccount) => {
-        setSelectedAccountForTx(account);
-        setTxEntries([]);
-        setTxSearch('');
-        setTxTypeFilter('ALL');
-        setTxPage(1);
-        setTxPagination(null);
-        setTxSummary({ totalDebit: 0, totalCredit: 0, netMovement: 0 });
-        setIsTxModalOpen(true);
+        const accCodeId = account.accountingCode?._id || account.accountingCode;
+        if (!accCodeId) {
+            toast.error('This bank account is not linked to any accounting code.');
+            return;
+        }
+        const basePath = window.location.pathname.split('/bank-accounts')[0];
+        navigate(`${basePath}/chart-of-accounts/${accCodeId}`);
     };
 
     const fetchAccounts = useCallback(async () => {
@@ -773,170 +721,7 @@ const ManageBankAccounts = () => {
                 </div>
             )}
 
-            {/* Transactions Modal */}
-            {isTxModalOpen && selectedAccountForTx && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60" onClick={() => setIsTxModalOpen(false)} />
-                    <div className="relative border-t-4 border-x border-b rounded-[2rem] w-full max-w-5xl overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] flex flex-col"
-                        style={{ 
-                            background: 'var(--bg-card)', 
-                            borderColor: 'var(--border-main)', 
-                            borderTopColor: 'var(--brand-lime)',
-                            height: '80vh'
-                        }}
-                    >
-                        {/* Header */}
-                        <div className="p-8 border-b flex justify-between items-center flex-shrink-0" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                            <div>
-                                <h2 className="text-lg font-black" style={{ color: 'var(--text-main)' }}>
-                                    {selectedAccountForTx.accountName || selectedAccountForTx.bankName} Transactions
-                                </h2>
-                                <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: 'var(--brand-lime)' }}>
-                                    Ledger Entries — Code {selectedAccountForTx.accountCode || '—'} ({selectedAccountForTx.currency})
-                                </p>
-                            </div>
-                            <button onClick={() => setIsTxModalOpen(false)} className="p-2.5 hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10 transition-all cursor-pointer" style={{ color: 'var(--text-dim)' }}>
-                                <X size={20} />
-                            </button>
-                        </div>
 
-                        {/* Modal Content - Scrollable */}
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
-                            
-                            {/* Summary Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="p-5 border rounded-2xl" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
-                                    <p className="text-[9px] font-black uppercase tracking-wider text-dim">Total Debits (Inflow)</p>
-                                    <p className="text-xl font-black mt-1 text-green-500">
-                                        + {selectedAccountForTx.currency} {txSummary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </p>
-                                </div>
-                                <div className="p-5 border rounded-2xl" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
-                                    <p className="text-[9px] font-black uppercase tracking-wider text-dim">Total Credits (Outflow)</p>
-                                    <p className="text-xl font-black mt-1 text-red-500">
-                                        - {selectedAccountForTx.currency} {txSummary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </p>
-                                </div>
-                                <div className="p-5 border rounded-2xl" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
-                                    <p className="text-[9px] font-black uppercase tracking-wider text-dim">Net Movement</p>
-                                    <p className="text-xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
-                                        {selectedAccountForTx.currency} {txSummary.netMovement.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Filters */}
-                            <div className="flex flex-col sm:flex-row gap-4 items-center p-2 rounded-2xl border" style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)' }}>
-                                <div className="relative flex-1 w-full group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-lime transition-colors" size={16} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search description..."
-                                        value={txSearch}
-                                        onChange={(e) => {
-                                            setTxSearch(e.target.value);
-                                            setTxPage(1);
-                                        }}
-                                        className="w-full bg-transparent py-2 pl-10 pr-4 text-xs font-medium outline-none transition-all placeholder:text-gray-500 animate-none"
-                                        style={{ color: 'var(--text-main)' }}
-                                    />
-                                </div>
-                                <div className="px-4 border-l flex items-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-dim">Type:</span>
-                                    <select
-                                        value={txTypeFilter}
-                                        onChange={(e) => {
-                                            setTxTypeFilter(e.target.value as any);
-                                            setTxPage(1);
-                                        }}
-                                        className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                        style={{ color: 'var(--text-main)' }}
-                                    >
-                                        <option value="ALL">All</option>
-                                        <option value="DEBIT">Debit (Inflow)</option>
-                                        <option value="CREDIT">Credit (Outflow)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Transactions Table */}
-                            {txLoading ? (
-                                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                    <Loader2 className="w-10 h-10 animate-spin text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
-                                    <p className="text-[10px] text-lime font-black uppercase tracking-[0.2em]" style={{ color: 'var(--brand-lime)' }}>Loading Transactions...</p>
-                                </div>
-                            ) : txEntries.length > 0 ? (
-                                <div className="border rounded-2xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim">Date</th>
-                                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim">Description</th>
-                                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim text-right">Debit (Inflow)</th>
-                                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-dim text-right">Credit (Outflow)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                            {txEntries.map((entry) => (
-                                                <tr key={entry._id} className="hover:bg-white/5 transition-colors text-xs">
-                                                    <td className="px-6 py-4 font-bold text-dim">
-                                                        {new Date(entry.entryDate || entry.date).toLocaleDateString(undefined, {
-                                                            year: 'numeric',
-                                                            month: 'short',
-                                                            day: 'numeric'
-                                                        })}
-                                                    </td>
-                                                    <td className="px-6 py-4 font-medium" style={{ color: 'var(--text-main)' }}>
-                                                        {entry.description}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-green-500 font-bold">
-                                                        {entry.type === 'DEBIT' ? `+ ${entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-red-500 font-bold">
-                                                        {entry.type === 'CREDIT' ? `- ${entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className="text-center py-20 border border-dashed rounded-2xl" style={{ borderColor: 'var(--border-main)' }}>
-                                    <p className="text-xs font-bold text-dim">No transactions found for this account.</p>
-                                </div>
-                            )}
-
-                            {/* Pagination */}
-                            {txPagination && txPagination.totalPages > 1 && (
-                                <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-dim">
-                                        Page {txPage} of {txPagination.totalPages}
-                                    </span>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setTxPage(prev => Math.max(prev - 1, 1))}
-                                            disabled={txPage === 1}
-                                            className="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 text-[10px] font-bold transition-all disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
-                                            style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
-                                        >
-                                            Previous
-                                        </button>
-                                        <button
-                                            onClick={() => setTxPage(prev => Math.min(prev + 1, txPagination.totalPages))}
-                                            disabled={txPage === txPagination.totalPages}
-                                            className="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 text-[10px] font-bold transition-all disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
-                                            style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
