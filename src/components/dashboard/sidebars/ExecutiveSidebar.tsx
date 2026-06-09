@@ -296,6 +296,10 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/chart-of-accounts",
         },
         {
+          label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
+          path: "/admin/admin/fixed-assets",
+        },
+        {
           label: t("sidebar.items.taxManagement"),
           path: "/admin/admin/taxes",
         },

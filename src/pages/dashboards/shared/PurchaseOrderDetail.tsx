@@ -147,6 +147,21 @@ const PurchaseOrderDetail = () => {
         }
     };
 
+    const handleReceivePO = async () => {
+        if (!id || !window.confirm('Are you sure you want to mark this Purchase Order as RECEIVED? This will generate draft fixed assets for eligible items.')) return;
+        setActionLoading(true);
+        try {
+            await approveRejectPurchaseOrder(id, {
+                status: 'RECEIVED'
+            });
+            await fetchPO();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Action failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
 
     if (loading) {
         return (
@@ -190,7 +205,8 @@ const PurchaseOrderDetail = () => {
         APPROVED: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', icon: <CheckCircle size={16} /> },
         REJECTED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: <XCircle size={16} /> },
         DISPOSED: { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', icon: <Trash2 size={16} /> },
-        PENDING_FINANCE_APPROVAL: { bg: 'rgba(236, 72, 153, 0.1)', text: '#ec4899', icon: <Clock size={16} /> }
+        PENDING_FINANCE_APPROVAL: { bg: 'rgba(236, 72, 153, 0.1)', text: '#ec4899', icon: <Clock size={16} /> },
+        RECEIVED: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', icon: <Package size={16} /> }
     };
 
     const s = statusColors[po.status] || statusColors.WAITING;
@@ -256,6 +272,15 @@ const PurchaseOrderDetail = () => {
                                 style={{ color: 'var(--text-dim)' }}
                             >
                                 <Trash2 size={18} /> Dispose PO
+                            </button>
+                        </HasPermission>
+                        <HasPermission permission="PURCHASE_ORDER_EDIT">
+                            <button
+                                onClick={handleReceivePO}
+                                disabled={actionLoading}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-[#C8E600]/30 hover:bg-[#C8E600]/10 transition-all disabled:opacity-50 text-[#C8E600]"
+                            >
+                                <Package size={18} /> Receive PO
                             </button>
                         </HasPermission>
                         <HasPermission permission="PURCHASE_ORDER_EDIT">

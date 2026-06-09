@@ -37,8 +37,9 @@ export interface CreateAccountingCodePayload {
     cuentaEspanol?: string;
 }
 
-export const getAllAccountingCodes = async (params?: any): Promise<any> => {
-    const response = await api.get('/api/accounting-code', { params });
+export const getAllAccountingCodes = async (params?: any): Promise<AccountingCode[] & { data?: AccountingCode[]; pagination?: any }> => {
+    const defaultParams = { limit: 1000, ...params };
+    const response = await api.get('/api/accounting-code', { params: defaultParams });
     if (params && (params.page || params.limit || params.search)) {
         return response.data;
     }

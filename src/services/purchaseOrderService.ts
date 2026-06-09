@@ -2,7 +2,7 @@ import api from './api';
 import type { Supplier } from './supplierService';
 import type { Branch } from './branchService';
 
-export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED' | 'PENDING_FINANCE_APPROVAL';
+export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED' | 'PENDING_FINANCE_APPROVAL' | 'RECEIVED';
 export type POPurpose = 'Vehicle' | 'Spare Parts' | 'Others';
 
 export interface PurchaseOrderItem {

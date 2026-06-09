@@ -294,6 +294,10 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/chart-of-accounts",
         },
         {
+          label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
+          path: "/admin/financial-admin/fixed-assets",
+        },
+        {
           label: t("sidebar.items.taxManagement"),
           path: "/admin/financial-admin/taxes",
         },

@@ -253,7 +253,9 @@ const BankingOverview = () => {
 
             list.push({
                 id: bank._id,
-                accountingCodeId: bank.accountingCode?._id || null,
+                accountingCodeId: typeof bank.accountingCode === 'object' && bank.accountingCode !== null
+                    ? (bank.accountingCode._id || bank.accountingCode)
+                    : (bank.accountingCode || null),
                 name: bank.accountName || bank.bankName,
                 code: bank.accountCode || '—',
                 accountNumber: bank.accountNumber,
