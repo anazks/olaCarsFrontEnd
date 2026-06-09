@@ -170,7 +170,7 @@ export const aggregateExecutiveData = (
         const vecs = vehicleRes.value.data || [];
         let activeVecs = 0;
         vecs.forEach((v: any) => {
-            if (v.status === 'ACTIVE — RENTED' || v.status === 'ACTIVE — AVAILABLE') {
+            if (v.status === 'ACTIVE — RENTED' || v.status === 'ACTIVE — AVAILABLE' || v.status === 'W. GROUP ACTIVE') {
                 activeVecs++;
             }
         });
@@ -307,7 +307,7 @@ export const aggregateExecutiveData = (
             const cd = new Date(v.createdAt);
             if (cd >= startD && cd <= endD) {
                 const status = v.status;
-                if (status === 'ACTIVE — RENTED') vDisplayCounts.Active++;
+                if (status === 'ACTIVE — RENTED' || status === 'W. GROUP ACTIVE') vDisplayCounts.Active++;
                 else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts.Maintenance++;
                 else if (status === 'ACTIVE — AVAILABLE') vDisplayCounts.Available++;
                 else if (status === 'SUSPENDED' || status === 'RETIRED') vDisplayCounts.Suspended++;

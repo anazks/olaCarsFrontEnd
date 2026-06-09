@@ -477,10 +477,6 @@ const CreateFixedAsset = () => {
             toast.error('Model is required');
             return;
         }
-        if (!newVehicleData.vin.trim()) {
-            toast.error('VIN is required');
-            return;
-        }
         if (!newVehicleData.branch) {
             toast.error('Branch is required');
             return;
@@ -505,7 +501,7 @@ const CreateFixedAsset = () => {
                     make: newVehicleData.make.trim(),
                     model: newVehicleData.model.trim(),
                     year: Number(newVehicleData.year),
-                    vin: newVehicleData.vin.trim().toUpperCase(),
+                    vin: newVehicleData.vin.trim() ? newVehicleData.vin.trim().toUpperCase() : undefined,
                     category: newVehicleData.category,
                     fuelType: newVehicleData.fuelType,
                     transmission: newVehicleData.transmission
@@ -1397,12 +1393,11 @@ const CreateFixedAsset = () => {
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-wider text-dim mb-1.5" style={{ color: 'var(--text-dim)' }}>
-                                VIN *
+                                VIN
                             </label>
                             <input
                                 type="text"
-                                required
-                                placeholder="17-digit VIN"
+                                placeholder="17-digit VIN (Optional)"
                                 value={newVehicleData.vin}
                                 onChange={e => setNewVehicleData({ ...newVehicleData, vin: e.target.value })}
                                 className="w-full px-4 py-2.5 border rounded-xl outline-none focus:border-[#C8E600] transition-all font-mono uppercase"

@@ -941,7 +941,8 @@
         "SUSPENDED": "Suspended",
         "TRANSFER PENDING": "Transfer Pending",
         "TRANSFER COMPLETE": "Transfer Complete",
-        "RETIRED": "Retired"
+        "RETIRED": "Retired",
+        "W. GROUP ACTIVE": "W. Group Active"
       },
       "vehicleDetail": {
         "documents": {

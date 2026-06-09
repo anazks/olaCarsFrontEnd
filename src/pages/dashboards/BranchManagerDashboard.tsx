@@ -75,7 +75,7 @@ const BranchManagerDashboard = () => {
                             availV++;
                             vDisplayCounts['Available']++;
                         }
-                        else if (status === 'ACTIVE — RENTED') vDisplayCounts['Rented']++;
+                        else if (status === 'ACTIVE — RENTED' || status === 'W. GROUP ACTIVE') vDisplayCounts['Rented']++;
                         else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts['Maintenance']++;
                         else vDisplayCounts['Pending/Other']++;
 

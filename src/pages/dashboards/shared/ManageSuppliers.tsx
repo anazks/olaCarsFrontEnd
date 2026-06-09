@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import BulkSupplierUpload from './BulkSupplierUpload';
 import {
     getAllSuppliers,
     createSupplier,
@@ -73,6 +74,9 @@ const ManageSuppliers = () => {
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Bulk upload modal state
+    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
     const fetchSuppliers = useCallback(async () => {
         setLoading(true);
@@ -267,6 +271,12 @@ const ManageSuppliers = () => {
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={() => setIsBulkUploadOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-white/5 border border-white/10 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer hover:bg-white/10"
+                    >
+                        <Upload size={14} /> Bulk Upload
                     </button>
                     <button
                         onClick={openCreateModal}
@@ -771,6 +781,12 @@ const ManageSuppliers = () => {
                     </div>
                 </div>
             )}
+
+            <BulkSupplierUpload
+                isOpen={isBulkUploadOpen}
+                onClose={() => setIsBulkUploadOpen(false)}
+                onSuccess={fetchSuppliers}
+            />
         </div>
     );
 };

@@ -29,6 +29,7 @@ const VEHICLE_STATUSES = [
     "TRANSFER COMPLETE",
     "RETIRED",
     "PRE-BOOKED",
+    "W. GROUP ACTIVE",
 ];
 const LEASE_ELIGIBLE_STATUSES = VEHICLE_STATUSES.filter(status => status !== 'ACTIVE — RENTED');
 

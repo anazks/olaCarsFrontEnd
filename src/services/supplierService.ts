@@ -3,14 +3,61 @@ import api from './api';
 export interface Supplier {
     _id: string;
     name: string;
-    contactPerson: string;
-    email: string;
-    phone: string;
-    address: string;
+    contactPerson?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
     category: string;
     isActive: boolean;
     createdAt?: string;
     updatedAt?: string;
+
+    vendorNumber?: string;
+    companyName?: string;
+    displayName?: string;
+    salutation?: string;
+    firstName?: string;
+    lastName?: string;
+    mobilePhone?: string;
+    currencyCode?: string;
+    notes?: string;
+    website?: string;
+    openingBalance?: number;
+    locationId?: string;
+    locationName?: string;
+    accountsPayable?: any; // populated AccountingCode object or ID string
+    paymentTermsLabel?: string;
+    paymentTerms?: string;
+    taxable?: boolean;
+    taxName?: string;
+    taxPercentage?: number;
+    taxType?: string;
+    contactAddressId?: string;
+    billingAttention?: string;
+    billingAddress?: string;
+    billingStreet2?: string;
+    billingCity?: string;
+    billingState?: string;
+    billingCountry?: string;
+    billingCode?: string;
+    billingPhone?: string;
+    billingFax?: string;
+    shippingAttention?: string;
+    shippingAddress?: string;
+    shippingStreet2?: string;
+    shippingCity?: string;
+    shippingState?: string;
+    shippingCountry?: string;
+    shippingCode?: string;
+    shippingPhone?: string;
+    shippingFax?: string;
+    source?: string;
+    primaryContactId?: string;
+    companyId?: string;
+    cfFleetNo?: string;
+    cfActiveDate?: string | Date;
+    cfRuc?: string;
+    cfDv?: string;
 }
 
 export interface CreateSupplierPayload {
@@ -80,4 +127,15 @@ export const updateSupplier = async (payload: UpdateSupplierPayload): Promise<Su
 // DELETE supplier
 export const deleteSupplier = async (id: string): Promise<void> => {
     await api.delete(`/api/supplier/${id}`);
+};
+
+export interface BulkSupplierUploadResult {
+    created: Array<{ row: number; id: string; name: string }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
+// POST bulk create suppliers
+export const bulkCreateSuppliers = async (suppliers: any[]): Promise<{ message: string; data: BulkSupplierUploadResult }> => {
+    const response = await api.post('/api/supplier/bulk', { suppliers });
+    return response.data;
 };

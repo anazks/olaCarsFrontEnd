@@ -17,7 +17,8 @@ export type VehicleStatus =
     | 'SUSPENDED'
     | 'TRANSFER PENDING'
     | 'TRANSFER COMPLETE'
-    | 'RETIRED';
+    | 'RETIRED'
+    | 'W. GROUP ACTIVE';
 
 export type PaymentMethod = 'Cash' | 'Bank Transfer' | 'Finance';
 export type VehicleCategory = 'Sedan' | 'SUV' | 'Pickup' | 'Van' | 'Luxury' | 'Commercial' | 'MUV';
@@ -58,7 +59,7 @@ export interface BasicDetails {
     make: string;
     model: string;
     year: number;
-    vin: string;
+    vin?: string;
     category: VehicleCategory;
     fuelType: FuelType;
     transmission: Transmission;
@@ -250,7 +251,7 @@ export interface CreateVehiclePayload {
         make: string;
         model: string;
         year: number;
-        vin: string;
+        vin?: string;
         category: VehicleCategory;
         fuelType: FuelType;
         transmission: Transmission;

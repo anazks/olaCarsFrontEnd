@@ -941,7 +941,8 @@
         "SUSPENDED": "Suspendido",
         "TRANSFER PENDING": "Transferencia Pendiente",
         "TRANSFER COMPLETE": "Transferencia Completa",
-        "RETIRED": "Retirado"
+        "RETIRED": "Retirado",
+        "W. GROUP ACTIVE": "W. Group Active"
       },
       "vehicleDetail": {
         "documents": {

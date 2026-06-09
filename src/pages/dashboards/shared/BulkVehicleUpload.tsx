@@ -15,21 +15,8 @@ interface ParsedVehicle {
     year: string | number;
     vin: string;
     registrationNumber: string;
-    registrationExpiry?: string;
-    category?: string;
-    fuelType?: string;
-    transmission?: string;
-    colour?: string;
-    odometer?: string | number;
-    gpsSerialNumber?: string;
-    purchasePrice?: string | number;
-    vendorName?: string;
-    purchaseDate?: string;
-    paymentMethod?: string;
-    weeklyRent?: string | number;
-    sellingValue?: string | number;
-    leaseDurationWeeks?: string | number;
     fleetNumber?: string;
+    status?: string;
     _rowErrors: string[];
 }
 
@@ -42,28 +29,27 @@ interface BulkVehicleUploadProps {
 const AUTO_ASSIGN_ROLES = ['operationstaff', 'financestaff', 'branchmanager'];
 
 const CSV_COLUMNS = [
-    'make', 'model', 'year', 'vin', 'registrationNumber', 'registrationExpiry',
-    'category', 'fuelType', 'transmission', 'colour', 'odometer', 'gpsSerialNumber',
-    'purchasePrice', 'vendorName', 'purchaseDate', 'paymentMethod', 'weeklyRent',
-    'sellingValue', 'leaseDurationWeeks', 'fleetNumber'
+    'Sl No', 'Vehicle No', 'FLEET NO', 'STATUS OF THE VEHICLES', 'VEHICLES MODELS', 'VIN NUMBER', 'YEAR OF ACTIVE'
 ];
 
 const SAMPLE_DATA = [
     {
-        make: 'Toyota', model: 'Corolla', year: 2022, vin: '1NXBR32E6NZ000001',
-        registrationNumber: 'KCC 123A', registrationExpiry: '2027-12-31',
-        category: 'Sedan', fuelType: 'Petrol', transmission: 'Automatic', colour: 'White',
-        odometer: 15000, gpsSerialNumber: 'GPS-998811', purchasePrice: 18000,
-        vendorName: 'Toyota Kenya', purchaseDate: '2023-01-15', paymentMethod: 'Cash',
-        weeklyRent: 150, sellingValue: 14000, leaseDurationWeeks: 260, fleetNumber: 'FL-001'
+        'Sl No': 1,
+        'Vehicle No': 'KCC 123A',
+        'FLEET NO': 'FL-001',
+        'STATUS OF THE VEHICLES': 'Active',
+        'VEHICLES MODELS': 'Toyota Corolla',
+        'VIN NUMBER': '1NXBR32E6NZ000001',
+        'YEAR OF ACTIVE': 2022
     },
     {
-        make: 'Nissan', model: 'X-Trail', year: 2021, vin: 'JN1TA0CP8LX000002',
-        registrationNumber: 'KCD 456B', registrationExpiry: '2026-06-30',
-        category: 'SUV', fuelType: 'Diesel', transmission: 'Automatic', colour: 'Silver',
-        odometer: 42000, gpsSerialNumber: 'GPS-776622', purchasePrice: 22000,
-        vendorName: 'Nissan Motors', purchaseDate: '2022-08-20', paymentMethod: 'Finance',
-        weeklyRent: 200, sellingValue: 17500, leaseDurationWeeks: 260, fleetNumber: 'FL-002'
+        'Sl No': 2,
+        'Vehicle No': 'KCD 456B',
+        'FLEET NO': 'FL-002',
+        'STATUS OF THE VEHICLES': 'Maintenance',
+        'VEHICLES MODELS': 'Nissan X-Trail',
+        'VIN NUMBER': 'JN1TA0CP8LX000002',
+        'YEAR OF ACTIVE': 2021
     }
 ];
 
@@ -78,6 +64,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
     const [parsedVehicles, setParsedVehicles] = useState<ParsedVehicle[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [result, setResult] = useState<BulkVehicleUploadResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -188,37 +175,141 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         }
     };
 
-    const validateRow = useCallback((row: any): string[] => {
-        const errors: string[] = [];
+    const parseYear = (val: any): number => {
+        if (val === undefined || val === null || val === '') return NaN;
         
-        if (!row.make?.trim()) errors.push('Missing make');
-        if (!row.model?.trim()) errors.push('Missing model');
-        if (!row.year || isNaN(Number(row.year))) errors.push('Missing or invalid year');
-        if (!row.vin?.trim()) errors.push('Missing vin');
-        if (!row.registrationNumber?.trim()) errors.push('Missing registrationNumber');
+        // Handle JS Date objects
+        if (val instanceof Date) {
+            return val.getFullYear();
+        }
 
-        if (row.year) {
-            const yr = Number(row.year);
-            const currentYear = new Date().getFullYear();
-            if (yr < 1980 || yr > currentYear + 1) {
-                errors.push(`Year must be between 1980 and ${currentYear + 1}`);
+        // Handle Excel Date Serial Numbers (e.g. 45231 represents Nov 1, 2023)
+        // 30000 corresponds to 1982-02-18 and 60000 to 2064-01-24
+        if (typeof val === 'number') {
+            if (val > 30000 && val < 60000) {
+                const date = new Date((val - 25569) * 86400 * 1000);
+                return date.getFullYear();
+            }
+            if (val >= 1900 && val <= 2100) return val;
+            if (val >= 0 && val <= 99) return val < 50 ? 2000 + val : 1900 + val;
+            return NaN;
+        }
+
+        const str = val.toString().trim();
+        if (!str) return NaN;
+
+        // Handle string representation of Excel Serial Date
+        if (!isNaN(Number(str))) {
+            const num = Number(str);
+            if (num > 30000 && num < 60000) {
+                const date = new Date((num - 25569) * 86400 * 1000);
+                return date.getFullYear();
             }
         }
 
-        if (row.vin && row.vin.trim().length !== 17) {
-            errors.push('VIN must be exactly 17 characters');
+        if (/^\d{4}$/.test(str)) {
+            return parseInt(str, 10);
         }
 
-        if (row.odometer && isNaN(Number(row.odometer))) {
-            errors.push('Odometer must be a number');
+        if (/^\d{2}$/.test(str)) {
+            const num = parseInt(str, 10);
+            return num < 50 ? 2000 + num : 1900 + num;
         }
 
-        if (row.weeklyRent && isNaN(Number(row.weeklyRent))) {
-            errors.push('Weekly rent must be a number');
+        const parts = str.split(/[\/\-\.\s,]+/);
+        
+        for (const part of parts) {
+            if (/^\d{4}$/.test(part)) {
+                return parseInt(part, 10);
+            }
         }
 
-        if (row.purchasePrice && isNaN(Number(row.purchasePrice))) {
-            errors.push('Purchase price must be a number');
+        const parsedDate = new Date(str);
+        if (!isNaN(parsedDate.getTime())) {
+            const yr = parsedDate.getFullYear();
+            if (yr >= 1900 && yr <= 2100) return yr;
+        }
+
+        if (parts.length > 0) {
+            const lastPart = parts[parts.length - 1];
+            if (/^\d{2}$/.test(lastPart)) {
+                const num = parseInt(lastPart, 10);
+                return num < 50 ? 2000 + num : 1900 + num;
+            }
+
+            const firstPart = parts[0];
+            if (/^\d{2}$/.test(firstPart)) {
+                const num = parseInt(firstPart, 10);
+                return num < 50 ? 2000 + num : 1900 + num;
+            }
+        }
+
+        return NaN;
+    };
+
+    const normalizeRow = (row: any) => {
+        const normalized: any = {};
+        for (const key of Object.keys(row)) {
+            normalized[key.trim().toUpperCase()] = row[key];
+        }
+
+        const registrationNumber = (normalized["VEHICLE NO"] || normalized["VEHICLE_NO"] || normalized["PLATE NO"] || normalized["PLATE_NO"] || "").toString().trim();
+        const fleetNumber = (normalized["FLEET NO"] || normalized["FLEET_NO"] || "").toString().trim();
+        const status = (normalized["STATUS OF THE VEHICLES"] || normalized["STATUS_OF_THE_VEHICLES"] || normalized["STATUS"] || "").toString().trim();
+        const vehicleModelStr = (normalized["VEHICLES MODELS"] || normalized["VEHICLES_MODELS"] || normalized["VEHICLE MODEL"] || normalized["VEHICLE_MODEL"] || "").toString().trim();
+        
+        let make = "";
+        let model = "";
+        if (vehicleModelStr) {
+            const parts = vehicleModelStr.split(/\s+/);
+            if (parts.length > 0) {
+                make = parts[0];
+            }
+            if (parts.length > 1) {
+                model = parts.slice(1).join(" ");
+            } else if (parts.length === 1) {
+                model = parts[0];
+            }
+        }
+
+        let vin = (normalized["VIN NUMBER"] || normalized["VIN_NUMBER"] || normalized["VIN"] || "").toString().trim().toUpperCase();
+        if (vin === 'N/A' || vin === 'NA' || vin === '-' || vin === '—' || vin === 'NULL' || vin === 'UNDEFINED') {
+            vin = "";
+        }
+        const yearVal = normalized["YEAR OF ACTIVE"] || normalized["YEAR_OF_ACTIVE"] || normalized["YEAR"] || "";
+        const year = parseYear(yearVal);
+
+        return {
+            make,
+            model,
+            year,
+            vin,
+            registrationNumber,
+            fleetNumber,
+            status,
+        };
+    };
+
+    const validateRow = useCallback((row: any): string[] => {
+        const errors: string[] = [];
+        
+        if (!row.make?.trim()) errors.push('Missing make (extracted from VEHICLES MODELS)');
+        if (!row.model?.trim()) errors.push('Missing model (extracted from VEHICLES MODELS)');
+        
+        if (!row.year || isNaN(Number(row.year))) {
+            errors.push('Missing or invalid YEAR OF ACTIVE');
+        } else {
+            const yr = Number(row.year);
+            const currentYear = new Date().getFullYear();
+            if (yr < 1980 || yr > currentYear + 1) {
+                errors.push(`YEAR OF ACTIVE must be between 1980 and ${currentYear + 1}`);
+            }
+        }
+
+
+
+        if (!row.registrationNumber?.trim()) {
+            errors.push('Missing Vehicle No (Plate Number)');
         }
 
         return errors;
@@ -240,10 +331,13 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
-                    const rows: ParsedVehicle[] = (jsonData as any[]).map(row => ({
-                        ...row,
-                        _rowErrors: validateRow(row),
-                    }));
+                    const rows: ParsedVehicle[] = (jsonData as any[]).map(row => {
+                        const norm = normalizeRow(row);
+                        return {
+                            ...norm,
+                            _rowErrors: validateRow(norm),
+                        };
+                    });
                     setParsedVehicles(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the Excel file.');
@@ -261,10 +355,13 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                 skipEmptyLines: true,
                 transformHeader: (h: string) => h.trim(),
                 complete: (results) => {
-                    const rows: ParsedVehicle[] = (results.data as any[]).map(row => ({
-                        ...row,
-                        _rowErrors: validateRow(row),
-                    }));
+                    const rows: ParsedVehicle[] = (results.data as any[]).map(row => {
+                        const norm = normalizeRow(row);
+                        return {
+                            ...norm,
+                            _rowErrors: validateRow(norm),
+                        };
+                    });
                     setParsedVehicles(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the file.');
@@ -340,19 +437,61 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         }
 
         setUploading(true);
+        setUploadProgress(0);
+
+        const branchToSend = needsBranchSelection ? selectedBranch : undefined;
+        const batchSize = 5;
+        const totalVehicles = validVehicles.length;
+        const allCreated: any[] = [];
+        const allErrors: any[] = [];
+
         try {
-            const payload = validVehicles.map(({ _rowErrors, ...rest }) => rest);
-            const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await bulkCreateVehicles(payload, branchToSend);
-            setResult(res.data);
-            toast.success(res.message);
-            if (res.data.created.length > 0) {
+            for (let i = 0; i < totalVehicles; i += batchSize) {
+                const batch = validVehicles.slice(i, i + batchSize);
+                const payload = batch.map(({ _rowErrors, ...rest }) => rest);
+                
+                try {
+                    const res = await bulkCreateVehicles(payload, branchToSend);
+                    if (res.data?.created) {
+                        allCreated.push(...res.data.created);
+                    }
+                    if (res.data?.errors) {
+                        const adjustedErrors = res.data.errors.map((err: any) => ({
+                            ...err,
+                            row: i + err.row
+                        }));
+                        allErrors.push(...adjustedErrors);
+                    }
+                } catch (batchErr: any) {
+                    const errMsg = batchErr?.response?.data?.message || batchErr.message || 'Batch creation failed';
+                    batch.forEach((_, batchIdx) => {
+                        allErrors.push({
+                            row: i + batchIdx + 1,
+                            message: errMsg
+                        });
+                    });
+                }
+                
+                const currentProgress = Math.min(100, Math.round(((i + batch.length) / totalVehicles) * 100));
+                setUploadProgress(currentProgress);
+            }
+            
+            setResult({
+                created: allCreated,
+                errors: allErrors
+            });
+            
+            if (allCreated.length > 0) {
+                toast.success(`Successfully uploaded ${allCreated.length} vehicle(s).`);
                 onSuccess();
+            } else {
+                toast.error('Failed to upload vehicles.');
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Bulk upload failed.');
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -404,8 +543,26 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                    {/* Branch Selector */}
-                    {needsBranchSelection && (
+                    {uploading ? (
+                        <div className="space-y-4 py-16 text-center flex flex-col items-center justify-center">
+                            <Loader2 size={40} className="animate-spin mb-4" style={{ color: 'var(--brand-lime)' }} />
+                            <div className="w-full max-w-md rounded-full h-3 border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                <div 
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
+                                />
+                            </div>
+                            <p className="text-base font-black" style={{ color: 'var(--text-main)' }}>
+                                Uploading vehicles... {uploadProgress}%
+                            </p>
+                            <p className="text-xs font-semibold" style={{ color: 'var(--text-dim)' }}>
+                                Processing vehicle batch. Please do not close or refresh this page.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Branch Selector */}
+                            {needsBranchSelection && (
                         <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.03)' }}>
                             <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
                                 Assign Vehicles to Branch *
@@ -767,11 +924,11 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                                     <thead>
                                         <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
                                             <th className="p-3 font-black text-dim uppercase">Row</th>
-                                            <th className="p-3 font-black text-dim uppercase">Make</th>
-                                            <th className="p-3 font-black text-dim uppercase">Model</th>
-                                            <th className="p-3 font-black text-dim uppercase">Year</th>
-                                            <th className="p-3 font-black text-dim uppercase">VIN</th>
-                                            <th className="p-3 font-black text-dim uppercase">Registration</th>
+                                            <th className="p-3 font-black text-dim uppercase">Vehicles Models</th>
+                                            <th className="p-3 font-black text-dim uppercase">Year of Active</th>
+                                            <th className="p-3 font-black text-dim uppercase">VIN Number</th>
+                                            <th className="p-3 font-black text-dim uppercase">Vehicle No</th>
+                                            <th className="p-3 font-black text-dim uppercase">Status of the Vehicles</th>
                                             <th className="p-3 font-black text-dim uppercase text-right">Errors / Status</th>
                                         </tr>
                                     </thead>
@@ -779,11 +936,11 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                                         {parsedVehicles.map((row, idx) => (
                                             <tr key={idx} className="border-b last:border-0" style={{ borderColor: 'var(--border-main)' }}>
                                                 <td className="p-3 font-medium text-dim">{idx + 1}</td>
-                                                <td className="p-3 font-bold text-main">{row.make || '—'}</td>
-                                                <td className="p-3 text-main">{row.model || '—'}</td>
+                                                <td className="p-3 font-bold text-main">{(row.make && row.model) ? `${row.make} ${row.model}` : (row.make || row.model || '—')}</td>
                                                 <td className="p-3 text-main">{row.year || '—'}</td>
                                                 <td className="p-3 font-mono text-main">{row.vin || '—'}</td>
                                                 <td className="p-3 text-main">{row.registrationNumber || '—'}</td>
+                                                <td className="p-3 text-main">{row.status || '—'}</td>
                                                 <td className="p-3 text-right">
                                                     {row._rowErrors.length > 0 ? (
                                                         <div className="flex flex-col items-end gap-1">
@@ -856,10 +1013,12 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                             </div>
                         </div>
                     )}
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}
-                {!result && (
+                {!result && !uploading && (
                     <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: 'var(--border-main)' }}>
                         <button
                             onClick={handleClose}

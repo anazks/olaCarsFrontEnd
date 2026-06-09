@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown, Upload } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import BulkVehicleUpload from './BulkVehicleUpload';
 
 // ── Status Styles ──────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }
     'TRANSFER COMPLETE': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' },
     'RETIRED': { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' },
     'PRE-BOOKED': { bg: 'rgba(14,165,233,0.1)', text: '#0ea5e9', border: 'rgba(14,165,233,0.3)' },
+    'W. GROUP ACTIVE': { bg: 'rgba(132,204,22,0.1)', text: '#84cc16', border: 'rgba(132,204,22,0.3)' },
 };
 
 const CATEGORIES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Luxury', 'Commercial', 'MUV'];
@@ -50,9 +52,10 @@ const VEHICLE_STATUSES = [
     "TRANSFER COMPLETE",
     "RETIRED",
     "PRE-BOOKED",
+    "W. GROUP ACTIVE",
 ];
 
-const ACTIVE_STATUSES = ["ACTIVE — AVAILABLE", "ACTIVE — RENTED"];
+const ACTIVE_STATUSES = ["ACTIVE — AVAILABLE", "ACTIVE — RENTED", "W. GROUP ACTIVE"];
 const PENDING_STATUSES = VEHICLE_STATUSES.filter(status => !ACTIVE_STATUSES.includes(status));
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -75,6 +78,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     
     // Server-side filtering & pagination state
     const [filters, setFilters] = useState({
@@ -274,13 +278,22 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                     </HasPermission>
                     
                     <HasPermission permission="VEHICLE_CREATE">
-                        <button
-                            onClick={() => navigate(mode === 'active' ? 'create' : '../vehicles/create')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
-                            style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
-                        >
-                            <Plus size={14} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsBulkUploadOpen(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 border"
+                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                            >
+                                <Upload size={14} /> Bulk Upload
+                            </button>
+                            <button
+                                onClick={() => navigate(mode === 'active' ? 'create' : '../vehicles/create')}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                                style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                            >
+                                <Plus size={14} strokeWidth={3} /> {t('management.vehicles.onboardingBtn', 'Add Vehicle')}
+                            </button>
+                        </div>
                     </HasPermission>
                 </div>
             </div>
@@ -639,6 +652,14 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                     </div>
                 )}
             </div>
+            <BulkVehicleUpload
+                isOpen={isBulkUploadOpen}
+                onClose={() => setIsBulkUploadOpen(false)}
+                onSuccess={() => {
+                    setIsBulkUploadOpen(false);
+                    fetchVehicles();
+                }}
+            />
         </div>
     );
 };

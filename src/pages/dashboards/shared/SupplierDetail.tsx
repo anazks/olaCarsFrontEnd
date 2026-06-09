@@ -395,31 +395,60 @@ const SupplierDetail = () => {
             <div className="min-h-[400px]">
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
-                        {/* Overview Tab Grid */}
+                        {/* Overview Tab Grid Row 1 */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
                             
-                            {/* Contact Details */}
-                            <SectionCard title="Contact Information" icon={<Phone size={18} />}>
-                                <div className="space-y-4 pt-2">
+                            {/* Business Profile Details */}
+                            <SectionCard title="Business Profile" icon={<Briefcase size={18} />}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                    <InfoRow label="Vendor Number" value={supplier.vendorNumber} />
+                                    <InfoRow label="Company Name" value={supplier.companyName} />
+                                    <InfoRow label="Display Name" value={supplier.displayName} />
+                                    <InfoRow label="Contact Person" value={supplier.contactPerson} icon={<Users size={14} />} />
+                                    <InfoRow label="First Name" value={supplier.firstName} />
+                                    <InfoRow label="Last Name" value={supplier.lastName} />
+                                    <InfoRow label="Salutation" value={supplier.salutation} />
                                     <InfoRow label="Email Address" value={supplier.email} icon={<Mail size={14} />} />
                                     <InfoRow label="Phone Number" value={supplier.phone} icon={<Phone size={14} />} />
-                                    <InfoRow label="Contact Person" value={supplier.contactPerson} icon={<Users size={14} />} />
+                                    <InfoRow label="Mobile Phone" value={supplier.mobilePhone} icon={<Phone size={14} />} />
+                                    <InfoRow label="Website" value={supplier.website} />
+                                    <InfoRow label="Source" value={supplier.source} />
+                                    <InfoRow label="Company ID" value={supplier.companyId} />
+                                    <InfoRow label="Primary Contact ID" value={supplier.primaryContactId} />
                                 </div>
                             </SectionCard>
 
-                            {/* Operating Location */}
-                            <SectionCard title="Operating Address" icon={<MapPin size={18} />}>
-                                <div className="space-y-4 pt-2">
-                                    <InfoRow label="Address Details" value={supplier.address} icon={<MapPin size={14} />} />
-                                    <InfoRow label="Business Category" value={supplier.category} icon={<Tag size={14} />} />
+                            {/* Tax & Financial Preferences */}
+                            <SectionCard title="Tax & Payments" icon={<CreditCard size={18} />}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                    <InfoRow 
+                                        label="Accounts Payable" 
+                                        value={
+                                            supplier.accountsPayable 
+                                                ? (typeof supplier.accountsPayable === 'object' 
+                                                    ? `${supplier.accountsPayable.code || ''} - ${supplier.accountsPayable.name || ''}` 
+                                                    : supplier.accountsPayable) 
+                                                : '—'
+                                        } 
+                                    />
+                                    <InfoRow label="Payment Terms" value={supplier.paymentTerms} />
+                                    <InfoRow label="Payment Terms Label" value={supplier.paymentTermsLabel} />
+                                    <InfoRow label="Taxable" value={supplier.taxable !== undefined ? (supplier.taxable ? 'Yes' : 'No') : '—'} />
+                                    <InfoRow label="Tax Name" value={supplier.taxName} />
+                                    <InfoRow label="Tax Percentage" value={supplier.taxPercentage !== undefined ? `${supplier.taxPercentage}%` : '—'} />
+                                    <InfoRow label="Tax Type" value={supplier.taxType} />
+                                    <InfoRow label="Opening Balance" value={supplier.openingBalance !== undefined ? `$${fmt(supplier.openingBalance)}` : '—'} />
+                                    <InfoRow label="Currency" value={supplier.currencyCode} />
+                                    <InfoRow label="Category" value={supplier.category} />
                                 </div>
                             </SectionCard>
 
-                            {/* Double-Entry Ledger Summary Card */}
-                            <SectionCard title="Balance Reconciliation" icon={<CreditCard size={18} />}>
+                            {/* Balance Reconciliation */}
+                            <SectionCard title="Balance Reconciliation" icon={<DollarSign size={18} />}>
                                 <div className="space-y-4 pt-2">
                                     <InfoRow label="Total Billed" value={`$${totalBilledAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                                     <InfoRow label="Total Settled" value={`$${totalAppliedToBills.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                                    <InfoRow label="Outstanding Liability" value={`$${outstandingLiability.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                                     <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
                                         <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Advance Balance</span>
                                         <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${supplierAdvanceBalance > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-dim border-white/10'}`}>
@@ -429,6 +458,67 @@ const SupplierDetail = () => {
                                 </div>
                             </SectionCard>
                         </div>
+
+                        {/* Overview Tab Grid Row 2 */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
+                            {/* Billing Address details */}
+                            <SectionCard title="Billing Address" icon={<MapPin size={18} />}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                    <InfoRow label="Attention" value={supplier.billingAttention} />
+                                    <InfoRow label="Street Address" value={supplier.billingAddress} />
+                                    <InfoRow label="Street Address 2" value={supplier.billingStreet2} />
+                                    <InfoRow label="City" value={supplier.billingCity} />
+                                    <InfoRow label="State" value={supplier.billingState} />
+                                    <InfoRow label="Country" value={supplier.billingCountry} />
+                                    <InfoRow label="Postal Code" value={supplier.billingCode} />
+                                    <InfoRow label="Phone" value={supplier.billingPhone} />
+                                    <InfoRow label="Fax" value={supplier.billingFax} />
+                                </div>
+                            </SectionCard>
+
+                            {/* Shipping Address details */}
+                            <SectionCard title="Shipping Address" icon={<MapPin size={18} />}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                    <InfoRow label="Attention" value={supplier.shippingAttention} />
+                                    <InfoRow label="Street Address" value={supplier.shippingAddress} />
+                                    <InfoRow label="Street Address 2" value={supplier.shippingStreet2} />
+                                    <InfoRow label="City" value={supplier.shippingCity} />
+                                    <InfoRow label="State" value={supplier.shippingState} />
+                                    <InfoRow label="Country" value={supplier.shippingCountry} />
+                                    <InfoRow label="Postal Code" value={supplier.shippingCode} />
+                                    <InfoRow label="Phone" value={supplier.shippingPhone} />
+                                    <InfoRow label="Fax" value={supplier.shippingFax} />
+                                </div>
+                            </SectionCard>
+
+                            {/* Custom Fields (Zoho / Fleet Integration) */}
+                            <SectionCard title="Custom Fields" icon={<Tag size={18} />}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                    <InfoRow label="CF.FLEET NO" value={supplier.cfFleetNo} />
+                                    <InfoRow label="CF.ACTIVE DATE" value={supplier.cfActiveDate ? new Date(supplier.cfActiveDate).toLocaleDateString() : '—'} />
+                                    <InfoRow label="CF.RUC" value={supplier.cfRuc} />
+                                    <InfoRow label="CF.DV" value={supplier.cfDv} />
+                                    <InfoRow label="Location ID" value={supplier.locationId} />
+                                    <InfoRow label="Location Name" value={supplier.locationName} />
+                                    <InfoRow label="Contact Address ID" value={supplier.contactAddressId} />
+                                </div>
+                            </SectionCard>
+                        </div>
+
+                        {/* Supplier Notes */}
+                        {supplier.notes && (
+                            <div className="p-6 rounded-[1.8rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2 pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                        <FileText size={18} />
+                                    </div>
+                                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Internal Notes</h3>
+                                </div>
+                                <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-main)' }}>
+                                    {supplier.notes}
+                                </p>
+                            </div>
+                        )}
 
                         {/* Extra Payment Tally Alert */}
                         {supplierAdvanceBalance > 0 ? (

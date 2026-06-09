@@ -216,7 +216,7 @@ const DriverVehicleAssignment = () => {
     const filteredVehicles = vehicles.filter(v =>
         (v.basicDetails.make + ' ' + v.basicDetails.model).toLowerCase().includes(searchQuery.toLowerCase()) ||
         (v.legalDocs?.registrationNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.basicDetails.vin.toLowerCase().includes(searchQuery.toLowerCase())
+        (v.basicDetails.vin || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
 
@@ -322,7 +322,7 @@ const DriverVehicleAssignment = () => {
                                     </div>
                                     <div className="pt-3 mt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">Plate No: {vehicle.basicDetails.vin}</p>
+                                            <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">Plate No: {vehicle.basicDetails.vin || '—'}</p>
                                             {vehicle.basicDetails.weeklyRent ? (
                                                 <p className="text-xs font-black text-brand-lime">${vehicle.basicDetails.weeklyRent.toLocaleString()}/wk</p>
                                             ) : null}

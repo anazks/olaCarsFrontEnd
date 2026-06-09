@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Upload, Users, Car, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText } from 'lucide-react';
+import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
-import BulkVehicleUpload from './BulkVehicleUpload';
+
 import DataMigrationUpload from './DataMigrationUpload';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import BulkUploadJournal from '../finance/BulkUploadJournal';
 import BulkInvoiceUpload from './BulkInvoiceUpload';
+import BulkSupplierUpload from './BulkSupplierUpload';
 
-type ModalType = 'driver' | 'vehicle' | 'migration' | 'journal' | 'invoice' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -19,11 +20,10 @@ const BulkUploadsHub = () => {
 
     const allRoles = ['admin', 'operationadmin', 'financialadmin', 'financeadmin', 'countrymanager', 'branchmanager', 'operationstaff', 'financestaff', 'workshopmanager', 'workshopstaff'];
     const hasDriverAccess = allRoles.includes(userRole);
-    const hasVehicleAccess = allRoles.includes(userRole);
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'vehicle' | 'migration' | 'journal' | 'invoice', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -33,10 +33,6 @@ const BulkUploadsHub = () => {
             fileName = 'driver_bulk_template.csv';
             headers = ['fullName', 'email', 'phone', 'whatsappNumber', 'dateOfBirth', 'nationality', 'idType', 'idNumber', 'licenseNumber', 'licenseCountry', 'licenseExpiry', 'emergencyName', 'emergencyRelationship', 'emergencyPhone'];
             rows = [['John Smith', 'john.smith@example.com', '+254700000001', '+254700000001', '1995-05-15', 'Kenyan', 'National ID', 'ID-12345678', 'DL-123456', 'Kenya', '2028-12-31', 'Jane Smith', 'Spouse', '+254700000002'], ['Maria Garcia', 'maria.garcia@example.com', '+254711223344', '+254711223344', '1990-08-22', 'Kenyan', 'Passport', 'PP-88552211', 'DL-789012', 'Kenya', '2029-06-30', 'Carlos Garcia', 'Brother', '+254711223355']];
-        } else if (type === 'vehicle') {
-            fileName = 'vehicle_bulk_template.csv';
-            headers = ['make', 'model', 'year', 'vin', 'registrationNumber', 'registrationExpiry', 'category', 'fuelType', 'transmission', 'colour', 'odometer', 'gpsSerialNumber', 'purchasePrice', 'vendorName', 'purchaseDate', 'paymentMethod', 'weeklyRent', 'sellingValue', 'leaseDurationWeeks', 'fleetNumber'];
-            rows = [['Toyota', 'Corolla', '2022', '1NXBR32E6NZ000001', 'KCC 123A', '2027-12-31', 'Sedan', 'Petrol', 'Automatic', 'White', '15000', 'GPS-998811', '18000', 'Toyota Kenya', '2023-01-15', 'Cash', '150', '14000', '260', 'FL-001'], ['Nissan', 'X-Trail', '2021', 'JN1TA0CP8LX000002', 'KCD 456B', '2026-06-30', 'SUV', 'Diesel', 'Automatic', 'Silver', '42000', 'GPS-776622', '22000', 'Nissan Motors', '2022-08-20', 'Finance', '200', '17500', '260', 'FL-002']];
         } else if (type === 'migration') {
             fileName = 'data_migration_template.csv';
             headers = ['fullName','email','phone','whatsappNumber','dateOfBirth','nationality','idType','idNumber','licenseNumber','licenseCountry','licenseExpiry','emergencyName','emergencyRelationship','emergencyPhone','vehicleNumber','vehicleMake','vehicleModel','vehicleYear','vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','activationDate','deactivationDate','weeklyRent','durationWeeks','remarks'];
@@ -62,7 +58,7 @@ const BulkUploadsHub = () => {
             ];
             rows = [
                 [
-                    '2026-06-01', 'INV-ZOHO-001', 'INV-000101', 'Closed', 'DRV001',
+                    '2026-06-01', 'INV-ZOHO-001', 'INV-0000101', 'Closed', 'DRV001',
                     'John Smith', '+254700000001', 'COMP01', 'FALSE', '2026-06-15',
                     'Percentage', '180', '208.8', '', '',
                     '0', '', 'Weekly lease payment', '0', '',
@@ -71,13 +67,39 @@ const BulkUploadsHub = () => {
                     '', '', 'TAX16', 'VAT 16%', '16', '28.8', 'Taxable'
                 ],
                 [
-                    '2026-06-02', 'INV-ZOHO-002', 'INV-000102', 'Pending', 'DRV002',
+                    '2026-06-02', 'INV-ZOHO-002', 'INV-0000102', 'Pending', 'DRV002',
                     'Maria Garcia', '+254711223344', 'COMP01', 'FALSE', '2026-06-20',
                     'Percentage', '100', '116.0', '', '',
                     '116.0', '', 'Scheduled oil change maintenance', '0', '',
                     'Oil Change Service', 'Service & Filter replacement', '1', '0', '0',
                     '100', '100', 'Cash', '1020', '',
                     '', '', 'TAX16', 'VAT 16%', '16', '16.0', 'Taxable'
+                ]
+            ];
+        } else if (type === 'supplier') {
+            fileName = 'vendor_bulk_template.csv';
+            headers = [
+                'Created Time', 'Last Modified Time', 'Contact ID', 'Contact Name', 'Vendor Number',
+                'Company Name', 'Display Name', 'Salutation', 'First Name', 'Last Name', 'EmailID',
+                'Phone', 'MobilePhone', 'Currency Code', 'Notes', 'Website', 'Status', 'Created By',
+                'Opening Balance', 'Location ID', 'Location Name', 'Accounts Payable', 'Payment Terms Label',
+                'Payment Terms', 'Taxable', 'Tax Name', 'Tax Percentage', 'Tax Type', 'Contact Address ID',
+                'Billing Attention', 'Billing Address', 'Billing Street2', 'Billing City', 'Billing State',
+                'Billing Country', 'Billing Code', 'Billing Phone', 'Billing Fax', 'Shipping Attention',
+                'Shipping Address', 'Shipping Street2', 'Shipping City', 'Shipping State', 'Shipping Country',
+                'Shipping Code', 'Shipping Phone', 'Shipping Fax', 'Source', 'Primary Contact ID', 'Company ID',
+                'CF.FLEET NO', 'CF.ACTIVE DATE', 'CF.RUC', 'CF.DV'
+            ];
+            rows = [
+                [
+                    '2026-06-09 18:00:00', '2026-06-09 18:05:00', 'CON-9901', 'Panama Fleet Supplies S.A.', 'VEND-2026-01',
+                    'Panama Fleet Supplies S.A.', 'Panama Fleet Supplies', 'Mr.', 'Carlos', 'Mendoza', 'sales@panamafleet.com',
+                    '+50766001122', '+50766001123', 'USD', 'Primary supplier for workshop consumables and parts', 'https://www.panamafleet.com', 'Active', 'Admin',
+                    '1500.00', 'LOC-PAN-01', 'Panama Depot Warehouse', '2100', 'Net 30',
+                    '30 Days', 'Yes', 'ITBMS 7%', '7', 'Taxable', 'CADDR-8801',
+                    'Accounts Payable Dept', 'Avenida Balboa, Torre Las Americas', 'Suite 14B', 'Panama City', 'Panama', 'Panama', '0801', '+50766001122', '+50766001125', 'Receiving Dock',
+                    'Calle 50 y Via Brasil', 'Warehouse Section B', 'Panama City', 'Panama', 'Panama', '0801', '+50766001122', '+50766001125', 'Direct Partner', 'CON-9901', 'COMP-OLA-01',
+                    'FLEET-5501', '2026-01-15', '8-765-4321', '99'
                 ]
             ];
         }
@@ -127,7 +149,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">5</p>
+                        <p className="text-base font-black text-main">6</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -204,69 +226,6 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
-                {/* CARD 2: VEHICLES */}
-                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
-                     style={{ 
-                          background: 'var(--bg-card)', 
-                          borderColor: 'var(--border-main)' 
-                      }}>
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
-                                 style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)' }}>
-                                <Car size={20} style={{ color: '#eab308' }} />
-                            </div>
-                            {hasVehicleAccess ? (
-                                <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
-                                    Authorized
-                                </span>
-                            ) : (
-                                <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 flex items-center gap-1">
-                                    <Lock size={10} /> Locked
-                                </span>
-                            )}
-                        </div>
-                        <div className="space-y-1">
-                            <h3 className="text-base font-bold text-main">Vehicle Bulk Upload</h3>
-                            <p className="text-xs text-dim leading-relaxed">
-                                Deploy multiple fleet elements. Auto-assigns to current user branch or accepts branch selections for administrators. Supports make, model, year, category, VIN, and rental parameters.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
-                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
-                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
-                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.txt</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-dim">Templates:</span>
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={() => handleDownloadTemplate('vehicle', 'xlsx')}
-                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
-                                >
-                                    Excel
-                                </button>
-                                <span className="text-dim/30">|</span>
-                                <button 
-                                    onClick={() => handleDownloadTemplate('vehicle', 'csv')}
-                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
-                                >
-                                    CSV
-                                </button>
-                            </div>
-                        </div>
-                        <button
-                            disabled={!hasVehicleAccess}
-                            onClick={() => setActiveModal('vehicle')}
-                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-sm"
-                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
-                        >
-                            Launch Importer <ArrowRight size={14} />
-                        </button>
-                    </div>
-                </div>
 
                 {/* CARD 3: DATA MIGRATION */}
                 <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
@@ -450,6 +409,62 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 6: SUPPLIERS */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(200, 230, 0, 0.1)' }}>
+                                <Upload size={20} style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Vendor Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Import active vendors/suppliers directory. Matches accounts payable to your chart of accounts (e.g. Code 2100), parses fleet assignments, and supports tax, location, and address details.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('supplier', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('supplier', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('supplier')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -474,11 +489,6 @@ const BulkUploadsHub = () => {
                 onSuccess={() => { setActiveModal(null); }} 
             />
 
-            <BulkVehicleUpload 
-                isOpen={activeModal === 'vehicle'} 
-                onClose={() => setActiveModal(null)} 
-                onSuccess={() => { setActiveModal(null); }} 
-            />
 
             <DataMigrationUpload 
                 isOpen={activeModal === 'migration'} 
@@ -513,6 +523,12 @@ const BulkUploadsHub = () => {
                 isOpen={activeModal === 'invoice'} 
                 onClose={() => setActiveModal(null)} 
                 onSuccess={() => setActiveModal(null)} 
+            />
+
+            <BulkSupplierUpload
+                isOpen={activeModal === 'supplier'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
             />
         </div>
     );
