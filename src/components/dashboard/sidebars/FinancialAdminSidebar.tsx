@@ -103,6 +103,10 @@ const FinancialAdminSidebar = ({
       icon: <LayoutGrid size={22} />,
       subItems: [
         {
+          label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
+          path: "/admin/financial-admin/dashboard-hub",
+        },
+        {
           label: t("sidebar.items.executiveDashboard"),
           path: "/admin/financial-admin",
         },
