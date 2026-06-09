@@ -560,7 +560,7 @@ const CreateJournalPage = () => {
             ]);
 
             if (codesRes.status === 'fulfilled') {
-                const codesData = codesRes.value;
+                const codesData = codesRes.value as any;
                 setAccountingCodes(Array.isArray(codesData) ? codesData : (codesData.data || []));
             }
             if (branchesRes.status === 'fulfilled') {
@@ -635,7 +635,7 @@ const CreateJournalPage = () => {
         setQuickCreateError(null);
         try {
             const res = await createAccountingCode(newAccountingCode);
-            const codesData = await getAllAccountingCodes({ limit: 1000 });
+            const codesData = (await getAllAccountingCodes({ limit: 1000 })) as any;
             setAccountingCodes(Array.isArray(codesData) ? codesData : (codesData.data || []));
 
             if (targetLineIndex !== null) {
