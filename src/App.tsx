@@ -129,6 +129,8 @@ import InvoiceList from "./pages/dashboards/finance/InvoiceList";
 import InvoiceDetail from "./pages/dashboards/finance/InvoiceDetail";
 import FinancialAdminScraps from "./pages/dashboards/financialAdmin/FinancialAdminScraps";
 import FinancialAdminWriteOffs from "./pages/dashboards/financialAdmin/FinancialAdminWriteOffs";
+import InventoryList from "./pages/dashboards/shared/InventoryList";
+import InventoryDetail from "./pages/dashboards/shared/InventoryDetail";
 
 // Sales Pages
 import Customers from "./pages/dashboards/finance/Sales/Customers";
@@ -428,6 +430,8 @@ function App() {
               <Route path="payments-made" element={<PaymentsMade />} />
               <Route path="scraps" element={<FinancialAdminScraps />} />
               <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
+              <Route path="inventory" element={<InventoryList />} />
+              <Route path="inventory/:id" element={<InventoryDetail />} />
 
               {/* Nested Collections Routing Hub */}
               <Route
@@ -889,6 +893,8 @@ function App() {
               />
               <Route path="scraps" element={<FinancialAdminScraps />} />
               <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
+              <Route path="inventory" element={<InventoryList />} />
+              <Route path="inventory/:id" element={<InventoryDetail />} />
             </Route>
           </Route>
 

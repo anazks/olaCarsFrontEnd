@@ -363,6 +363,10 @@ const FinancialAdminSidebar = ({
       icon: <Wrench size={22} />,
       subItems: [
         {
+          label: t("sidebar.items.inventory", "Inventory"),
+          path: "/admin/financial-admin/inventory",
+        },
+        {
           label: t("sidebar.items.scraps"),
           path: "/admin/financial-admin/scraps",
         },

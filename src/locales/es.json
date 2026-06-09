@@ -213,6 +213,7 @@
       "manualJournals": "Asientos Manuales",
       "scraps": "Desechos",
       "writeOffs": "Baja de Activos",
+      "inventory": "Inventario",
       "addJournalEntry": "Agregar Asiento Contable",
       "taskDelegation": "Delegación de Tareas"
     }

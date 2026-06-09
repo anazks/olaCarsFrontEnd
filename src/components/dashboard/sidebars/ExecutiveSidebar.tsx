@@ -345,6 +345,7 @@ const ExecutiveSidebar = ({
       label: "Workshop Management",
       icon: <Wrench size={22} />,
       subItems: [
+        { label: "Inventory", path: "/admin/admin/inventory" },
         { label: "Scraps", path: "/admin/admin/scraps" },
         { label: "Write Offs", path: "/admin/admin/write-offs" },
       ],

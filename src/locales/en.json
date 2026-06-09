@@ -213,6 +213,7 @@
       "manualJournals": "Manual Journals",
       "scraps": "Scraps",
       "writeOffs": "Write Offs",
+      "inventory": "Inventory",
       "addJournalEntry": "Add Journal Entry",
       "taskDelegation": "Task Delegation"
     }
