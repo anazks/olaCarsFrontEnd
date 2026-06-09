@@ -47,13 +47,15 @@ const InventoryDetail = () => {
   const [loadingTx, setLoadingTx] = useState(false);
 
   // Accounting Ledger States
+  const [assetLedger, setAssetLedger] = useState<LedgerEntry[]>([]);
   const [debitLedger, setDebitLedger] = useState<LedgerEntry[]>([]);
   const [creditLedger, setCreditLedger] = useState<LedgerEntry[]>([]);
+  const [loadingAsset, setLoadingAsset] = useState(false);
   const [loadingDebit, setLoadingDebit] = useState(false);
   const [loadingCredit, setLoadingCredit] = useState(false);
 
-  // Tab State: 'specs' | 'timeline' | 'debit' | 'credit'
-  const [activeTab, setActiveTab] = useState<"specs" | "timeline" | "debit" | "credit">("specs");
+  // Tab State: 'specs' | 'timeline' | 'asset' | 'debit' | 'credit'
+  const [activeTab, setActiveTab] = useState<"specs" | "timeline" | "asset" | "debit" | "credit">("specs");
 
   // Load Part Specs
   const loadPartDetails = useCallback(async () => {
@@ -84,6 +86,19 @@ const InventoryDetail = () => {
       setLoadingTx(false);
     }
   }, [id]);
+
+  // Load Ledger Entries for Asset Account
+  const loadAssetAccountLedger = useCallback(async (codeId: string) => {
+    setLoadingAsset(true);
+    try {
+      const res = await getLedgerEntries({ accountingCode: codeId, limit: 100 });
+      setAssetLedger(res.data || []);
+    } catch (err) {
+      console.error("Failed to load asset ledger:", err);
+    } finally {
+      setLoadingAsset(false);
+    }
+  }, []);
 
   // Load Ledger Entries for Debit Account
   const loadDebitAccountLedger = useCallback(async (codeId: string) => {
@@ -121,6 +136,11 @@ const InventoryDetail = () => {
     if (!part) return;
     if (activeTab === "timeline") {
       loadPartTimeline();
+    } else if (activeTab === "asset") {
+      const assetAccId = typeof part.inventoryAccountId === "object" ? part.inventoryAccountId?._id : part.inventoryAccountId;
+      if (assetAccId) {
+        loadAssetAccountLedger(assetAccId);
+      }
     } else if (activeTab === "debit") {
       const purchaseAccId = typeof part.purchaseAccountId === "object" ? part.purchaseAccountId?._id : part.purchaseAccountId;
       if (purchaseAccId) {
@@ -132,7 +152,7 @@ const InventoryDetail = () => {
         loadCreditAccountLedger(incomeAccId);
       }
     }
-  }, [activeTab, part, loadPartTimeline, loadDebitAccountLedger, loadCreditAccountLedger]);
+  }, [activeTab, part, loadPartTimeline, loadAssetAccountLedger, loadDebitAccountLedger, loadCreditAccountLedger]);
 
   if (loadingPart) {
     return (
@@ -323,9 +343,18 @@ const InventoryDetail = () => {
           <Calculator size={16} className="text-[#D4F12E]" />
           Linked Accounting Accounts Mapping
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-semibold">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-xs font-semibold">
           <div className="p-4 rounded-2xl border" style={{ borderColor: "var(--border-main)", backgroundColor: "var(--bg-input)" }}>
-            <span className="text-[9px] uppercase tracking-wider text-red-400 block mb-1">Debit / Asset / Purchase Account</span>
+            <span className="text-[9px] uppercase tracking-wider text-blue-400 block mb-1">Inventory Asset Account</span>
+            <span className="font-mono font-bold text-sm block" style={{ color: "var(--text-main)" }}>
+              {typeof part.inventoryAccountId === "object" && part.inventoryAccountId
+                ? `${part.inventoryAccountId.code} - ${part.inventoryAccountId.name}`
+                : "AST0001 (Inventory Asset - Default)"}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-2xl border" style={{ borderColor: "var(--border-main)", backgroundColor: "var(--bg-input)" }}>
+            <span className="text-[9px] uppercase tracking-wider text-red-400 block mb-1">COGS / Expense Account</span>
             <span className="font-mono font-bold text-sm block" style={{ color: "var(--text-main)" }}>
               {typeof part.purchaseAccountId === "object" && part.purchaseAccountId
                 ? `${part.purchaseAccountId.code} - ${part.purchaseAccountId.name}`
@@ -379,13 +408,23 @@ const InventoryDetail = () => {
           </button>
           <button
             className={`px-4 py-2 font-bold text-sm border-b-2 transition-all -mb-[14px] bg-transparent border-none outline-none cursor-pointer ${
+              activeTab === "asset"
+                ? "border-[#D4F12E] text-[var(--text-main)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
+            }`}
+            onClick={() => setActiveTab("asset")}
+          >
+            Asset Ledger History
+          </button>
+          <button
+            className={`px-4 py-2 font-bold text-sm border-b-2 transition-all -mb-[14px] bg-transparent border-none outline-none cursor-pointer ${
               activeTab === "debit"
                 ? "border-[#D4F12E] text-[var(--text-main)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             onClick={() => setActiveTab("debit")}
           >
-            Debit Ledger History
+            COGS Ledger History
           </button>
           <button
             className={`px-4 py-2 font-bold text-sm border-b-2 transition-all -mb-[14px] bg-transparent border-none outline-none cursor-pointer ${
@@ -478,6 +517,61 @@ const InventoryDetail = () => {
                           </td>
                           <td className="py-3.5 px-4 text-xs max-w-sm truncate" style={{ color: "var(--text-muted)" }} title={tx.notes}>
                             {tx.notes || "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "asset" && (
+            <div className="space-y-4">
+              {loadingAsset ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={28} className="animate-spin text-[#D4F12E]" />
+                </div>
+              ) : assetLedger.length === 0 ? (
+                <div className="text-center py-12 text-xs font-bold opacity-30 uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                  No Asset Ledger transactions hitting this account.
+                </div>
+              ) : (
+                <div className="overflow-x-auto w-full rounded-2xl border" style={{ borderColor: "var(--border-main)" }}>
+                  <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead style={{ backgroundColor: "var(--bg-input)" }}>
+                      <tr className="text-[10px] font-black uppercase tracking-wider opacity-60 border-b" style={{ borderColor: "var(--border-main)", color: "var(--text-main)" }}>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Description</th>
+                        <th className="py-3 px-4 text-right">Debit</th>
+                        <th className="py-3 px-4 text-right">Credit</th>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Reference</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs font-semibold divide-y" style={{ borderColor: "var(--border-main)" }}>
+                      {assetLedger.map((entry) => (
+                        <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3.5 px-4 font-mono opacity-80" style={{ color: "var(--text-muted)" }}>
+                            {entry.date ? new Date(entry.date).toLocaleDateString() : new Date(entry.createdAt || "").toLocaleDateString()}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold max-w-sm truncate" style={{ color: "var(--text-main)" }} title={entry.description}>
+                            {entry.description}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-green-500">
+                            {entry.debit ? `$${entry.debit.toFixed(2)}` : entry.type === "DEBIT" && entry.amount ? `$${entry.amount.toFixed(2)}` : "—"}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-red-500">
+                            {entry.credit ? `$${entry.credit.toFixed(2)}` : entry.type === "CREDIT" && entry.amount ? `$${entry.amount.toFixed(2)}` : "—"}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${entry.type === "DEBIT" || entry.debit ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                              {entry.type || (entry.debit ? "DEBIT" : "CREDIT")}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
+                            {entry.referenceId || "—"}
                           </td>
                         </tr>
                       ))}

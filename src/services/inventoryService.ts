@@ -18,6 +18,7 @@ export interface InventoryPart {
     leadTimeDays?: number;
     purchaseAccountId?: { _id: string; code: string; name: string } | string | null;
     incomeAccountId?: { _id: string; code: string; name: string } | string | null;
+    inventoryAccountId?: { _id: string; code: string; name: string } | string | null;
     taxId?: { _id: string; name: string; rate: number } | string | null;
     lastRestockedAt?: string;
     isActive: boolean;
@@ -71,4 +72,9 @@ export const restockPart = async (id: string, quantity: number): Promise<Invento
 export const getPartTransactions = async (id: string): Promise<PartTransaction[]> => {
     const response = await api.get(`/api/inventory/${id}/transactions`);
     return response.data.data || response.data;
+};
+
+export const bulkCreateParts = async (parts: any[], branch?: string): Promise<any> => {
+    const response = await api.post('/api/inventory/bulk', { parts, branch });
+    return response.data;
 };

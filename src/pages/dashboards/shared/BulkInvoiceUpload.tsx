@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { bulkUploadInvoices } from '../../../services/invoiceService';
-import { getAllDrivers } from '../../../services/driverService';
+import { getAllCustomers } from '../../../services/customerService';
 
 interface ParsedInvoiceRow {
     [key: string]: any;
@@ -21,7 +21,7 @@ const CSV_COLUMNS = [
     'Invoice Date', 'Invoice ID', 'Invoice Number', 'Invoice Status', 'Customer ID',
     'Customer Name', 'Customer Number', 'Company ID', 'Is Inclusive Tax', 'Due Date',
     'Discount Type', 'SubTotal', 'Total', 'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY',
-    'Balance', 'Adjustment', 'Notes', 'Entity Discount Amount', 'Location ID',
+    'Balance', 'Adjustment', 'Notes', 'Terms & Conditions', 'Entity Discount Amount', 'Location ID',
     'Item Name', 'Item Desc', 'Quantity', 'Discount', 'Discount Amount',
     'Item Total', 'Item Price', 'Account', 'Account Code', 'Line Item Location Name',
     'Invoice Shipment Status', 'Manually Shipped Quantity', 'Tax ID', 'Item Tax',
@@ -48,6 +48,7 @@ const SAMPLE_DATA = [
         'Balance': '0',
         'Adjustment': '',
         'Notes': 'Weekly lease payment',
+        'Terms & Conditions': 'Payment is due within 14 days',
         'Entity Discount Amount': '0',
         'Location ID': '',
         'Item Name': 'Weekly Rent',
@@ -87,6 +88,7 @@ const SAMPLE_DATA = [
         'Balance': '116.0',
         'Adjustment': '',
         'Notes': 'Scheduled oil change maintenance',
+        'Terms & Conditions': 'Warranty is 30 days',
         'Entity Discount Amount': '0',
         'Location ID': '',
         'Item Name': 'Oil Change Service',
@@ -199,69 +201,92 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [dragOver, setDragOver] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatusText, setUploadStatusText] = useState('');
-    const [availableDriverNames, setAvailableDriverNames] = useState<Set<string>>(new Set());
-    const [availableDriverIds, setAvailableDriverIds] = useState<Set<string>>(new Set());
-    const [loadingDrivers, setLoadingDrivers] = useState(false);
+    const [availableCustomerNames, setAvailableCustomerNames] = useState<Set<string>>(new Set());
+    const [availableCustomerIds, setAvailableCustomerIds] = useState<Set<string>>(new Set());
+    const [loadingCustomers, setLoadingCustomers] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            setLoadingDrivers(true);
-            getAllDrivers({ limit: 1000 })
+            setLoadingCustomers(true);
+
+            getAllCustomers({ limit: 100000 })
                 .then(res => {
                     const list = Array.isArray(res.data) ? res.data : [];
-                    const names = new Set(list.map(d => d.personalInfo?.fullName?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
-                    const ids = new Set(list.map(d => d.driverId?.toLowerCase().trim()).filter((id): id is string => !!id));
-                    setAvailableDriverNames(names);
-                    setAvailableDriverIds(ids);
+                    const names = new Set(list.map(c => c.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
+                    const ids = new Set(list.map(c => c.customerId?.toLowerCase().trim()).filter((id): id is string => !!id));
+                    setAvailableCustomerNames(names);
+                    setAvailableCustomerIds(ids);
+                    console.log(`[BulkInvoiceUpload] Loaded ${names.size} customers for validation.`);
                 })
                 .catch(err => {
-                    console.error('Failed to load driver names/IDs for validation', err);
+                    console.error('Failed to load customer names/IDs for validation', err);
                 })
                 .finally(() => {
-                    setLoadingDrivers(false);
+                    setLoadingCustomers(false);
                 });
         } else {
-            setAvailableDriverNames(new Set());
-            setAvailableDriverIds(new Set());
-            setLoadingDrivers(false);
+            setAvailableCustomerNames(new Set());
+            setAvailableCustomerIds(new Set());
+            setLoadingCustomers(false);
         }
     }, [isOpen]);
 
+    const matchNameFlexibly = (inputName: string, dbNames: Set<string>): boolean => {
+        const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
+        if (!cleanInput) return false;
+        
+        if (dbNames.has(cleanInput)) return true;
+        
+        // Check if cleanInput is a substring of any dbName or vice-versa
+        for (const dbName of dbNames) {
+            const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
+            if (cleanDb === cleanInput || cleanDb.includes(cleanInput) || cleanInput.includes(cleanDb)) {
+                return true;
+            }
+            
+            // Check word coverage: do all input words exist in the DB name?
+            const inputWords = cleanInput.split(/\s+/).filter(w => w.length > 1);
+            if (inputWords.length > 0) {
+                const dbWords = cleanDb.split(/\s+/);
+                const matchesAll = inputWords.every(word => dbWords.some(dbWord => dbWord.includes(word) || word.includes(dbWord)));
+                if (matchesAll) return true;
+            }
+        }
+        return false;
+    };
+
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        const name = (getRowVal(row, ['Customer Name', 'customerName', 'fullName', 'driver name', 'driverName', 'customer', 'driver']) || '').toString().trim();
-        const customerId = (getRowVal(row, ['Customer ID', 'customerId', 'driver id', 'driverId']) || '').toString().trim();
+        const name = (getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '').toString().trim();
+        const customerId = (getRowVal(row, ['Customer ID', 'customerId', 'customerNumber']) || '').toString().trim();
 
         if (!name && !customerId) {
             const rowKeys = Object.keys(row).filter(k => !k.startsWith('_'));
-            errors.push(`Missing Customer Name or Customer ID (Found columns: ${rowKeys.join(', ') || 'none'})`);
+            errors.push(`Missing Customer Name (Found columns: ${rowKeys.join(', ') || 'none'})`);
         } else {
             let found = false;
             
-            // 1. Try Customer ID match
-            if (customerId && availableDriverIds.has(customerId.toLowerCase().trim())) {
-                found = true;
+            // 1. Try Customer Name match first (flexible and exact)
+            if (name) {
+                const cleanNameInput = name.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (
+                    availableCustomerNames.has(cleanNameInput) || 
+                    matchNameFlexibly(cleanNameInput, availableCustomerNames)
+                ) {
+                    found = true;
+                }
             }
             
-            // 2. Try exact and flexible Customer Name match
-            if (!found && name) {
-                const cleanNameInput = name.toLowerCase().replace(/\s+/g, ' ').trim();
-                if (availableDriverNames.has(cleanNameInput)) {
+            // 2. Try Customer ID match as fallback
+            if (!found && customerId) {
+                const cleanId = customerId.toLowerCase().trim();
+                if (availableCustomerIds.has(cleanId)) {
                     found = true;
-                } else {
-                    // Flexible match: substring match to handle middle names or slight formatting differences
-                    for (const dbName of availableDriverNames) {
-                        const cleanDbName = dbName.toLowerCase().replace(/\s+/g, ' ').trim();
-                        if (cleanDbName === cleanNameInput || cleanDbName.includes(cleanNameInput) || cleanNameInput.includes(cleanDbName)) {
-                            found = true;
-                            break;
-                        }
-                    }
                 }
             }
 
-            if ((availableDriverNames.size > 0 || availableDriverIds.size > 0) && !found) {
-                errors.push(`Driver not found for ID "${customerId}" or Name "${name}"`);
+            if (!found) {
+                errors.push(`Customer not found for Name "${name || 'N/A'}"${customerId ? ` or ID "${customerId}"` : ''}`);
             }
         }
         
@@ -279,17 +304,17 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         }
         
         return errors;
-    }, [availableDriverNames, availableDriverIds]);
+    }, [availableCustomerNames, availableCustomerIds]);
 
-    // Re-validate rows when driver names load
+    // Re-validate rows when customer lists load
     useEffect(() => {
-        if (parsedRows.length > 0 && (availableDriverNames.size > 0 || availableDriverIds.size > 0)) {
+        if (parsedRows.length > 0 && availableCustomerNames.size > 0) {
             setParsedRows(prev => prev.map(row => ({
                 ...row,
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableDriverNames, availableDriverIds, validateRow]);
+    }, [availableCustomerNames, availableCustomerIds, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -385,45 +410,76 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             return;
         }
 
+        // Group rows by Invoice Number / Invoice ID to keep line items of the same invoice together
+        const invoiceGroupsMap = new Map<string, any[]>();
+        validRows.forEach(row => {
+            const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
+            const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
+            const key = (invNo || invId || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
+            if (!invoiceGroupsMap.has(key)) {
+                invoiceGroupsMap.set(key, []);
+            }
+            invoiceGroupsMap.get(key)!.push(row);
+        });
+
+        const groupsArray = Array.from(invoiceGroupsMap.values());
+        const totalInvoices = groupsArray.length;
+
         setUploading(true);
         setUploadProgress(0);
-        setUploadStatusText('Uploading invoices...');
+        setUploadStatusText(`Uploading invoices (0 / ${totalInvoices})...`);
 
-        // Start progress simulation
-        const progressInterval = setInterval(() => {
-            setUploadProgress(prev => {
-                if (prev >= 90) {
-                    clearInterval(progressInterval);
-                    return 90;
-                }
-                return prev + 10;
-            });
-        }, 150);
+        const CHUNK_INVOICE_SIZE = 50; // Send 50 unique invoices at a time
+        const chunks: any[][] = [];
+        for (let i = 0; i < groupsArray.length; i += CHUNK_INVOICE_SIZE) {
+            const groupBatch = groupsArray.slice(i, i + CHUNK_INVOICE_SIZE);
+            const rowBatch = groupBatch.flat().map(({ _rowErrors, ...rest }) => rest);
+            chunks.push(rowBatch);
+        }
+
+        const finalResult = {
+            successCount: 0,
+            errorCount: 0,
+            skippedCount: 0,
+            errors: [] as string[],
+            skipped: [] as string[],
+            createdInvoices: [] as string[]
+        };
 
         try {
-            const payload = validRows.map(({ _rowErrors, ...rest }) => rest);
-            const res = await bulkUploadInvoices({ rows: payload, invoiceType });
-            
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-            setUploadStatusText('Processing completed.');
-            setResult(res);
+            let processedInvoices = 0;
+            for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                const rowBatch = chunks[chunkIdx];
+                const res = await bulkUploadInvoices({ rows: rowBatch, invoiceType });
+                
+                finalResult.successCount += res.successCount || 0;
+                finalResult.errorCount += res.errorCount || 0;
+                finalResult.skippedCount += res.skippedCount || 0;
+                if (res.errors) finalResult.errors.push(...res.errors);
+                if (res.skipped) finalResult.skipped.push(...res.skipped);
+                if (res.createdInvoices) finalResult.createdInvoices.push(...res.createdInvoices);
 
-            if (res.successCount > 0) {
-                toast.success(`${res.successCount} invoices created successfully.`);
-                if (res.skippedCount > 0) {
-                    toast(`${res.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
+                processedInvoices += groupsArray.slice(chunkIdx * CHUNK_INVOICE_SIZE, (chunkIdx + 1) * CHUNK_INVOICE_SIZE).length;
+                setUploadProgress(Math.round((processedInvoices / totalInvoices) * 100));
+                setUploadStatusText(`Uploading invoices (${processedInvoices} / ${totalInvoices})...`);
+            }
+
+            setResult(finalResult);
+
+            if (finalResult.successCount > 0) {
+                toast.success(`${finalResult.successCount} invoices created successfully.`);
+                if (finalResult.skippedCount > 0) {
+                    toast(`${finalResult.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
                 }
                 onSuccess();
-            } else if (res.skippedCount > 0) {
-                toast(`All ${res.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
-            } else if (res.errorCount > 0) {
-                toast.error(`Completed with ${res.errorCount} errors.`);
+            } else if (finalResult.skippedCount > 0) {
+                toast(`All ${finalResult.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
+            } else if (finalResult.errorCount > 0) {
+                toast.error(`Completed with ${finalResult.errorCount} errors.`);
             } else {
                 toast.success('Upload complete.');
             }
         } catch (err: any) {
-            clearInterval(progressInterval);
             toast.error(err?.response?.data?.message || err?.message || 'Bulk upload failed.');
         } finally {
             setUploading(false);
@@ -466,6 +522,20 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
 
     const validCount = parsedRows.filter(r => r._rowErrors.length === 0).length;
     const errorCount = parsedRows.filter(r => r._rowErrors.length > 0).length;
+
+    const getUniqueInvoicesCount = () => {
+        const invoiceKeys = new Set();
+        parsedRows.forEach(row => {
+            if (row._rowErrors.length === 0) {
+                const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
+                const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
+                const key = (invNo || invId || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
+                invoiceKeys.add(key);
+            }
+        });
+        return invoiceKeys.size;
+    };
+    const uniqueInvoicesCount = getUniqueInvoicesCount();
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
@@ -554,11 +624,11 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                     <div>
                                         <p className="text-sm font-bold text-main">{fileName}</p>
                                         <div className="flex gap-4 mt-1 text-xs">
-                                            <span className="text-emerald-500 font-bold">{validCount} valid</span>
+                                            <span className="text-emerald-500 font-bold">{validCount} valid rows ({uniqueInvoicesCount} invoices)</span>
                                             {errorCount > 0 && <span className="text-rose-500 font-bold">{errorCount} errors</span>}
-                                            {loadingDrivers && (
+                                            {loadingCustomers && (
                                                 <span className="text-blue-500 font-bold flex items-center gap-1">
-                                                    <Loader2 size={12} className="animate-spin" /> Verifying driver names...
+                                                    <Loader2 size={12} className="animate-spin" /> Verifying names...
                                                 </span>
                                             )}
                                         </div>
@@ -585,12 +655,12 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         Change File
                                     </button>
                                     <button
-                                        onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingDrivers}
+                                        onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingCustomers}
                                         className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02]"
                                         style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                                     >
                                         {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                                        {uploading ? 'Processing...' : `Upload ${validCount} Invoices`}
+                                        {uploading ? 'Processing...' : `Upload ${uniqueInvoicesCount} Invoices`}
                                     </button>
                                 </div>
                             </div>
@@ -632,13 +702,13 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                             {parsedRows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '-'}</td>
-                                                    <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'fullName', 'driver name', 'driverName']) || '-'}</td>
+                                                    <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold">{getRowVal(row, ['SubTotal', 'subtotal', 'amount', 'itemPrice', 'Item Price']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold text-emerald-500">{getRowVal(row, ['Total', 'total']) || '-'}</td>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Invoice Status', 'status']) || '-'}</td>
                                                     <td className="py-3 px-4 text-dim">{getRowVal(row, ['Due Date', 'dueDate']) || '-'}</td>
                                                     <td className="py-3 px-4">
-                                                        {loadingDrivers ? (
+                                                        {loadingCustomers ? (
                                                             <div className="flex items-center gap-1.5 text-blue-500">
                                                                 <Loader2 size={14} className="animate-spin" /> Verifying...
                                                             </div>

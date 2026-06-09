@@ -116,6 +116,7 @@ const InventoryList = () => {
     supplierId: "",
     supplierPartNumber: "",
     leadTimeDays: 7,
+    inventoryAccountId: "",
     purchaseAccountId: "",
     incomeAccountId: "",
     taxId: "",
@@ -254,6 +255,7 @@ const InventoryList = () => {
       supplierId: typeof part.supplierId === "object" ? part.supplierId?._id || "" : part.supplierId || "",
       supplierPartNumber: part.supplierPartNumber || "",
       leadTimeDays: part.leadTimeDays || 7,
+      inventoryAccountId: typeof part.inventoryAccountId === "object" ? part.inventoryAccountId?._id || "" : part.inventoryAccountId || "",
       purchaseAccountId: typeof part.purchaseAccountId === "object" ? part.purchaseAccountId?._id || "" : part.purchaseAccountId || "",
       incomeAccountId: typeof part.incomeAccountId === "object" ? part.incomeAccountId?._id || "" : part.incomeAccountId || "",
       taxId: typeof part.taxId === "object" ? part.taxId?._id || "" : part.taxId || "",
@@ -278,6 +280,7 @@ const InventoryList = () => {
       supplierId: "",
       supplierPartNumber: "",
       leadTimeDays: 7,
+      inventoryAccountId: "",
       purchaseAccountId: "",
       incomeAccountId: "",
       taxId: "",
@@ -309,6 +312,7 @@ const InventoryList = () => {
 
       if (partForm.supplierId) payload.supplierId = partForm.supplierId;
       if (partForm.supplierPartNumber) payload.supplierPartNumber = partForm.supplierPartNumber.trim();
+      if (partForm.inventoryAccountId) payload.inventoryAccountId = partForm.inventoryAccountId;
       if (partForm.purchaseAccountId) payload.purchaseAccountId = partForm.purchaseAccountId;
       if (partForm.incomeAccountId) payload.incomeAccountId = partForm.incomeAccountId;
       if (partForm.taxId) payload.taxId = partForm.taxId;
@@ -548,6 +552,7 @@ const InventoryList = () => {
                   ) : (
                     paginatedParts.map((part) => {
                       const isLow = part.quantityOnHand <= part.reorderLevel;
+                      const invCode = typeof part.inventoryAccountId === "object" ? part.inventoryAccountId?.code : "";
                       const purchaseCode = typeof part.purchaseAccountId === "object" ? part.purchaseAccountId?.code : "";
                       const incomeCode = typeof part.incomeAccountId === "object" ? part.incomeAccountId?.code : "";
                       const taxName = typeof part.taxId === "object" ? part.taxId?.name : "";
@@ -560,7 +565,7 @@ const InventoryList = () => {
                           </td>
                           <td className="py-4 px-4">
                             <div className="font-bold flex items-center gap-1.5" style={{ color: "var(--text-main)" }}>
-                              {part.partName}
+                               {part.partName}
                               {isLow && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" title="Low stock limit reached" />
                               )}
@@ -597,14 +602,19 @@ const InventoryList = () => {
                           </td>
                           <td className="py-4 px-4 text-xs font-mono">
                             <div className="flex flex-col gap-0.5">
+                              {invCode && (
+                                <span className="text-[10px] text-blue-400" title="Inventory Asset Account">
+                                  Asset: {invCode}
+                                </span>
+                              )}
                               {purchaseCode && (
-                                <span className="text-[10px] text-red-400" title="Purchase Expense/Inventory Account">
-                                  Debit: {purchaseCode}
+                                <span className="text-[10px] text-red-400" title="COGS / Purchase Account">
+                                  COGS: {purchaseCode}
                                 </span>
                               )}
                               {incomeCode && (
                                 <span className="text-[10px] text-green-400" title="Sales Income Account">
-                                  Credit: {incomeCode}
+                                  Income: {incomeCode}
                                 </span>
                               )}
                               {taxName && (
@@ -950,10 +960,31 @@ const InventoryList = () => {
                     <Calculator size={12} className="text-[#D4F12E]" />
                     Accounting Integration Mapping (Optional)
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-[9px] uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>
-                        Purchase/Asset Account
+                        Inventory Asset Account
+                      </label>
+                      <select
+                        value={partForm.inventoryAccountId}
+                        onChange={(e) => setPartForm({ ...partForm, inventoryAccountId: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border bg-transparent outline-none cursor-pointer text-xs"
+                        style={{ borderColor: "var(--border-main)", color: "var(--text-main)" }}
+                      >
+                        <option value="">— Default: AST0001 —</option>
+                        {accountingCodes
+                          .filter((c) => c.category === "ASSET")
+                          .map((c) => (
+                            <option key={c._id} value={c._id} style={{ background: "var(--bg-card)" }}>
+                              {c.code} - {c.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>
+                        COGS / Expense Account
                       </label>
                       <select
                         value={partForm.purchaseAccountId}
