@@ -221,7 +221,9 @@ const AccountingCodeDetails = () => {
             <Breadcrumbs 
                 items={[
                     { label: 'Finance', path: '../../finance-dashboard' },
-                    { label: 'Chart of Accounts', path: '../chart-of-accounts' },
+                    window.location.pathname.includes('/bank-accounts/')
+                        ? { label: 'Bank Accounts', path: '../bank-accounts' }
+                        : { label: 'Chart of Accounts', path: '../chart-of-accounts' },
                     { label: code.code, active: true }
                 ]} 
             />
@@ -244,7 +246,7 @@ const AccountingCodeDetails = () => {
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: style.bg, color: style.text, borderColor: style.border }}>
                             {code.category}
                         </span>
-                        {(code.category === 'ASSET' || code.category === 'LIABILITY') && (
+                        {(code.accountType === 'Bank' || code.accountType === 'Credit Card') && (
                             <button
                                 onClick={() => setIsImportModalOpen(true)}
                                 className="ml-4 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide border border-brand-lime hover:bg-lime/10 text-brand-lime transition-all cursor-pointer"

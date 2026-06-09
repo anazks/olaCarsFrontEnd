@@ -102,6 +102,7 @@ import DriverPerformanceDashboard from "./pages/dashboards/shared/DriverPerforma
 import StaffPerformanceDashboard from "./pages/dashboards/shared/StaffPerformanceDashboard";
 import StaffPerformanceDetails from "./pages/dashboards/shared/StaffPerformanceDetails";
 import WGroupDashboard from "./pages/dashboards/WGroupDashboard";
+import DashboardHub from "./pages/dashboards/shared/DashboardHub";
 import DriverDashboard from "./pages/dashboards/driver/DriverDashboard";
 import AgreementSignPage from "./pages/dashboards/driver/AgreementSignPage";
 import NotificationsPage from "./pages/dashboards/shared/NotificationsPage";
@@ -200,6 +201,7 @@ function App() {
               element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}
             >
               <Route index element={<ExecutiveDashboard />} />
+              <Route path="dashboard-hub" element={<DashboardHub />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
@@ -399,6 +401,10 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route
+                path="bank-accounts/:id"
+                element={<AccountingCodeDetails />}
+              />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />
@@ -645,6 +651,7 @@ function App() {
               }
             >
               <Route index element={<FinancialAdminDashboard />} />
+              <Route path="dashboard-hub" element={<DashboardHub />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}
@@ -858,6 +865,10 @@ function App() {
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="staff-salaries" element={<StaffSalaries />} />
               <Route path="bank-accounts" element={<ManageBankAccounts />} />
+              <Route
+                path="bank-accounts/:id"
+                element={<AccountingCodeDetails />}
+              />
               <Route path="banking" element={<BankingOverview />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />

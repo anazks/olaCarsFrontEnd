@@ -98,6 +98,10 @@ const ExecutiveSidebar = ({
       label: t("sidebar.sections.dashboard"),
       icon: <LayoutGrid size={22} />,
       subItems: [
+        {
+          label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
+          path: "/admin/admin/dashboard-hub",
+        },
         { label: t("sidebar.items.executiveDashboard"), path: "/admin/admin" },
         {
           label: t("sidebar.items.collectionsDashboard"),
@@ -292,12 +296,19 @@ const ExecutiveSidebar = ({
           permission: "REPORTS_VIEW",
         },
         {
-          label: t("sidebar.items.chartOfAccounts"),
-          path: "/admin/admin/chart-of-accounts",
-        },
-        {
           label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
           path: "/admin/admin/fixed-assets",
+        },
+      ],
+    },
+    {
+      id: "accounting-settings",
+      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
+      icon: <Settings size={22} />,
+      subItems: [
+        {
+          label: t("sidebar.items.chartOfAccounts"),
+          path: "/admin/admin/chart-of-accounts",
         },
         {
           label: t("sidebar.items.taxManagement"),
