@@ -104,11 +104,11 @@ const FinancialAdminSidebar = ({
       subItems: [
         {
           label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
-          path: "/admin/financial-admin/dashboard-hub",
+          path: "/admin/financial-admin",
         },
         {
           label: t("sidebar.items.executiveDashboard"),
-          path: "/admin/financial-admin",
+          path: "/admin/financial-admin/financial-dashboard",
         },
         {
           label: t("sidebar.items.collectionsDashboard"),

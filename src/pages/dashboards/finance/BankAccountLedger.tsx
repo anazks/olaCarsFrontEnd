@@ -13,12 +13,16 @@ import {
     Info,
     Coins,
     Building2,
-    Plus
+    Plus,
+    ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement } from '../../../services/bankAccountService';
 import { getLedgerEntries, type LedgerEntry } from '../../../services/ledgerService';
+import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 const BankAccountLedger = () => {
     const { id } = useParams<{ id: string }>();
@@ -34,11 +38,46 @@ const BankAccountLedger = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
+
+    // Dynamic bank statement import preview & branch selection
+    const [branches, setBranches] = useState<any[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+    interface ParsedTransaction {
+        date: string;
+        description: string;
+        referenceNumber: string;
+        payee: string;
+        withdrawal: number;
+        deposit: number;
+        type: 'DEBIT' | 'CREDIT';
+        amount: number;
+        isValid: boolean;
+        error?: string;
+    }
+    const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const branchesRes = await getAllBranches({ limit: 100 });
+                const branchesList = branchesRes.data || [];
+                setBranches(branchesList);
+                if (branchesList.length > 0) {
+                    setSelectedBranchId(branchesList[0]._id);
+                }
+            } catch (err) {
+                console.error('Failed to fetch branches', err);
+            }
+        };
+        fetchBranches();
+    }, []);
+
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -76,22 +115,182 @@ const BankAccountLedger = () => {
         fetchData();
     }, [fetchData]);
 
-    const handleImportSubmit = (e: React.FormEvent) => {
+    const normalizeHeader = (header: string): string => {
+        return header.toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    const processRawRows = (rawRows: Record<string, any>[]) => {
+        if (!rawRows || rawRows.length === 0) {
+            toast.error("The file is empty or contains no data rows.");
+            return;
+        }
+
+        // Find keys
+        const firstRow = rawRows[0];
+        const keys = Object.keys(firstRow);
+        
+        let dateKey = '';
+        let withdrawalKey = '';
+        let depositKey = '';
+        let payeeKey = '';
+        let descKey = '';
+        let refKey = '';
+
+        keys.forEach(k => {
+            const normalized = normalizeHeader(k);
+            if (['date', 'transactiondate', 'entrydate'].includes(normalized)) {
+                dateKey = k;
+            } else if (['withdrawals', 'withdrawal', 'withdraw', 'debits', 'debit', 'dr'].includes(normalized)) {
+                withdrawalKey = k;
+            } else if (['deposits', 'deposit', 'credits', 'credit', 'cr'].includes(normalized)) {
+                depositKey = k;
+            } else if (['payee', 'paidto', 'party', 'contact'].includes(normalized)) {
+                payeeKey = k;
+            } else if (['description', 'details', 'memo', 'narration', 'comment'].includes(normalized)) {
+                descKey = k;
+            } else if (['referencenumber', 'ref', 'reference', 'refnumber', 'chequenumber'].includes(normalized)) {
+                refKey = k;
+            }
+        });
+
+        // Let's validate keys
+        if (!dateKey) {
+            toast.error("Missing required column: Date");
+            return;
+        }
+        if (!withdrawalKey && !depositKey) {
+            toast.error("Missing required column: Withdrawals or Deposits");
+            return;
+        }
+
+        const transactions: ParsedTransaction[] = rawRows.map((row) => {
+            const dateStr = String(row[dateKey] || '').trim();
+            const withdrawalVal = Number(row[withdrawalKey]) || 0;
+            const depositVal = Number(row[depositKey]) || 0;
+            const payeeVal = payeeKey ? String(row[payeeKey] || '').trim() : '';
+            const descVal = descKey ? String(row[descKey] || '').trim() : '';
+            const refVal = refKey ? String(row[refKey] || '').trim() : '';
+
+            let type: 'DEBIT' | 'CREDIT' = 'DEBIT';
+            let amount = 0;
+            let isValid = true;
+            let errorMsg = '';
+
+            // Validation checks
+            const parsedDate = new Date(dateStr);
+            if (dateStr === '' || isNaN(parsedDate.getTime())) {
+                isValid = false;
+                errorMsg = 'Invalid date';
+            }
+
+            if (withdrawalVal > 0 && depositVal > 0) {
+                isValid = false;
+                errorMsg = 'Both DR/CR present';
+            } else if (withdrawalVal <= 0 && depositVal <= 0) {
+                isValid = false;
+                errorMsg = 'No amount';
+            } else if (withdrawalVal > 0) {
+                type = 'CREDIT';
+                amount = withdrawalVal;
+            } else if (depositVal > 0) {
+                type = 'DEBIT';
+                amount = depositVal;
+            }
+
+            if (amount < 0) {
+                isValid = false;
+                errorMsg = 'Negative amount';
+            }
+
+            return {
+                date: dateStr,
+                description: descVal,
+                referenceNumber: refVal,
+                payee: payeeVal,
+                withdrawal: withdrawalVal,
+                deposit: depositVal,
+                type,
+                amount,
+                isValid,
+                error: errorMsg
+            };
+        });
+
+        setParsedTransactions(transactions);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImportFile(file);
+        setParsedTransactions([]);
+
+        const reader = new FileReader();
+
+        if (file.name.endsWith('.csv')) {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    processRawRows(results.data as Record<string, any>[]);
+                },
+                error: (err) => {
+                    toast.error(`CSV Parse Error: ${err.message}`);
+                }
+            });
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            reader.onload = (evt) => {
+                try {
+                    const data = evt.target?.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+                    processRawRows(jsonRows);
+                } catch (err: any) {
+                    toast.error(`Excel Parse Error: ${err.message || err}`);
+                }
+            };
+            reader.readAsBinaryString(file);
+        } else {
+            toast.error("Unsupported file type. Please upload a .csv, .xls, or .xlsx file.");
+        }
+    };
+
+    const handleImportSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!id) return;
         if (!importFile) {
             toast.error('Please upload a statement file');
             return;
         }
 
+        const validTxs = parsedTransactions.filter(tx => tx.isValid);
+        if (validTxs.length === 0) {
+            toast.error('No valid transactions to reconcile.');
+            return;
+        }
+
+        if (!selectedBranchId) {
+            toast.error('Please select a target branch.');
+            return;
+        }
+
         setImporting(true);
-        // Simulate importing statement file
-        setTimeout(() => {
-            setImporting(false);
+        try {
+            const res = await uploadBankStatement(id, selectedBranchId, validTxs);
+            toast.success(res.message || 'Statement reconciliation completed successfully.');
             setIsImportModalOpen(false);
             setImportFile(null);
-            toast.success('Statement import completed: 12 new transactions reconciled.');
-            fetchData(); // Refresh the ledger list!
-        }, 1500);
+            setParsedTransactions([]);
+            fetchData();
+        } catch (err: any) {
+            console.error('Failed to import statement', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to import bank statement');
+        } finally {
+            setImporting(false);
+        }
     };
 
     const handleInvoiceClick = async (invoiceNumber: string) => {
@@ -173,6 +372,14 @@ const BankAccountLedger = () => {
         return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
     };
 
+    const sortedEntries = React.useMemo(() => {
+        return [...entries].sort((a, b) => {
+            const dateA = new Date(a.entryDate || a.date || 0).getTime();
+            const dateB = new Date(b.entryDate || b.date || 0).getTime();
+            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+    }, [entries, sortDirection]);
+
     if (loading && !account) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -193,17 +400,6 @@ const BankAccountLedger = () => {
             </div>
         );
     }
-
-    // Derived statistics (calculated locally for this page's view)
-    const totalDebit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
-        return sum + (entry.debit || 0);
-    }, 0);
-
-    const totalCredit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'CREDIT') return sum + entry.amount;
-        return sum + (entry.credit || 0);
-    }, 0);
 
     return (
         <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
@@ -240,8 +436,7 @@ const BankAccountLedger = () => {
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
+                                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
@@ -249,27 +444,6 @@ const BankAccountLedger = () => {
                     >
                         <Upload size={14} strokeWidth={3} /> Import Statement
                     </button>
-
-                    <div className="flex items-center gap-6 border-l border-white/10 pl-6">
-                        <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Debit</div>
-                            <div className="text-xl font-mono font-bold text-red-400">
-                                {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Credit</div>
-                            <div className="text-xl font-mono font-bold text-green-400">
-                                {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                        </div>
-                        <div className="text-right pl-6 border-l border-white/10">
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-brand-lime mb-1" style={{ color: 'var(--brand-lime)' }}>Ledger Balance</div>
-                            <div className="text-xl font-mono font-black" style={{ color: 'var(--text-main)' }}>
-                                {account.currency || 'USD'} {account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -294,15 +468,23 @@ const BankAccountLedger = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Date</th>
+                                    <th 
+                                        className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50 cursor-pointer select-none hover:text-white transition-colors"
+                                        onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Date
+                                            <ArrowUpDown size={13} className={`transition-transform duration-200 ${sortDirection === 'asc' ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Description</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Audit Trace</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Debit</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Credit</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Deposits</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Withdrawals</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {entries.map((entry) => {
+                                {sortedEntries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
                                     const formattedDate = !isNaN(dateObj.getTime()) 
@@ -344,14 +526,14 @@ const BankAccountLedger = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 {debitVal > 0 ? (
-                                                    <span className="font-mono text-sm font-bold text-red-400">
+                                                    <span className="font-mono text-sm font-bold text-green-400">
                                                         {debitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 {creditVal > 0 ? (
-                                                    <span className="font-mono text-sm font-bold text-green-400">
+                                                    <span className="font-mono text-sm font-bold text-red-400">
                                                         {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
@@ -426,7 +608,7 @@ const BankAccountLedger = () => {
             {isImportModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsImportModalOpen(false)} />
-                    <div className="relative border rounded-[2.5rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className={`relative border rounded-[2.5rem] w-full ${parsedTransactions.length > 0 ? 'max-w-2xl' : 'max-w-md'} overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
                                 <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Import Bank Statement</h2>
@@ -447,7 +629,25 @@ const BankAccountLedger = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Upload Statement File (CSV / OFX / QIF)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Branch</label>
+                                <select 
+                                    value={selectedBranchId}
+                                    onChange={e => setSelectedBranchId(e.target.value)}
+                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    required
+                                >
+                                    <option value="" disabled style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Branch</option>
+                                    {branches.map(b => (
+                                        <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                            {b.name} ({b.country || b.city || 'N/A'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Upload Statement File (CSV / Excel)</label>
                                 <div className="border border-dashed rounded-2xl p-6 text-center space-y-3 hover:border-lime/50 transition-all relative" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                                     <FileSpreadsheet size={32} className="mx-auto text-dim opacity-40" />
                                     {importFile ? (
@@ -460,23 +660,88 @@ const BankAccountLedger = () => {
                                     )}
                                     <input 
                                         type="file" 
-                                        accept=".csv,.ofx,.qif"
-                                        onChange={e => setImportFile(e.target.files?.[0] || null)}
+                                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                        onChange={handleFileChange}
                                         className="absolute inset-0 opacity-0 cursor-pointer"
-                                        required
+                                        required={!importFile}
                                     />
                                 </div>
                             </div>
 
+                            {importFile && (
+                                <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setImportFile(null);
+                                            setParsedTransactions([]);
+                                        }}
+                                        className="text-[10px] text-red-400 hover:underline cursor-pointer"
+                                    >
+                                        Clear Uploaded File
+                                    </button>
+                                </div>
+                            )}
+
+                            {parsedTransactions.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                        Transactions Preview ({parsedTransactions.length} rows, {parsedTransactions.filter(t => t.isValid).length} valid)
+                                    </label>
+                                    <div className="space-y-4 max-h-[200px] overflow-y-auto border rounded-xl p-3 bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                        <table className="w-full text-left border-collapse text-[11px]">
+                                            <thead>
+                                                <tr className="border-b text-white/50" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <th className="pb-1">Date</th>
+                                                    <th className="pb-1">Details</th>
+                                                    <th className="pb-1 text-right">Debit (Dep)</th>
+                                                    <th className="pb-1 text-right">Credit (With)</th>
+                                                    <th className="pb-1 text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {parsedTransactions.map((tx, idx) => (
+                                                    <tr key={idx} className="hover:bg-white/5">
+                                                        <td className="py-1.5 pr-2 font-mono whitespace-nowrap">{tx.date}</td>
+                                                        <td className="py-1.5 pr-2 max-w-[180px] truncate">
+                                                            <div className="font-bold text-white/80">{tx.description || 'Bank Line'}</div>
+                                                            {tx.payee && <div className="text-[9px] text-white/45">Payee: {tx.payee}</div>}
+                                                            {tx.referenceNumber && <div className="text-[9px] text-white/45 font-mono">Ref: {tx.referenceNumber}</div>}
+                                                        </td>
+                                                        <td className="py-1.5 pr-2 text-right font-mono font-bold text-green-400">
+                                                            {tx.type === 'DEBIT' ? tx.amount.toFixed(2) : ''}
+                                                        </td>
+                                                        <td className="py-1.5 pr-2 text-right font-mono font-bold text-red-400">
+                                                            {tx.type === 'CREDIT' ? tx.amount.toFixed(2) : ''}
+                                                        </td>
+                                                        <td className="py-1.5 text-center whitespace-nowrap">
+                                                            {tx.isValid ? (
+                                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 font-bold">Valid</span>
+                                                            ) : (
+                                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-bold" title={tx.error}>Error</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-xs text-dim bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
                                 <Info size={16} className="text-lime flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-lime)' }} />
-                                <span className="leading-relaxed font-semibold">Ola Cars uses smart matching filters to link imported bank entries with recorded supplier bills and client invoices automatically.</span>
+                                <span className="leading-relaxed font-semibold">Ola Cars reconciles imported statement lines directly as ledger entries, automatically updating the current bank account balance.</span>
                             </div>
 
                             <div className="pt-4 flex gap-3">
                                 <button 
                                     type="button"
-                                    onClick={() => setIsImportModalOpen(false)}
+                                    onClick={() => {
+                                        setIsImportModalOpen(false);
+                                        setImportFile(null);
+                                        setParsedTransactions([]);
+                                    }}
                                     className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border cursor-pointer"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
@@ -484,8 +749,8 @@ const BankAccountLedger = () => {
                                 </button>
                                 <button 
                                     type="submit"
-                                    disabled={importing}
-                                    className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                                    disabled={importing || parsedTransactions.filter(tx => tx.isValid).length === 0}
+                                    className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                     style={{ backgroundColor: 'var(--brand-lime)' }}
                                 >
                                     {importing ? (

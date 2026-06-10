@@ -352,8 +352,15 @@ const ManageBankAccounts = () => {
                                             <p className="text-xs font-mono font-bold text-dim mt-0.5">{account.accountNumber}</p>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <span className="text-[10px] font-black text-lime mr-1">{account.currency}</span>
-                                            <span className="text-md font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <div className="flex items-center justify-end">
+                                                    <span className="text-[10px] font-black text-lime mr-1">{account.currency}</span>
+                                                    <span className="text-md font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-dim opacity-70">
+                                                    {account.transactionCount || 0} Transactions
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-5 text-center">
                                             <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${

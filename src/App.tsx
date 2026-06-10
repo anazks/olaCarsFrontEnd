@@ -203,8 +203,9 @@ function App() {
               path="/admin/admin/*"
               element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}
             >
-              <Route index element={<ExecutiveDashboard />} />
-              <Route path="dashboard-hub" element={<DashboardHub />} />
+              <Route index element={<DashboardHub />} />
+              <Route path="dashboard-hub" element={<Navigate to="/admin/admin" replace />} />
+              <Route path="executive-dashboard" element={<ExecutiveDashboard />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
@@ -652,8 +653,9 @@ function App() {
                 <DashboardLayout SidebarComponent={FinancialAdminSidebar} />
               }
             >
-              <Route index element={<FinancialAdminDashboard />} />
-              <Route path="dashboard-hub" element={<DashboardHub />} />
+              <Route index element={<DashboardHub />} />
+              <Route path="dashboard-hub" element={<Navigate to="/admin/financial-admin" replace />} />
+              <Route path="financial-dashboard" element={<FinancialAdminDashboard />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}
