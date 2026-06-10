@@ -18,11 +18,15 @@ import HasPermission from '../../../components/HasPermission';
 import { getAllBranchManagers, type BranchManager } from '../../../services/branchManagerService';
 import { getAllCountryManagers, createCountryManager, type CountryManager, type CreateCountryManagerPayload } from '../../../services/countryManagerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { getUser, getUserRole } from '../../../utils/auth';
 
 type ModalMode = 'create' | 'edit' | null;
 
 const ManageBranches = () => {
     const { t } = useTranslation();
+    const currentUser = getUser();
+    const userRole = getUserRole();
+    const isCountryManager = userRole === 'countrymanager' || currentUser?.role === 'countrymanager';
     const navigate = useNavigate();
     const location = useLocation();
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -204,9 +208,9 @@ const ManageBranches = () => {
             state: '',
             phone: '',
             email: '',
-            country: '',
+            country: isCountryManager ? (currentUser?.country || '') : '',
             branchManager: '',
-            countryManager: '',
+            countryManager: isCountryManager ? (currentUser?._id || currentUser?.id || '') : '',
             status: 'ACTIVE'
         });
         setFormError(null);
@@ -668,7 +672,7 @@ const ManageBranches = () => {
                         </div>
 
                         {/* Empty state: no Country Managers when creating */}
-                        {modalMode === 'create' && countryManagers.length === 0 ? (
+                        {false ? (
                             <div className="flex flex-col items-center gap-4 py-8">
                                 {!showAddCM ? (
                                     /* Prompt state */
@@ -909,40 +913,45 @@ const ManageBranches = () => {
                                         />
                                     </div>
 
-                                    {/* Country Manager */}
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium"
-                                            style={{ color: "var(--text-dim)" }}>
-                                            {t('management.common.modal.countryManager')}
-                                        </label>
+                                    {/* Country and Country Manager */}
+                                    {!isCountryManager && (
+                                        <>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
+                                                    {t('management.common.modal.country')}
+                                                </label>
+                                                <select
+                                                    required
+                                                    value={formData.country}
+                                                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                                >
+                                                    <option value="">{t('management.common.modal.selectCountry', { defaultValue: 'Select Country' })}</option>
+                                                    {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            </div>
 
-                                        <select
-                                            required
-                                            value={formData.countryManager}
-                                            onChange={(e) => {
-                                                const managerId = e.target.value;
-                                                const manager = countryManagers.find(m => m._id === managerId);
-                                                setFormData({
-                                                    ...formData,
-                                                    countryManager: managerId,
-                                                    country: manager ? manager.country : ''
-                                                });
-                                            }}
-                                            className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                            style={{
-                                                background: "var(--bg-input)",
-                                                border: "1px solid var(--border-main)",
-                                                color: "var(--text-main)"
-                                            }}
-                                        >
-                                            <option value="">{t('management.common.modal.selectCountryManager')}</option>
-                                            {countryManagers.map((m: CountryManager) => (
-                                                <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
-                                                    {m.fullName} ({m.country})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
+                                                    {t('management.common.modal.countryManager')}
+                                                </label>
+                                                <select
+                                                    value={formData.countryManager}
+                                                    onChange={(e) => setFormData({ ...formData, countryManager: e.target.value })}
+                                                    className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                                >
+                                                    <option value="">{t('management.common.modal.selectCountryManager')}</option>
+                                                    {countryManagers.map((m: CountryManager) => (
+                                                        <option key={m._id} value={m._id} style={{ background: 'var(--bg-card)' }}>
+                                                            {m.fullName} ({m.country})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </>
+                                    )}
 
                                     {/* Email */}
                                     <div className="space-y-1">

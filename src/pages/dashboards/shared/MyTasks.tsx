@@ -210,10 +210,10 @@ const MyTasks = () => {
                                                 <div className="flex flex-col gap-1 items-center">
                                                     <div className="flex items-center gap-1.5 text-gray-900 dark:text-white">
                                                         <Clock size={12} className="text-indigo-600 dark:text-indigo-400" />
-                                                        <span className="text-xs font-black">{new Date(task.dueDate).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-black">{new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                                     </div>
                                                     {task.completedAt && (
-                                                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Resolved {new Date(task.completedAt).toLocaleDateString()}</span>
+                                                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Resolved {new Date(task.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                                     )}
                                                 </div>
                                             </td>
