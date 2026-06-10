@@ -164,33 +164,31 @@ const ManageMerchendisers = () => {
             return;
         }
 
-        // Validate phone number using the centralized helper if provided
-        const cleanedPhone = formData.phone ? formData.phone.replace(/\D/g, '') : '';
-        const isPhoneEmpty = !cleanedPhone || cleanedPhone.length <= 4;
-
-        if (!isPhoneEmpty) {
-            const phoneValidation = validatePhoneDetails(formData.phone);
-            if (!phoneValidation.isValid) {
-                let errorMsg = '';
-                switch (phoneValidation.errorKey) {
-                    case 'REPEATED_DIGITS':
-                        errorMsg = t('management.merchendiser.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
-                        break;
-                    case 'TOO_SHORT':
-                        errorMsg = t('management.merchendiser.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
-                        break;
-                    case 'TOO_LONG':
-                        errorMsg = t('management.merchendiser.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
-                        break;
-                    case 'INVALID_FORMAT':
-                    default:
-                        errorMsg = t('management.merchendiser.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
-                        break;
-                }
-                setFormError(errorMsg);
-                setFormLoading(false);
-                return;
+        // Validate phone number using the centralized helper
+        const phoneValidation = validatePhoneDetails(formData.phone);
+        if (!phoneValidation.isValid) {
+            let errorMsg = '';
+            switch (phoneValidation.errorKey) {
+                case 'REQUIRED':
+                    errorMsg = t('management.merchendiser.form.phoneRequired', { defaultValue: 'Phone number is required.' });
+                    break;
+                case 'REPEATED_DIGITS':
+                    errorMsg = t('management.merchendiser.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                    break;
+                case 'TOO_SHORT':
+                    errorMsg = t('management.merchendiser.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                    break;
+                case 'TOO_LONG':
+                    errorMsg = t('management.merchendiser.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                    break;
+                case 'INVALID_FORMAT':
+                default:
+                    errorMsg = t('management.merchendiser.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                    break;
             }
+            setFormError(errorMsg);
+            setFormLoading(false);
+            return;
         }
 
         try {

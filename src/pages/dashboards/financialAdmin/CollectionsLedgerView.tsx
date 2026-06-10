@@ -220,6 +220,13 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const handleExport = async () => {
         setExporting(true);
         const toastId = toast.loading("Fetching all records for export...");
+
+        if (listItems.length === 0) {
+            toast.error("No records found to export.", { id: toastId });
+            setExporting(false);
+            return;
+        }
+
         try {
             const query = {
                 ...filters,
@@ -315,6 +322,13 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const handleExportPdf = async () => {
         setExportingPdf(true);
         const toastId = toast.loading("Generating PDF Report...");
+        
+        if (listItems.length === 0) {
+            toast.error("No records found to export.", { id: toastId });
+            setExportingPdf(false);
+            return;
+        }
+
         try {
             const query = {
                 ...filters,

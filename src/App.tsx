@@ -1284,6 +1284,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="complaints" element={<ComplaintsPage />} />
               <Route path="my-tasks" element={<MyTasks />} />
               <Route path="accident-reports" element={<AccidentReports />} />
               <Route

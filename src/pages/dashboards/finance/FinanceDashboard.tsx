@@ -768,12 +768,6 @@ const FinanceDashboard = () => {
                             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-widest text-dim">Total Payables</h3>
                         </div>
-                        <button 
-                            onClick={() => navigate('../purchase-bills')}
-                            className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-brand-lime bg-white/5 border border-white/5 px-2.5 py-1 rounded-lg hover:bg-brand-lime hover:text-black transition-all"
-                        >
-                            <Plus size={10} strokeWidth={3} /> New
-                        </button>
                     </div>
 
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -993,6 +987,8 @@ const FinanceDashboard = () => {
                             style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
                             <option value="This Fiscal Year">This Fiscal Year</option>
+                            <option value="Previous Fiscal Year">Prev Fiscal Year</option>
+                            <option value="This Quarter">This Quarter</option>
                         </select>
                         <ChevronDown size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none" />
                     </div>
