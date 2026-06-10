@@ -4,7 +4,7 @@ import {
     Plus, Search, Filter, X, FileText, RefreshCw, 
     User, DollarSign, CheckCircle2,
     Eye, ChevronLeft, ChevronRight, Calendar,
-    ArrowUpDown, ArrowUp, ArrowDown
+    ArrowUpDown, ArrowUp, ArrowDown, Upload
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import { 
@@ -14,6 +14,7 @@ import {
 } from '../../../../services/creditNoteService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
 import { getInvoicesByCustomer } from '../../../../services/invoiceService';
+import BulkCreditNoteUpload from '../../shared/BulkCreditNoteUpload';
 import toast from 'react-hot-toast';
 
 const CreditNotes = () => {
@@ -41,6 +42,7 @@ const CreditNotes = () => {
     
     // Creation State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
     const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
@@ -339,6 +341,14 @@ const CreditNotes = () => {
                             title="Refresh Data"
                         >
                             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        </button>
+                        <button 
+                            onClick={() => setIsBulkModalOpen(true)} 
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <Upload size={14} />
+                            Bulk Upload
                         </button>
                         <button 
                             onClick={() => setIsCreateModalOpen(true)} 
@@ -663,6 +673,15 @@ const CreditNotes = () => {
                     </div>
                 </div>
             )}
+
+            <BulkCreditNoteUpload
+                isOpen={isBulkModalOpen}
+                onClose={() => setIsBulkModalOpen(false)}
+                onSuccess={async () => {
+                    setIsBulkModalOpen(false);
+                    await fetchCreditNotes();
+                }}
+            />
         </div>
     );
 };

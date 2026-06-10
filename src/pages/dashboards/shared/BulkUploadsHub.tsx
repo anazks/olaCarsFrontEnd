@@ -13,8 +13,9 @@ import BulkSupplierUpload from './BulkSupplierUpload';
 import BulkCustomerUpload from './BulkCustomerUpload';
 import BulkInventoryUpload from './BulkInventoryUpload';
 import BulkPaymentUpload from './BulkPaymentUpload';
+import BulkCreditNoteUpload from './BulkCreditNoteUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -26,7 +27,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -174,6 +175,38 @@ const BulkUploadsHub = () => {
                     '100', '0', '0', 'REF-98765', 'USD', '', '', '', 'Maria Garcia', '+254711223344',
                     'Bank Transfer', 'Panama Branch', '2026-06-03', '2026-06-03 11:30:00', 'Bank Account', '1010',
                     '', 'Completed', 'IP-002', '100', '2026-06-03', '0', '0', 'INV-000102', '2026-06-02'
+                ]
+            ];
+        } else if (type === 'credit-note') {
+            fileName = 'credit_notes_bulk_template.csv';
+            headers = [
+                'Credit Note Date', 'Issued Date', 'Transaction Posting Date', 'Product ID', 'CreditNotes ID',
+                'Credit Note Number', 'Credit Note Status', 'Accounts Receivable', 'Customer Name', 'Customer Number',
+                'Billing Attention', 'Billing Address', 'Billing Street 2', 'Billing City', 'Billing State',
+                'Billing Country', 'Billing Code', 'Billing Phone', 'Billing Fax', 'Shipping Attention',
+                'Shipping Address', 'Shipping Street 2', 'Shipping City', 'Shipping State', 'Shipping Country',
+                'Shipping Phone', 'Shipping Code', 'Shipping Fax', 'Customer ID', 'Currency Code', 'Exchange Rate',
+                'Is Inclusive Tax', 'Total', 'Balance', 'Entity Discount Percent', 'Notes', 'Terms & Conditions',
+                'Reference#', 'Shipping Charge', 'Shipping Charge Tax ID', 'Shipping Charge Tax Amount',
+                'Shipping Charge Tax Name', 'Shipping Charge Tax %', 'Shipping Charge Tax Type',
+                'Shipping Charge Account', 'Adjustment', 'Adjustment Account', 'Branch ID', 'Is Discount Before Tax',
+                'Item Name', 'Discount', 'Discount Amount', 'Quantity', 'Item Desc', 'Item Tax Amount',
+                'Item Total', 'Applied Invoice Number', 'Location Name', 'Project ID', 'Project Name',
+                'Tax1 ID', 'Item Tax', 'Item Tax %', 'Item Tax Type', 'Sales person', 'Discount Type',
+                'SubTotal', 'Round Off', 'Adjustment Description', 'Subject', 'Template Name', 'Usage unit',
+                'Item Price', 'Account', 'Account Code', 'SKU', 'UPC', 'MPN', 'EAN', 'ISBN', 'p',
+                'Entity Discount Amount', 'Line Item Location Name', 'Kit Combo Item Name',
+                'CF.STAFF NAME', 'CF.CUFE', 'CF.Protocolo de autorización', 'CF.Fecha de autorización'
+            ];
+            rows = [
+                [
+                    '2026-06-02', '2026-06-02', '', '', '', 'CN-000101', '', '', 'John Smith', '+254700000001',
+                    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'USD', '1',
+                    'FALSE', '150.00', '150.00', '', 'Vehicle downtime credit adjustment', '', 'REF-12345', '', '', '', '',
+                    '', '', '', '', '', '', '', 'Weekly Rent', '0', '0', '1', 'Downtime Adjustment', '10.50',
+                    '150.00', 'INV-000101, INV-000102', 'Panama Branch', '', '', '', 'ITBMS 7%', '7', 'Taxable', '', '',
+                    '150.00', '0.00', '', 'Vehicle Downtime Adjustment', '', '', '150.00', '', '', '', '', '', '', '', '', '',
+                    '', '', '', 'Alice Vance', 'CUFE-12345-OLA', 'PROT-OLA-99', '2026-06-02'
                 ]
             ];
         }
@@ -707,6 +740,62 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 9: CREDIT NOTES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
+                                <FileText size={20} className="text-indigo-400" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Credit Note Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload bulk Credit Note adjustments. Links customers by name, matches outstanding invoices, distributes credit sequentially, and registers double-entry ledger entries.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('credit-note', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('credit-note', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('credit-note')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -787,6 +876,12 @@ const BulkUploadsHub = () => {
 
             <BulkPaymentUpload
                 isOpen={activeModal === 'payment'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkCreditNoteUpload
+                isOpen={activeModal === 'credit-note'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
             />
