@@ -74,6 +74,12 @@ export const getAllCountryManagers = async (filters: ManagerFilters = {}): Promi
     return response.data;
 };
 
+// GET a country manager by ID
+export const getCountryManagerById = async (id: string): Promise<CountryManager> => {
+    const response = await api.get(`/api/country-manager/${id}`);
+    return response.data.data || response.data;
+};
+
 // POST create a new country manager
 export const createCountryManager = async (
     payload: CreateCountryManagerPayload

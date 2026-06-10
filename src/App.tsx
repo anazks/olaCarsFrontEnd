@@ -36,6 +36,13 @@ import BranchFinStaffDashboard from "./pages/dashboards/BranchFinStaffDashboard"
 // Admin Manage Pages
 import ManageOperationalAdmins from "./pages/dashboards/admin/ManageOperationalAdmins";
 import ManageFinancialAdmins from "./pages/dashboards/admin/ManageFinancialAdmins";
+import EditFinancialAdmin from "./pages/dashboards/admin/EditFinancialAdmin";
+import EditCountryManager from "./pages/dashboards/shared/EditCountryManager";
+import EditBranchManager from "./pages/dashboards/shared/EditBranchManager";
+import EditFinanceStaff from "./pages/dashboards/shared/EditFinanceStaff";
+import EditOperationStaff from "./pages/dashboards/shared/EditOperationStaff";
+import EditWorkshopStaff from "./pages/dashboards/shared/EditWorkshopStaff";
+import EditMerchendiser from "./pages/dashboards/shared/EditMerchendiser";
 import ManageCountryManagers from "./pages/dashboards/shared/ManageCountryManagers";
 import ManageBranches from "./pages/dashboards/shared/ManageBranches";
 import BranchDetails from "./pages/dashboards/shared/BranchDetails";
@@ -221,20 +228,44 @@ function App() {
                   element={<ManageFinancialAdmins />}
                 />
                 <Route
+                  path="manage-financial-admins/edit/:id"
+                  element={<EditFinancialAdmin />}
+                />
+                <Route
                   path="manage-country-managers"
                   element={<ManageCountryManagers />}
+                />
+                <Route
+                  path='manage-country-managers/edit/:id'
+                  element={<EditCountryManager />}
+                
                 />
                 <Route
                   path="manage-branch-managers"
                   element={<ManageBranchManagers />}
                 />
                 <Route
+                  path='manage-branch-managers/edit/:id'
+                  element={<EditBranchManager />}
+                
+                />
+                <Route
                   path="manage-finance-staff"
                   element={<ManageFinanceStaff />}
                 />
                 <Route
+                  path='manage-finance-staff/edit/:id'
+                  element={<EditFinanceStaff />}
+                
+                />
+                <Route
                   path="manage-operation-staff"
                   element={<ManageOperationStaff />}
+                />
+                <Route
+                  path='manage-operation-staff/edit/:id'
+                  element={<EditOperationStaff />}
+                
                 />
                 <Route path="manage-workshops" element={<ManageWorkshops />} />
                 <Route
@@ -246,8 +277,18 @@ function App() {
                   element={<ManageWorkshopStaff />}
                 />
                 <Route
+                  path='manage-workshop-staff/edit/:id'
+                  element={<EditWorkshopStaff />}
+                
+                />
+                <Route
                   path="manage-merchendisers"
                   element={<ManageMerchendisers />}
+                />
+                <Route
+                  path='manage-merchendisers/edit/:id'
+                  element={<EditMerchendiser />}
+                
                 />
               </Route>
 
@@ -477,16 +518,36 @@ function App() {
                   element={<ManageCountryManagers />}
                 />
                 <Route
+                  path='manage-country-managers/edit/:id'
+                  element={<EditCountryManager />}
+                
+                />
+                <Route
                   path="manage-branch-managers"
                   element={<ManageBranchManagers />}
+                />
+                <Route
+                  path='manage-branch-managers/edit/:id'
+                  element={<EditBranchManager />}
+                
                 />
                 <Route
                   path="manage-finance-staff"
                   element={<ManageFinanceStaff />}
                 />
                 <Route
+                  path='manage-finance-staff/edit/:id'
+                  element={<EditFinanceStaff />}
+                
+                />
+                <Route
                   path="manage-operation-staff"
                   element={<ManageOperationStaff />}
+                />
+                <Route
+                  path='manage-operation-staff/edit/:id'
+                  element={<EditOperationStaff />}
+                
                 />
                 <Route path="manage-workshops" element={<ManageWorkshops />} />
                 <Route
@@ -498,8 +559,18 @@ function App() {
                   element={<ManageWorkshopStaff />}
                 />
                 <Route
+                  path='manage-workshop-staff/edit/:id'
+                  element={<EditWorkshopStaff />}
+                
+                />
+                <Route
                   path="manage-merchendisers"
                   element={<ManageMerchendisers />}
+                />
+                <Route
+                  path='manage-merchendisers/edit/:id'
+                  element={<EditMerchendiser />}
+                
                 />
               </Route>
 
@@ -687,16 +758,36 @@ function App() {
                   element={<ManageCountryManagers />}
                 />
                 <Route
+                  path='manage-country-managers/edit/:id'
+                  element={<EditCountryManager />}
+                
+                />
+                <Route
                   path="manage-branch-managers"
                   element={<ManageBranchManagers />}
+                />
+                <Route
+                  path='manage-branch-managers/edit/:id'
+                  element={<EditBranchManager />}
+                
                 />
                 <Route
                   path="manage-finance-staff"
                   element={<ManageFinanceStaff />}
                 />
                 <Route
+                  path='manage-finance-staff/edit/:id'
+                  element={<EditFinanceStaff />}
+                
+                />
+                <Route
                   path="manage-operation-staff"
                   element={<ManageOperationStaff />}
+                />
+                <Route
+                  path='manage-operation-staff/edit/:id'
+                  element={<EditOperationStaff />}
+                
                 />
                 <Route path="manage-workshops" element={<ManageWorkshops />} />
                 <Route
@@ -706,6 +797,11 @@ function App() {
                 <Route
                   path="manage-workshop-staff"
                   element={<ManageWorkshopStaff />}
+                />
+                <Route
+                  path='manage-workshop-staff/edit/:id'
+                  element={<EditWorkshopStaff />}
+                
                 />
               </Route>
 
@@ -924,12 +1020,27 @@ function App() {
                   element={<ManageBranchManagers />}
                 />
                 <Route
+                  path='manage-branch-managers/edit/:id'
+                  element={<EditBranchManager />}
+                
+                />
+                <Route
                   path="manage-finance-staff"
                   element={<ManageFinanceStaff />}
                 />
                 <Route
+                  path='manage-finance-staff/edit/:id'
+                  element={<EditFinanceStaff />}
+                
+                />
+                <Route
                   path="manage-operation-staff"
                   element={<ManageOperationStaff />}
+                />
+                <Route
+                  path='manage-operation-staff/edit/:id'
+                  element={<EditOperationStaff />}
+                
                 />
                 <Route path="manage-workshops" element={<ManageWorkshops />} />
                 <Route
@@ -941,8 +1052,18 @@ function App() {
                   element={<ManageWorkshopStaff />}
                 />
                 <Route
+                  path='manage-workshop-staff/edit/:id'
+                  element={<EditWorkshopStaff />}
+                
+                />
+                <Route
                   path="manage-merchendisers"
                   element={<ManageMerchendisers />}
+                />
+                <Route
+                  path='manage-merchendisers/edit/:id'
+                  element={<EditMerchendiser />}
+                
                 />
               </Route>
               <Route
@@ -1102,8 +1223,18 @@ function App() {
                   element={<ManageFinanceStaff />}
                 />
                 <Route
+                  path='manage-finance-staff/edit/:id'
+                  element={<EditFinanceStaff />}
+                
+                />
+                <Route
                   path="manage-operation-staff"
                   element={<ManageOperationStaff />}
+                />
+                <Route
+                  path='manage-operation-staff/edit/:id'
+                  element={<EditOperationStaff />}
+                
                 />
                 <Route
                   path="manage-workshop-managers"
@@ -1114,8 +1245,18 @@ function App() {
                   element={<ManageWorkshopStaff />}
                 />
                 <Route
+                  path='manage-workshop-staff/edit/:id'
+                  element={<EditWorkshopStaff />}
+                
+                />
+                <Route
                   path="manage-merchendisers"
                   element={<ManageMerchendisers />}
+                />
+                <Route
+                  path='manage-merchendisers/edit/:id'
+                  element={<EditMerchendiser />}
+                
                 />
               </Route>
 

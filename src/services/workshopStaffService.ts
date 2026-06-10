@@ -67,6 +67,12 @@ export const getAllWorkshopStaff = async (filters: StaffFilters = {}): Promise<P
     return response.data;
 };
 
+// GET a workshop staff by ID
+export const getWorkshopStaffById = async (id: string): Promise<WorkshopStaff> => {
+    const response = await api.get(`/api/workshop-staff/${id}`);
+    return response.data.data || response.data;
+};
+
 // POST create a new workshop staff
 export const createWorkshopStaff = async (
     payload: CreateWorkshopStaffPayload
