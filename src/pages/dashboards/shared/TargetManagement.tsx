@@ -9,6 +9,7 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getStaffPerformance } from '../../../services/staffPerformanceService';
 import { getUserRole, getUserId, getUser, ROLE_LEVELS } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import toast from 'react-hot-toast';
 
 const TargetManagement = () => {
     const userRole = (getUserRole() || '').toLowerCase().replace(/[\s-_]/g, '');
@@ -122,6 +123,39 @@ const TargetManagement = () => {
 
     const handleTargetSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!targetFormData.targetType) {
+            toast.error('Please select a target scope.');
+            return;
+        }
+
+        if (!targetFormData.targetId) {
+            toast.error('Please select a specific target recipient.');
+            return;
+        }
+
+        if (!targetFormData.category) {
+            toast.error('Please select a target category.');
+            return;
+        }
+
+        if (!targetFormData.targetValue || targetFormData.targetValue <= 0) {
+            toast.error('Target value must be greater than 0.');
+            return;
+        }
+
+        if (!targetFormData.endDate) {
+            toast.error('Please select a due date.');
+            return;
+        }
+
+        const end = new Date(targetFormData.endDate);
+        const start = new Date(targetFormData.startDate);
+        if (end <= start) {
+            toast.error('Due date must be after the start date.');
+            return;
+        }
+
         setLoading(true);
         try {
             await assignTarget(targetFormData as any);

@@ -29,6 +29,7 @@ const GeneralLedger = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const basePath = window.location.pathname.split('/ledger')[0];
 
     const userRole = getUserRole() || '';
     const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
@@ -130,12 +131,12 @@ const GeneralLedger = () => {
             const response = await getInvoices({ search: invoiceNumber });
             if (response.data && response.data.length > 0) {
                 const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
-                navigate(`/admin/financial-admin/invoices/${invoice._id}`);
+                navigate(`${basePath}/invoices/${invoice._id}`);
             } else {
-                navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+                navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
             }
         } catch (err) {
-            navigate('/admin/financial-admin/invoices', { state: { search: invoiceNumber } });
+            navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
         }
     };
 
@@ -146,12 +147,12 @@ const GeneralLedger = () => {
             const response = await getAllBills({ search: billNumber });
             if (response.success && response.data && response.data.length > 0) {
                 const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
-                navigate(`/admin/financial-admin/bills/${bill._id}`);
+                navigate(`${basePath}/bills/${bill._id}`);
             } else {
-                navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+                navigate(`${basePath}/bills`, { state: { search: billNumber } });
             }
         } catch (err) {
-            navigate('/admin/financial-admin/bills', { state: { search: billNumber } });
+            navigate(`${basePath}/bills`, { state: { search: billNumber } });
         }
     };
 
@@ -159,7 +160,7 @@ const GeneralLedger = () => {
         if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
 
         const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/i;
-        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+        const invoiceRegex = /((?:INV)-\w+(?:-\w+)*)/i;
 
         const matchBill = description.match(billRegex);
         const matchInvoice = description.match(invoiceRegex);
@@ -334,7 +335,7 @@ const GeneralLedger = () => {
             {/* Navigation Shortcuts */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div 
-                    onClick={() => navigate('../taxes')}
+                    onClick={() => navigate(`${basePath}/taxes`)}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -346,7 +347,7 @@ const GeneralLedger = () => {
                 </div>
 
                 <div 
-                    onClick={() => navigate('../chart-of-accounts')}
+                    onClick={() => navigate(`${basePath}/chart-of-accounts`)}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -358,7 +359,7 @@ const GeneralLedger = () => {
                 </div>
 
                 <div 
-                    onClick={() => navigate('../bills')}
+                    onClick={() => navigate(`${basePath}/bills`)}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -370,7 +371,7 @@ const GeneralLedger = () => {
                 </div>
 
                 <div 
-                    onClick={() => navigate('../invoices')}
+                    onClick={() => navigate(`${basePath}/invoices`)}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
@@ -469,7 +470,7 @@ const GeneralLedger = () => {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     if (entry.accountingCode?._id) {
-                                                        navigate(`../chart-of-accounts/${entry.accountingCode._id}`);
+                                                        navigate(`${basePath}/chart-of-accounts/${entry.accountingCode._id}`);
                                                     }
                                                 }}
                                             >

@@ -530,7 +530,7 @@ const StaffPerformanceDashboard = () => {
                                             </td>
                                             <td className="p-5 text-center">
                                                 <p className="text-lg font-black text-orange-400 leading-none">
-                                                    {staff.metrics.avgTimePerStageHours}h
+                                                    {staff.metrics.avgTimePerStageHours ?? 0}h
                                                 </p>
                                                 <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Avg Cycle</p>
                                             </td>

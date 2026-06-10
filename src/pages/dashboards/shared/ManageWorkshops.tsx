@@ -119,6 +119,7 @@ const ManageWorkshops = () => {
 
     try {
       const response = await api.put(`/api/workshop/${selectedWorkshop._id}`, {
+        id: selectedWorkshop._id,
         name: formData.name,
         code: formData.code,
         branchId: formData.branchId,
@@ -306,7 +307,7 @@ const ManageWorkshops = () => {
               className="text-xs transition-colors uppercase tracking-widest font-semibold"
               style={{ color: "var(--text-dim)" }}
             >
-              {t("management.common.total")}
+              {t("management.common.total", { defaultValue: "Total" })}
             </p>
             <h3
               className="text-3xl font-black transition-colors"
@@ -326,7 +327,7 @@ const ManageWorkshops = () => {
               className="text-xs transition-colors uppercase tracking-widest font-semibold"
               style={{ color: "var(--text-dim)" }}
             >
-              {t("management.common.active")}
+              {t("management.common.active", { defaultValue: "Active" })}
             </p>
             <h3
               className="text-3xl font-black transition-colors"
@@ -419,9 +420,9 @@ const ManageWorkshops = () => {
               <option value="ALL">
                 {t("common.allStatuses", { defaultValue: "All Statuses" })}
               </option>
-              <option value="ACTIVE">{t("common.active")}</option>
-              <option value="INACTIVE">{t("common.inactive")}</option>
-              <option value="SUSPENDED">{t("common.suspended")}</option>
+              <option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</option>
+              <option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</option>
+              <option value="SUSPENDED">{t("common.suspended", { defaultValue: "Suspended" })}</option>
             </select>
           </div>
         </div>
@@ -468,31 +469,31 @@ const ManageWorkshops = () => {
                       className="px-4 py-3 text-left text-sm font-semibold"
                       style={{ color: "var(--text-dim)" }}
                     >
-                      {t("common.name")}
+                      {t("common.name", { defaultValue: "Name" })}
                     </th>
                     <th
                       className="px-4 py-3 text-left text-sm font-semibold"
                       style={{ color: "var(--text-dim)" }}
                     >
-                      {t("common.code")}
+                      {t("common.code", { defaultValue: "Code" })}
                     </th>
                     <th
                       className="px-4 py-3 text-left text-sm font-semibold"
                       style={{ color: "var(--text-dim)" }}
                     >
-                      {t("common.branch")}
+                      {t("common.branch", { defaultValue: "Branch" })}
                     </th>
                     <th
                       className="px-4 py-3 text-left text-sm font-semibold"
                       style={{ color: "var(--text-dim)" }}
                     >
-                      {t("common.status")}
+                      {t("common.status", { defaultValue: "Status" })}
                     </th>
                     <th
                       className="px-4 py-3 text-center text-sm font-semibold"
                       style={{ color: "var(--text-dim)" }}
                     >
-                      {t("common.actions")}
+                      {t("common.actions", { defaultValue: "Actions" })}
                     </th>
                   </tr>
                 </thead>
@@ -622,14 +623,17 @@ const ManageWorkshops = () => {
                     className="block text-sm font-semibold mb-1"
                     style={{ color: "var(--text-main)" }}
                   >
-                    {t("common.name")}
+                    {t("common.name", { defaultValue: "Name" })}
                   </label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^[A-Za-z\s]*$/.test(val)) {
+                        setFormData({ ...formData, name: val });
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded border transition-colors"
                     style={{
                       background: "var(--bg-main)",
@@ -644,14 +648,17 @@ const ManageWorkshops = () => {
                     className="block text-sm font-semibold mb-1"
                     style={{ color: "var(--text-main)" }}
                   >
-                    {t("common.code")}
+                    {t("common.code", { defaultValue: "Code" })}
                   </label>
                   <input
                     type="text"
                     value={formData.code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^\d*$/.test(val)) {
+                        setFormData({ ...formData, code: val });
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded border transition-colors"
                     style={{
                       background: "var(--bg-main)",
@@ -666,7 +673,7 @@ const ManageWorkshops = () => {
                     className="block text-sm font-semibold mb-1"
                     style={{ color: "var(--text-main)" }}
                   >
-                    {t("common.branch")}
+                    {t("common.branch", { defaultValue: "Branch" })}
                   </label>
                   <select
                     value={formData.branchId}
@@ -698,7 +705,7 @@ const ManageWorkshops = () => {
                     className="block text-sm font-semibold mb-1"
                     style={{ color: "var(--text-main)" }}
                   >
-                    {t("common.status")}
+                    {t("common.status", { defaultValue: "Status" })}
                   </label>
                   <select
                     value={formData.status}
@@ -715,9 +722,9 @@ const ManageWorkshops = () => {
                       color: "var(--text-main)",
                     }}
                   >
-                    <option value="ACTIVE">{t("common.active")}</option>
-                    <option value="INACTIVE">{t("common.inactive")}</option>
-                    <option value="SUSPENDED">{t("common.suspended")}</option>
+                    <option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</option>
+                    <option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</option>
+                    <option value="SUSPENDED">{t("common.suspended", { defaultValue: "Suspended" })}</option>
                   </select>
                 </div>
 
@@ -732,7 +739,7 @@ const ManageWorkshops = () => {
                       border: "1px solid var(--border-main)",
                     }}
                   >
-                    {t("common.cancel")}
+                    {t("common.cancel", { defaultValue: "Cancel" })}
                   </button>
                   <button
                     type="submit"
@@ -750,8 +757,8 @@ const ManageWorkshops = () => {
                       />
                     ) : null}
                     {modalMode === "create"
-                      ? t("common.create")
-                      : t("common.update")}
+                      ? t("common.create", { defaultValue: "Create" })
+                      : t("common.update", { defaultValue: "Update" })}
                   </button>
                 </div>
               </form>

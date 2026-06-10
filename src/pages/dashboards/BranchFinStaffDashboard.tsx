@@ -54,12 +54,13 @@ const BranchFinStaffDashboard = () => {
                 const amt = tx.amount || 0;
                 const date = (tx.entryDate || tx.createdAt || '').split('T')[0];
                 const cat = tx.accountingCode?.category?.toUpperCase();
+                const txStatus = tx.transaction?.status || 'UNKNOWN';
 
-                if (tx.status === 'CLEARED' && cat === 'INCOME') {
+                if (['COMPLETED', 'CLEARED'].includes(txStatus) && cat === 'INCOME') {
                     cash += amt;
                     if (date === today) todayRev += amt;
                 }
-                if (tx.status === 'PENDING') pending++;
+                if (txStatus === 'PENDING') pending++;
             });
 
             setStats({
@@ -243,7 +244,7 @@ const BranchFinStaffDashboard = () => {
                                             <div className="text-xs font-medium text-dim">{new Date(po.createdAt).toLocaleDateString()}</div>
                                         </td>
                                         <td className="px-8 py-5 text-right">
-                                            <div className="text-sm font-black text-white">
+                                            <div className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
                                                 ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </div>
                                         </td>
@@ -295,7 +296,6 @@ const BranchFinStaffDashboard = () => {
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Transaction Date</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim">Entry Description</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-right">Settlement</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-dim text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
@@ -308,10 +308,10 @@ const BranchFinStaffDashboard = () => {
                                 return (
                                 <tr key={tx?._id || Math.random().toString()} className="hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-8 py-5">
-                                        <div className="text-xs font-bold text-white">{formattedDate}</div>
+                                        <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <div className="text-xs font-medium text-dim group-hover:text-white transition-colors">{tx?.description || 'System Entry'}</div>
+                                        <div className="text-xs font-medium text-dim transition-colors">{tx?.description || 'System Entry'}</div>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] font-mono text-dim">#{tx?._id?.slice(-6).toUpperCase() || 'TX'}</span>
                                         </div>
@@ -320,11 +320,6 @@ const BranchFinStaffDashboard = () => {
                                             <div className={`text-sm font-black font-mono ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
                                                 {isIncome ? '+' : '-'}${(tx.amount || 0).toLocaleString()}
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${tx.status === 'CLEARED' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                                                {tx.status}
-                                            </span>
                                         </td>
                                     </tr>
                                 );
