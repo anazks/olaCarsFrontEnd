@@ -169,3 +169,12 @@ export const getVoucherById = async (id: string): Promise<Voucher> => {
     const response = await api.get(`/api/vouchers/${id}`);
     return response.data.data;
 };
+
+/**
+ * Delete a ledger entry and its entire parent journal (all double-entry partners).
+ * ADMIN only.
+ */
+export const deleteLedgerJournal = async (entryId: string): Promise<any> => {
+    const response = await api.delete(`/api/ledger/${entryId}`);
+    return response.data;
+};

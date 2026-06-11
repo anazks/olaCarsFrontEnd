@@ -60,6 +60,7 @@ import FinancialAdminPaymentRequests from "./pages/dashboards/financialAdmin/Fin
 import ManageAgreements from "./pages/dashboards/shared/ManageAgreements";
 import EditAgreement from "./pages/dashboards/shared/EditAgreement";
 import VehicleLeaseSettings from "./pages/dashboards/financialAdmin/VehicleLeaseSettings";
+import GpsVehicles from "./pages/dashboards/financialAdmin/GpsVehicles";
 import CollectionsDashboard from "./pages/dashboards/financialAdmin/CollectionsDashboard";
 import CollectionsLedgerView from "./pages/dashboards/financialAdmin/CollectionsLedgerView";
 import ManageBankAccounts from "./pages/dashboards/finance/ManageBankAccounts";
@@ -203,8 +204,9 @@ function App() {
               path="/admin/admin/*"
               element={<DashboardLayout SidebarComponent={ExecutiveSidebar} />}
             >
-              <Route index element={<ExecutiveDashboard />} />
-              <Route path="dashboard-hub" element={<DashboardHub />} />
+              <Route index element={<DashboardHub />} />
+              <Route path="dashboard-hub" element={<Navigate to="/admin/admin" replace />} />
+              <Route path="executive-dashboard" element={<ExecutiveDashboard />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Staff Management */}
@@ -652,8 +654,9 @@ function App() {
                 <DashboardLayout SidebarComponent={FinancialAdminSidebar} />
               }
             >
-              <Route index element={<FinancialAdminDashboard />} />
-              <Route path="dashboard-hub" element={<DashboardHub />} />
+              <Route index element={<DashboardHub />} />
+              <Route path="dashboard-hub" element={<Navigate to="/admin/financial-admin" replace />} />
+              <Route path="financial-dashboard" element={<FinancialAdminDashboard />} />
               <Route path="wgroup-dashboard" element={<WGroupDashboard />} />
 
               {/* Nested Collections Routing Hub */}
@@ -788,6 +791,10 @@ function App() {
               <Route
                 path="vehicle-lease-settings"
                 element={<VehicleLeaseSettings />}
+              />
+              <Route
+                path="gps-vehicles"
+                element={<GpsVehicles />}
               />
               <Route
                 path="insurance-claims"

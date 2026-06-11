@@ -199,7 +199,9 @@ const DashboardHub = () => {
         {
             title: t('sidebar.items.executiveDashboard', 'Executive Dashboard'),
             description: t('dashboardHub.executiveDesc', 'Real-time master telemetry, operations overview, and executive insights across all branch locations.'),
-            path: `${basePrefix}`,
+            path: basePrefix === '/admin/financial-admin' 
+                ? `${basePrefix}/financial-dashboard` 
+                : `${basePrefix}/executive-dashboard`,
             icon: <Activity className="text-emerald-500" size={20} />,
             iconBg: 'bg-emerald-500/10',
             borderColor: 'hover:border-emerald-500',
