@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
+import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck, BookMarked } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -13,8 +13,9 @@ import BulkSupplierUpload from './BulkSupplierUpload';
 import BulkCustomerUpload from './BulkCustomerUpload';
 import BulkInventoryUpload from './BulkInventoryUpload';
 import BulkPaymentUpload from './BulkPaymentUpload';
+import BulkLedgerUpload from './BulkLedgerUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'ledger' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -26,7 +27,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'ledger', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -176,6 +177,18 @@ const BulkUploadsHub = () => {
                     '', 'Completed', 'IP-002', '100', '2026-06-03', '0', '0', 'INV-000102', '2026-06-02'
                 ]
             ];
+        } else if (type === 'ledger') {
+            fileName = 'ledger_entries_bulk_template.csv';
+            headers = [
+                'date', 'account_name', 'transaction_details', 'transaction_id',
+                'reference_transaction_id', 'offset_account_id', 'offset_account_type',
+                'transaction_type', 'debit', 'credit', 'contact_id', 'account_id',
+                'project_ids', 'description', 'currency_code', 'account_group',
+                'account_type', 'location_name'
+            ];
+            rows = [
+                ['2026-06-01', 'Petty Cash', 'Office supplies purchase', 'TXN-001', 'REF-001', '2100', 'Liability', 'expense', '150', '', '', '1020', '', 'Monthly stationery', 'USD', 'Expense', 'Cash', 'Panama Branch']
+            ];
         }
 
         if (format === 'xlsx') {
@@ -223,7 +236,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">7</p>
+                        <p className="text-base font-black text-main">8</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -707,6 +720,49 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 9: LEDGER ENTRIES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6"
+                                 style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)' }}>
+                                <BookMarked size={20} style={{ color: '#eab308' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Ledger Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Import ledger entries from Excel. Auto-links with invoices via transaction ID ↔ invoice ID matching. Unmapped columns are stored in description.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleDownloadTemplate('ledger', 'xlsx')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">Excel</button>
+                                <span className="text-dim/30">|</span>
+                                <button onClick={() => handleDownloadTemplate('ledger', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('ledger')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -787,6 +843,12 @@ const BulkUploadsHub = () => {
 
             <BulkPaymentUpload
                 isOpen={activeModal === 'payment'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkLedgerUpload
+                isOpen={activeModal === 'ledger'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
             />

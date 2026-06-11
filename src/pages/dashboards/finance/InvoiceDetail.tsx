@@ -60,8 +60,26 @@ const InvoiceDetail = () => {
 
             // Fetch Ledger entries for this invoice
             try {
-                const ledgerRes = await getLedgerEntries({ search: res.invoiceNumber, exact: true });
-                setLedgerEntries(ledgerRes.data || []);
+                const queries = [
+                    getLedgerEntries({ search: res.invoiceNumber, exact: true })
+                ];
+                if ((res as any).invoiceID) {
+                    queries.push(getLedgerEntries({ transactionId: (res as any).invoiceID }));
+                }
+                if (res.invoiceNumber && (res as any).invoiceID !== res.invoiceNumber) {
+                    queries.push(getLedgerEntries({ transactionId: res.invoiceNumber }));
+                }
+
+                const responses = await Promise.all(queries);
+                const uniqueEntriesMap = new Map();
+                for (const r of responses) {
+                    if (r && r.data) {
+                        for (const entry of r.data) {
+                            uniqueEntriesMap.set(entry._id, entry);
+                        }
+                    }
+                }
+                setLedgerEntries(Array.from(uniqueEntriesMap.values()));
             } catch (e) {
                 console.error("Error loading ledger entries:", e);
             }
