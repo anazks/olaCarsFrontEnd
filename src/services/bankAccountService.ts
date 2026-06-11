@@ -52,3 +52,17 @@ export const uploadBankStatement = async (id: string, branchId: string, transact
     return response.data;
 };
 
+export const recordManualPayment = async (id: string, data: FormData) => {
+    const response = await api.post(`/api/bank-accounts/${id}/manual-payment`, data, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
+export const deleteAllTransactions = async (id: string) => {
+    const response = await api.delete(`/api/bank-accounts/${id}/transactions`);
+    return response.data;
+};
+

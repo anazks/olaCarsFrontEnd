@@ -14,10 +14,11 @@ import {
     Coins,
     Building2,
     Plus,
-    ArrowUpDown
+    ArrowUpDown,
+    Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions } from '../../../services/bankAccountService';
 import { getLedgerEntries, type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -48,6 +49,68 @@ const BankAccountLedger = () => {
     // Dynamic bank statement import preview & branch selection
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+    
+    // Record Payment Modal States
+    const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false);
+    const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
+    const [loadingAccounts, setLoadingAccounts] = useState(false);
+    const [recording, setRecording] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+
+    // Form states
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [depositDate, setDepositDate] = useState(new Date().toISOString().slice(0, 10)); // default today YYYY-MM-DD
+    const [paymentMode, setPaymentMode] = useState('Bank Transfer');
+    const [paymentCurrency, setPaymentCurrency] = useState('USD');
+    const [fromAccountId, setFromAccountId] = useState('');
+    const [paymentDescription, setPaymentDescription] = useState('');
+    const [paymentBranchId, setPaymentBranchId] = useState('');
+    const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
+
+    const handleDeleteAllTransactions = async () => {
+        if (!id) return;
+        const confirmed = window.confirm(
+            'Are you sure you want to delete ALL transactions for this bank account?\n\n' +
+            'This will permanently delete all ledger entries and journal records, and reset the balance.\n\n' +
+            'This action CANNOT be undone!'
+        );
+        if (!confirmed) return;
+        setDeletingAll(true);
+        try {
+            const result = await deleteAllTransactions(id);
+            toast.success(result.message || 'All transactions deleted successfully!');
+            // Reload the ledger
+            setEntries([]);
+            setPagination({ total: 0, pages: 1, limit: 25 });
+            if (account) {
+                setAccount({ ...account, currentBalance: account.initialBalance || 0 });
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to delete transactions');
+        } finally {
+            setDeletingAll(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isRecordPaymentModalOpen) {
+            const fetchOtherAccounts = async () => {
+                setLoadingAccounts(true);
+                try {
+                    const res = await getAllBankAccounts({ limit: 100 });
+                    const allAccounts = res.data || [];
+                    // filter out current ledger account
+                    setOtherAccounts(allAccounts.filter((acc: BankAccount) => acc._id !== id && acc.status === 'ACTIVE'));
+                } catch (err) {
+                    console.error('Failed to fetch other accounts', err);
+                    toast.error('Failed to load other accounts');
+                } finally {
+                    setLoadingAccounts(false);
+                }
+            };
+            fetchOtherAccounts();
+        }
+    }, [isRecordPaymentModalOpen, id]);
     interface ParsedTransaction {
         date: string;
         description: string;
@@ -70,6 +133,7 @@ const BankAccountLedger = () => {
                 setBranches(branchesList);
                 if (branchesList.length > 0) {
                     setSelectedBranchId(branchesList[0]._id);
+                    setPaymentBranchId(branchesList[0]._id);
                 }
             } catch (err) {
                 console.error('Failed to fetch branches', err);
@@ -293,6 +357,51 @@ const BankAccountLedger = () => {
         }
     };
 
+    const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id) return;
+        if (!paymentAmount || Number(paymentAmount) <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+        if (!fromAccountId) {
+            toast.error('Please select the source account (From Account)');
+            return;
+        }
+
+        setRecording(true);
+        try {
+            const formData = new FormData();
+            formData.append('amount', paymentAmount);
+            formData.append('depositDate', depositDate);
+            formData.append('paymentMode', paymentMode);
+            formData.append('currency', paymentCurrency);
+            formData.append('fromAccountId', fromAccountId);
+            formData.append('description', paymentDescription);
+            if (supportingDocFile) {
+                formData.append('supportingDocument', supportingDocFile);
+            }
+
+            const res = await recordManualPayment(id, formData);
+            toast.success(res.message || 'Payment recorded successfully');
+            
+            // Reset states
+            setIsRecordPaymentModalOpen(false);
+            setPaymentAmount('');
+            setPaymentDescription('');
+            setSupportingDocFile(null);
+            setFromAccountId('');
+            
+            // Reload ledger
+            fetchData();
+        } catch (err: any) {
+            console.error('Failed to record manual payment', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to record manual payment');
+        } finally {
+            setRecording(false);
+        }
+    };
+
     const handleInvoiceClick = async (invoiceNumber: string) => {
         try {
             const { getInvoices } = await import('../../../services/invoiceService');
@@ -437,6 +546,20 @@ const BankAccountLedger = () => {
                     <p className="text-sm font-mono text-white/50">Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
+                    <button 
+                        onClick={handleDeleteAllTransactions}
+                        disabled={deletingAll}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Trash2 size={14} strokeWidth={3} />
+                        {deletingAll ? 'Deleting...' : 'Clear All Transactions'}
+                    </button>
+                    <button 
+                        onClick={() => setIsRecordPaymentModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 active:scale-95 shadow-md border border-white/10 cursor-pointer"
+                    >
+                        <Plus size={14} strokeWidth={3} /> Record Payment
+                    </button>
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
@@ -757,6 +880,169 @@ const BankAccountLedger = () => {
                                         <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                                     ) : (
                                         <>Reconcile Statement</>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Record Manual Payment Modal Workspace */}
+            {isRecordPaymentModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsRecordPaymentModalOpen(false)} />
+                    <div className="relative border rounded-[2.5rem] w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div>
+                                <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Record Manual Payment</h2>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Post Double-Entry Ledger Transaction</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleRecordPaymentSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+                            {/* Row 1: Date, Mode, Source Account */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Deposit Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={depositDate}
+                                        onChange={e => setDepositDate(e.target.value)}
+                                        className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Mode</label>
+                                    <select 
+                                        value={paymentMode}
+                                        onChange={e => setPaymentMode(e.target.value)}
+                                        className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        required
+                                    >
+                                        <option value="Bank remittance" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Bank remittance</option>
+                                        <option value="Bank Transfer" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Bank Transfer</option>
+                                        <option value="Cash" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Cash</option>
+                                        <option value="Cheque" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Cheque</option>
+                                        <option value="Credit card" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Credit card</option>
+                                        <option value="UPI" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>UPI</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>From Account</label>
+                                    {loadingAccounts ? (
+                                        <div className="w-full border rounded-2xl px-4 py-3 text-xs text-dim bg-transparent" style={{ borderColor: 'var(--border-main)' }}>
+                                            Loading other accounts...
+                                        </div>
+                                    ) : (
+                                        <select 
+                                            value={fromAccountId}
+                                            onChange={e => setFromAccountId(e.target.value)}
+                                            className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
+                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                            required
+                                        >
+                                            <option value="" disabled style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Account</option>
+                                            {otherAccounts.map(acc => (
+                                                <option key={acc._id} value={acc._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                                    {acc.accountName || acc.bankName} ({acc.currency || 'USD'} {acc.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Row 2: Amount, Currency, Supporting Document */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        min="0.01"
+                                        value={paymentAmount}
+                                        onChange={e => setPaymentAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Currency</label>
+                                    <select 
+                                        value={paymentCurrency}
+                                        onChange={e => setPaymentCurrency(e.target.value)}
+                                        className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                        required
+                                    >
+                                        <option value="USD" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>USD</option>
+                                        <option value="INR" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>INR</option>
+                                        <option value="AED" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>AED</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Supporting Document (Optional)</label>
+                                    <div className="border border-dashed rounded-2xl px-4 py-3 text-center relative cursor-pointer flex items-center justify-center gap-2 h-[46px]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                        <Upload size={14} className="text-dim opacity-60 flex-shrink-0" />
+                                        {supportingDocFile ? (
+                                            <p className="text-xs font-bold text-lime truncate max-w-[150px]" style={{ color: 'var(--brand-lime)' }}>{supportingDocFile.name}</p>
+                                        ) : (
+                                            <p className="text-xs text-dim truncate">Click to upload file</p>
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*,application/pdf"
+                                            onChange={e => setSupportingDocFile(e.target.files?.[0] || null)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Row 3: Description */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description</label>
+                                <textarea 
+                                    value={paymentDescription}
+                                    onChange={e => setPaymentDescription(e.target.value)}
+                                    placeholder="Enter payment description details"
+                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none min-h-[80px]"
+                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                />
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setIsRecordPaymentModalOpen(false);
+                                        setSupportingDocFile(null);
+                                    }}
+                                    className="flex-1 py-3 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border cursor-pointer"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    disabled={recording}
+                                    className="flex-[2] py-3 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ backgroundColor: 'var(--brand-lime)' }}
+                                >
+                                    {recording ? (
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>Record Payment</>
                                     )}
                                 </button>
                             </div>

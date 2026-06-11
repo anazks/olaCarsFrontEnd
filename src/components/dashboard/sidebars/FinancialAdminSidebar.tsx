@@ -408,7 +408,12 @@ const FinancialAdminSidebar = ({
       id: "gps",
       label: t("sidebar.sections.gps"),
       icon: <Crosshair size={22} />,
-      subItems: [],
+      subItems: [
+        {
+          label: t("sidebar.items.gpsVehicles", "Connected Vehicles"),
+          path: "/admin/financial-admin/gps-vehicles",
+        }
+      ],
     },
     {
       id: "alerts",

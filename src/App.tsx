@@ -60,6 +60,7 @@ import FinancialAdminPaymentRequests from "./pages/dashboards/financialAdmin/Fin
 import ManageAgreements from "./pages/dashboards/shared/ManageAgreements";
 import EditAgreement from "./pages/dashboards/shared/EditAgreement";
 import VehicleLeaseSettings from "./pages/dashboards/financialAdmin/VehicleLeaseSettings";
+import GpsVehicles from "./pages/dashboards/financialAdmin/GpsVehicles";
 import CollectionsDashboard from "./pages/dashboards/financialAdmin/CollectionsDashboard";
 import CollectionsLedgerView from "./pages/dashboards/financialAdmin/CollectionsLedgerView";
 import ManageBankAccounts from "./pages/dashboards/finance/ManageBankAccounts";
@@ -790,6 +791,10 @@ function App() {
               <Route
                 path="vehicle-lease-settings"
                 element={<VehicleLeaseSettings />}
+              />
+              <Route
+                path="gps-vehicles"
+                element={<GpsVehicles />}
               />
               <Route
                 path="insurance-claims"
