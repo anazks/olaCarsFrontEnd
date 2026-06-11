@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';

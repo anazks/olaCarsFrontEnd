@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Building2, Wrench } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { Upload, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Building2, Wrench } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -66,7 +65,6 @@ const SAMPLE_DATA = [
 ];
 
 const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUploadProps) => {
-    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
@@ -77,8 +75,6 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<any | null>(null);
-    const [progressCurrent, setProgressCurrent] = useState(0);
-    const [progressTotal, setProgressTotal] = useState(0);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [branchesLoading, setBranchesLoading] = useState(false);
@@ -339,8 +335,6 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
         setBranchError(null);
 
         setUploading(true);
-        setProgressTotal(validParts.length);
-        setProgressCurrent(0);
 
         try {
             // Strip out internal fields before sending to API
