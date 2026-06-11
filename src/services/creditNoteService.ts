@@ -80,3 +80,8 @@ export const refundCreditNote = async (id: string) => {
     const res = await api.put(`/api/credit-notes/${id}/refund`);
     return res.data;
 };
+
+export const bulkUploadCreditNotes = async (payload: { rows: any[] }) => {
+    const res = await api.post('/api/credit-notes/bulk-upload', payload);
+    return res.data;
+};
