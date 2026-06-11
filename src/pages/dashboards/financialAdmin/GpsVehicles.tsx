@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Crosshair, Search, Filter, Cpu, Wifi, WifiOff, Database, 
+    Crosshair, Search, Cpu, Wifi, WifiOff, Database, 
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal, 
-    Copy, Check, FileSpreadsheet, Eye, User, Phone, MapPin, Gauge,
+    Copy, Check, FileSpreadsheet, User, Phone, MapPin, Gauge,
     Battery, Zap, Navigation, Link, ExternalLink, Satellite
 } from 'lucide-react';
 import OlaLoader from '../../../components/common/OlaLoader';
@@ -356,14 +356,24 @@ const GpsVehicles = () => {
     const handleOpenLiveStream = async (imei: string) => {
         setLiveStreamLoading(true);
         try {
-            const url = await getDeviceLiveStreamingUrl(imei);
+            const responseData = await getDeviceLiveStreamingUrl(imei);
+            const url = responseData;
             if (url) {
-                window.open(url, '_blank', 'noopener,noreferrer');
+                let finalUrl = typeof url === 'object' ? JSON.stringify(url) : String(url);
+                if (typeof url === 'object' && url !== null) {
+                    finalUrl = (url as any).url || (url as any).liveUrl || (url as any).h5Url || (url as any).pageUrl || (Object.values(url).find(v => typeof v === 'string' && v.startsWith('http')) as string) || finalUrl;
+                }
+                if (finalUrl.startsWith('http') || finalUrl.startsWith('rtmp') || finalUrl.startsWith('ws') || finalUrl.startsWith('rtsp')) {
+                    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                    alert(`Stream response: ${finalUrl}\nPlease contact support if this is a raw format.`);
+                }
             } else {
-                console.warn('No live stream URL returned.');
+                alert('No live stream URL returned by the device.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('[GpsVehicles] Live stream error:', error);
+            alert(`Live Stream Error: ${error.response?.data?.message || error.message}`);
         } finally {
             setLiveStreamLoading(false);
         }
@@ -372,14 +382,24 @@ const GpsVehicles = () => {
     const handleOpenMediaEvent = async (imei: string) => {
         setMediaEventLoading(true);
         try {
-            const url = await getDeviceMediaEventUrl(imei);
+            const responseData = await getDeviceMediaEventUrl(imei);
+            const url = responseData;
             if (url) {
-                window.open(url, '_blank', 'noopener,noreferrer');
+                let finalUrl = typeof url === 'object' ? JSON.stringify(url) : String(url);
+                if (typeof url === 'object' && url !== null) {
+                    finalUrl = (url as any).url || (url as any).liveUrl || (url as any).h5Url || (url as any).pageUrl || (Object.values(url).find(v => typeof v === 'string' && v.startsWith('http')) as string) || finalUrl;
+                }
+                if (finalUrl.startsWith('http') || finalUrl.startsWith('rtmp') || finalUrl.startsWith('ws') || finalUrl.startsWith('rtsp')) {
+                    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                    alert(`Media Event response: ${finalUrl}\nPlease contact support if this is a raw format.`);
+                }
             } else {
-                console.warn('No media event URL returned.');
+                alert('No media event URL returned by the device.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('[GpsVehicles] Media event error:', error);
+            alert(`Media Event Error: ${error.response?.data?.message || error.message}`);
         } finally {
             setMediaEventLoading(false);
         }
@@ -916,15 +936,15 @@ const GpsVehicles = () => {
                                         <div className="space-y-1.5">
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="text-[10px] font-bold text-[var(--text-dim)] flex items-center gap-1">
-                                                    <Battery size={13} className={trackedLoc.electQuantity > 25 ? 'text-green-500' : 'text-red-500'} />
+                                                    <Battery size={13} className={(trackedLoc?.electQuantity || 0) > 25 ? 'text-green-500' : 'text-red-500'} />
                                                     Hardware Battery
                                                 </span>
-                                                <span className="font-extrabold text-white">{trackedLoc.electQuantity}%</span>
+                                                <span className="font-extrabold text-white">{trackedLoc?.electQuantity || 0}%</span>
                                             </div>
                                             <div className="w-full bg-[var(--bg-input)] rounded-full h-1.5 overflow-hidden">
                                                 <div 
-                                                    className={`h-full rounded-full ${trackedLoc.electQuantity > 25 ? 'bg-green-500' : 'bg-red-500'}`}
-                                                    style={{ width: `${trackedLoc.electQuantity}%` }}
+                                                    className={`h-full rounded-full ${(trackedLoc?.electQuantity || 0) > 25 ? 'bg-green-500' : 'bg-red-500'}`}
+                                                    style={{ width: `${trackedLoc?.electQuantity || 0}%` }}
                                                 />
                                             </div>
                                         </div>
