@@ -148,7 +148,6 @@ const SAMPLE_DATA = [
 ];
 
 const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadProps) => {
-    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [parsedSuppliers, setParsedSuppliers] = useState<ParsedSupplier[]>([]);
@@ -165,7 +164,7 @@ const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadPr
             setAccountsLoading(true);
             getAllAccountingCodes()
                 .then(res => {
-                    const list = Array.isArray(res) ? res : res.data ?? [];
+                    const list = Array.isArray(res) ? res : (res as any).data ?? [];
                     setAccounts(list);
                 })
                 .catch(err => {

@@ -57,6 +57,7 @@ const DashboardHub = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
     const [endDate, setEndDate] = useState<string>(getToday());
 

@@ -194,7 +194,6 @@ const VehicleDetail = () => {
     const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const extPhotoRef = useRef<HTMLInputElement | null>(null);
     const intPhotoRef = useRef<HTMLInputElement | null>(null);
-    const [liveStreamLoading, setLiveStreamLoading] = useState(false);
 
     const fetchEligibleInsurances = useCallback(async () => {
         try {
