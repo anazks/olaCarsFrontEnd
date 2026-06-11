@@ -216,7 +216,7 @@ const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadPr
         } else {
             // Check if standard Accounts Payable defaults are available in our system
             const defaultAP = activeAccounts.find(acc => 
-                acc.category === 'Accounts Payable' || 
+                String(acc.category) === 'Accounts Payable' || 
                 acc.name.toLowerCase() === 'accounts payable' || 
                 acc.code === '2100' ||
                 acc.code === '2.1.01'
@@ -536,11 +536,12 @@ const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadPr
                                     </thead>
                                     <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                         {parsedSuppliers.map((row, idx) => {
+                                            const anyRow = row as any;
                                             const hasErrors = row._rowErrors.length > 0;
-                                            const apVal = row['Accounts Payable'] || row['accounts payable'] || row['AccountsPayable'] || '—';
-                                            const fleetNo = row['CF.FLEET NO'] || row['cf.fleet no'] || '—';
-                                            const ruc = row['CF.RUC'] || row['cf.ruc'] || '—';
-                                            const dv = row['CF.DV'] || row['cf.dv'] || '—';
+                                            const apVal = row['Accounts Payable'] || anyRow['accounts payable'] || anyRow['AccountsPayable'] || '—';
+                                            const fleetNo = row['CF.FLEET NO'] || anyRow['cf.fleet no'] || '—';
+                                            const ruc = row['CF.RUC'] || anyRow['cf.ruc'] || '—';
+                                            const dv = row['CF.DV'] || anyRow['cf.dv'] || '—';
 
                                             return (
                                                 <tr key={idx} className={`hover:bg-white/[0.01] ${hasErrors ? 'bg-rose-500/[0.02]' : ''}`}>
@@ -562,7 +563,7 @@ const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadPr
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-2 font-bold text-main">{row._resolvedName || '—'}</td>
-                                                    <td className="px-4 py-2 text-dim">{row['EmailID'] || row['Email'] || '—'}</td>
+                                                    <td className="px-4 py-2 text-dim">{row['EmailID'] || (row as any)['Email'] || '—'}</td>
                                                     <td className="px-4 py-2 text-dim">{row['Phone'] || row['MobilePhone'] || '—'}</td>
                                                     <td className="px-4 py-2 text-dim">{apVal}</td>
                                                     <td className="px-4 py-2 text-dim">{fleetNo}</td>

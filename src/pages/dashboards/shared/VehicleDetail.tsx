@@ -24,6 +24,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { downloadFile } from '../../../utils/fileDownloader';
 import { getGpsVehiclesList, getGpsLocationsList, findGpsDeviceByVehicle, getDeviceLiveStreamingUrl } from '../../../services/gpsService';
 import type { GpsVehicle, GpsLocation } from '../../../services/gpsService';
+import toast from 'react-hot-toast';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const PIPELINE: VehicleStatus[] = [
@@ -193,6 +194,7 @@ const VehicleDetail = () => {
     const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const extPhotoRef = useRef<HTMLInputElement | null>(null);
     const intPhotoRef = useRef<HTMLInputElement | null>(null);
+    const [liveStreamLoading, setLiveStreamLoading] = useState(false);
 
     const fetchEligibleInsurances = useCallback(async () => {
         try {
@@ -353,11 +355,11 @@ const VehicleDetail = () => {
             if (url) {
                 window.open(url, '_blank', 'noopener,noreferrer');
             } else {
-                alertService.addNotification('No live stream URL returned for this device.', 'error');
+                toast.error('No live stream URL returned for this device.');
             }
         } catch (error) {
             console.error('[VehicleDetail] Live stream error:', error);
-            alertService.addNotification('Failed to open live stream.', 'error');
+            toast.error('Failed to open live stream.');
         } finally {
             setLiveStreamLoading(false);
         }
