@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, ChevronRight, Check, Minus, X } from 'lucide-react';
+import { Search, ChevronRight, Check, Minus, X } from 'lucide-react';
 import { permissionCategories } from '../../utils/permissionCategories';
 
 interface PermissionSelectorProps {

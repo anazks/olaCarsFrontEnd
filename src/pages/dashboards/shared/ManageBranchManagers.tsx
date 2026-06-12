@@ -139,22 +139,7 @@ const ManageBranchManagers = () => {
         setFormError(null);
     };
 
-    const openEditModal = (manager: BranchManager) => {
-        setModalMode('edit');
-        setSelectedManager(manager);
-        setFormData({
-            fullName: manager.fullName,
-            email: manager.email,
-            password: '',
-            phone: manager.phone || '',
-            branchId: manager.branchId,
-            status: manager.status,
-            twoFactorEnabled: manager.twoFactorEnabled,
-            permissions: manager.permissions || []
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);

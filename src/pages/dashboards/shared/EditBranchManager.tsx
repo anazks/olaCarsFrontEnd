@@ -62,7 +62,7 @@ const EditBranchManager = () => {
                 email: data.email,
                 phone: data.phone || '',
                 password: '',
-                branchId: typeof data.branchId === 'object' ? data.branchId?._id : data.branchId || '',
+                branchId: typeof data.branchId === 'object' ? (data.branchId as any)?._id : data.branchId || '',
                 status: data.status,
                 twoFactorEnabled: data.twoFactorEnabled ?? true,
                 permissions: data.permissions || []

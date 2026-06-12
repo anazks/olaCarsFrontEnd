@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, Link2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import { bulkImportLedgerEntries, bulkImportLedgerRows } from '../../../services/ledgerService';
+import { bulkImportLedgerRows } from '../../../services/ledgerService';
 
 interface BulkLedgerUploadProps {
     isOpen: boolean;
@@ -55,7 +55,7 @@ const getRowVal = (r: any, keys: string[]): any => {
 
 const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps) => {
     const fileRef = useRef<HTMLInputElement>(null);
-    const [file, setFile] = useState<File | null>(null);
+    const [, setFile] = useState<File | null>(null);
     const [rows, setRows] = useState<any[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);

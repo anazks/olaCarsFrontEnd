@@ -113,19 +113,7 @@ const ManageFinancialAdmins = () => {
         setFormError(null);
     };
 
-    const openEditModal = (admin: FinancialAdmin) => {
-        setModalMode('edit');
-        setSelectedAdmin(admin);
-        setFormData({
-            fullName: admin.fullName,
-            email: admin.email,
-            password: '',
-            status: admin.status,
-            permissions: admin.permissions || []
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);

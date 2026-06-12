@@ -128,21 +128,7 @@ const ManageOperationStaff = () => {
         setFormError(null);
     };
 
-    const openEditModal = (staff: OperationStaff) => {
-        setModalMode('edit');
-        setSelectedStaff(staff);
-        setFormData({
-            fullName: staff.fullName,
-            email: staff.email,
-            password: '',
-            phone: staff.phone || '',
-            branchId: typeof staff.branchId === 'object' ? staff.branchId?._id || '' : staff.branchId,
-            status: staff.status,
-            permissions: staff.permissions || []
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);

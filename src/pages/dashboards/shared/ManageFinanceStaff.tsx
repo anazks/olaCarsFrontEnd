@@ -130,22 +130,7 @@ const ManageFinanceStaff = () => {
         setFormError(null);
     };
 
-    const openEditModal = (staff: FinanceStaff) => {
-        setModalMode('edit');
-        setSelectedStaff(staff);
-        setFormData({
-            fullName: staff.fullName,
-            email: staff.email,
-            password: '',
-            phone: staff.phone || '',
-            branchId: typeof staff.branchId === 'object' ? staff.branchId?._id || '' : staff.branchId,
-            status: staff.status,
-            permissions: staff.permissions || [],
-            fleetNumbers: (staff.fleetNumbers || []).join(', ')
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);

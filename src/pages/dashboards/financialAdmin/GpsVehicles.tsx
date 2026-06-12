@@ -25,7 +25,7 @@ const GpsVehicles = () => {
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-    const [plateStatusFilter, setPlateStatusFilter] = useState<'ALL' | 'ASSIGNED' | 'PENDING'>('ALL');
+    const [plateStatusFilter, setPlateStatusFilter] = useState<'ALL' | 'WITH DATA' | 'PENDING'>('ALL');
     const [copiedImei, setCopiedImei] = useState<string | null>(null);
     const [liveStreamLoading, setLiveStreamLoading] = useState(false);
     const [mediaEventLoading, setMediaEventLoading] = useState(false);
@@ -277,7 +277,7 @@ const GpsVehicles = () => {
             const matchesStatus = selectedStatus === 'ALL' || v.status === selectedStatus;
             
             let matchesPlateStatus = true;
-            if (plateStatusFilter === 'ASSIGNED') {
+            if (plateStatusFilter === 'WITH DATA') {
                 matchesPlateStatus = !!v.vehicleNumber && v.vehicleNumber.trim() !== '' && v.vehicleNumber !== 'Pending';
             } else if (plateStatusFilter === 'PENDING') {
                 matchesPlateStatus = !v.vehicleNumber || v.vehicleNumber.trim() === '' || v.vehicleNumber === 'Pending';
@@ -602,7 +602,7 @@ const GpsVehicles = () => {
                                 <div className="flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-main)] overflow-hidden w-full md:w-auto">
                                     {[
                                         { label: 'ALL', count: stats.total },
-                                        { label: 'ASSIGNED', count: stats.plateAssigned },
+                                        { label: 'WITH DATA', count: stats.plateAssigned },
                                         { label: 'PENDING', count: stats.platePending }
                                     ].map(status => (
                                         <button

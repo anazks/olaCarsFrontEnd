@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Mail, Phone, ShieldCheck, AlertTriangle, ChevronDown, Filter, ChevronLeft, ChevronRight, User, Unlock } from 'lucide-react';
 import {
     getAllMerchendisers,
@@ -37,6 +38,7 @@ const phoneInputStyles = `
 
 const ManageMerchendisers = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [merchendisers, setMerchendisers] = useState<MerchendiseUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [_error, setError] = useState<string | null>(null);
@@ -130,20 +132,7 @@ const ManageMerchendisers = () => {
         setFormError(null);
     };
 
-    const openEditModal = (merch: MerchendiseUser) => {
-        setModalMode('edit');
-        setSelectedMerch(merch);
-        setFormData({
-            fullName: merch.fullName,
-            email: merch.email,
-            password: '',
-            phone: merch.phone || '',
-            status: merch.status,
-            permissions: merch.permissions || []
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);

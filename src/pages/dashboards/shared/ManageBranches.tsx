@@ -521,6 +521,7 @@ const ManageBranches = () => {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           <HasPermission permission="BRANCH_CREATE">
+            <>
             <button
               onClick={openCreateBranchModal}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer"
@@ -545,6 +546,7 @@ const ManageBranches = () => {
                 defaultValue: "Add Workshop",
               })}
             </button>
+            </>
           </HasPermission>
         </div>
       </div>

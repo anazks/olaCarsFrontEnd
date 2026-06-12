@@ -187,24 +187,7 @@ const ManageWorkshopStaff = () => {
     setFormError(null);
   };
 
-  const openEditModal = (staff: WorkshopStaff) => {
-    setModalMode("edit");
-    setSelectedStaff(staff);
-    setFormData({
-      fullName: staff.fullName,
-      email: staff.email,
-      password: "",
-      phone: staff.phone || "",
-      workshopId:
-        typeof staff.workshopId === "object"
-          ? staff.workshopId?._id || ""
-          : staff.workshopId || "",
-      status: staff.status,
-      permissions: staff.permissions || [],
-    });
-    setActiveTab("details");
-    setFormError(null);
-  };
+
 
   const closeModal = () => {
     setModalMode(null);

@@ -130,22 +130,7 @@ const ManageCountryManagers = () => {
         setFormError(null);
     };
 
-    const openEditModal = (manager: CountryManager) => {
-        setModalMode('edit');
-        setSelectedManager(manager);
-        setFormData({
-            fullName: manager.fullName,
-            email: manager.email,
-            password: '',
-            phone: manager.phone || '',
-            country: manager.country || 'Panama',
-            status: manager.status,
-            twoFactorEnabled: manager.twoFactorEnabled,
-            permissions: manager.permissions || []
-        });
-        setActiveTab('details');
-        setFormError(null);
-    };
+
 
     const closeModal = () => {
         setModalMode(null);
