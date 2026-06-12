@@ -527,7 +527,7 @@ const ManageFinanceStaff = () => {
                                                 </button>
                                                 <HasPermission permission="STAFF_EDIT">
                                                     <button
-                                                        onClick={() => openEditModal(staff)}
+                                                        onClick={() => navigate(`edit/${staff._id}`)}
                                                         className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
                                                         style={{ color: 'var(--text-dim)' }}
                                                         title="Edit"

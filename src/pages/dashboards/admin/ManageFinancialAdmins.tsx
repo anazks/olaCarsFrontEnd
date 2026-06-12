@@ -444,7 +444,7 @@ const ManageFinancialAdmins = () => {
                                                     <Eye size={15} />
                                                 </button>
                                                 <button
-                                                    onClick={() => openEditModal(admin)}
+                                                    onClick={() => navigate(`edit/${admin._id}`)}
                                                     className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
                                                     style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
                                                     title="Edit"
@@ -523,7 +523,7 @@ const ManageFinancialAdmins = () => {
             {modalMode && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
                     <div
-                        className="w-full max-w-lg mx-4 rounded-2xl p-6 border shadow-2xl transition-colors animate-in zoom-in-95 duration-200"
+                        className={`w-full mx-4 rounded-2xl p-6 border shadow-2xl transition-all animate-in zoom-in-95 duration-300 ${activeTab === 'permissions' ? 'max-w-4xl' : 'max-w-lg'}`}
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                     >
                         <div className="flex justify-between items-center mb-6">

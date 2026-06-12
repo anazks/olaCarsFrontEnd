@@ -69,6 +69,12 @@ export const getAllFinanceStaff = async (filters: StaffFilters = {}): Promise<Pa
     return response.data;
 };
 
+// GET a finance staff by ID
+export const getFinanceStaffById = async (id: string): Promise<FinanceStaff> => {
+    const response = await api.get(`/api/finance-staff/${id}`);
+    return response.data.data || response.data;
+};
+
 // POST create a new finance staff
 export const createFinanceStaff = async (
     payload: CreateFinanceStaffPayload

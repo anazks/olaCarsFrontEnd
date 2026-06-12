@@ -485,7 +485,7 @@ const ManageMerchendisers = () => {
                                                 )}
                                                 <HasPermission permission="STAFF_EDIT">
                                                     <button
-                                                        onClick={() => openEditModal(merch)}
+                                                        onClick={() => navigate(`edit/${merch._id}`)}
                                                         className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
                                                         style={{ color: 'var(--text-dim)' }}
                                                     >

@@ -538,7 +538,7 @@ const ManageBranchManagers = () => {
                                                     </button>
                                                     <HasPermission permission="STAFF_EDIT">
                                                         <button
-                                                            onClick={() => openEditModal(manager)}
+                                                            onClick={() => navigate(`edit/${manager._id}`)}
                                                             className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-500/20"
                                                             style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}
                                                         >

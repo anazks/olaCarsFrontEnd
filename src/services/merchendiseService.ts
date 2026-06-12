@@ -62,6 +62,12 @@ export const getAllMerchendisers = async (filters: MerchendiseFilters = {}): Pro
     return response.data;
 };
 
+// GET a merchendiser by ID
+export const getMerchendiserById = async (id: string): Promise<MerchendiseUser> => {
+    const response = await api.get(`/api/merchendise/${id}`);
+    return response.data.data || response.data;
+};
+
 // POST create a new merchendiser
 export const createMerchendiser = async (
     payload: CreateMerchendisePayload

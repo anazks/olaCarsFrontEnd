@@ -152,14 +152,7 @@ const ExecutiveSidebar = ({
       icon: <Library size={22} />,
       subItems: [
         {
-          label: t("sidebar.items.manageWorkshops", {
-            defaultValue: "Manage Workshops",
-          }),
-          path: "/admin/admin/manage-workshops",
-          permission: "STAFF_VIEW",
-        },
-        {
-          label: t("sidebar.items.manageBranches"),
+          label: "Manage Branches & Workshops",
           path: "/admin/admin/manage-branches",
           permission: "BRANCH_VIEW",
         },
@@ -301,7 +294,9 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/manual-journals",
         },
         {
-          label: t("sidebar.items.fixedAssets", { defaultValue: "Fixed Assets" }),
+          label: t("sidebar.items.fixedAssets", {
+            defaultValue: "Fixed Assets",
+          }),
           path: "/admin/admin/fixed-assets",
         },
       ],

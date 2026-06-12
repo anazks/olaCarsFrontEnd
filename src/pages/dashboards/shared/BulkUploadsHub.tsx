@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
+import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck, BookMarked } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -13,6 +13,7 @@ import BulkSupplierUpload from './BulkSupplierUpload';
 import BulkCustomerUpload from './BulkCustomerUpload';
 import BulkInventoryUpload from './BulkInventoryUpload';
 import BulkPaymentUpload from './BulkPaymentUpload';
+import BulkLedgerUpload from './BulkLedgerUpload';
 import BulkCreditNoteUpload from './BulkCreditNoteUpload';
 
 type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | null;
@@ -27,7 +28,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -256,7 +257,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">7</p>
+                        <p className="text-base font-black text-main">8</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>

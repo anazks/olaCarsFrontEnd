@@ -270,6 +270,76 @@ const CreditNoteDetail = () => {
         );
     }
 
+    const taxRate = note.taxId?.rate || 0;
+    const totalAmount = note.amount || 0;
+    const baseAmount = taxRate > 0 ? (totalAmount / (1 + taxRate / 100)) : totalAmount;
+    const taxAmount = totalAmount - baseAmount;
+
+    // Helper to parse invoice numbers from notes or other sources
+    const getInvoicesList = () => {
+        const list: { number: string; id?: string; resolved: boolean }[] = [];
+        
+        // 1. Gather from populated invoices array
+        if (note.invoices && note.invoices.length > 0) {
+            note.invoices.forEach((inv: any) => {
+                if (inv && typeof inv === 'object') {
+                    list.push({
+                        number: inv.invoiceNumber || 'INV-REF',
+                        id: inv._id,
+                        resolved: true
+                    });
+                } else if (inv) {
+                    list.push({
+                        number: inv.toString(),
+                        id: inv.toString(),
+                        resolved: false
+                    });
+                }
+            });
+        }
+        
+        // 2. Gather from legacy invoiceId field
+        if (note.invoiceId) {
+            const inv = note.invoiceId;
+            if (typeof inv === 'object' && inv._id) {
+                if (!list.some(item => item.id === inv._id)) {
+                    list.push({
+                        number: inv.invoiceNumber || 'INV-REF',
+                        id: inv._id,
+                        resolved: true
+                    });
+                }
+            } else if (typeof inv === 'string' && inv) {
+                if (!list.some(item => item.number === inv || item.id === inv)) {
+                    list.push({
+                        number: inv,
+                        id: inv,
+                        resolved: false
+                    });
+                }
+            }
+        }
+        
+        // 3. Gather from notes field (e.g. "Applied Invoices: INV-000101, INV-000102")
+        if (note.notes) {
+            const match = note.notes.match(/Applied Invoices:\s*([^\r\n]+)/i);
+            if (match && match[1]) {
+                const parts = match[1].split(',').map((s: string) => s.trim()).filter(Boolean);
+                parts.forEach((part: string) => {
+                    // Avoid duplicate if already resolved/added
+                    if (!list.some(item => item.number.toLowerCase() === part.toLowerCase())) {
+                        list.push({
+                            number: part,
+                            resolved: false
+                        });
+                    }
+                });
+            }
+        }
+        
+        return list;
+    };
+
     return (
         <div className="container-responsive space-y-6 animate-in fade-in duration-500">
             <Breadcrumbs 
@@ -349,29 +419,51 @@ const CreditNoteDetail = () => {
 
                 {/* Canvas Content Area */}
                 <div className="flex-1 p-6 md:p-10 space-y-10 overflow-y-auto custom-scrollbar" style={{ background: 'rgba(0,0,0,0.05)' }}>
-                    {note.invoiceId && note.status === 'CLOSED' && (
-                        <div className="w-full max-w-4xl mx-auto p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex justify-between items-center shadow-inner animate-in fade-in duration-300">
-                            <div className="flex items-center gap-3">
-                                <FileCheck className="text-blue-400" size={18} />
-                                <div>
-                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Applied directly to invoice</p>
-                                    <p className="text-[10px] text-dim mt-0.5">Dynamic offset finalized against {note.invoiceId.invoiceNumber}</p>
+                    {((note.invoices && note.invoices.length > 0) || note.invoiceId) && (
+                        <div className={`w-full max-w-4xl mx-auto p-4 rounded-2xl flex flex-col gap-3 shadow-inner animate-in fade-in duration-300 border ${
+                            note.status === 'CLOSED' 
+                                ? 'bg-blue-500/5 border-blue-500/20' 
+                                : 'bg-amber-500/5 border-amber-500/20'
+                        }`}>
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    {note.status === 'CLOSED' ? (
+                                        <FileCheck className="text-blue-400" size={18} />
+                                    ) : (
+                                        <AlertCircle className="text-amber-400" size={18} />
+                                    )}
+                                    <div>
+                                        <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>
+                                            {note.status === 'CLOSED' ? 'Applied directly to invoices' : 'Linked intended targets'}
+                                        </p>
+                                        <p className="text-[10px] text-dim mt-0.5">
+                                            {note.status === 'CLOSED' 
+                                                ? 'Dynamic offset finalized against these invoices:' 
+                                                : 'Ready to be applied. Click "Apply to Invoice" above to post:'}
+                                        </p>
+                                    </div>
                                 </div>
+                                <span className={`text-[9px] font-black border rounded px-2.5 py-0.5 uppercase tracking-widest ${
+                                    note.status === 'CLOSED'
+                                        ? 'text-blue-400 border-blue-500/30 bg-blue-500/10'
+                                        : 'text-amber-400 border-amber-500/30 bg-amber-500/10'
+                                }`}>
+                                    {note.status === 'CLOSED' ? 'Applied' : 'Draft Link'}
+                                </span>
                             </div>
-                            <span className="text-[9px] font-black text-blue-400 border border-blue-500/30 bg-blue-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Applied</span>
-                        </div>
-                    )}
-
-                    {note.invoiceId && ['OPEN', 'DRAFT'].includes(note.status) && (
-                        <div className="w-full max-w-4xl mx-auto p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex justify-between items-center shadow-inner animate-in fade-in duration-300">
-                            <div className="flex items-center gap-3">
-                                <AlertCircle className="text-amber-400" size={18} />
-                                <div>
-                                    <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>Linked intended target</p>
-                                    <p className="text-[10px] text-dim mt-0.5">Ready to be applied to {note.invoiceId.invoiceNumber}. Click "Apply to Invoice" above to post.</p>
-                                </div>
+                            <div className="flex flex-wrap gap-2 pt-1 border-t border-dashed" style={{ borderColor: 'var(--border-main)' }}>
+                                {note.invoices && note.invoices.length > 0 ? (
+                                    note.invoices.map((inv: any) => (
+                                        <span key={inv._id || inv} className="text-[10px] font-mono font-bold px-2.5 py-1 rounded bg-input border" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}>
+                                            {inv.invoiceNumber || inv._id || inv}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded bg-input border" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}>
+                                        {note.invoiceId.invoiceNumber || note.invoiceId._id || note.invoiceId}
+                                    </span>
+                                )}
                             </div>
-                            <span className="text-[9px] font-black text-amber-400 border border-amber-500/30 bg-amber-500/10 rounded px-2.5 py-0.5 uppercase tracking-widest">Draft Link</span>
                         </div>
                     )}
 
@@ -435,12 +527,28 @@ const CreditNoteDetail = () => {
                                     <p className="text-[11px] font-black italic border-l-2 pl-4 leading-relaxed" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>{convertToWords(note.amount)} Only</p>
                                 </div>
                                 <div className="w-full md:w-[320px] space-y-2 text-xs">
-                                    <div className="flex justify-between font-bold" style={{ color: 'var(--text-dim)' }}><span>Gross Reconcile Amount</span><span style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString()}</span></div>
-                                    <div className="flex justify-between border-t pt-2 font-black text-lg" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}><span>TOTAL REGISTERED</span><span>${note.amount?.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-rose-500 font-bold pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}><span>Credits Allocated</span><span>(-) ${note.status === 'CLOSED' || note.status === 'APPLIED' ? note.amount?.toLocaleString() : "0.00"}</span></div>
+                                    {note.taxId ? (
+                                        <>
+                                            <div className="flex justify-between font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                <span>Subtotal (Excl. Tax)</span>
+                                                <span style={{ color: 'var(--text-main)' }}>${baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold" style={{ color: 'var(--text-dim)' }}>
+                                                <span>{note.taxId.name} ({note.taxId.rate}%) (Inclusive)</span>
+                                                <span style={{ color: 'var(--text-main)' }}>${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex justify-between font-bold" style={{ color: 'var(--text-dim)' }}>
+                                            <span>Gross Reconcile Amount</span>
+                                            <span style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between border-t pt-2 font-black text-lg" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}><span>TOTAL REGISTERED</span><span>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                                    <div className="flex justify-between text-rose-500 font-bold pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}><span>Credits Allocated</span><span>(-) ${note.status === 'CLOSED' || note.status === 'APPLIED' ? note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</span></div>
                                     <div className="flex justify-between items-center p-3 border rounded-2xl text-sm font-black mt-3 shadow-inner" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                         <span>UNALLOCATED RESIDUE</span>
-                                        <span className="font-mono">${note.status === 'OPEN' ? note.amount?.toLocaleString() : "0.00"}</span>
+                                        <span className="font-mono">${note.status === 'OPEN' ? note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</span>
                                     </div>
                                 </div>
                             </div>
@@ -452,6 +560,60 @@ const CreditNoteDetail = () => {
                                     </div>
                                     <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reconciliations Officer</p>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* APPLIED INVOICES SECTION */}
+                    <div className="w-full max-w-4xl mx-auto rounded-[2rem] border shadow-xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-6 border-b bg-black/10 flex items-center justify-between shadow-inner" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2">
+                                <FileCheck className="text-brand-lime" size={18} />
+                                <h2 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Applied Invoices & Reconciliations</h2>
+                            </div>
+                            <span className="text-[10px] text-dim font-mono">
+                                Total Linked: {getInvoicesList().length}
+                            </span>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-xs text-dim leading-relaxed">
+                                The following invoices are associated with this credit note. Click on any resolved invoice to view its details, or view the unresolved invoice identifiers extracted from notes.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {getInvoicesList().length > 0 ? (
+                                    getInvoicesList().map((item, idx) => (
+                                        <div 
+                                            key={idx}
+                                            onClick={() => item.resolved && item.id ? navigate(`../invoices/${item.id}`) : null}
+                                            className={`p-4 rounded-2xl border transition-all flex items-center justify-between select-none ${
+                                                item.resolved 
+                                                    ? 'cursor-pointer hover:bg-white/5 active:scale-98 border-emerald-500/20 bg-emerald-500/5' 
+                                                    : 'border-white/10 bg-white/5 opacity-70'
+                                            }`}
+                                        >
+                                            <div className="space-y-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-black text-main truncate">{item.number}</span>
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                                                        item.resolved ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/10 text-dim'
+                                                    }`}>
+                                                        {item.resolved ? 'Linked' : 'Not Found'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-dim truncate font-mono">
+                                                    {item.resolved ? `ID: ${item.id}` : 'Unresolved text identifier'}
+                                                </p>
+                                            </div>
+                                            {item.resolved && (
+                                                <ArrowLeft className="rotate-180 text-brand-lime" size={16} />
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-8 text-center text-dim text-xs">
+                                        No invoices linked to this credit note.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

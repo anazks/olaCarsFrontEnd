@@ -139,14 +139,7 @@ const OperationalAdminSidebar = ({
       icon: <Library size={22} />,
       subItems: [
         {
-          label: t("sidebar.items.manageWorkshops", {
-            defaultValue: "Manage Workshops",
-          }),
-          path: "/admin/operational-admin/manage-workshops",
-          permission: "STAFF_VIEW",
-        },
-        {
-          label: t("sidebar.items.manageBranches"),
+          label: "Manage Branches & Workshops",
           path: "/admin/operational-admin/manage-branches",
           permission: "BRANCH_VIEW",
         },

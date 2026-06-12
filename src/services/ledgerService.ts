@@ -170,6 +170,22 @@ export const getVoucherById = async (id: string): Promise<Voucher> => {
     return response.data.data;
 };
 
+// --- Bulk Import ---
+
+export const bulkImportLedgerEntries = async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/ledger/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+};
+
+export const bulkImportLedgerRows = async (rows: any[]): Promise<any> => {
+    const response = await api.post('/api/ledger/import', { rows });
+    return response.data;
+};
+
 /**
  * Delete a ledger entry and its entire parent journal (all double-entry partners).
  * ADMIN only.

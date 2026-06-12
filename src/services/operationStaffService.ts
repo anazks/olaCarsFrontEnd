@@ -66,6 +66,12 @@ export const getAllOperationStaff = async (filters: StaffFilters = {}): Promise<
     return response.data;
 };
 
+// GET an operation staff by ID
+export const getOperationStaffById = async (id: string): Promise<OperationStaff> => {
+    const response = await api.get(`/api/operation-staff/${id}`);
+    return response.data.data || response.data;
+};
+
 // POST create a new operation staff
 export const createOperationStaff = async (
     payload: CreateOperationStaffPayload
