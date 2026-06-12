@@ -120,10 +120,10 @@ const ManageBankAccounts = () => {
 
     const filteredCodes = useMemo(() => {
         return accountingCodes.filter((code: any) => {
-            if (formData.accountType === 'Credit Card') {
+            if ((formData.accountType as string) === 'Credit Card') {
                 return code.accountType === 'Credit Card' || 
                        (code.category === 'LIABILITY' && (code.accountType?.includes('Credit Card') || code.accountType?.includes('Liability')));
-            } else if (formData.accountType === 'Cash' || formData.accountType === 'Bank') {
+            } else if ((formData.accountType as string) === 'Cash' || (formData.accountType as string) === 'Bank') {
                 return code.accountType === 'Bank' || code.accountType === 'Cash' || code.category === 'Cash' ||
                        (code.category === 'ASSET' && (code.accountType === 'Bank' || code.accountType === 'Cash' || code.code?.startsWith('1.1.02') || code.name?.toLowerCase().includes('cash')));
             } else {
@@ -330,9 +330,9 @@ const ManageBankAccounts = () => {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black border border-lime/10">
-                                                    {account.accountType === 'Cash' ? (
+                                                    {(account.accountType as string) === 'Cash' ? (
                                                         <Coins size={18} />
-                                                    ) : account.accountType === 'Credit Card' ? (
+                                                    ) : (account.accountType as string) === 'Credit Card' ? (
                                                         <CreditCard size={18} />
                                                     ) : (
                                                         <Building2 size={18} />

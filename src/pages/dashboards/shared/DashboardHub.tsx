@@ -30,7 +30,6 @@ import {
     Tooltip as RechartsTooltip,
     Legend
 } from 'recharts';
-import OlaLoader from '../../../components/common/OlaLoader';
 import { getFinancialDashboardSummary } from '../../../services/dashboardService';
 import { getAllBranches } from '../../../services/branchService';
 import { getLedgerEntries } from '../../../services/ledgerService';
@@ -54,11 +53,11 @@ const DashboardHub = () => {
         return new Date().toISOString().split('T')[0];
     };
 
-    const [loading, setLoading] = useState(true);
     const [summaryData, setSummaryData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
     const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
     const [endDate, setEndDate] = useState<string>(getToday());
 
@@ -84,8 +83,6 @@ const DashboardHub = () => {
         } catch (err: any) {
             console.error('DashboardHub: Failed to load dashboard data', err);
             setError('Could not load live dashboard telemetry.');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -101,7 +98,7 @@ const DashboardHub = () => {
 
     // Aggregate ledger revenue details by day and branch
     const performanceData = useMemo(() => {
-        const data = [];
+        const data: any[] = [];
         const dailyMap: Record<string, Record<string, number>> = {};
         const datesList: string[] = [];
 
@@ -519,7 +516,7 @@ const DashboardHub = () => {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
-                                {activeBranchNames.map((name, idx) => {
+                                {activeBranchNames.map((_, idx) => {
                                     const color = lineColors[idx % lineColors.length];
                                     const gradId = `areaGrad-${idx}`;
                                     return (

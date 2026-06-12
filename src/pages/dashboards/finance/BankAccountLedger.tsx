@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
-    BookMarked, 
-    ArrowLeft, 
+    ArrowLeft,
     List,
     AlertTriangle,
     FileText,
@@ -64,7 +63,6 @@ const BankAccountLedger = () => {
     const [paymentCurrency, setPaymentCurrency] = useState('USD');
     const [fromAccountId, setFromAccountId] = useState('');
     const [paymentDescription, setPaymentDescription] = useState('');
-    const [paymentBranchId, setPaymentBranchId] = useState('');
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
     const handleDeleteAllTransactions = async () => {
@@ -133,7 +131,6 @@ const BankAccountLedger = () => {
                 setBranches(branchesList);
                 if (branchesList.length > 0) {
                     setSelectedBranchId(branchesList[0]._id);
-                    setPaymentBranchId(branchesList[0]._id);
                 }
             } catch (err) {
                 console.error('Failed to fetch branches', err);
@@ -532,7 +529,7 @@ const BankAccountLedger = () => {
                     </button>
                     <div className="flex items-center gap-3 mb-1">
                         <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                            {account.accountType === 'Cash' ? (
+                            {(account.accountType as string) === 'Cash' ? (
                                 <Coins size={28} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                             ) : (
                                 <Building2 size={28} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
