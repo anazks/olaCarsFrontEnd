@@ -164,6 +164,8 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
     const [availableCustomerNames, setAvailableCustomerNames] = useState<Set<string>>(new Set());
     const [availableCustomerIds, setAvailableCustomerIds] = useState<Set<string>>(new Set());
     const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [verifiedInvoices, setVerifiedInvoices] = useState<Map<string, { exists: boolean, customerId?: string, customerName?: string }>>(new Map());
+    const [verifyingInvoices, setVerifyingInvoices] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -187,6 +189,10 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
             setAvailableCustomerNames(new Set());
             setAvailableCustomerIds(new Set());
             setLoadingCustomers(false);
+            setVerifiedInvoices(new Map());
+            setParsedRows([]);
+            setFileName('');
+            setResult(null);
         }
     }, [isOpen]);
 
@@ -260,18 +266,85 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
                 errors.push('Invalid Date (expected YYYY-MM-DD or DD-MM-YYYY)');
             }
         }
+
+        // 4. Validate Applied Invoices (no validation block, handled as fallback on backend)
         
         return errors;
-    }, [availableCustomerNames, availableCustomerIds]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices]);
+
+    // Asynchronously verify parsed invoice numbers against database
+    useEffect(() => {
+        if (parsedRows.length === 0) return;
+
+        const uniqueTokens = new Set<string>();
+        parsedRows.forEach(row => {
+            const rawInvNumbers = getRowVal(row, ['Applied Invoice Number', 'appliedInvoiceNumber', 'Invoice Number', 'invoiceNumber']) || '';
+            if (rawInvNumbers) {
+                const tokens = rawInvNumbers.toString().split(',').map((s: string) => s.trim()).filter(Boolean);
+                tokens.forEach((t: string) => uniqueTokens.add(t));
+            }
+        });
+
+        if (uniqueTokens.size === 0) return;
+
+        const tokensToVerify = Array.from(uniqueTokens).filter(t => !verifiedInvoices.has(t.toLowerCase()));
+        if (tokensToVerify.length === 0) return;
+
+        const verifyInvoicesAsync = async () => {
+            setVerifyingInvoices(true);
+            const { getInvoices } = await import('../../../services/invoiceService');
+
+            const newVerifications = new Map<string, { exists: boolean, customerId?: string, customerName?: string }>();
+            const CONCURRENCY = 5;
+            for (let i = 0; i < tokensToVerify.length; i += CONCURRENCY) {
+                const chunk = tokensToVerify.slice(i, i + CONCURRENCY);
+                await Promise.all(chunk.map(async (token) => {
+                    try {
+                        const res = await getInvoices({ search: token, limit: 10 });
+                        const matchedInvoice = res.data?.find((inv: any) => {
+                            const dbNum = (inv.invoiceNumber || '').trim().toLowerCase();
+                            const queryNum = token.trim().toLowerCase();
+                            return dbNum === queryNum || dbNum.includes(queryNum) || queryNum.includes(dbNum);
+                        });
+
+                        if (matchedInvoice) {
+                            const custId = matchedInvoice.customer?._id || matchedInvoice.customer;
+                            newVerifications.set(token.toLowerCase(), {
+                                exists: true,
+                                customerId: custId?.toString(),
+                                customerName: matchedInvoice.customer?.name
+                            });
+                        } else {
+                            newVerifications.set(token.toLowerCase(), { exists: false });
+                        }
+                    } catch (err) {
+                        console.error(`Error verifying invoice ${token}:`, err);
+                        newVerifications.set(token.toLowerCase(), { exists: false });
+                    }
+                }));
+            }
+
+            setVerifiedInvoices(prev => {
+                const updated = new Map(prev);
+                newVerifications.forEach((val, key) => {
+                    updated.set(key, val);
+                });
+                return updated;
+            });
+            setVerifyingInvoices(false);
+        };
+
+        verifyInvoicesAsync();
+    }, [parsedRows]);
 
     useEffect(() => {
-        if (parsedRows.length > 0 && availableCustomerNames.size > 0) {
+        if (parsedRows.length > 0) {
             setParsedRows(prev => prev.map(row => ({
                 ...row,
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableCustomerNames, availableCustomerIds, validateRow]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -566,6 +639,12 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
                                     <span className="text-dim">Total Rows: <strong className="text-main">{parsedRows.length}</strong></span>
                                     <span className="text-green-500">Valid Rows: {validRowsCount}</span>
                                     {errorRowsCount > 0 && <span className="text-red-500">Errors: {errorRowsCount}</span>}
+                                    {verifyingInvoices && (
+                                        <span className="text-blue-500 flex items-center gap-1.5 animate-pulse">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            Verifying invoice numbers...
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -667,7 +746,37 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
                                                         <td className="p-3 text-main font-bold">{cName || <span className="text-red-500 font-bold">Missing</span>}</td>
                                                         <td className="p-3 text-main">{cnDate || <span className="text-red-500">Missing</span>}</td>
                                                         <td className="p-3 text-main font-bold">${cnAmount || 0}</td>
-                                                        <td className="p-3 text-main font-semibold">{appliedInvoices || <span className="text-dim/60">General Open Pool</span>}</td>
+                                                         <td className="p-3 text-main font-semibold">
+                                                             {appliedInvoices ? (
+                                                                 <div className="flex flex-wrap gap-1 max-w-[250px]">
+                                                                     {appliedInvoices.toString().split(',').map((s: string) => s.trim()).filter(Boolean).map((token: string, tIdx: number) => {
+                                                                         const cached = verifiedInvoices.get(token.toLowerCase());
+                                                                         if (cached) {
+                                                                             if (cached.exists) {
+                                                                                 return (
+                                                                                     <span key={tIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/25">
+                                                                                         {token}
+                                                                                     </span>
+                                                                                 );
+                                                                             } else {
+                                                                                 return (
+                                                                                     <span key={tIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20" title="Not found in database - will remain as fallback text notes">
+                                                                                         {token}
+                                                                                     </span>
+                                                                                 );
+                                                                             }
+                                                                         }
+                                                                         return (
+                                                                             <span key={tIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/5 text-blue-400 border border-blue-500/10 animate-pulse">
+                                                                                 {token}
+                                                                             </span>
+                                                                        );
+                                                                     })}
+                                                                 </div>
+                                                             ) : (
+                                                                 <span className="text-dim/60">General Open Pool</span>
+                                                             )}
+                                                         </td>
                                                         <td className="p-3">
                                                             {hasErrors ? (
                                                                 <div className="space-y-1">
