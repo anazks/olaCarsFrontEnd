@@ -104,11 +104,11 @@ const FinancialAdminSidebar = ({
       subItems: [
         {
           label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
-          path: "/admin/financial-admin/dashboard-hub",
+          path: "/admin/financial-admin",
         },
         {
           label: t("sidebar.items.executiveDashboard"),
-          path: "/admin/financial-admin",
+          path: "/admin/financial-admin/financial-dashboard",
         },
         {
           label: t("sidebar.items.collectionsDashboard"),
@@ -403,7 +403,12 @@ const FinancialAdminSidebar = ({
       id: "gps",
       label: t("sidebar.sections.gps"),
       icon: <Crosshair size={22} />,
-      subItems: [],
+      subItems: [
+        {
+          label: t("sidebar.items.gpsVehicles", "Connected Vehicles"),
+          path: "/admin/financial-admin/gps-vehicles",
+        }
+      ],
     },
     {
       id: "alerts",

@@ -8,7 +8,6 @@ import {
     FileText,
     Receipt,
     User,
-    Upload,
     FileSpreadsheet,
     Info
 } from 'lucide-react';

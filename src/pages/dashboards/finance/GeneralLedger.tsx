@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye } from 'lucide-react';
-import { getLedgerEntries } from '../../../services/ledgerService';
+import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye, Trash2 } from 'lucide-react';
+import { getLedgerEntries, deleteLedgerJournal } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
@@ -29,9 +29,34 @@ const GeneralLedger = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
     const userRole = getUserRole() || '';
     const canCreateEntry = ['admin', 'financeadmin', 'financestaff'].includes(userRole.toLowerCase());
+    const isAdmin = userRole.toLowerCase() === 'admin';
+
+    const handleDeleteEntry = async (entry: LedgerEntry, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const confirmed = window.confirm(
+            `Delete this journal entry and ALL its related ledger lines?\n\nDescription: ${entry.description}\n\nThis cannot be undone.`
+        );
+        if (!confirmed) return;
+        setDeletingEntryId(entry._id);
+        try {
+            const result = await deleteLedgerJournal(entry._id);
+            // Remove all entries with the same manualJournal from local state
+            setEntries(prev => prev.filter(e => e._id !== entry._id));
+            // Re-fetch to ensure clean state
+            fetchData();
+            const { toast } = await import('react-hot-toast');
+            toast.success(result.message || 'Journal deleted successfully');
+        } catch (err: any) {
+            const { toast } = await import('react-hot-toast');
+            toast.error(err?.response?.data?.message || 'Failed to delete journal');
+        } finally {
+            setDeletingEntryId(null);
+        }
+    };
 
     const getThisMonthStart = () => {
         const now = new Date();
@@ -504,14 +529,26 @@ const GeneralLedger = () => {
                                                 ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                                <button 
-                                                    onClick={() => navigate(`./${entry._id}`)}
-                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-brand-lime/10 text-[var(--brand-lime)] border border-transparent hover:border-brand-lime/20 cursor-pointer"
-                                                    style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
-                                                    title="View Details"
-                                                >
-                                                    <Eye size={14} strokeWidth={2.5} />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => navigate(`./${entry._id}`)}
+                                                        className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-brand-lime/10 text-[var(--brand-lime)] border border-transparent hover:border-brand-lime/20 cursor-pointer"
+                                                        style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={(e) => handleDeleteEntry(entry, e)}
+                                                            disabled={deletingEntryId === entry._id}
+                                                            className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-red-500/10 text-red-400 border border-transparent hover:border-red-500/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            title="Delete journal entry"
+                                                        >
+                                                            <Trash2 size={14} strokeWidth={2.5} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );

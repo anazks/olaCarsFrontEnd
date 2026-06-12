@@ -100,9 +100,9 @@ const ExecutiveSidebar = ({
       subItems: [
         {
           label: t("sidebar.items.dashboardHub", "Dashboard Hub"),
-          path: "/admin/admin/dashboard-hub",
+          path: "/admin/admin",
         },
-        { label: t("sidebar.items.executiveDashboard"), path: "/admin/admin" },
+        { label: t("sidebar.items.executiveDashboard"), path: "/admin/admin/executive-dashboard" },
         {
           label: t("sidebar.items.collectionsDashboard"),
           path: "/admin/admin/collections/dashboard",

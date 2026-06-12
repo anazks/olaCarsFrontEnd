@@ -173,8 +173,8 @@ const BulkCreditNoteUpload = ({ isOpen, onClose, onSuccess }: BulkCreditNoteUplo
             getAllCustomers({ limit: 100000 })
                 .then(res => {
                     const list = Array.isArray(res.data) ? res.data : [];
-                    const names = new Set(list.map(c => c.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
-                    const ids = new Set(list.map(c => c.customerId?.toLowerCase().trim()).filter((id): id is string => !!id));
+                    const names = new Set<string>(list.map((c: any) => c.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n: any): n is string => !!n));
+                    const ids = new Set<string>(list.map((c: any) => c.customerId?.toLowerCase().trim()).filter((id: any): id is string => !!id));
                     setAvailableCustomerNames(names);
                     setAvailableCustomerIds(ids);
                     console.log(`[BulkCreditNoteUpload] Loaded ${names.size} customers for verification.`);

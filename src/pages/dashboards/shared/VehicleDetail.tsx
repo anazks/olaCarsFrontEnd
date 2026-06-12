@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Zap, Wrench, Clock, Send, Edit2, Save, Download
+    Zap, Wrench, Clock, Send, Edit2, Save, Download, Gauge, Battery, Navigation
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
@@ -22,6 +22,9 @@ import type { Alert } from '../../../services/alertService';
 import { updateMaintenanceSettings } from '../../../services/vehicleService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { downloadFile } from '../../../utils/fileDownloader';
+import { getGpsVehiclesList, getGpsLocationsList, findGpsDeviceByVehicle, getDeviceLiveStreamingUrl } from '../../../services/gpsService';
+import type { GpsVehicle, GpsLocation } from '../../../services/gpsService';
+import toast from 'react-hot-toast';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const PIPELINE: VehicleStatus[] = [
@@ -120,6 +123,12 @@ const VehicleDetail = () => {
     const [isEditingOverview, setIsEditingOverview] = useState(false);
     const [isEditingDocs, setIsEditingDocs] = useState(false);
     const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
+
+    // ── Live GPS Telemetry ──────────────────────────────────────────────────
+    const [gpsDevice, setGpsDevice] = useState<GpsVehicle | null>(null);
+    const [gpsLocation, setGpsLocation] = useState<GpsLocation | null>(null);
+    const [gpsLoading, setGpsLoading] = useState(false);
+    const [liveStreamLoading, setLiveStreamLoading] = useState(false);
 
     const handleEditOverview = async () => {
         if (!id || !vehicle) return;
@@ -309,8 +318,50 @@ const VehicleDetail = () => {
         fetchAlerts();
     }, [fetchVehicle, fetchEligibleInsurances, fetchVehiclePolicies, fetchAlerts]);
 
+    // ── Fetch live GPS data from Tracksolid after vehicle loads ──────────────
+    useEffect(() => {
+        if (!vehicle) return;
+        const vin = vehicle.basicDetails?.vin;
+        const plate = vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber;
+        if (!vin && !plate) return;
+
+        setGpsLoading(true);
+        getGpsVehiclesList()
+            .then(gpsVehicles => {
+                const device = findGpsDeviceByVehicle(gpsVehicles, vin, plate);
+                setGpsDevice(device || null);
+                if (device) {
+                    return getGpsLocationsList(device.imei).then(locs => {
+                        setGpsLocation(locs && locs.length > 0 ? locs[0] : null);
+                    });
+                }
+            })
+            .catch(err => {
+                console.warn('[VehicleDetail GPS] Failed to load GPS telemetry:', err);
+            })
+            .finally(() => setGpsLoading(false));
+    }, [vehicle?._id]);
+
     const getStatusTranslation = (status: string) => {
         return t(`management.vehicles.statusLabels.${status}`, status);
+    };
+
+    const handleOpenLiveStream = async () => {
+        if (!gpsDevice?.imei) return;
+        setLiveStreamLoading(true);
+        try {
+            const url = await getDeviceLiveStreamingUrl(gpsDevice.imei);
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } else {
+                toast.error('No live stream URL returned for this device.');
+            }
+        } catch (error) {
+            console.error('[VehicleDetail] Live stream error:', error);
+            toast.error('Failed to open live stream.');
+        } finally {
+            setLiveStreamLoading(false);
+        }
     };
 
     // ── Actions ────────────────────────────────────────────────────────────
@@ -950,6 +1001,12 @@ const VehicleDetail = () => {
                         <div className="flex items-center justify-between mb-2">
                             <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsTracking')} />
                             <div className="flex items-center gap-2">
+                                {gpsLoading && <div className="w-3 h-3 border border-[#C8E600] border-t-transparent rounded-full animate-spin" />}
+                                {gpsDevice && gpsLocation && (
+                                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">
+                                        {gpsDevice.deviceName} • Tracksolid Live
+                                    </span>
+                                )}
                                 <div className={`w-2 h-2 rounded-full ${vehicle.gpsConfiguration?.isActivated ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                                 <span className="text-[10px] font-bold uppercase" style={{ color: vehicle.gpsConfiguration?.isActivated ? '#22c55e' : '#ef4444' }}>
                                     {vehicle.gpsConfiguration?.isActivated ? t('management.vehicles.vehicleDetail.gpsConfiguration') : t('management.common.status.disabled')}
@@ -957,13 +1014,93 @@ const VehicleDetail = () => {
                             </div>
                         </div>
 
-                        {/* Leaflet Map */}
+                        {/* Leaflet Map — passes real GPS data when available */}
                         <VehicleGpsMap
                             vehicleId={vehicle._id || id || 'unknown'}
                             vehicleName={`${vehicle.basicDetails?.make || ''} ${vehicle.basicDetails?.model || ''} ${vehicle.basicDetails?.year || ''}`}
                             isActivated={vehicle.gpsConfiguration?.isActivated}
                             height="320px"
+                            realLocation={gpsLocation ? {
+                                lat: gpsLocation.lat,
+                                lng: gpsLocation.lng,
+                                speed: gpsLocation.speed,
+                                accStatus: gpsLocation.accStatus,
+                                electQuantity: gpsLocation.electQuantity,
+                                locDesc: gpsLocation.locDesc,
+                                gpsTime: gpsLocation.gpsTime,
+                                status: gpsLocation.status
+                            } : undefined}
                         />
+
+                        {/* Live GPS Telemetry Cards — only when device is matched */}
+                        {gpsDevice && gpsLocation && (
+                            <div className="mt-4 p-4 rounded-2xl border space-y-3" style={{ background: 'rgba(200,230,0,0.03)', borderColor: 'rgba(200,230,0,0.15)' }}>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                    <p className="text-[10px] font-black uppercase tracking-wider m-0" style={{ color: '#C8E600' }}>Live Telemetry — {gpsDevice.deviceName}</p>
+                                    <button
+                                        onClick={handleOpenLiveStream}
+                                        disabled={liveStreamLoading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold transition-all hover:bg-[#C8E600]/10 active:scale-95 disabled:opacity-50"
+                                        style={{ borderColor: 'rgba(200,230,0,0.3)', color: '#C8E600', background: 'var(--bg-input)' }}
+                                    >
+                                        <Satellite size={12} />
+                                        {liveStreamLoading ? 'Loading...' : 'View Live Stream'}
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-xl" style={{ background: 'rgba(200,230,0,0.1)' }}>
+                                            <Gauge size={16} style={{ color: '#C8E600' }} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Live Speed</p>
+                                            <p className="text-sm font-black" style={{ color: 'var(--text-main)' }}>{gpsLocation.speed} km/h</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-xl" style={{ background: gpsLocation.accStatus === 1 ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)' }}>
+                                            <Zap size={16} style={{ color: gpsLocation.accStatus === 1 ? '#22c55e' : '#888' }} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Ignition (ACC)</p>
+                                            <p className="text-sm font-black" style={{ color: gpsLocation.accStatus === 1 ? '#22c55e' : 'var(--text-dim)' }}>
+                                                {gpsLocation.accStatus === 1 ? 'ON' : 'OFF'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                            <Battery size={16} style={{ color: (gpsLocation.electQuantity ?? 100) > 25 ? '#22c55e' : '#ef4444' }} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Device Battery</p>
+                                            <p className="text-sm font-black" style={{ color: 'var(--text-main)' }}>{gpsLocation.electQuantity ?? '—'}%</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                            <Navigation size={16} style={{ color: '#C8E600' }} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Location</p>
+                                            <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                                {gpsLocation.locDesc || `${gpsLocation.lat.toFixed(4)}°, ${gpsLocation.lng.toFixed(4)}°`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* IMEI info row */}
+                                <div className="flex flex-wrap items-center gap-3 pt-2 border-t text-[10px] font-semibold" style={{ borderColor: 'rgba(200,230,0,0.1)', color: 'var(--text-dim)' }}>
+                                    <span>IMEI: <span className="font-mono" style={{ color: 'var(--text-main)' }}>{gpsDevice.imei}</span></span>
+                                    <span>•</span>
+                                    <span>SIM: <span style={{ color: 'var(--text-main)' }}>{gpsDevice.sim}</span></span>
+                                    <span>•</span>
+                                    <span>Status: <span style={{ color: gpsLocation.status === 1 ? '#22c55e' : '#f97316' }}>{gpsLocation.status === 1 ? 'Online' : 'Offline'}</span></span>
+                                    <span>•</span>
+                                    <span>Updated: <span style={{ color: 'var(--text-main)' }}>{gpsLocation.gpsTime ? gpsLocation.gpsTime.split(' ')[1] || gpsLocation.gpsTime : 'N/A'} UTC</span></span>
+                                </div>
+                            </div>
+                        )}
 
                         {/* GPS Config Details */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t" style={{ borderColor: 'var(--border-main)' }}>

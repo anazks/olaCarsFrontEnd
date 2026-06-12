@@ -186,3 +186,11 @@ export const bulkImportLedgerRows = async (rows: any[]): Promise<any> => {
     return response.data;
 };
 
+/**
+ * Delete a ledger entry and its entire parent journal (all double-entry partners).
+ * ADMIN only.
+ */
+export const deleteLedgerJournal = async (entryId: string): Promise<any> => {
+    const response = await api.delete(`/api/ledger/${entryId}`);
+    return response.data;
+};

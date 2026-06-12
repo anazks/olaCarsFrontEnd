@@ -136,11 +136,11 @@ const ManageSuppliers = () => {
         const isPredefined = CATEGORIES.includes(supplier.category);
 
         setFormData({
-            name: supplier.name,
-            contactPerson: supplier.contactPerson,
-            email: supplier.email,
+            name: supplier.name || '',
+            contactPerson: supplier.contactPerson || '',
+            email: supplier.email || '',
             phone: supplier.phone || '',
-            address: supplier.address,
+            address: supplier.address || '',
             category: isPredefined ? supplier.category : t('management.suppliers.categories.Other'),
             customCategory: isPredefined ? '' : supplier.category,
             isActive: supplier.isActive
