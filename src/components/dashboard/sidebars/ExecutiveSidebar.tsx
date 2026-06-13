@@ -264,7 +264,7 @@ const ExecutiveSidebar = ({
         { label: t("sidebar.items.bills"), path: "/admin/admin/bills" },
         {
           label: t("sidebar.items.paymentsMade"),
-          path: "/admin/admin/payments-made",
+          path: "/admin/admin/vendor-payment",
         },
       ],
     },

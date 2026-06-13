@@ -391,13 +391,13 @@ const PurchaseOrderDetail = () => {
                                 <div>
                                     <span className="text-[10px] text-muted block uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Original Amount</span>
                                     <span className="text-lg font-bold text-main" style={{ color: 'var(--text-main)' }}>
-                                        ${(po.status === 'APPROVED' && po.originalTotalAmount !== undefined && po.originalTotalAmount !== null ? po.originalTotalAmount : po.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${(po.status === 'APPROVED' && po.originalTotalAmount !== undefined && po.originalTotalAmount !== null ? po.originalTotalAmount : (po.totalAmount ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div>
                                     <span className="text-[10px] block uppercase font-bold mb-1" style={{ color: '#C8E600' }}>Proposed Merchandiser Amount</span>
                                     <span className="text-xl font-black text-[#C8E600]">
-                                        ${(po.status === 'APPROVED' ? po.totalAmount : po.merchandiserTotalAmount ?? po.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${(po.status === 'APPROVED' ? (po.totalAmount ?? 0) : (po.merchandiserTotalAmount ?? po.totalAmount ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                             </div>
@@ -517,7 +517,7 @@ const PurchaseOrderDetail = () => {
                                 <tr className="bg-white/5">
                                     <td colSpan={po.merchandiserTotalAmount !== undefined && po.merchandiserTotalAmount !== null ? 4 : 3} className="px-6 py-6 text-right font-bold" style={{ color: 'var(--text-dim)' }}>Total Amount</td>
                                     <td className="px-6 py-6 text-right text-2xl font-black text-[#C8E600]">
-                                        ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ${(po.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
                                 </tr>
                             </tbody>
@@ -542,7 +542,7 @@ const PurchaseOrderDetail = () => {
                                 {isFinanceApproval
                                     ? 'Requires Admin or Financial Admin approval for the proposed merchandiser amount.'
                                     : po.totalAmount > poThreshold
-                                        ? `This order exceeds the $${poThreshold.toLocaleString()} threshold and requires a Super Admin (Level 5) to approve.`
+                                        ? `This order exceeds the $${(poThreshold ?? 0).toLocaleString()} threshold and requires a Super Admin (Level 5) to approve.`
                                         : `Requires approval from a role higher than ${po.creatorRole} (Level ${creatorLevel}+).`}
                             </p>
                             {!canApprove && (po.status === 'WAITING' || po.status === 'PENDING_FINANCE_APPROVAL') && (

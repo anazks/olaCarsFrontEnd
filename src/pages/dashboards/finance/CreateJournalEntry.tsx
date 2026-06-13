@@ -399,9 +399,29 @@ const CreateJournalEntry = ({ onClose, onSuccess }: { onClose: () => void; onSuc
         setSubmitting(true);
         setError(null);
         try {
+            const sanitizedLines = lines.map(line => {
+                const cleaned: any = {
+                    accountingCode: line.accountingCode,
+                    type: line.type,
+                    amount: Number(line.amount || 0),
+                    description: line.description || ''
+                };
+                if ((line as any).contact && (line as any).contact !== '') {
+                    cleaned.contact = (line as any).contact;
+                }
+                if ((line as any).transactionType && (line as any).transactionType !== '') {
+                    cleaned.transactionType = (line as any).transactionType;
+                }
+                if (line.taxInfo && line.taxInfo.taxApplied && line.taxInfo.taxApplied !== '') {
+                    cleaned.taxInfo = {
+                        taxApplied: line.taxInfo.taxApplied
+                    };
+                }
+                return cleaned;
+            });
             await createManualJournal({
                 ...header,
-                lines
+                lines: sanitizedLines
             });
             onSuccess();
             onClose();

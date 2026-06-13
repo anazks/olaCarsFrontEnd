@@ -781,10 +781,26 @@ const CreateJournalPage = () => {
         setSubmitting(true);
         setError(null);
         try {
-            const sanitizedLines = lines.map(line => ({
-                ...line,
-                amount: Number(line.amount || 0)
-            }));
+            const sanitizedLines = lines.map(line => {
+                const cleaned: any = {
+                    accountingCode: line.accountingCode,
+                    type: line.type,
+                    amount: Number(line.amount || 0),
+                    description: line.description || ''
+                };
+                if (line.contact && line.contact !== '') {
+                    cleaned.contact = line.contact;
+                }
+                if (line.transactionType && line.transactionType !== '') {
+                    cleaned.transactionType = line.transactionType;
+                }
+                if (line.taxInfo && line.taxInfo.taxApplied && line.taxInfo.taxApplied !== '') {
+                    cleaned.taxInfo = {
+                        taxApplied: line.taxInfo.taxApplied
+                    };
+                }
+                return cleaned;
+            });
             await createManualJournal({
                 ...header,
                 lines: sanitizedLines

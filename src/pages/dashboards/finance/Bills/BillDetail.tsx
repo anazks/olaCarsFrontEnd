@@ -205,16 +205,43 @@ const BillDetail = () => {
                     <div className="rounded-3xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Summary</h3>
                         <div className="space-y-4">
+                            {bill.isInclusiveTax && bill.taxAmount !== undefined && bill.taxAmount > 0 ? (
+                                <>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span style={{ color: 'var(--text-dim)' }}>Amount (excl. Tax)</span>
+                                        <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                            ${(bill.totalAmount - bill.taxAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span style={{ color: 'var(--text-dim)' }}>
+                                            Tax Amount ({bill.taxPercentage || 0}% {bill.taxId && typeof bill.taxId === 'object' ? bill.taxId.name : ''})
+                                        </span>
+                                        <span className="font-bold text-[#C8E600]">
+                                            ${bill.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm pt-2 border-t border-white/5">
+                                        <span style={{ color: 'var(--text-dim)' }}>Total (incl. Tax)</span>
+                                        <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                            ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex justify-between items-center text-sm">
+                                    <span style={{ color: 'var(--text-dim)' }}>Total Amount</span>
+                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                        ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center text-sm">
-                                <span style={{ color: 'var(--text-dim)' }}>Total Amount</span>
-                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span style={{ color: 'var(--text-dim)' }}>Amount Paid</span>
+                                <span style={{ color: 'var(--text-dim)' }}> Balance Due</span>
                                 <span className="font-bold text-green-500">-${bill.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="pt-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>Balance Due</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>Amount Paid</span>
                                 <span className="text-2xl font-black text-[#C8E600]">${bill.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>

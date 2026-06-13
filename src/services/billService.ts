@@ -27,6 +27,10 @@ export interface Bill {
     amountPaid: number;
     balanceDue: number;
     status: BillStatus;
+    isInclusiveTax?: boolean;
+    taxId?: any;
+    taxPercentage?: number;
+    taxAmount?: number;
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -59,5 +63,10 @@ export const recordBillPayment = async (billId: string, payload: any): Promise<a
 
 export const createBill = async (billData: any): Promise<{ success: boolean; data: Bill }> => {
     const response = await api.post('/api/bills', billData);
+    return response.data;
+};
+
+export const bulkUploadBills = async (payload: { rows: any[] }): Promise<any> => {
+    const response = await api.post('/api/bills/bulk-upload', payload);
     return response.data;
 };
