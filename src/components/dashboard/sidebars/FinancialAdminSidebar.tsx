@@ -255,7 +255,7 @@ const FinancialAdminSidebar = ({
         },
         {
           label: t("sidebar.items.paymentsMade"),
-          path: "/admin/financial-admin/payments-made",
+          path: "/admin/financial-admin/vendor-payment",
         },
       ],
     },

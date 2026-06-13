@@ -221,11 +221,6 @@ const Expenses = () => {
                                 Clear Custom Dates
                             </button>
                         )}
-                        {!search && branchFilter === 'ALL' && !startDate && !endDate && (
-                            <span className="text-[9px] font-bold text-dim italic ml-2 opacity-50">
-                                * Defaulting to last 1 month of expenses for performance. Adjust dates or search to fetch full history.
-                            </span>
-                        )}
                     </div>
                 </div>
 

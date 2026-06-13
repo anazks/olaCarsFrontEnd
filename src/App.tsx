@@ -151,7 +151,8 @@ import CreditNoteDetail from "./pages/dashboards/finance/Sales/CreditNoteDetail"
 // Purchases Pages
 import Expenses from "./pages/dashboards/finance/Purchases/Expenses";
 import ExpenseDetail from "./pages/dashboards/finance/Purchases/ExpenseDetail";
-import PaymentsMade from "./pages/dashboards/finance/Purchases/PaymentsMade";
+import VendorPayment from "./pages/dashboards/finance/Purchases/VendorPayment";
+import VendorPaymentDetail from "./pages/dashboards/finance/Purchases/VendorPaymentDetail";
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -472,7 +473,8 @@ function App() {
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
-              <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="vendor-payment" element={<VendorPayment />} />
+              <Route path="vendor-payment/:id" element={<VendorPaymentDetail />} />
               <Route path="scraps" element={<FinancialAdminScraps />} />
               <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
               <Route path="inventory" element={<InventoryList />} />
@@ -992,7 +994,8 @@ function App() {
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
               <Route path="expenses/:id" element={<ExpenseDetail />} />
-              <Route path="payments-made" element={<PaymentsMade />} />
+              <Route path="vendor-payment" element={<VendorPayment />} />
+              <Route path="vendor-payment/:id" element={<VendorPaymentDetail />} />
               <Route
                 path="payment-requests"
                 element={<FinancialAdminPaymentRequests />}

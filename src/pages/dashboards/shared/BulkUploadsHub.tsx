@@ -13,10 +13,13 @@ import BulkSupplierUpload from './BulkSupplierUpload';
 import BulkCustomerUpload from './BulkCustomerUpload';
 import BulkInventoryUpload from './BulkInventoryUpload';
 import BulkPaymentUpload from './BulkPaymentUpload';
-
 import BulkCreditNoteUpload from './BulkCreditNoteUpload';
+import BulkPurchaseOrderUpload from './BulkPurchaseOrderUpload';
+import BulkBillUpload from './BulkBillUpload';
+import BulkVendorPaymentUpload from './BulkVendorPaymentUpload';
+import BulkExpenseUpload from './BulkExpenseUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -28,7 +31,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -210,6 +213,106 @@ const BulkUploadsHub = () => {
                     '', '', '', 'Alice Vance', 'CUFE-12345-OLA', 'PROT-OLA-99', '2026-06-02'
                 ]
             ];
+        } else if (type === 'purchase-order') {
+            fileName = 'purchase_orders_bulk_template.csv';
+            headers = [
+                'Purchase Order ID', 'Purchase Order Date', 'Location ID', 'Location Name', 'Delivery Date',
+                'Purchase Order Number', 'Reference#', 'Purchase Order Status', 'Vendor Name', 'Vendor Number',
+                'Is Inclusive Tax', 'Currency Code', 'Exchange Rate', 'Template Name', 'Reference No',
+                'Account', 'Account Code', 'Item Price', 'Item Name', 'Product ID', 'Item Desc',
+                'QuantityOrdered', 'QuantityCancelled', 'QuantityReceived', 'QuantityBilled', 'Usage unit',
+                'Line Item Location Name', 'Discount Type', 'Is Discount Before Tax', 'Discount', 'Discount Amount',
+                'Tax ID', 'Item Tax', 'Item Tax %', 'Item Tax Amount', 'Item Tax Type', 'Item Total', 'Total',
+                'Adjustment', 'Adjustment Description', 'Entity Discount Percent', 'Entity Discount Amount',
+                'Payment Terms', 'Payment Terms Label', 'Attention', 'Country'
+            ];
+            rows = [
+                [
+                    'PO-ZOHO-001', '2026-06-12', '', 'Downtown Branch', '',
+                    'PO-000101', 'REF-12345', 'Approved', 'Acme Car Parts', 'VEND-001',
+                    'FALSE', 'USD', '1', 'Standard Template', '',
+                    'Cost of Goods Sold', '5000', '45.00', 'Synthetic Engine Oil 5W-30', 'PROD-001', 'High performance synthetic oil',
+                    '10', '0', '0', '0', 'liters',
+                    'Downtown Branch', '', 'FALSE', '0', '0',
+                    '', '', '0', '0', 'Taxable', '450.00', '450.00',
+                    '0', '', '0', '0',
+                    'Net 30', '30 Days', 'Accounts Payable', 'Panama'
+                ],
+                [
+                    'PO-ZOHO-001', '2026-06-12', '', 'Downtown Branch', '',
+                    'PO-000101', 'REF-12345', 'Approved', 'Acme Car Parts', 'VEND-001',
+                    'FALSE', 'USD', '1', 'Standard Template', '',
+                    'Cost of Goods Sold', '5000', '12.50', 'Premium Oil Filter', 'PROD-002', 'OEM specification oil filter',
+                    '10', '0', '0', '0', 'pieces',
+                    'Downtown Branch', '', 'FALSE', '0', '0',
+                    '', '', '0', '0', 'Taxable', '125.00', '125.00',
+                    '0', '', '0', '0',
+                    'Net 30', '30 Days', 'Accounts Payable', 'Panama'
+                ]
+            ];
+        } else if (type === 'bill') {
+            fileName = 'bills_bulk_template.csv';
+            headers = [
+                'Bill Date', 'Due Date', 'Bill ID', 'Accounts Payable', 'Vendor Name', 'Vendor Number',
+                'Entity Discount Percent', 'Payment Terms', 'Payment Terms Label', 'Bill Number', 'PurchaseOrder',
+                'Currency Code', 'Exchange Rate', 'SubTotal', 'Total', 'Balance', 'TotalRetentionAmountFCY',
+                'TotalRetentionAmountBCY', 'Adjustment', 'Adjustment Description', 'Adjustment Account', 'Bill Type',
+                'Branch ID', 'Branch Name', 'Location Name', 'Is Inclusive Tax', 'Bill Status', 'Created By',
+                'Account', 'Account Code', 'Description', 'Quantity', 'Usage unit', 'Tax Amount', 'Item Total',
+                'Is Billable', 'Line Item Location Name', 'Rate', 'Discount Type', 'Is Discount Before Tax',
+                'Discount', 'Discount Amount', 'Bill Receive Status', 'Manually Received Quantity', 'Tax ID',
+                'Tax Name', 'Tax Percentage', 'Tax Type', 'Entity Discount Amount', 'Discount Account', 'Is Landed Cost'
+            ];
+            rows = [
+                [
+                    '2026-06-12', '2026-07-12', 'BILL-ZOHO-001', '', 'Acme Car Parts', 'VEND-001',
+                    '', 'Net 30', '30 Days', 'BILL-000101', '',
+                    'USD', '1', '450.00', '450.00', '450.00', '',
+                    '', '', '', '', 'Standard',
+                    '', 'Downtown Branch', 'Downtown Branch', 'FALSE', 'Open', 'Admin',
+                    'Cost of Goods Sold', '5000', 'Synthetic Engine Oil 5W-30', '10', 'liters', '', '450.00',
+                    'TRUE', 'Downtown Branch', '45.00', '', 'FALSE',
+                    '', '', '', '', '',
+                    '', '0', '', '', '', '', ''
+                ]
+            ];
+        } else if (type === 'vendor-payment') {
+            fileName = 'vendor_payments_bulk_template.csv';
+            headers = [
+                'Payment Number', 'Payment Number Prefix', 'Payment Number Suffix', 'VendorPayment ID',
+                'Mode', 'Description', 'Exchange Rate', 'Amount', 'Unused Amount', 'Reference Number',
+                'Currency Code', 'Branch ID', 'Bank Charges', 'Payment Status', 'Date', 'Location Name',
+                'Vendor Name', 'Vendor Number', 'EmailID', 'Paid Through', 'Paid Through Account Code',
+                'Tax Account', 'Bank Reference Number', 'PIPayment ID', 'Bill ID', 'Bill Amount',
+                'Bill Payment Applied Date', 'Bill Date', 'Bill Number', 'Withholding Tax Amount',
+                'Withholding Tax Amount (BCY)'
+            ];
+            rows = [
+                [
+                    'PMT-00001', '', '', '', 'Bank Transfer', 'Monthly supplier payment', '1', '1500.00', '0',
+                    'REF-VP-001', 'USD', '', '0', 'Completed', '2026-06-10', 'Panama Branch',
+                    'Acme Car Parts', 'VEND-001', '', 'Cash Account', '1020',
+                    '', '', '', '', '1500.00', '', '', 'BILL-000101', '', ''
+                ]
+            ];
+        } else if (type === 'expense') {
+            fileName = 'expenses_bulk_template.csv';
+            headers = [
+                'Expense Date', 'Expense Description', 'Expense Account', 'Expense Account Code',
+                'Paid Through', 'Paid Through Account Code', 'Vendor', 'Vendor Number',
+                'Location Name', 'Project Name', 'Entry Number', 'Currency Code',
+                'Exchange Rate', 'Is Inclusive Tax', 'Mileage Rate', 'Mileage Type',
+                'Tax Type', 'Tax Amount', 'Expense Amount', 'Total', 'Is Billable',
+                'Expense Reference ID', 'Is Reimbursable'
+            ];
+            rows = [
+                [
+                    '2026-06-12', 'Office Stationery and Supplies', 'Office Expenses', '6010',
+                    'Petty Cash', '1030', 'Stationery Depot', 'VEND-003', 'Downtown Branch',
+                    'Q2 Office Rebranding', 'EXP-REF-001', 'USD', '1.0', 'FALSE', '', '',
+                    'Standard Tax', '0.00', '150.00', '150.00', 'FALSE', 'REF-EXP-9901', 'FALSE'
+                ]
+            ];
         }
 
         if (format === 'xlsx') {
@@ -257,7 +360,7 @@ const BulkUploadsHub = () => {
                 </div>
                 <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <p className="text-base font-black text-main">8</p>
+                        <p className="text-base font-black text-main">10</p>
                         <p className="text-[8px] font-black uppercase tracking-widest text-dim">Total Modules</p>
                     </div>
                     <div className="px-3 py-1.5 rounded-lg border text-center min-w-24" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -797,6 +900,182 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 10: PURCHASE ORDERS */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(200, 230, 0, 0.1)' }}>
+                                <FileText size={20} className="text-lime-500" style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Purchase Order Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload bulk Purchase Orders. Links vendor profiles, maps accounts and branches, groups multi-row items by PO number, and wraps unmapped fields in descriptions.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('purchase-order', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('purchase-order', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('purchase-order')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* CARD 11: BILLS */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(249, 115, 22, 0.1)' }}>
+                                <FileText size={20} className="text-orange-500" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Bill Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload bulk Bills. Matches supplier profiles, maps accounts and branches, groups multi-row items by bill number, and wraps unmapped fields in bill notes.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('bill', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('bill', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('bill')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* CARD 12: VENDOR PAYMENTS */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)' }}>
+                                <Upload size={20} className="text-yellow-500" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Authorized</span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Vendor Payment Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">Upload batch vendor payments (payments made to suppliers). Matches vendor profiles, resolves bills by number, maps paid-through accounts, and wraps unmapped fields into notes.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleDownloadTemplate('vendor-payment', 'xlsx')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">Excel</button>
+                                <span className="text-dim/30">|</span>
+                                <button onClick={() => handleDownloadTemplate('vendor-payment', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
+                            </div>
+                        </div>
+                        <button onClick={() => setActiveModal('vendor-payment')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
+                    </div>
+                </div>
+
+                {/* CARD 13: EXPENSES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)' }}>
+                                <Upload size={20} className="text-yellow-500" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Authorized</span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Expense Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">Upload batch business expenses. Resolves expense and payment accounts by code/name, references supplier, and automatically dumps unmapped fields into Notes.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleDownloadTemplate('expense', 'xlsx')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">Excel</button>
+                                <span className="text-dim/30">|</span>
+                                <button onClick={() => handleDownloadTemplate('expense', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
+                            </div>
+                        </div>
+                        <button onClick={() => setActiveModal('expense')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -885,6 +1164,30 @@ const BulkUploadsHub = () => {
                 isOpen={activeModal === 'credit-note'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkPurchaseOrderUpload
+                isOpen={activeModal === 'purchase-order'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkBillUpload
+                isOpen={activeModal === 'bill'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkVendorPaymentUpload
+                isOpen={activeModal === 'vendor-payment'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkExpenseUpload
+                isOpen={activeModal === 'expense'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => { setActiveModal(null); }}
             />
         </div>
     );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Coins, Search, Filter, RefreshCw, Calendar, CreditCard, X, FileText,
     ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Plus
@@ -34,7 +35,11 @@ interface PaymentMade {
     createdAt: string;
 }
 
-const PaymentsMade = () => {
+const VendorPayment = () => {
+    const navigate = useNavigate();
+    const isFinancialAdmin = window.location.pathname.includes('/financial-admin');
+    const baseDashboardPath = isFinancialAdmin ? '/admin/financial-admin' : '/admin/admin';
+
     const [payments, setPayments] = useState<PaymentMade[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
@@ -114,7 +119,7 @@ const PaymentsMade = () => {
             <Breadcrumbs 
                 items={[
                     { label: 'Purchases', path: '#' },
-                    { label: 'Payments Made', active: true }
+                    { label: 'Vendor Payment', active: true }
                 ]} 
             />
 
@@ -123,7 +128,7 @@ const PaymentsMade = () => {
                 <div>
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Coins size={20} className="text-brand-lime" />
-                        Payments Made
+                        Vendor Payment
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5">Live disbursements tracker for suppliers and vendor bills</p>
                 </div>
@@ -256,10 +261,9 @@ const PaymentsMade = () => {
                                 payments.map((pmt) => (
                                     <tr 
                                         key={pmt._id} 
-                                        className="transition-colors cursor-pointer group"
+                                        className="transition-colors cursor-pointer group hover:bg-white/[0.02]"
                                         style={{ borderBottom: '1px solid var(--border-main)' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        onClick={() => navigate(`${baseDashboardPath}/vendor-payment/${pmt._id}`)}
                                     >
                                         <td className="p-6">
                                             <span className="font-black text-sm block" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</span>
@@ -277,10 +281,12 @@ const PaymentsMade = () => {
                                         </td>
                                         <td className="p-6 text-xs text-dim">{new Date(pmt.paymentDate).toLocaleDateString()}</td>
                                         <td className="p-6 text-right font-black text-brand-lime">${pmt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-6 text-xs font-semibold flex items-center gap-1.5 mt-4" style={{ color: 'var(--text-main)' }}>
-                                            <CreditCard size={12} className="opacity-40" />
-                                            {pmt.paymentMethod}
-                                        </td>
+                                        <td className="p-6 text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
+                                             <div className="flex items-center gap-1.5">
+                                                 <CreditCard size={12} className="opacity-40" />
+                                                 {pmt.paymentMethod}
+                                             </div>
+                                         </td>
                                         <td className="p-6 text-center">
                                             <span 
                                                 className="text-[9px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider" 
@@ -352,4 +358,4 @@ const PaymentsMade = () => {
     );
 };
 
-export default PaymentsMade;
+export default VendorPayment;

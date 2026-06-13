@@ -184,3 +184,9 @@ export const updatePurchaseOrder = async (id: string, payload: UpdatePurchaseOrd
     const response = await api.put(`/api/purchase-order/${id}`, payload);
     return response.data;
 };
+
+// POST bulk upload purchase orders
+export const bulkUploadPurchaseOrders = async (payload: { rows: any[] }): Promise<any> => {
+    const response = await api.post('/api/purchase-order/bulk-upload', payload);
+    return response.data;
+};
