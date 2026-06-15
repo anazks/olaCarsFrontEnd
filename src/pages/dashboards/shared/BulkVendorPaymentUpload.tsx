@@ -9,6 +9,7 @@ import { getAllSuppliers } from '../../../services/supplierService';
 interface ParsedRow {
     [key: string]: any;
     _rowErrors: string[];
+    _rowWarnings?: string[];
 }
 
 interface BulkVendorPaymentUploadProps {
@@ -415,7 +416,7 @@ const BulkVendorPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkVendorPayme
                                         <tbody className="divide-y" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                                             {parsedRows.map((row, idx) => {
                                                 const hasErrors = row._rowErrors.length > 0;
-                                                const hasWarnings = row._rowWarnings?.length > 0;
+                                                const hasWarnings = (row._rowWarnings?.length || 0) > 0;
                                                 const vendorName = getRowVal(row, ['Vendor Name', 'vendorName']);
                                                 return (
                                                     <tr key={idx} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : hasWarnings ? 'bg-amber-500/[0.03]' : ''}`}>
@@ -439,7 +440,7 @@ const BulkVendorPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkVendorPayme
                                                         <td className="p-3">{hasErrors ? (
                                                             <div className="space-y-1">{row._rowErrors.map((err, i) => (<div key={i} className="flex items-start gap-1 text-[10px] text-red-500 font-bold"><AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /><span>{err}</span></div>))}</div>
                                                         ) : hasWarnings ? (
-                                                            <div className="space-y-1">{row._rowWarnings.map((warn, i) => (<div key={i} className="flex items-start gap-1 text-[10px] text-amber-500 font-bold"><Info className="h-3 w-3 shrink-0 mt-0.5" /><span>{warn}</span></div>))}</div>
+                                                            <div className="space-y-1">{(row._rowWarnings || []).map((warn: string, i: number) => (<div key={i} className="flex items-start gap-1 text-[10px] text-amber-500 font-bold"><Info className="h-3 w-3 shrink-0 mt-0.5" /><span>{warn}</span></div>))}</div>
                                                         ) : (<div className="flex items-center gap-1.5 text-green-500 font-bold text-[10px]"><CheckCircle className="h-3.5 w-3.5" /><span>Ready</span></div>)}</td>
                                                         <td className="p-3 text-center"><button onClick={() => handleRemoveRow(idx)} disabled={uploading} className="p-1 rounded bg-transparent hover:bg-input text-dim hover:text-red-500 transition-colors border-none cursor-pointer disabled:opacity-50" title="Remove"><Trash2 size={14} /></button></td>
                                                     </tr>

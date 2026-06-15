@@ -184,21 +184,6 @@ const BulkPurchaseOrderUpload = ({ isOpen, onClose, onSuccess }: BulkPurchaseOrd
         }
     }, [isOpen]);
 
-    const matchNameFlexibly = (inputName: string, dbNames: Set<string>): boolean => {
-        const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
-        if (!cleanInput) return false;
-        
-        if (dbNames.has(cleanInput)) return true;
-        
-        for (const dbName of dbNames) {
-            const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
-            if (cleanDb === cleanInput || cleanDb.includes(cleanInput) || cleanInput.includes(cleanDb)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         

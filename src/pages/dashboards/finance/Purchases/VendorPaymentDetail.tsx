@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Calendar, FolderOpen,
     ShoppingBag, FileText, Printer,
-    AlertCircle, RefreshCw, Coins, CreditCard
+    AlertCircle, RefreshCw, CreditCard
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';

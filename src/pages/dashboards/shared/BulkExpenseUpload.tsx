@@ -150,7 +150,6 @@ const BulkExpenseUpload = ({ isOpen, onClose, onSuccess }: BulkExpenseUploadProp
     const [loadingSuppliers, setLoadingSuppliers] = useState(false);
     const [availableAccountCodes, setAvailableAccountCodes] = useState<Set<string>>(new Set());
     const [availableAccountNames, setAvailableAccountNames] = useState<Set<string>>(new Set());
-    const [loadingAccounts, setLoadingAccounts] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -164,23 +163,20 @@ const BulkExpenseUpload = ({ isOpen, onClose, onSuccess }: BulkExpenseUploadProp
                 .catch(err => console.error('Failed to load suppliers for validation', err))
                 .finally(() => setLoadingSuppliers(false));
 
-            setLoadingAccounts(true);
             getAllAccountingCodes({ limit: 100000 })
                 .then(res => {
                     const list = Array.isArray(res) ? res : ((res as any).data || []);
-                    const codes = new Set(list.map(a => a.code?.toLowerCase().trim()).filter((c): c is string => !!c));
-                    const names = new Set(list.map(a => a.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
+                    const codes = new Set<string>(list.map((a: any) => a.code?.toLowerCase().trim()).filter((c: any): c is string => !!c));
+                    const names = new Set<string>(list.map((a: any) => a.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n: any): n is string => !!n));
                     setAvailableAccountCodes(codes);
                     setAvailableAccountNames(names);
                 })
-                .catch(err => console.error('Failed to load accounting codes for validation', err))
-                .finally(() => setLoadingAccounts(false));
+                .catch(err => console.error('Failed to load accounting codes for validation', err));
         } else {
             setAvailableSupplierNames(new Set());
             setAvailableAccountCodes(new Set());
             setAvailableAccountNames(new Set());
             setLoadingSuppliers(false);
-            setLoadingAccounts(false);
             setParsedRows([]);
             setFileName('');
             setResult(null);
@@ -390,9 +386,9 @@ const BulkExpenseUpload = ({ isOpen, onClose, onSuccess }: BulkExpenseUploadProp
     };
 
     const handleSubmit = async () => {
-        const updatedRows = parsedRows.map(r => ({
+        const updatedRows: ParsedRow[] = parsedRows.map(r => ({
             ...r,
-            _uploadStatus: (r._rowErrors && r._rowErrors.length > 0) ? 'failed' as const : 'pending' as const,
+            _uploadStatus: (r._rowErrors && r._rowErrors.length > 0) ? 'failed' : 'pending',
             _uploadError: (r._rowErrors && r._rowErrors.length > 0) ? r._rowErrors.join(', ') : ''
         }));
 

@@ -306,6 +306,11 @@ const BillList = () => {
                     </div>
                 )}
             </div>
+            <CreateBillModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => setIsCreateModalOpen(false)} 
+                onSuccess={fetchBills} 
+            />
         </div>
     );
 };
