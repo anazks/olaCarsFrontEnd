@@ -344,7 +344,10 @@ const CreateInvoicePage = () => {
                                         {/* Option to create a new customer inline */}
                                         <button
                                             type="button"
-                                            onMouseDown={() => setIsCustomerModalOpen(true)}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setIsCustomerModalOpen(true);
+                                            }}
                                             className="w-full text-left px-4 py-3 bg-brand-lime/5 hover:bg-brand-lime/10 text-brand-lime font-black text-[10px] uppercase tracking-wider flex items-center gap-2 sticky bottom-0 border-t"
                                             style={{ borderColor: 'var(--border-main)' }}
                                         >
@@ -494,7 +497,8 @@ const CreateInvoicePage = () => {
                                                     {/* Inline part creation */}
                                                     <button
                                                         type="button"
-                                                        onMouseDown={() => {
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
                                                             setPartModalRowIndex(idx);
                                                             setIsItemModalOpen(true);
                                                         }}
