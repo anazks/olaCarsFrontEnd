@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Calendar, FileText, Tag, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, FileText, Tag } from 'lucide-react';
 import { createInvoice, getInvoicesByCustomer } from '../../../services/invoiceService';
-import { getAllCustomers, type Customer, createCustomer, type CreateCustomerPayload } from '../../../services/customerService';
+import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getAllTaxes } from '../../../services/taxService';
 import type { Tax } from '../../../services/taxService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import QuickAddCustomerModal from '../../../components/common/QuickAddCustomerModal';
+import QuickAddInventoryPartModal from '../../../components/common/QuickAddInventoryPartModal';
 
 interface LineItem {
     name: string;
@@ -137,8 +139,8 @@ const CreateInvoicePage = () => {
         }
     }, []);
 
-    useEffect(() => { 
-        fetchCustomers(); 
+    useEffect(() => {
+        fetchCustomers();
         fetchTaxes();
     }, [fetchCustomers, fetchTaxes]);
 
@@ -192,7 +194,7 @@ const CreateInvoicePage = () => {
     });
 
     const taxAmount = Math.round(totalTaxAmount * 100) / 100;
-    const grandTotal = isTaxInclusive 
+    const grandTotal = isTaxInclusive
         ? Math.round(afterDiscount * 100) / 100
         : Math.round((afterDiscount + taxAmount) * 100) / 100;
 
@@ -265,7 +267,7 @@ const CreateInvoicePage = () => {
         <div className="container-responsive space-y-6 pb-12 select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
             {/* Standard Header / Breadcrumbs - matching other registry pages */}
             <Breadcrumbs items={[{ label: 'Invoices', path: '../invoices' }, { label: 'New Invoice', active: true }]} />
-            
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 animate-in fade-in duration-500">
                 <div>
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
@@ -274,9 +276,9 @@ const CreateInvoicePage = () => {
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>Generate a manual invoice statement with itemized tax rates</p>
                 </div>
-                <button 
-                    type="button" 
-                    onClick={() => navigate('../invoices')} 
+                <button
+                    type="button"
+                    onClick={() => navigate('../invoices')}
                     className="px-4 py-2 border rounded-xl text-xs font-bold transition-all duration-300 hover:bg-white/5 active:scale-95 cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 >
@@ -286,7 +288,7 @@ const CreateInvoicePage = () => {
 
             {/* Form Container */}
             <form id="create-manual-invoice-page-form" onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
-                
+
                 {/* 1. General Billing Metadata & Header Card */}
                 <div className="p-6 md:p-8 border rounded-3xl space-y-6 relative overflow-hidden transition-all duration-300 hover:border-white/10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex justify-between items-center pb-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
@@ -361,7 +363,7 @@ const CreateInvoicePage = () => {
                                         </div>
                                         {loadingCustomerBalances && <span className="text-[9px] font-bold uppercase tracking-widest text-dim animate-pulse">Fetching Balances...</span>}
                                     </div>
-                                    
+
                                     {!loadingCustomerBalances && (
                                         <div className="grid grid-cols-2 gap-3 pt-2.5 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                                             <div className="p-3 rounded-xl bg-white/[0.01] border flex flex-col justify-center" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
@@ -429,7 +431,7 @@ const CreateInvoicePage = () => {
                         <div className="divide-y rounded-b-2xl" style={{ borderColor: 'var(--border-main)' }}>
                             {lineItems.map((item, idx) => (
                                 <div key={idx} className={`flex flex-col md:grid md:grid-cols-12 gap-4 md:gap-3 px-5 py-6 md:py-3.5 items-stretch md:items-center hover:bg-white/[0.005] transition-colors relative ${focusedItemIndex === idx ? 'z-[40]' : 'z-[10]'}`}>
-                                    
+
                                     {/* Mobile Floating Delete Button */}
                                     <div className="absolute top-4 right-4 md:hidden">
                                         {lineItems.length > 1 && (
@@ -442,7 +444,7 @@ const CreateInvoicePage = () => {
                                     {/* Item Selector Combobox Search Input */}
                                     <div className="col-span-3 space-y-1.5 relative">
                                         <label className="text-[8px] font-black uppercase tracking-widest text-dim md:hidden" style={{ color: 'var(--text-dim)' }}>Item Details</label>
-                                        
+
                                         <div className="relative">
                                             <input
                                                 type="text"
@@ -588,8 +590,8 @@ const CreateInvoicePage = () => {
                     </div>
 
                     <div className="flex justify-start">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={addItem}
                             className="flex items-center gap-2 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-brand-lime hover:bg-brand-lime/10 border border-brand-lime/20 rounded-xl transition-all active:scale-95 group cursor-pointer"
                         >
@@ -602,11 +604,11 @@ const CreateInvoicePage = () => {
                 {/* 3. Settings & Totals */}
                 <div className="p-6 md:p-8 border rounded-3xl relative overflow-visible transition-all duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
+
                         {/* Settings Form Column */}
                         <div className="space-y-6">
                             <h3 className="text-xs font-black uppercase tracking-widest pb-2.5 border-b" style={{ color: 'var(--text-main)', borderColor: 'rgba(255,255,255,0.05)' }}>Invoice Notes</h3>
-                            
+
                             {/* Internal Notes */}
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase tracking-widest text-dim block" style={{ color: 'var(--text-dim)' }}>
@@ -627,13 +629,13 @@ const CreateInvoicePage = () => {
                         <div className="space-y-6 flex flex-col justify-between">
                             <div className="space-y-4">
                                 <h3 className="text-xs font-black uppercase tracking-widest pb-2.5 border-b" style={{ color: 'var(--text-main)', borderColor: 'rgba(255,255,255,0.05)' }}>Invoice Summary</h3>
-                                
+
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="font-semibold text-dim" style={{ color: 'var(--text-dim)' }}>Subtotal</span>
                                         <span className="font-bold font-mono" style={{ color: 'var(--text-main)' }}>${fmt(subtotal)}</span>
                                     </div>
-                                    
+
                                     {/* Discount Input directly in summary */}
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="font-semibold text-dim" style={{ color: 'var(--text-dim)' }}>Discount ($)</span>
@@ -711,201 +713,56 @@ const CreateInvoicePage = () => {
             </form>
 
             {/* ================= INLINE CREATE CUSTOMER MODAL ================= */}
-            {isCustomerModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg border shadow-2xl overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="p-6 border-b bg-white/[0.01] flex justify-between items-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            <div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-white">Create New Customer</h2>
-                                <p className="text-[10px] font-bold text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>Register a new client profile in the registry</p>
-                            </div>
-                            <button type="button" onClick={() => setIsCustomerModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer text-dim" style={{ color: 'var(--text-dim)' }}><X size={15} /></button>
-                        </div>
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            const formData = new FormData(e.currentTarget);
-                            const name = formData.get('name') as string;
-                            const email = formData.get('email') as string;
-                            const phone = formData.get('phone') as string;
-                            const branch = formData.get('branch') as string;
-                            const address = formData.get('address') as string;
-                            const city = formData.get('city') as string;
+            <QuickAddCustomerModal
+                isOpen={isCustomerModalOpen}
+                onClose={() => setIsCustomerModalOpen(false)}
+                onSuccess={async (newCust) => {
+                    try {
+                        // Refresh customers list
+                        const customerListRes = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
+                        const customersData = customerListRes.data || (customerListRes as any).customers || [];
+                        setCustomers(customersData);
 
-                            if (!name || !branch) {
-                                toast.error('Name and Branch are required');
-                                return;
+                        if (newCust) {
+                            // Find the created customer from the refreshed list to ensure references match
+                            const match = customersData.find((c: any) => c._id === newCust._id || c.name === newCust.name);
+                            if (match) {
+                                setSelectedCustomer(match);
+                            } else {
+                                setSelectedCustomer(newCust);
                             }
-
-                            try {
-                                const payload: CreateCustomerPayload = {
-                                    name: name.trim(),
-                                    email: email.trim() || undefined,
-                                    phone: phone.trim() || undefined,
-                                    branch,
-                                    address: address.trim() || undefined,
-                                    city: city.trim() || undefined,
-                                    status: 'ACTIVE'
-                                };
-                                await createCustomer(payload);
-                                toast.success('Customer profile created!');
-                                setIsCustomerModalOpen(false);
-                                
-                                // Refresh and auto-select
-                                const customerListRes = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
-                                const customersData = customerListRes.data || (customerListRes as any).customers || [];
-                                setCustomers(customersData);
-                                
-                                const newCust = customersData.find((c: any) => c.name === name.trim());
-                                if (newCust) {
-                                    setSelectedCustomer(newCust);
-                                    setCustomerSearch('');
-                                    setShowCustomerList(false);
-                                }
-                            } catch (err: any) {
-                                toast.error(err.response?.data?.message || 'Failed to create customer');
-                            }
-                        }} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Full Name *</label>
-                                    <input type="text" name="name" required placeholder="John Doe" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Branch / Location *</label>
-                                    <select name="branch" required className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="">Select branch...</option>
-                                        {branches.map(b => (
-                                            <option key={b._id} value={b._id}>{b.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Email Address</label>
-                                    <input type="email" name="email" placeholder="john@example.com" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Phone Number</label>
-                                    <input type="text" name="phone" placeholder="+123456789" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Physical Address</label>
-                                    <input type="text" name="address" placeholder="123 Main St" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setIsCustomerModalOpen(false)} className="px-4 py-2 border rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-white/5" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>Cancel</button>
-                                <button type="submit" className="px-5 py-2 bg-brand-lime text-brand-black rounded-xl text-[10px] font-black uppercase tracking-wider">Save Customer</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                        }
+                        setCustomerSearch('');
+                        setShowCustomerList(false);
+                    } catch (err) {
+                        console.error('Failed to refresh customers list after quick add:', err);
+                    }
+                }}
+                branches={branches}
+            />
 
             {/* ================= INLINE CREATE INVENTORY PART MODAL ================= */}
-            {isItemModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="w-full max-w-lg border shadow-2xl overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="p-6 border-b bg-white/[0.01] flex justify-between items-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            <div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-white">Create Inventory Item</h2>
-                                <p className="text-[10px] font-bold text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>Add a new vehicle part or service to the stock registry</p>
-                            </div>
-                            <button type="button" onClick={() => setIsItemModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer text-dim" style={{ color: 'var(--text-dim)' }}><X size={15} /></button>
-                        </div>
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            const formData = new FormData(e.currentTarget);
-                            const partName = formData.get('partName') as string;
-                            const partNumber = formData.get('partNumber') as string;
-                            const category = formData.get('category') as string;
-                            const unitCost = Number(formData.get('unitCost') || 0);
-                            const branchId = formData.get('branchId') as string;
-                            const description = formData.get('description') as string;
+            <QuickAddInventoryPartModal
+                isOpen={isItemModalOpen}
+                onClose={() => setIsItemModalOpen(false)}
+                onSuccess={async (newPart) => {
+                    // Refresh and auto-fill in row
+                    await fetchInventory();
 
-                            if (!partName || !partNumber || !category || !branchId || unitCost <= 0) {
-                                toast.error('Please fill in all required fields and a valid cost');
-                                return;
-                            }
-
-                            try {
-                                const res = await api.post('/api/inventory', {
-                                    partName: partName.trim(),
-                                    partNumber: partNumber.trim().toUpperCase(),
-                                    category,
-                                    unitCost,
-                                    branchId,
-                                    unit: 'piece',
-                                    quantityOnHand: 100, // Default opening stock
-                                    reorderLevel: 5,
-                                    description: description.trim() || undefined
-                                });
-                                toast.success('Inventory part registered successfully!');
-                                setIsItemModalOpen(false);
-                                
-                                // Refresh and auto-fill in row
-                                await fetchInventory();
-                                
-                                if (partModalRowIndex !== null) {
-                                    const newPart = res.data?.data || res.data?.part;
-                                    if (newPart) {
-                                        updateItem(partModalRowIndex, {
-                                            name: newPart.partName,
-                                            description: `Part: ${newPart.partNumber} - Category: ${newPart.category}`,
-                                            unitPrice: String(newPart.unitCost || 0),
-                                            inventoryPart: newPart._id,
-                                            isCustom: false,
-                                            tax: newPart.taxId?._id || newPart.taxId || ''
-                                        });
-                                    }
-                                }
-                            } catch (err: any) {
-                                toast.error(err.response?.data?.message || 'Failed to register part');
-                            }
-                        }} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Part / Item Name *</label>
-                                    <input type="text" name="partName" required placeholder="Brake Pad Front" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Part Number (SKU) *</label>
-                                    <input type="text" name="partNumber" required placeholder="BP-4001" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Category *</label>
-                                    <select name="category" required className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="">Select Category...</option>
-                                        {["Engine", "Transmission", "Brakes", "Suspension", "Electrical", "Body", "Tyres", "Fluids", "Filters", "Belts", "Cooling", "Exhaust", "Interior", "Other"].map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Branch *</label>
-                                    <select name="branchId" required className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="">Select branch...</option>
-                                        {branches.map(b => (
-                                            <option key={b._id} value={b._id}>{b.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Standard Cost / Price ($) *</label>
-                                    <input type="number" step="0.01" required name="unitCost" placeholder="45.00" className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Description</label>
-                                    <input type="text" name="description" placeholder="Specify details, brand, or location..." className="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setIsItemModalOpen(false)} className="px-4 py-2 border rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-white/5" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>Cancel</button>
-                                <button type="submit" className="px-5 py-2 bg-brand-lime text-brand-black rounded-xl text-[10px] font-black uppercase tracking-wider">Create Item</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                    if (partModalRowIndex !== null && newPart) {
+                        updateItem(partModalRowIndex, {
+                            name: newPart.partName,
+                            description: `Part: ${newPart.partNumber} - Category: ${newPart.category}`,
+                            unitPrice: String(newPart.unitCost || 0),
+                            inventoryPart: newPart._id,
+                            isCustom: false,
+                            tax: (newPart.taxId as any)?._id || (newPart.taxId as string) || ''
+                        });
+                    }
+                }}
+                branches={branches}
+                taxes={taxes}
+            />
 
         </div>
     );
