@@ -23,6 +23,7 @@ import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import BulkLedgerUpload from '../shared/BulkLedgerUpload';
 
 const BankAccountLedger = () => {
     const { id } = useParams<{ id: string }>();
@@ -42,6 +43,7 @@ const BankAccountLedger = () => {
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
 
@@ -482,9 +484,46 @@ const BankAccountLedger = () => {
         return [...entries].sort((a, b) => {
             const dateA = new Date(a.entryDate || a.date || 0).getTime();
             const dateB = new Date(b.entryDate || b.date || 0).getTime();
+            if (dateA === dateB) {
+                const idA = String(a._id || '');
+                const idB = String(b._id || '');
+                return sortDirection === 'asc' ? idA.localeCompare(idB) : idB.localeCompare(idA);
+            }
             return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
         });
     }, [entries, sortDirection]);
+
+    const runningBalancesMap = React.useMemo(() => {
+        const map: Record<string, number> = {};
+        if (!account) return map;
+
+        // Sort visible entries chronologically (oldest first) to compute running balances starting from initialBalance
+        const chronological = [...entries].sort((a, b) => {
+            const dateA = new Date(a.entryDate || a.date || 0).getTime();
+            const dateB = new Date(b.entryDate || b.date || 0).getTime();
+            if (dateA === dateB) {
+                return String(a._id || '').localeCompare(String(b._id || ''));
+            }
+            return dateA - dateB;
+        });
+
+        let current = account.initialBalance || 0;
+        chronological.forEach(entry => {
+            if (entry.runningBalance !== undefined && entry.runningBalance !== null) {
+                current = entry.runningBalance;
+            } else {
+                const debit = entry.amount !== undefined 
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                    : (entry.debit || 0);
+                const credit = entry.amount !== undefined 
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+                    : (entry.credit || 0);
+                current = current + debit - credit;
+            }
+            map[entry._id] = current;
+        });
+        return map;
+    }, [entries, account]);
 
     if (loading && !account) {
         return (
@@ -558,6 +597,12 @@ const BankAccountLedger = () => {
                         <Plus size={14} strokeWidth={3} /> Record Payment
                     </button>
                     <button 
+                        onClick={() => setIsBulkUploadOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                    >
+                        <FileSpreadsheet size={14} strokeWidth={3} /> Bulk Re-entry
+                    </button>
+                    <button 
                         onClick={() => setIsImportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                         style={{ backgroundColor: 'var(--brand-lime)' }}
@@ -601,6 +646,7 @@ const BankAccountLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Audit Trace</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Deposits</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Withdrawals</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Running Balance</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -657,6 +703,13 @@ const BankAccountLedger = () => {
                                                         {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </span>
                                                 ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="font-mono text-sm font-bold text-blue-400">
+                                                    {(runningBalancesMap[entry._id] !== undefined) 
+                                                        ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                                        : '-'}
+                                                </span>
                                             </td>
                                         </tr>
                                     );
@@ -1047,6 +1100,15 @@ const BankAccountLedger = () => {
                     </div>
                 </div>
             )}
+
+            <BulkLedgerUpload
+                isOpen={isBulkUploadOpen}
+                onClose={() => setIsBulkUploadOpen(false)}
+                onSuccess={() => {
+                    setIsBulkUploadOpen(false);
+                    fetchData();
+                }}
+            />
         </div>
     );
 };

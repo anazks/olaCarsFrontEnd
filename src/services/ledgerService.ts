@@ -24,6 +24,7 @@ export interface LedgerEntry {
     };
     createdBy?: any;
     creatorRole?: string;
+    runningBalance?: number;
     createdAt?: string;
 }
 

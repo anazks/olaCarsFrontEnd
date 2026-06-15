@@ -18,8 +18,9 @@ import BulkPurchaseOrderUpload from './BulkPurchaseOrderUpload';
 import BulkBillUpload from './BulkBillUpload';
 import BulkVendorPaymentUpload from './BulkVendorPaymentUpload';
 import BulkExpenseUpload from './BulkExpenseUpload';
+import BulkLedgerUpload from './BulkLedgerUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -312,6 +313,16 @@ const BulkUploadsHub = () => {
                     'Q2 Office Rebranding', 'EXP-REF-001', 'USD', '1.0', 'FALSE', '', '',
                     'Standard Tax', '0.00', '150.00', '150.00', 'FALSE', 'REF-EXP-9901', 'FALSE'
                 ]
+            ];
+        } else if (type === 'ledger') {
+            fileName = 'bank_transactions_template.csv';
+            headers = [
+                'Date', 'Description', 'Transaction Details', 'Debit', 'Credit', 'Running Balance', 'Transaction Type', 'Amount'
+            ];
+            rows = [
+                ['2026-06-01', 'Opening Balance', 'System migration opening balance', '50000.00', '0.00', '50000.00', 'DEBIT', '50000.00'],
+                ['2026-06-02', 'Invoice Payment Received', 'INV-002305 from Client Alpha', '1500.00', '0.00', '51500.00', 'DEBIT', '1500.00'],
+                ['2026-06-03', 'Office Utilities Paid', 'Electricity bill payment - SB-88772', '0.00', '320.00', '51180.00', 'CREDIT', '320.00']
             ];
         }
 
@@ -1076,6 +1087,41 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 14: BANK TRANSACTIONS RE-ENTRY */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" style={{ backgroundColor: 'rgba(200, 230, 0, 0.1)' }}>
+                                <Upload size={20} style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Authorized</span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Bank Ledger Transactions</h3>
+                            <p className="text-xs text-dim leading-relaxed">Reset and re-import historical transactions via Excel/CSV for specific bank accounts like Banco General AH 1601.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleDownloadTemplate('ledger', 'xlsx')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">Excel</button>
+                                <span className="text-dim/30">|</span>
+                                <button onClick={() => handleDownloadTemplate('ledger', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
+                            </div>
+                        </div>
+                        <button onClick={() => setActiveModal('ledger')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -1188,6 +1234,12 @@ const BulkUploadsHub = () => {
                 isOpen={activeModal === 'expense'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => { setActiveModal(null); }}
+            />
+
+            <BulkLedgerUpload
+                isOpen={activeModal === 'ledger'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
             />
         </div>
     );
