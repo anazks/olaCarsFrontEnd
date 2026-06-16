@@ -17,7 +17,6 @@ import {
     RefreshCw
 } from 'lucide-react';
 import * as billService from '../../../../services/billService';
-import type { Bill } from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
 import type { RootState } from '../../../../store';

@@ -24,6 +24,7 @@ import { getStaffPerformance } from '../../services/staffPerformanceService';
 import { getAllBranches } from '../../services/branchService';
 import alertService from '../../services/alertService';
 import { getTasks } from '../../services/taskService';
+import { getInvoicesRegistry } from '../../services/invoiceService';
 
 const COLORS = {
     green: '#22c55e', blue: '#3b82f6', red: '#ef4444',
@@ -96,14 +97,15 @@ const ExecutiveDashboard = () => {
             baseFilters.startDate = globalStartDate;
             baseFilters.endDate = globalEndDate;
 
-            const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes] = await Promise.allSettled([
+            const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
                 getLedgerEntries({ limit: 10000, ...baseFilters }),
                 getAllDrivers({ limit: 1000, ...baseFilters }),
                 getAllVehicles({ limit: 1000, ...baseFilters }),
                 getAllPurchaseOrders({ limit: 500, ...baseFilters }),
                 getStaffPerformance({ type: 'all', ...baseFilters }),
                 alertService.getActiveAlerts(),
-                getTasks({ limit: 1000, ...baseFilters })
+                getTasks({ limit: 1000, ...baseFilters }),
+                getInvoicesRegistry({ limit: 10000, branch: baseFilters.branch })
             ]);
 
             const aggregated = aggregateExecutiveData(
@@ -114,6 +116,7 @@ const ExecutiveDashboard = () => {
                 staffRes,
                 alertRes,
                 taskRes,
+                invoiceRes,
                 startD,
                 endD,
                 executiveState.kpiData

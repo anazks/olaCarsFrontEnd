@@ -35,6 +35,7 @@ export const aggregateExecutiveData = (
     staffRes: PromiseSettledResult<any>,
     alertRes: PromiseSettledResult<any>,
     taskRes: PromiseSettledResult<any>,
+    invoiceRes: PromiseSettledResult<any>,
     startD: Date,
     endD: Date,
     kpiData: any
@@ -92,33 +93,26 @@ export const aggregateExecutiveData = (
         newKpi.tasks = { overdue, upcoming, assigned };
     }
 
-    if (ledgerRes.status === 'fulfilled') {
-        const ledgerValue = ledgerRes.value;
-        const ledgerData = Array.isArray(ledgerValue)
-            ? ledgerValue
-            : (ledgerValue && Array.isArray(ledgerValue.data) ? ledgerValue.data : []);
-        let periodRev = 0;
+    let periodRev = 0;
+    if (invoiceRes && invoiceRes.status === 'fulfilled') {
+        const invoiceValue = invoiceRes.value;
+        const invoices = Array.isArray(invoiceValue)
+            ? invoiceValue
+            : (invoiceValue && Array.isArray(invoiceValue.data) ? invoiceValue.data : []);
 
-        ledgerData.forEach((entry: any) => {
-            const d = new Date(entry.entryDate || entry.date || entry.createdAt);
-            if (isNaN(d.getTime())) return;
-
-            const cat = entry.accountingCode?.category?.toUpperCase();
-            let amt = entry.amount !== undefined ? entry.amount : (entry.debit || entry.credit || 0);
-            let isDebit = entry.amount !== undefined ? entry.type === 'DEBIT' : ((entry.debit || 0) > 0);
-
-            if (cat === 'INCOME') {
-                const incomeToAdd = isDebit ? -amt : amt;
-
-                // Period revenue
-                if (d >= startD && d <= endD) {
-                    periodRev += incomeToAdd;
+        invoices.forEach((inv: any) => {
+            if (inv.status === 'PAID') {
+                const payDate = new Date(inv.paidAt || inv.updatedAt || inv.createdAt || inv.dueDate);
+                if (!isNaN(payDate.getTime())) {
+                    if (payDate >= startD && payDate <= endD) {
+                        periodRev += inv.totalAmountDue || inv.amountPaid || 0;
+                    }
                 }
             }
         });
-        newKpi.monthlyRevenue = periodRev;
-        newKpi.last12MonthRevenue = periodRev;
     }
+    newKpi.monthlyRevenue = periodRev;
+    newKpi.last12MonthRevenue = periodRev;
 
     if (driverRes.status === 'fulfilled') {
         const drivers = driverRes.value.data || [];
@@ -183,13 +177,13 @@ export const aggregateExecutiveData = (
             : (ledgerValue && Array.isArray(ledgerValue.data) ? ledgerValue.data : []);
 
         // Aggregate category totals
-        let totalIncome = 0;
+        let totalIncome = periodRev;
         let totalExpense = 0;
         let totalAssets = 0;
         let totalLiability = 0;
 
         ledgerData.forEach((entry: any) => {
-            const d = new Date(entry.entryDate || entry.date);
+            const d = new Date(entry.entryDate || entry.date || entry.createdAt);
             if (isNaN(d.getTime())) return;
             if (d < startD || d > endD) return;
 
@@ -198,7 +192,7 @@ export const aggregateExecutiveData = (
             let isDebit = entry.amount !== undefined ? entry.type === 'DEBIT' : ((entry.debit || 0) > 0);
 
             if (cat === 'INCOME') {
-                totalIncome += isDebit ? -amt : amt;
+                // Skip income entries - now calculated from invoices
             } else if (cat === 'EXPENSE') {
                 totalExpense += isDebit ? amt : -amt;
             } else if (cat === 'ASSET') {

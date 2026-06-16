@@ -90,14 +90,15 @@ export const useDashboardPrefetcher = () => {
                             console.error("Prefetcher: Failed to load branches", e);
                         }
 
-                        const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes] = await Promise.allSettled([
+                        const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
                             getLedgerEntries({ limit: 10000, ...baseFilters }),
                             getAllDrivers({ limit: 1000, ...baseFilters }),
                             getAllVehicles({ limit: 1000, ...baseFilters }),
                             getAllPurchaseOrders({ limit: 500, ...baseFilters }),
                             getStaffPerformance({ type: 'all', ...baseFilters }),
                             alertService.getActiveAlerts(),
-                            getTasks({ limit: 1000, ...baseFilters })
+                            getTasks({ limit: 1000, ...baseFilters }),
+                            getInvoices({ limit: 10000, branch: baseFilters.branch })
                         ]);
 
                         const aggregated = aggregateExecutiveData(
@@ -108,6 +109,7 @@ export const useDashboardPrefetcher = () => {
                             staffRes,
                             alertRes,
                             taskRes,
+                            invoiceRes,
                             startD,
                             endD,
                             executiveState.kpiData
