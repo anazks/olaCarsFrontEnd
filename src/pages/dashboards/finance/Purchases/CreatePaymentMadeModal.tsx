@@ -44,11 +44,14 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const [loadingBills, setLoadingBills] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    const [loadingMasters, setLoadingMasters] = useState(false);
+
     // Quick Add Modal States
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
+        setLoadingMasters(true);
         try {
             const [supplierRes, branchRes, codesRes] = await Promise.all([
                 getAllSuppliers({ limit: 300 }),
@@ -62,6 +65,8 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
         } catch (err) {
             console.error('Failed to load transaction master data', err);
             toast.error('Failed to load drop directories.');
+        } finally {
+            setLoadingMasters(false);
         }
     }, []);
 
@@ -247,6 +252,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 placeholder="Select Supplier"
                                 onAddNew={() => setIsAddSupplierOpen(true)}
                                 addNewText="Add New Supplier"
+                                isLoading={loadingMasters}
                             />
                         </div>
 
@@ -282,6 +288,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 onAddNew={() => setIsAddAccountOpen(true)}
                                 addNewText="Add New Account"
                                 required
+                                isLoading={loadingMasters}
                             />
                         </div>
 
@@ -329,6 +336,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 onChange={setSelectedBranch}
                                 placeholder="Select Branch"
                                 required
+                                isLoading={loadingMasters}
                             />
                         </div>
                     </div>
@@ -453,7 +461,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
                             </div>
                             {advanceAmount > 0 && (
                                 <p className="text-[9px] font-semibold text-rose-300 italic opacity-80 text-center leading-relaxed">
-                                    * The leftover ${fmt(advanceAmount)} will book as a Supplier Prepayment advance credit balance in Accounts Payable (2100) to settle future bills.
+                                    * The leftover ${fmt(advanceAmount)} will book as a Supplier Prepayment advance credit balance in Accounts Payable (2.1.01) to settle future bills.
                                 </p>
                             )}
                         </div>

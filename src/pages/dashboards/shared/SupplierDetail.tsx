@@ -535,7 +535,7 @@ const SupplierDetail = () => {
                                         Current Vendor Prepayment Credit Balance: ${fmt(supplierAdvanceBalance)}
                                     </p>
                                     <span className="text-[9px] font-bold text-dim block italic mt-1">
-                                        * This advance balance is stored securely as a debit balance in Accounts Payable (2100) and is available to settle future bills generated from this supplier.
+                                        * This advance balance is stored securely as a debit balance in Accounts Payable (2.1.01) and is available to settle future bills generated from this supplier.
                                     </span>
                                 </div>
                             </div>

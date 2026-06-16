@@ -73,21 +73,14 @@ export const useDashboardPrefetcher = () => {
                         oneMonthAgoDate.setMonth(oneMonthAgoDate.getMonth() - 1);
                         const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
 
-                        const startD = new Date(oneMonthAgoStr);
-                        const endD = new Date(todayStr);
-                        endD.setHours(23, 59, 59, 999);
-                        startD.setHours(0, 0, 0, 0);
-
-                        const twelveMonthsAgo = new Date();
-                        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-                        twelveMonthsAgo.setHours(0, 0, 0, 0);
-
-                        const fetchStartDate = (startD < twelveMonthsAgo) ? startD : twelveMonthsAgo;
+                        const startD = new Date(oneMonthAgoStr + 'T00:00:00.000Z');
+                        const endD = new Date(todayStr + 'T23:59:59.999Z');
 
                         const baseFilters: any = {};
                         baseFilters.sortOrder = 'desc';
                         baseFilters.sortBy = 'createdAt';
-                        baseFilters.startDate = fetchStartDate.toISOString().split('T')[0];
+                        baseFilters.startDate = oneMonthAgoStr;
+                        baseFilters.endDate = todayStr;
 
                         let fetchedBranches: any[] = [];
                         try {

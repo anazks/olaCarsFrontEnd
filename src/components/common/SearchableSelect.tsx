@@ -15,6 +15,7 @@ interface SearchableSelectProps {
     addNewText?: string;
     required?: boolean;
     disabled?: boolean;
+    isLoading?: boolean;
 }
 
 export const SearchableSelect = ({
@@ -25,7 +26,8 @@ export const SearchableSelect = ({
     onAddNew,
     addNewText = 'Add New',
     required = false,
-    disabled = false
+    disabled = false,
+    isLoading = false
 }: SearchableSelectProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -71,7 +73,7 @@ export const SearchableSelect = ({
     }, [isOpen]);
 
     const handleTriggerClick = () => {
-        if (disabled) return;
+        if (disabled || isLoading) return;
         if (!isOpen && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
@@ -98,9 +100,9 @@ export const SearchableSelect = ({
             <button
                 type="button"
                 onClick={handleTriggerClick}
-                disabled={disabled}
+                disabled={disabled || isLoading}
                 className={`w-full px-4 py-3 border rounded-2xl text-sm font-semibold outline-none flex items-center justify-between transition-all select-none ${
-                    disabled
+                    (disabled || isLoading)
                         ? 'opacity-40 cursor-not-allowed'
                         : 'cursor-pointer focus:border-brand-lime hover:border-[#C8E600]/60'
                 }`}
@@ -111,13 +113,17 @@ export const SearchableSelect = ({
                 }}
             >
                 <span className="truncate">
-                    {selectedOption ? selectedOption.label : placeholder}
+                    {isLoading ? 'Loading options...' : (selectedOption ? selectedOption.label : placeholder)}
                 </span>
-                <ChevronDown
-                    size={16}
-                    className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand-lime' : 'text-dim'}`}
-                    style={{ color: isOpen ? 'var(--brand-lime, #C8E600)' : 'var(--text-dim)' }}
-                />
+                {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-brand-lime border-t-transparent rounded-full animate-spin flex-shrink-0" style={{ borderColor: 'var(--brand-lime, #C8E600) transparent var(--brand-lime, #C8E600) var(--brand-lime, #C8E600)' }} />
+                ) : (
+                    <ChevronDown
+                        size={16}
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand-lime' : 'text-dim'}`}
+                        style={{ color: isOpen ? 'var(--brand-lime, #C8E600)' : 'var(--text-dim)' }}
+                    />
+                )}
             </button>
 
             {/* Dropdown Menu */}

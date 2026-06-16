@@ -97,14 +97,10 @@ export const aggregateExecutiveData = (
         const ledgerData = Array.isArray(ledgerValue)
             ? ledgerValue
             : (ledgerValue && Array.isArray(ledgerValue.data) ? ledgerValue.data : []);
-        const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
         let periodRev = 0;
-        let twelveMonthRev = 0;
 
         ledgerData.forEach((entry: any) => {
-            const d = new Date(entry.entryDate || entry.date);
+            const d = new Date(entry.entryDate || entry.date || entry.createdAt);
             if (isNaN(d.getTime())) return;
 
             const cat = entry.accountingCode?.category?.toUpperCase();
@@ -118,15 +114,10 @@ export const aggregateExecutiveData = (
                 if (d >= startD && d <= endD) {
                     periodRev += incomeToAdd;
                 }
-
-                // Last 12 months (ignores date picker)
-                if (d >= twelveMonthsAgo) {
-                    twelveMonthRev += incomeToAdd;
-                }
             }
         });
         newKpi.monthlyRevenue = periodRev;
-        newKpi.last12MonthRevenue = twelveMonthRev;
+        newKpi.last12MonthRevenue = periodRev;
     }
 
     if (driverRes.status === 'fulfilled') {

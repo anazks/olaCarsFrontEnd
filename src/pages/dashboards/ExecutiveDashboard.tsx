@@ -60,6 +60,16 @@ const ExecutiveDashboard = () => {
     const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 
+    const getDynamicRevenueLabel = () => {
+        if (!globalStartDate || !globalEndDate) return "Last 12 Months Revenue";
+        const start = new Date(globalStartDate);
+        const end = new Date(globalEndDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        const months = Math.max(1, Math.round(diffDays / 30));
+        return `Last ${months} ${months === 1 ? 'Month' : 'Months'} Revenue`;
+    };
+
     const fetchData = async (showLoadingSpinner = true) => {
         if (showLoadingSpinner) setLoading(true);
         try {
@@ -76,23 +86,15 @@ const ExecutiveDashboard = () => {
                 }
             }
 
-            const startD = globalStartDate ? new Date(globalStartDate) : new Date(0);
-            const endD = globalEndDate ? new Date(globalEndDate) : new Date();
-            endD.setHours(23, 59, 59, 999);
-            startD.setHours(0, 0, 0, 0);
-
-            const twelveMonthsAgo = new Date();
-            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-            twelveMonthsAgo.setHours(0, 0, 0, 0);
-
-            // Fetch from minimum of twelveMonthsAgo and startD to cover both KPIs
-            const fetchStartDate = (startD < twelveMonthsAgo) ? startD : twelveMonthsAgo;
+            const startD = globalStartDate ? new Date(globalStartDate + 'T00:00:00.000Z') : new Date(0);
+            const endD = globalEndDate ? new Date(globalEndDate + 'T23:59:59.999Z') : new Date();
 
             const baseFilters: any = {};
             if (globalBranch !== 'all') baseFilters.branch = globalBranch;
             baseFilters.sortOrder = globalSort;
             baseFilters.sortBy = 'createdAt';
-            baseFilters.startDate = fetchStartDate.toISOString().split('T')[0];
+            baseFilters.startDate = globalStartDate;
+            baseFilters.endDate = globalEndDate;
 
             const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes] = await Promise.allSettled([
                 getLedgerEntries({ limit: 10000, ...baseFilters }),
@@ -403,7 +405,7 @@ const ExecutiveDashboard = () => {
                                 </div>
                                 <div>
                                     <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.last12MonthRevenue.toLocaleString()}</span>
-                                    <span className="text-sm font-medium block mt-1" style={{ color: 'var(--text-dim)' }}>Last 12 Months Revenue</span>
+                                    <span className="text-sm font-medium block mt-1" style={{ color: 'var(--text-dim)' }}>{getDynamicRevenueLabel()}</span>
                                 </div>
                             </div>
 

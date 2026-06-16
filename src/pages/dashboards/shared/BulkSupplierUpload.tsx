@@ -217,7 +217,6 @@ const BulkSupplierUpload = ({ isOpen, onClose, onSuccess }: BulkSupplierUploadPr
             const defaultAP = activeAccounts.find(acc => 
                 String(acc.category) === 'Accounts Payable' || 
                 acc.name.toLowerCase() === 'accounts payable' || 
-                acc.code === '2100' ||
                 acc.code === '2.1.01'
             );
             if (!defaultAP) {

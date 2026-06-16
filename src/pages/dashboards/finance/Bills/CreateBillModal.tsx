@@ -395,7 +395,7 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                         <span style={{ color: 'var(--text-main)' }}>${fmt(grandTotal)}</span>
                                     </div>
                                     <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                        <span>Credit (Accounts Payable - Liability 2100)</span>
+                                        <span>Credit (Accounts Payable - Liability 2.1.01)</span>
                                         <span className="text-brand-lime">${fmt(grandTotal)}</span>
                                     </div>
                                     <div className="pt-4 border-t mt-2" style={{ borderColor: 'var(--border-main)' }}>

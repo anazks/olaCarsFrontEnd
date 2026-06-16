@@ -104,7 +104,7 @@ const BulkUploadsHub = () => {
                     '2026-06-09 18:00:00', '2026-06-09 18:05:00', 'CON-9901', 'Panama Fleet Supplies S.A.', 'VEND-2026-01',
                     'Panama Fleet Supplies S.A.', 'Panama Fleet Supplies', 'Mr.', 'Carlos', 'Mendoza', 'sales@panamafleet.com',
                     '+50766001122', '+50766001123', 'USD', 'Primary supplier for workshop consumables and parts', 'https://www.panamafleet.com', 'Active', 'Admin',
-                    '1500.00', 'LOC-PAN-01', 'Panama Depot Warehouse', '2100', 'Net 30',
+                    '1500.00', 'LOC-PAN-01', 'Panama Depot Warehouse', '2.1.01', 'Net 30',
                     '30 Days', 'Yes', 'ITBMS 7%', '7', 'Taxable', 'CADDR-8801',
                     'Accounts Payable Dept', 'Avenida Balboa, Torre Las Americas', 'Suite 14B', 'Panama City', 'Panama', 'Panama', '0801', '+50766001122', '+50766001125', 'Receiving Dock',
                     'Calle 50 y Via Brasil', 'Warehouse Section B', 'Panama City', 'Panama', 'Panama', '0801', '+50766001122', '+50766001125', 'Direct Partner', 'CON-9901', 'COMP-OLA-01',
@@ -706,7 +706,7 @@ const BulkUploadsHub = () => {
                         <div className="space-y-1">
                             <h3 className="text-base font-bold text-main">Vendor Bulk Upload</h3>
                             <p className="text-xs text-dim leading-relaxed">
-                                Import active vendors/suppliers directory. Matches accounts payable to your chart of accounts (e.g. Code 2100), parses fleet assignments, and supports tax, location, and address details.
+                                Import active vendors/suppliers directory. Matches accounts payable to your chart of accounts (e.g. Code 2.1.01), parses fleet assignments, and supports tax, location, and address details.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
