@@ -84,7 +84,7 @@ const DriverRentPlan = () => {
     const totalPeriods = rentTracking.length;
 
     return (
-        <div className="min-h-screen p-4 md:p-8 space-y-8 max-w-7xl mx-auto" style={{ background: 'var(--bg-main)' }}>
+        <div className="min-h-screen p-4 md:p-8 space-y-8" style={{ background: 'var(--bg-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Driver Rent Plan', active: true }]} />
 
             {/* Header */}

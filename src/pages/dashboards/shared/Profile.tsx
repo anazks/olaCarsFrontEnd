@@ -74,7 +74,7 @@ const Profile = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Profile', active: true }]} />
 
             {/* Header */}

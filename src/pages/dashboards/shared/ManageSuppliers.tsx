@@ -274,7 +274,7 @@ const ManageSuppliers = () => {
     };
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Manage Suppliers', active: true }]} />
 
             {/* Compact Header */}

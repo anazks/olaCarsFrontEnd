@@ -10,6 +10,8 @@ import type { Expense } from '../../../../services/expenseService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateExpenseModal from './CreateExpenseModal';
+import DateRangeReportModal from '../../shared/DateRangeReportModal';
+import { downloadExcelReport } from '../../../../services/reportingService';
 
 const Expenses = () => {
     const navigate = useNavigate();
@@ -30,10 +32,41 @@ const Expenses = () => {
     const [pagination, setPagination] = useState<any>(null);
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     // Sorting
     const [sortBy, setSortBy] = useState<string>('expenseDate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    const handleDownloadReport = async (start: string, end: string) => {
+        await downloadExcelReport('expenses', {
+            startDate: start,
+            endDate: end,
+            branch: branchFilter !== 'ALL' ? branchFilter : undefined
+        });
+    };
+
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) { end = 4; }
+        if (page >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
+    };
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -122,7 +155,7 @@ const Expenses = () => {
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
-        <div className="container-responsive space-y-6 pb-12">
+        <div className="space-y-6 pb-12">
             <Breadcrumbs 
                 items={[
                     { label: 'Purchases', path: '#' },
@@ -149,6 +182,14 @@ const Expenses = () => {
                             title="Refresh registry"
                         >
                             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        </button>
+
+                        <button
+                            onClick={() => setIsReportModalOpen(true)}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"
+                            style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
+                        >
+                            Download Report
                         </button>
 
                         <button
@@ -371,25 +412,27 @@ const Expenses = () => {
                                 <button
                                     onClick={() => setPage(page - 1)}
                                     disabled={page === 1 || loading}
-                                    className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer"
+                                    className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer bg-transparent"
                                     style={{ borderColor: 'var(--border-main)' }}
                                 >
                                     <ChevronLeft size={18} />
                                 </button>
                                 <div className="flex items-center gap-1">
-                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                        let pageNum: number;
-                                        if (pagination.totalPages <= 5) pageNum = i + 1;
-                                        else if (page <= 3) pageNum = i + 1;
-                                        else if (page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
-                                        else pageNum = page - 2 + i;
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pageNum}
-                                                onClick={() => setPage(pageNum)}
-                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'bg-brand-lime text-black shadow-lg scale-110' : 'text-dim hover:bg-white/5 border border-white/5'}`}
+                                                key={p}
+                                                onClick={() => setPage(Number(p))}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === p ? 'bg-brand-lime text-black shadow-lg scale-110' : 'text-dim hover:bg-white/5 border border-white/5'}`}
                                             >
-                                                {pageNum}
+                                                {p}
                                             </button>
                                         );
                                     })}
@@ -397,7 +440,7 @@ const Expenses = () => {
                                 <button
                                     onClick={() => setPage(page + 1)}
                                     disabled={page === pagination.totalPages || loading}
-                                    className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer"
+                                    className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer bg-transparent"
                                     style={{ borderColor: 'var(--border-main)' }}
                                 >
                                     <ChevronRight size={18} />
@@ -413,6 +456,13 @@ const Expenses = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={fetchData}
+            />
+
+            <DateRangeReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onDownload={handleDownloadReport}
+                title="Operational Expenses Report"
             />
 
         </div>

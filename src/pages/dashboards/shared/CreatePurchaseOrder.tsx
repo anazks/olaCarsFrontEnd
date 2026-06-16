@@ -131,7 +131,7 @@ const CreatePurchaseOrder = () => {
             const hasPrice = (item.unitPrice as any) !== '' && Number(item.unitPrice) > 0;
             const hasDescription = item.description && item.description.trim() !== '';
             const changedQuantity = item.quantity !== 1 && (item.quantity as any) !== '' && item.quantity !== 0;
-            
+
             // If they entered literally anything meaningful, we keep it (and validate it)
             return hasName || hasPrice || hasDescription || changedQuantity;
         });
@@ -178,8 +178,8 @@ const CreatePurchaseOrder = () => {
 
     if (success) {
         return (
-            <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Create Purchase Order', active: true }]} />
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Create Purchase Order', active: true }]} />
 
                 <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                     <Check size={40} />
@@ -191,7 +191,7 @@ const CreatePurchaseOrder = () => {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -292,9 +292,9 @@ const CreatePurchaseOrder = () => {
                                     value={formData.paymentDate}
                                     onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
                                     className="w-full pl-12 pr-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-lime transition-all left-date-picker"
-                                    style={{ 
-                                        background: 'var(--bg-input)', 
-                                        border: '1px solid var(--border-main)', 
+                                    style={{
+                                        background: 'var(--bg-input)',
+                                        border: '1px solid var(--border-main)',
                                         color: 'var(--text-main)',
                                         colorScheme: 'dark'
                                     }}
@@ -363,7 +363,7 @@ const CreatePurchaseOrder = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Accounting Code <span className="text-red-500">*</span></label>
-                                        <SearchableSelect 
+                                        <SearchableSelect
                                             options={accountingCodes.map(code => ({
                                                 value: code._id,
                                                 label: `${code.code} - ${code.name} (${code.category})`
@@ -430,21 +430,21 @@ const CreatePurchaseOrder = () => {
                                                 }}
                                             />
                                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed transition-all hover:border-lime group-hover/upload:bg-lime/5"
-                                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
                                                 <ImageIcon size={14} className="group-hover/upload:text-lime" />
                                                 <span className="text-xs font-bold uppercase tracking-wider group-hover/upload:text-main">Add Images</span>
                                             </div>
                                         </label>
-                                        
+
                                         {item.images && item.images.length > 0 && (
                                             <div className="flex flex-wrap gap-3">
                                                 {item.images.map((file, fileIdx) => (
                                                     <div key={fileIdx} className="relative group">
-                                                        <div className="w-16 h-16 rounded-lg border overflow-hidden transition-all group-hover:scale-105" 
-                                                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                                        <div className="w-16 h-16 rounded-lg border overflow-hidden transition-all group-hover:scale-105"
+                                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                                             {file instanceof File ? (
-                                                                <img 
-                                                                    src={URL.createObjectURL(file)} 
+                                                                <img
+                                                                    src={URL.createObjectURL(file)}
                                                                     alt={file.name}
                                                                     className="w-full h-full object-cover"
                                                                     onLoad={(e) => URL.revokeObjectURL((e.target as any).src)} // Clean up URL

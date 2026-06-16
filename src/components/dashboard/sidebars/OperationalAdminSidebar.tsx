@@ -181,11 +181,6 @@ const OperationalAdminSidebar = ({
           permission: "AGREEMENT_VIEW",
         },
         {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/operational-admin/reports",
-          permission: "REPORTS_VIEW",
-        },
-        {
           label: t("sidebar.items.alertsManagement"),
           path: "/admin/operational-admin/alerts",
         },

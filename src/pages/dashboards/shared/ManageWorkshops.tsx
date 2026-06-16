@@ -253,7 +253,7 @@ const ManageWorkshops = () => {
       className="w-full h-full overflow-y-auto"
       style={{ background: "var(--bg-main)" }}
     >
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6">
         {/* Breadcrumb */}
         <Breadcrumbs
           items={[

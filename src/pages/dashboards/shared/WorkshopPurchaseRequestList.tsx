@@ -120,6 +120,28 @@ const WorkshopPurchaseRequestList = () => {
         return () => clearTimeout(timer);
     }, [fetchRequests, searchQuery]);
 
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3) { end = 4; }
+        if (currentPage >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
+    };
+
     const handlePageChange = (newPage: number) => {
         if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
             setCurrentPage(newPage);
@@ -142,7 +164,7 @@ const WorkshopPurchaseRequestList = () => {
     };
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchases', path: '#' }, { label: 'Purchase Requests', active: true }]} />
 
             {/* Header Section */}
@@ -409,25 +431,25 @@ const WorkshopPurchaseRequestList = () => {
                                 >
                                     <ChevronLeft size={20} className="group-active:-translate-x-1 transition-transform" />
                                 </button>
-
                                 <div className="flex items-center gap-1.5 px-3 py-1 bg-black/20 rounded-2xl border border-white/5">
-                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                        let pageNum = currentPage;
-                                        if (pagination.totalPages <= 5) pageNum = i + 1;
-                                        else if (currentPage <= 3) pageNum = i + 1;
-                                        else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
-                                        else pageNum = currentPage - 2 + i;
-
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all cursor-pointer ${currentPage === pageNum ? 'bg-[#C8E600] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
+                                                key={p}
+                                                onClick={() => handlePageChange(Number(p))}
+                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all cursor-pointer ${currentPage === p ? 'bg-[#C8E600] text-black shadow-lg shadow-lime/20 scale-110' : 'hover:bg-white/5 opacity-50 hover:opacity-100'}`}
                                                 style={{
-                                                    color: currentPage === pageNum ? '#000' : 'var(--text-main)'
+                                                    color: currentPage === p ? '#000' : 'var(--text-main)'
                                                 }}
                                             >
-                                                {pageNum}
+                                                {p}
                                             </button>
                                         );
                                     })}

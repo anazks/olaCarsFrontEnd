@@ -20,6 +20,8 @@ import { toast } from 'react-hot-toast';
 import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions } from '../../../services/bankAccountService';
 import { getLedgerEntries, type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
+import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getInvoicesByCustomer, type Invoice } from '../../../services/invoiceService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -67,6 +69,23 @@ const BankAccountLedger = () => {
     const [paymentDescription, setPaymentDescription] = useState('');
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
+    // Customer Selection States for Rental Income (500031)
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerList, setShowCustomerList] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
+    const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+    const selectedFromAccountObj = otherAccounts.find(acc => acc._id === fromAccountId);
+    const isRentalIncomeSelected = selectedFromAccountObj?.accountCode === '500031';
+
+    const filteredCustomers = customers.filter(c =>
+        c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
+    );
+
     const handleDeleteAllTransactions = async () => {
         if (!id) return;
         const confirmed = window.confirm(
@@ -108,9 +127,44 @@ const BankAccountLedger = () => {
                     setLoadingAccounts(false);
                 }
             };
+            const fetchCustomers = async () => {
+                try {
+                    const res = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
+                    setCustomers(res.data || (res as any).customers || []);
+                } catch (err) {
+                    console.error('Failed to fetch customers', err);
+                }
+            };
             fetchOtherAccounts();
+            fetchCustomers();
         }
     }, [isRecordPaymentModalOpen, id]);
+
+    useEffect(() => {
+        if (selectedCustomer) {
+            const fetchCustomerInvoices = async () => {
+                setLoadingInvoices(true);
+                try {
+                    const invoices = await getInvoicesByCustomer(selectedCustomer._id);
+                    // Filter to keep only PENDING, PARTIAL, OVERDUE invoices
+                    const openInvoices = invoices.filter(inv => 
+                        inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE'
+                    );
+                    setCustomerInvoices(openInvoices);
+                } catch (err) {
+                    console.error('Failed to fetch customer invoices', err);
+                    toast.error('Failed to load invoices for selected customer');
+                } finally {
+                    setLoadingInvoices(false);
+                }
+            };
+            fetchCustomerInvoices();
+        } else {
+            setCustomerInvoices([]);
+            setSelectedInvoiceId('');
+        }
+    }, [selectedCustomer]);
+
     interface ParsedTransaction {
         date: string;
         description: string;
@@ -368,6 +422,13 @@ const BankAccountLedger = () => {
             return;
         }
 
+        const selectedFromAccountObj = otherAccounts.find(acc => acc._id === fromAccountId);
+        const isRentalIncomeSelected = selectedFromAccountObj?.accountCode === '500031';
+        if (isRentalIncomeSelected && !selectedCustomer) {
+            toast.error('Please select a customer for rental income');
+            return;
+        }
+
         setRecording(true);
         try {
             const formData = new FormData();
@@ -380,6 +441,12 @@ const BankAccountLedger = () => {
             if (supportingDocFile) {
                 formData.append('supportingDocument', supportingDocFile);
             }
+            if (isRentalIncomeSelected && selectedCustomer) {
+                formData.append('customerId', selectedCustomer._id);
+                if (selectedInvoiceId) {
+                    formData.append('invoiceId', selectedInvoiceId);
+                }
+            }
 
             const res = await recordManualPayment(id, formData);
             toast.success(res.message || 'Payment recorded successfully');
@@ -390,6 +457,11 @@ const BankAccountLedger = () => {
             setPaymentDescription('');
             setSupportingDocFile(null);
             setFromAccountId('');
+            setCustomerSearch('');
+            setSelectedCustomer(null);
+            setShowCustomerList(false);
+            setSelectedInvoiceId('');
+            setCustomerInvoices([]);
             
             // Reload ledger
             fetchData();
@@ -1007,6 +1079,94 @@ const BankAccountLedger = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Customer selection for Rental Income (500031) */}
+                            {isRentalIncomeSelected && (
+                                <div className="space-y-4">
+                                    <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Select Customer</label>
+                                        <div className="relative">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search customer by name or ID..."
+                                                value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
+                                                onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
+                                                onFocus={() => setShowCustomerList(true)}
+                                                onBlur={() => setTimeout(() => setShowCustomerList(false), 200)}
+                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                                required
+                                            />
+                                            {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
+                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    {filteredCustomers.slice(0, 15).map(c => (
+                                                        <button
+                                                            type="button"
+                                                            key={c._id}
+                                                            onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
+                                                            className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
+                                                                    {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {selectedCustomer && (
+                                            <div className="flex items-center justify-between mt-1 text-xs">
+                                                <span className="text-emerald-400 font-bold">Selected: {selectedCustomer.name} ({selectedCustomer.customerId})</span>
+                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-red-400 hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {selectedCustomer && (
+                                        <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Apply to Invoice (Optional)</label>
+                                            {loadingInvoices ? (
+                                                <div className="text-xs font-bold py-2" style={{ color: 'var(--text-dim)' }}>Loading customer invoices...</div>
+                                            ) : customerInvoices.length === 0 ? (
+                                                <div className="text-xs font-bold py-2 text-amber-500">No open or partial invoices found for this customer.</div>
+                                            ) : (
+                                                <select
+                                                    value={selectedInvoiceId}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setSelectedInvoiceId(val);
+                                                        if (val) {
+                                                            const selectedInv = customerInvoices.find(inv => inv._id === val);
+                                                            if (selectedInv && (!paymentAmount || Number(paymentAmount) === 0)) {
+                                                                setPaymentAmount(String(selectedInv.balance ?? selectedInv.totalAmountDue ?? ''));
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
+                                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                                >
+                                                    <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>-- Select an Invoice --</option>
+                                                    {customerInvoices.map(inv => (
+                                                        <option 
+                                                            key={inv._id} 
+                                                            value={inv._id}
+                                                            style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                                        >
+                                                            {inv.invoiceNumber} ({inv.invoiceType || 'Rental'}) - Due: ${inv.balance?.toFixed(2) || inv.totalAmountDue?.toFixed(2)} [Total: ${inv.totalAmountDue?.toFixed(2)}]
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Row 2: Amount, Currency, Supporting Document */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

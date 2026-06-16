@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-    Receipt, 
-    Search, 
-    Filter, 
-    ChevronLeft, 
-    ChevronRight, 
-    Clock, 
-    CheckCircle, 
+import {
+    Receipt,
+    Search,
+    Filter,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    CheckCircle,
     AlertCircle,
     Calendar,
     ArrowUpRight,
@@ -19,6 +19,8 @@ import {
 import * as billService from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
+import DateRangeReportModal from '../../shared/DateRangeReportModal';
+import { downloadExcelReport } from '../../../../services/reportingService';
 import type { RootState } from '../../../../store';
 import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
@@ -35,6 +37,14 @@ const BillList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+    const handleDownloadReport = async (start: string, end: string) => {
+        await downloadExcelReport('purchase-bills', {
+            startDate: start,
+            endDate: end
+        });
+    };
 
     // Filters states
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -42,7 +52,7 @@ const BillList = () => {
     const [filterYear, setFilterYear] = useState<string>('');
     const [filterFromDate, setFilterFromDate] = useState<string>('');
     const [filterToDate, setFilterToDate] = useState<string>('');
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -121,7 +131,7 @@ const BillList = () => {
     };
 
     const totalPages = Math.ceil(totalRecords / pageSize) || 1;
-    
+
     const startIndex = (currentPage - 1) * pageSize;
     const paginatedBills = reduxBills || [];
 
@@ -131,21 +141,24 @@ const BillList = () => {
         }
     };
 
-    // Calculate up to 5 page numbers to show
     const getPageNumbers = () => {
-        const pagesToShow = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
-        let endPage = startPage + pagesToShow - 1;
-
-        if (endPage > totalPages) {
-            endPage = totalPages;
-            startPage = Math.max(1, endPage - pagesToShow + 1);
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
 
-        const pages = [];
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3) { end = 4; }
+        if (currentPage >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
         return pages;
     };
 
@@ -221,7 +234,7 @@ const BillList = () => {
                 <div className="border rounded-[2rem] p-6 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex justify-between items-center border-b border-white/5 pb-3">
                         <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Bills</h3>
-                        <button 
+                        <button
                             type="button"
                             onClick={() => {
                                 setFilterMonth('');
@@ -321,6 +334,13 @@ const BillList = () => {
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                     </button>
                     <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wide transition-all border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
+                    >
+                        Download Report
+                    </button>
+                    <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all hover:scale-[1.03] active:scale-95 shadow-lg cursor-pointer"
                         style={{ background: '#C8E600', color: '#111', border: 'none' }}
@@ -358,7 +378,7 @@ const BillList = () => {
                         <option value={20}>20 per page</option>
                         <option value={50}>50 per page</option>
                     </select>
-                    <button 
+                    <button
                         onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
                         className={`px-6 py-3 rounded-2xl border flex items-center gap-2 font-bold transition-all hover:bg-white/5 bg-transparent cursor-pointer ${isFilterPanelOpen ? 'bg-white/5 border-brand-lime' : ''}`}
                         style={{ borderColor: isFilterPanelOpen ? '#C8E600' : 'var(--border-main)', color: 'var(--text-main)' }}
@@ -369,8 +389,8 @@ const BillList = () => {
             </div>
 
             {/* Main Table / Loader Container */}
-            <div className="border shadow-lg rounded-[2rem] overflow-hidden" 
-                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="border shadow-lg rounded-[2rem] overflow-hidden"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="py-20 flex flex-col items-center justify-center gap-4">
@@ -402,11 +422,11 @@ const BillList = () => {
                                 {paginatedBills.map((bill, index) => {
                                     const s = statusColors[bill.status] || statusColors.OPEN;
                                     const supplierName = typeof bill.supplier === 'object' && bill.supplier
-                                        ? bill.supplier.name 
+                                        ? bill.supplier.name
                                         : 'Unresolved Supplier';
 
                                     return (
-                                        <tr 
+                                        <tr
                                             key={bill._id}
                                             onClick={() => navigate(`${bill._id}`)}
                                             className="transition-colors cursor-pointer hover:bg-white/[0.02]"
@@ -446,7 +466,7 @@ const BillList = () => {
                                             </td>
                                             <td className="py-4 px-5 text-center">
                                                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border"
-                                                     style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
+                                                    style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
                                                     {s.icon} {bill.status.replace('_', ' ')}
                                                 </div>
                                             </td>
@@ -469,12 +489,12 @@ const BillList = () => {
 
                 {/* Pagination footer */}
                 {!loading && totalRecords > 0 && totalPages > 1 && (
-                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" 
-                         style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors"
+                        style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <p className="text-xs font-bold text-dim">
                             Showing {paginatedBills.length} of {totalRecords} bills
                         </p>
-                        
+
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => handlePageChange(currentPage - 1)}
@@ -484,24 +504,33 @@ const BillList = () => {
                             >
                                 <ChevronLeft size={18} />
                             </button>
-                            
+
                             <div className="flex items-center gap-1">
-                                {getPageNumbers().map((pageNum) => (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => handlePageChange(pageNum)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                        style={{ 
-                                            background: currentPage === pageNum ? '#C8E600' : 'transparent',
-                                            color: currentPage === pageNum ? '#000' : 'var(--text-main)',
-                                            border: currentPage === pageNum ? 'none' : '1px solid var(--border-main)'
-                                        }}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                ))}
+                                {getPageNumbers().map((p, index) => {
+                                    if (p === '...') {
+                                        return (
+                                            <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => handlePageChange(Number(p))}
+                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                            style={{
+                                                background: currentPage === p ? '#C8E600' : 'transparent',
+                                                color: currentPage === p ? '#000' : 'var(--text-main)',
+                                                border: currentPage === p ? 'none' : '1px solid var(--border-main)'
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            
+
                             <button
                                 onClick={() => handlePageChange(currentPage + 1)}
                                 disabled={currentPage === totalPages || loading}
@@ -514,10 +543,16 @@ const BillList = () => {
                     </div>
                 )}
             </div>
-            <CreateBillModal 
-                isOpen={isCreateModalOpen} 
-                onClose={() => setIsCreateModalOpen(false)} 
-                onSuccess={fetchBills} 
+            <CreateBillModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={fetchBills}
+            />
+            <DateRangeReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onDownload={handleDownloadReport}
+                title="Purchase Bills Report"
             />
         </div>
     );

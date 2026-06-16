@@ -7,6 +7,8 @@ import {
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentMadeModal from './CreatePaymentMadeModal';
+import DateRangeReportModal from '../../shared/DateRangeReportModal';
+import { downloadExcelReport } from '../../../../services/reportingService';
 
 interface BillReference {
     billId: string;
@@ -46,6 +48,14 @@ const VendorPayment = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
+    const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+
+    const handleDownloadReport = async (start: string, end: string) => {
+        await downloadExcelReport('vendor-payments', {
+            startDate: start,
+            endDate: end
+        });
+    };
 
     // Pagination
     const [page, setPage] = useState<number>(1);
@@ -80,19 +90,24 @@ const VendorPayment = () => {
     };
 
     const getPageNumbers = () => {
-        const pagesToShow = 5;
-        let startPage = Math.max(1, page - Math.floor(pagesToShow / 2));
-        let endPage = startPage + pagesToShow - 1;
-
-        if (endPage > pagination.pages) {
-            endPage = pagination.pages;
-            startPage = Math.max(1, endPage - pagesToShow + 1);
+        const totalPages = pagination?.pages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
 
-        const pages = [];
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) { end = 4; }
+        if (page >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
         return pages;
     };
 
@@ -132,7 +147,7 @@ const VendorPayment = () => {
     }, [fetchPayments]);
 
     return (
-        <div className="container-responsive space-y-6 pb-12">
+        <div className="space-y-6 pb-12">
             <Breadcrumbs 
                 items={[
                     { label: 'Purchases', path: '#' },
@@ -157,6 +172,13 @@ const VendorPayment = () => {
                         title="Refresh Data"
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
+                    >
+                        Download Report
                     </button>
                     <button 
                             onClick={() => setIsCreateModalOpen(true)} 
@@ -341,20 +363,29 @@ const VendorPayment = () => {
                             </button>
                             
                             <div className="flex items-center gap-1">
-                                {getPageNumbers().map((pageNum) => (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setPage(pageNum)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                        style={{ 
-                                            background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
-                                            color: page === pageNum ? '#000' : 'var(--text-main)',
-                                            border: page === pageNum ? 'none' : '1px solid var(--border-main)'
-                                        }}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                ))}
+                                {getPageNumbers().map((p, index) => {
+                                    if (p === '...') {
+                                        return (
+                                            <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPage(Number(p))}
+                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                            style={{ 
+                                                background: page === p ? 'var(--brand-lime)' : 'transparent',
+                                                color: page === p ? '#000' : 'var(--text-main)',
+                                                border: page === p ? 'none' : '1px solid var(--border-main)'
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
                             </div>
                             
                             <button
@@ -374,6 +405,13 @@ const VendorPayment = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={fetchPayments}
+            />
+
+            <DateRangeReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onDownload={handleDownloadReport}
+                title="Vendor Payments Report"
             />
         </div>
     );

@@ -154,11 +154,6 @@ const BranchManagerSidebar = ({
           permission: "STAFF_PERFORMANCE_VIEW",
         },
         {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/branch-manager/reports",
-          permission: "REPORTS_VIEW",
-        },
-        {
           label: t("sidebar.items.alertsManagement"),
           path: "/admin/branch-manager/alerts",
         },

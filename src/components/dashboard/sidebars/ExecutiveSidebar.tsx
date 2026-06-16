@@ -189,11 +189,6 @@ const ExecutiveSidebar = ({
           permission: "AGREEMENT_VIEW",
         },
         {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/admin/reports",
-          permission: "REPORTS_VIEW",
-        },
-        {
           label: t("sidebar.items.accidentReports"),
           path: "/admin/admin/accident-reports",
           permission: "STAFF_VIEW",
@@ -280,10 +275,6 @@ const ExecutiveSidebar = ({
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/admin/ledger",
-        },
-        {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/admin/reports",
         },
         {
           label: t("sidebar.items.financialStatements"),

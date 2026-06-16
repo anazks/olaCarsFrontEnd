@@ -95,7 +95,7 @@ const EditMerchendiser = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fadeInUp">
+        <div className="space-y-6 animate-fadeInUp">
             <div className="flex items-center gap-4">
                 <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/5 transition-colors border" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                     <ArrowLeft size={20} />

@@ -99,7 +99,7 @@ const EditFinancialAdmin = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fadeInUp">
+        <div className="space-y-6 animate-fadeInUp">
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate(-1)}

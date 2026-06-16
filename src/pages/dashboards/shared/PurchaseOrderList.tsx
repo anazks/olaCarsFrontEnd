@@ -9,6 +9,8 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import { useNavigate } from 'react-router-dom';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import DateRangeReportModal from './DateRangeReportModal';
+import { downloadExcelReport } from '../../../services/reportingService';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
@@ -91,6 +93,15 @@ const PurchaseOrderList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+    const handleDownloadReport = async (start: string, end: string) => {
+        await downloadExcelReport('purchase-orders', {
+            startDate: start,
+            endDate: end,
+            branch: branchFilter !== 'ALL' ? branchFilter : undefined
+        });
+    };
     
     // Pagination State
     const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
@@ -178,6 +189,28 @@ const PurchaseOrderList = () => {
         return () => clearTimeout(timer);
     }, [fetchPOs, searchQuery]);
 
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3) { end = 4; }
+        if (currentPage >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
+    };
+
     const handlePageChange = (newPage: number) => {
         if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
             setCurrentPage(newPage);
@@ -210,7 +243,7 @@ const PurchaseOrderList = () => {
     };
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Orders', active: true }]} />
 
             {/* Compact Header Section */}
@@ -240,6 +273,13 @@ const PurchaseOrderList = () => {
                         }}
                     >
                         <Filter size={14} /> {t('management.common.filters')}
+                    </button>
+                    <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
+                    >
+                        Download Report
                     </button>
                     <HasPermission permission="PURCHASE_ORDER_CREATE">
                         <button
@@ -577,25 +617,26 @@ const PurchaseOrderList = () => {
                             </button>
                             
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                    let pageNum = currentPage;
-                                    if (pagination.totalPages <= 5) pageNum = i + 1;
-                                    else if (currentPage <= 3) pageNum = i + 1;
-                                    else if (currentPage >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
-                                    else pageNum = currentPage - 2 + i;
-                                    
+                                {getPageNumbers().map((p, index) => {
+                                    if (p === '...') {
+                                        return (
+                                            <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                ...
+                                            </span>
+                                        );
+                                    }
                                     return (
                                         <button
-                                            key={pageNum}
-                                            onClick={() => handlePageChange(pageNum)}
-                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                            key={p}
+                                            onClick={() => handlePageChange(Number(p))}
+                                            className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                             style={{ 
-                                                background: currentPage === pageNum ? 'var(--brand-lime)' : 'transparent',
-                                                color: currentPage === pageNum ? '#000' : 'var(--text-main)',
-                                                border: currentPage === pageNum ? 'none' : '1px solid var(--border-main)'
+                                                background: currentPage === p ? 'var(--brand-lime)' : 'transparent',
+                                                color: currentPage === p ? '#000' : 'var(--text-main)',
+                                                border: currentPage === p ? 'none' : '1px solid var(--border-main)'
                                             }}
                                         >
-                                            {pageNum}
+                                            {p}
                                         </button>
                                     );
                                 })}
@@ -613,6 +654,12 @@ const PurchaseOrderList = () => {
                     </div>
                 )}
             </div>
+            <DateRangeReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onDownload={handleDownloadReport}
+                title="Purchase Orders Report"
+            />
         </div>
     );
 };

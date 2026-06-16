@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
-import { 
-    ArrowLeft, Clock, CheckCircle, XCircle, FileText, 
+import {
+    ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -139,14 +139,14 @@ const WorkshopPurchaseRequestDetail = () => {
     }
 
     const isFinanceApproval = request.status === 'PENDING_FINANCE_APPROVAL';
-    const canApprove = isFinanceApproval && 
-                       request.requestedBy?._id !== userId && 
-                       (userRole === 'admin' || userRole === 'financeadmin');
+    const canApprove = isFinanceApproval &&
+        request.requestedBy?._id !== userId &&
+        (userRole === 'admin' || userRole === 'financeadmin');
 
 
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-20">
+        <div className="space-y-6 pb-20">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Requests', path: '..' }, { label: request.requestNumber, active: true }]} />
 
             {/* Header */}
@@ -188,7 +188,7 @@ const WorkshopPurchaseRequestDetail = () => {
 
             {/* Rejection / Approval Banners */}
             {request.status === 'REJECTED' && request.rejectionNote && (
-                <div className="flex items-start gap-3 p-4 rounded-xl text-sm animate-in fade-in" 
+                <div className="flex items-start gap-3 p-4 rounded-xl text-sm animate-in fade-in"
                     style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
                     <AlertCircle size={18} className="mt-0.5 shrink-0" />
                     <div>
@@ -246,10 +246,10 @@ const WorkshopPurchaseRequestDetail = () => {
                                         {request.documents.map((doc, idx) => {
                                             const fileName = doc.split('/').pop() || `document_${idx + 1}`;
                                             return (
-                                                <a 
-                                                    key={idx} 
-                                                    href={doc} 
-                                                    target="_blank" 
+                                                <a
+                                                    key={idx}
+                                                    href={doc}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 hover:bg-white/10 hover:text-[#C8E600] transition-all decoration-none"
                                                     style={{ color: 'var(--text-main)' }}
@@ -406,7 +406,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                 Review the requested parts and cost. Once approved, the workshop can proceed with the procurement.
                             </p>
                             <div className="flex gap-3">
-                                <button 
+                                <button
                                     onClick={() => openActionModal('REJECT')}
                                     disabled={actionLoading !== null}
                                     className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
@@ -414,7 +414,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                     {actionLoading === 'REJECT' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
                                     Reject
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => openActionModal('APPROVE')}
                                     disabled={actionLoading !== null}
                                     className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
@@ -430,11 +430,11 @@ const WorkshopPurchaseRequestDetail = () => {
 
             {/* Action Modal */}
             {isActionModalOpen && (
-                <div 
+                <div
                     className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setIsActionModalOpen(false)}
                 >
-                    <div 
+                    <div
                         className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
@@ -447,7 +447,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                     {actionType === 'REJECT' ? 'Confirm Rejection' : 'Confirm Approval'}
                                 </h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsActionModalOpen(false)}
                                 className="p-2 hover:bg-white/5 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
                                 style={{ color: 'var(--text-dim)' }}

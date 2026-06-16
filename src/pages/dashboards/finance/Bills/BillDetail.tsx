@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-    ArrowLeft, 
-    Receipt, 
-    Calendar, 
-    Landmark, 
-    Clock, 
-    CheckCircle, 
-    AlertCircle, 
+import {
+    ArrowLeft,
+    Receipt,
+    Calendar,
+    Landmark,
+    Clock,
+    CheckCircle,
+    AlertCircle,
     CreditCard,
     FileText,
     History,
@@ -46,11 +46,11 @@ const BillDetail = () => {
             const res = await billService.getBillById(id);
             const fetchedBill = res.data;
             setBill(fetchedBill);
-            
+
             // Sync to Redux cache if loaded
             const currentFinanceState = financeStateRef.current;
             if (currentFinanceState.isLoaded && fetchedBill) {
-                const updatedBills = currentFinanceState.liveData.bills.map((b: any) => 
+                const updatedBills = currentFinanceState.liveData.bills.map((b: any) =>
                     b._id === fetchedBill._id ? { ...b, ...fetchedBill } : b
                 );
                 dispatch(setFinanceDashboardData({
@@ -103,9 +103,9 @@ const BillDetail = () => {
     const s = statusColors[bill.status] || statusColors.OPEN;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-20">
+        <div className="space-y-6 pb-20">
             <Breadcrumbs items={[
-                { label: 'Dashboard', path: '/admin/financial-admin' }, 
+                { label: 'Dashboard', path: '/admin/financial-admin' },
                 { label: 'Bills', path: '/admin/financial-admin/bills' },
                 { label: bill.billNumber, active: true }
             ]} />
@@ -276,7 +276,7 @@ const BillDetail = () => {
 
                     {/* Quick Info */}
                     <div className="rounded-3xl border p-6 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                         <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: '#C8E600' }}>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: '#C8E600' }}>
                             <History size={14} /> Audit Info
                         </div>
                         <div className="space-y-3">
@@ -293,7 +293,7 @@ const BillDetail = () => {
                 </div>
             </div>
 
-            <RecordPaymentModal 
+            <RecordPaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
                 onSuccess={fetchBill}

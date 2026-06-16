@@ -277,10 +277,6 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/ledger",
         },
         {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/financial-admin/reports",
-        },
-        {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",
         },

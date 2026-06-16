@@ -108,7 +108,7 @@ const ExpenseDetail = () => {
     }
 
     return (
-        <div className="container-responsive max-w-5xl space-y-6 pb-20 select-text">
+        <div className="space-y-6 pb-20 select-text">
             {/* Dynamic breadcrumbs context mapping */}
             <Breadcrumbs 
                 items={[

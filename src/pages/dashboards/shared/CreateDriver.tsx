@@ -517,7 +517,7 @@ const CreateDriver = () => {
     };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'is Valid Phone Digits', active: true }]} />
 
             {/* Header */}

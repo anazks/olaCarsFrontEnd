@@ -150,53 +150,51 @@ const StaffManagement = () => {
     );
 
     return (
-        <div className="p-4 sm:p-8 min-h-full transition-colors duration-300" style={{ background: 'var(--bg-main)' }}>
+        <div className="p-4 sm:p-8 min-h-full transition-colors duration-300 space-y-8" style={{ background: 'var(--bg-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Staff Management', active: true }]} />
 
-            <div className="max-w-7xl mx-auto">
-                {/* Compact Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-8">
-                    <div>
-                        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                            <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
-                            {t('sidebar.sections.staffManagement', 'Staff Management')}
-                        </h1>
-                        <p className="text-xs font-medium text-dim mt-0.5">Comprehensive administrative hierarchies, branch personnel, and workforce performance.</p>
-                    </div>
+            {/* Compact Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-8">
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                        {t('sidebar.sections.staffManagement', 'Staff Management')}
+                    </h1>
+                    <p className="text-xs font-medium text-dim mt-0.5">Comprehensive administrative hierarchies, branch personnel, and workforce performance.</p>
                 </div>
-
-                {/* Staff Roles Section */}
-                <section className="mb-12">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
-                        <h2 className="text-[10px] uppercase font-black tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>
-                            Personnel & Roles
-                        </h2>
-                        <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {managementItems.map((item, idx) => (
-                            <ManagementCard key={idx} item={item} />
-                        ))}
-                    </div>
-                </section>
-
-                {/* Performance & Operations Section */}
-                <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
-                        <h2 className="text-[10px] uppercase font-black tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>
-                            Performance & Delegation
-                        </h2>
-                        <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {performanceItems.map((item, idx) => (
-                            <ManagementCard key={idx} item={item} />
-                        ))}
-                    </div>
-                </section>
             </div>
+
+            {/* Staff Roles Section */}
+            <section className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
+                    <h2 className="text-[10px] uppercase font-black tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>
+                        Personnel & Roles
+                    </h2>
+                    <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {managementItems.map((item, idx) => (
+                        <ManagementCard key={idx} item={item} />
+                    ))}
+                </div>
+            </section>
+
+            {/* Performance & Operations Section */}
+            <section>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
+                    <h2 className="text-[10px] uppercase font-black tracking-[0.2em]" style={{ color: 'var(--text-dim)' }}>
+                        Performance & Delegation
+                    </h2>
+                    <div className="h-px flex-1" style={{ background: 'var(--border-main)' }}></div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {performanceItems.map((item, idx) => (
+                        <ManagementCard key={idx} item={item} />
+                    ))}
+                </div>
+            </section>
         </div>
     );
 };

@@ -1,4 +1,4 @@
-    import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     getPurchaseOrderById,
@@ -166,7 +166,7 @@ const PurchaseOrderDetail = () => {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Order Detail', active: true }]} />
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Order Detail', active: true }]} />
 
                 <div className="w-10 h-10 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                 <p style={{ color: 'var(--text-dim)' }}>Loading order details...</p>
@@ -192,9 +192,9 @@ const PurchaseOrderDetail = () => {
     const canApprove = isFinanceApproval
         ? (po.createdBy !== userId && (userRole === 'admin' || userRole === 'financeadmin'))
         : (po.status === 'WAITING' &&
-           po.createdBy !== userId &&
-           userLevel > creatorLevel &&
-           (po.totalAmount <= poThreshold || userLevel >= 5));
+            po.createdBy !== userId &&
+            userLevel > creatorLevel &&
+            (po.totalAmount <= poThreshold || userLevel >= 5));
 
     const canPay = po.status === 'APPROVED' && !po.isBilled;
 
@@ -212,7 +212,7 @@ const PurchaseOrderDetail = () => {
     const s = statusColors[po.status] || statusColors.WAITING;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-20">
+        <div className="space-y-6 pb-20">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -284,15 +284,15 @@ const PurchaseOrderDetail = () => {
                             </button>
                         </HasPermission>
                         <HasPermission permission="PURCHASE_ORDER_EDIT">
-                                <button
-                                    onClick={handleConvertToBill}
-                                    disabled={actionLoading}
-                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                    style={{ background: '#C8E600', color: '#111' }}
-                                >
-                                    {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
-                                </button>
-                            </HasPermission>
+                            <button
+                                onClick={handleConvertToBill}
+                                disabled={actionLoading}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                style={{ background: '#C8E600', color: '#111' }}
+                            >
+                                {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
+                            </button>
+                        </HasPermission>
                     </div>
                 )}
 
@@ -386,7 +386,7 @@ const PurchaseOrderDetail = () => {
                                 <FileText size={16} />
                                 Merchandiser Audit Review
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
                                 <div>
                                     <span className="text-[10px] text-muted block uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Original Amount</span>
@@ -401,7 +401,7 @@ const PurchaseOrderDetail = () => {
                                     </span>
                                 </div>
                             </div>
-                            
+
                             {po.documents && po.documents.length > 0 && (
                                 <div className="space-y-2">
                                     <span className="text-[10px] block uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Supporting Documents</span>
@@ -418,18 +418,18 @@ const PurchaseOrderDetail = () => {
                                                 return filePart;
                                             };
                                             return (
-                                                <a 
+                                                <a
                                                     key={idx}
                                                     href={docUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="p-3 bg-white/5 hover:bg-[#C8E600]/10 border border-white/10 hover:border-[#C8E600] rounded-xl flex items-center gap-2.5 transition-all text-xs font-semibold text-main cursor-pointer"
                                                     style={{ color: 'var(--text-main)' }}
-                                                    title={`Open ${docLabels[idx] || `Document ${idx+1}`}`}
+                                                    title={`Open ${docLabels[idx] || `Document ${idx + 1}`}`}
                                                 >
                                                     <FileText size={16} className="text-[#C8E600]" />
                                                     <div className="min-w-0 flex-1">
-                                                        <span className="block text-[9px] text-muted text-dim" style={{ color: 'var(--text-dim)' }}>{docLabels[idx] || `Document ${idx+1}`}</span>
+                                                        <span className="block text-[9px] text-muted text-dim" style={{ color: 'var(--text-dim)' }}>{docLabels[idx] || `Document ${idx + 1}`}</span>
                                                         <span className="block truncate text-xs font-mono">{getDocName(doc)}</span>
                                                     </div>
                                                 </a>
@@ -488,10 +488,10 @@ const PurchaseOrderDetail = () => {
                                                             return (
                                                                 <div key={imgIdx} className="relative group cursor-pointer">
                                                                     <a href={resolvedUrl} target="_blank" rel="noopener noreferrer">
-                                                                        <img 
-                                                                            src={resolvedUrl} 
+                                                                        <img
+                                                                            src={resolvedUrl}
                                                                             alt={`Item image ${imgIdx + 1}`}
-                                                                            className="w-12 h-12 object-cover rounded-lg border transition-all group-hover:scale-110" 
+                                                                            className="w-12 h-12 object-cover rounded-lg border transition-all group-hover:scale-110"
                                                                             style={{ borderColor: 'var(--border-main)' }}
                                                                         />
                                                                     </a>

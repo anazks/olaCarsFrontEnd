@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { useTheme } from '../../../context/ThemeContext';
+import DateRangeReportModal from './DateRangeReportModal';
+import { downloadExcelReport } from '../../../services/reportingService';
 
 const getOneMonthAgo = () => {
     const d = new Date();
@@ -40,6 +42,14 @@ const PurchaseBillList = () => {
     const [payments, setPayments] = useState<PaymentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+    const handleDownloadReport = async (start: string, end: string) => {
+        await downloadExcelReport('purchase-bills', {
+            startDate: start,
+            endDate: end
+        });
+    };
     
     // Filters State
     const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +76,27 @@ const PurchaseBillList = () => {
     const [limit, setLimit] = useState(10);
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+
+    const getPageNumbers = () => {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) { end = 4; }
+        if (page >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
+    };
 
     // Debounce search effect
     useEffect(() => {
@@ -117,7 +148,7 @@ const PurchaseBillList = () => {
     };
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className="space-y-6">
             <Breadcrumbs 
                 items={[
                     { label: 'Finance', path: '#' },
@@ -135,6 +166,13 @@ const PurchaseBillList = () => {
                     <p className="text-xs font-medium text-dim mt-0.5">{t('management.purchaseBills.subtitle')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
+                    >
+                        Download Report
+                    </button>
                     <button
                         onClick={fetchPayments}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
@@ -342,18 +380,22 @@ const PurchaseBillList = () => {
                                 </button>
                                 
                                 <div className="flex items-center gap-1">
-                                    {[...Array(totalPages)].map((_, i) => {
-                                        const pNum = i + 1;
-                                        // Show 5 pages max around current
-                                        if (totalPages > 5 && (pNum < page - 2 || pNum > page + 2)) return null;
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
                                         return (
                                             <button
-                                                key={pNum}
-                                                onClick={() => setPage(pNum)}
-                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-90 ${page === pNum ? 'bg-brand-lime text-black shadow-[0_0_15px_rgba(200,230,0,0.3)]' : 'hover:bg-white/5 border border-white/5 opacity-40'}`}
-                                                style={{ color: page === pNum ? '#000' : 'var(--text-main)' }}
+                                                key={p}
+                                                onClick={() => setPage(Number(p))}
+                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-90 ${page === p ? 'bg-brand-lime text-black shadow-[0_0_15px_rgba(200,230,0,0.3)]' : 'hover:bg-white/5 border border-white/5 opacity-40'}`}
+                                                style={{ color: page === p ? '#000' : 'var(--text-main)' }}
                                             >
-                                                {pNum}
+                                                {p}
                                             </button>
                                         );
                                     })}
@@ -372,6 +414,12 @@ const PurchaseBillList = () => {
                     </>
                 )}
             </div>
+            <DateRangeReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onDownload={handleDownloadReport}
+                title="Purchase Bills Report"
+            />
         </div>
     );
 };

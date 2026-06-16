@@ -74,3 +74,25 @@ export const getUnifiedStaff = async (filters: any) => {
     const response = await api.get('/api/reporting/staff/unified', { params: filters });
     return response.data;
 };
+
+export const downloadExcelReport = async (reportType: string, filters: { startDate?: string; endDate?: string; branch?: string }) => {
+    const response = await api.get('/api/reporting/export/excel', {
+        params: {
+            reportType,
+            ...filters
+        },
+        responseType: 'blob'
+    });
+    
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.download = `${reportType}_report_${dateStr}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+};

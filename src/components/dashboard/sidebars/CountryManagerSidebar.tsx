@@ -170,11 +170,6 @@ const CountryManagerSidebar = ({
           permission: "AGREEMENT_VIEW",
         },
         {
-          label: t("sidebar.items.intelligenceReports"),
-          path: "/admin/country-manager/reports",
-          permission: "REPORTS_VIEW",
-        },
-        {
           label: t("sidebar.items.alertsManagement"),
           path: "/admin/country-manager/alerts",
         },
