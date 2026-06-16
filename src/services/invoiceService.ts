@@ -63,7 +63,7 @@ export const getDepositInvoicesByDriver = async (driverId: string): Promise<Invo
     return response.data.data || [];
 };
 
-export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any}> => {
+export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any, metrics?: any}> => {
     const params = new URLSearchParams();
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
@@ -73,11 +73,14 @@ export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Inv
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
     if (filters.status) params.append('status', filters.status);
+    if (filters.month) params.append('month', filters.month);
+    if (filters.year) params.append('year', filters.year);
     
     const response = await api.get(`/api/invoices?${params.toString()}`);
     return { 
         data: response.data.data || [], 
-        pagination: response.data.pagination 
+        pagination: response.data.pagination,
+        metrics: response.data.metrics
     };
 };
 

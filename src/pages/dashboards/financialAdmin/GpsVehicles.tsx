@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../../context/ThemeContext';
 import { 
     Crosshair, Search, Cpu, Wifi, WifiOff, Database, 
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal, 
@@ -16,6 +17,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const GpsVehicles = () => {
+    const { theme } = useTheme();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [vehicles, setVehicles] = useState<GpsVehicle[]>([]);
@@ -76,6 +78,57 @@ const GpsVehicles = () => {
         loadGpsData();
     }, []);
 
+    // Polling effect for the single tracked vehicle
+    useEffect(() => {
+        if (activeView === 'track' && selectedTrackVehicle) {
+            let isMounted = true;
+            
+            const fetchSingleLocation = async () => {
+                try {
+                    const singleLocData = await getGpsLocationsList(selectedTrackVehicle.imei);
+                    if (isMounted && Array.isArray(singleLocData) && singleLocData.length > 0) {
+                        setLocations(prev => {
+                            const filtered = prev.filter(l => l.imei !== selectedTrackVehicle.imei);
+                            return [...filtered, singleLocData[0]];
+                        });
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch location for selected vehicle", err);
+                }
+            };
+            
+            // Fetch immediately upon entry
+            fetchSingleLocation();
+            
+            // Set up 10-second polling interval
+            const interval = setInterval(fetchSingleLocation, 10000);
+            return () => {
+                isMounted = false;
+                clearInterval(interval);
+            };
+        }
+    }, [activeView, selectedTrackVehicle]);
+
+    // Polling effect for the entire fleet locations (list or map view)
+    useEffect(() => {
+        if (activeView === 'list' || activeView === 'map') {
+            const fetchFleetLocations = async () => {
+                try {
+                    const locationsData = await getGpsLocationsList();
+                    if (Array.isArray(locationsData)) {
+                        setLocations(locationsData);
+                    }
+                } catch (err) {
+                    console.error("Failed to poll GPS locations", err);
+                }
+            };
+            
+            // Set up 10-second polling interval
+            const interval = setInterval(fetchFleetLocations, 10000);
+            return () => clearInterval(interval);
+        }
+    }, [activeView]);
+
     // Initialize/cleanup Fleet map container
     useEffect(() => {
         if (activeView === 'map' && mapContainerRef.current) {
@@ -86,7 +139,11 @@ const GpsVehicles = () => {
 
                 L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                const tileUrl = theme === 'light' 
+                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+                L.tileLayer(tileUrl, {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                     maxZoom: 20
                 }).addTo(mapRef.current);
@@ -98,13 +155,13 @@ const GpsVehicles = () => {
         }
 
         return () => {
-            if (activeView !== 'map' && mapRef.current) {
+            if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
                 markersRef.current = {};
             }
         };
-    }, [activeView]);
+    }, [activeView, theme]);
 
     // Plot/update Fleet markers dynamically
     useEffect(() => {
@@ -118,10 +175,15 @@ const GpsVehicles = () => {
             }
         });
 
+        const borderColor = theme === 'light' ? '#FFFFFF' : '#171717';
+        const brandColor = theme === 'light' ? '#4D7C0F' : '#C8E600';
+        const brandColorDim = theme === 'light' ? '#6B7280' : '#888888';
+
         locations.forEach(loc => {
+            if (!loc.lat || !loc.lng || (loc.lat === 0 && loc.lng === 0)) return;
             const vehicle = vehicles.find(v => v.imei === loc.imei);
             const isOnline = loc.status === 1;
-            const color = isOnline ? '#C8E600' : '#f97316';
+            const color = isOnline ? brandColor : '#f97316';
             const pulseClass = isOnline ? 'gps-pulse-active' : '';
             const statusLabel = isOnline ? 'Online' : 'Offline';
             const speedLabel = isOnline ? `${loc.speed} km/h` : 'Stopped';
@@ -129,7 +191,7 @@ const GpsVehicles = () => {
             const htmlMarker = `
                 <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
                     <span class="${pulseClass}" style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; opacity: 0.25;"></span>
-                    <span style="position: absolute; width: 14px; height: 14px; border-radius: 50%; background-color: ${color}; border: 2.5px solid #171717; box-shadow: 0 0 10px rgba(0,0,0,0.7);"></span>
+                    <span style="position: absolute; width: 14px; height: 14px; border-radius: 50%; background-color: ${color}; border: 2.5px solid ${borderColor}; box-shadow: 0 0 10px rgba(0,0,0,0.7);"></span>
                 </div>
             `;
 
@@ -144,20 +206,20 @@ const GpsVehicles = () => {
             const position: L.LatLngExpression = [loc.lat, loc.lng];
 
             const popupHtml = `
-                <div style="background-color: #171717; color: #fff; font-family: 'Inter', sans-serif; min-width: 200px; padding: 4px; border-radius: 12px;">
-                    <div style="font-weight: 800; font-size: 13px; border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 6px; color: #C8E600; display: flex; align-items: center; justify-content: space-between;">
+                <div style="background-color: var(--bg-card); color: var(--text-main); font-family: 'Inter', sans-serif; min-width: 200px; padding: 4px; border-radius: 12px; border: 1px solid var(--border-main);">
+                    <div style="font-weight: 800; font-size: 13px; border-bottom: 1px solid var(--border-main); padding-bottom: 6px; margin-bottom: 6px; color: ${brandColor}; display: flex; align-items: center; justify-content: space-between;">
                         <span>${vehicle?.deviceName || 'GPS Tracker'}</span>
                         <span style="font-size: 9px; padding: 2px 6px; border-radius: 999px; background-color: ${color}20; color: ${color}; border: 1px solid ${color}30;">
                             ${statusLabel}
                         </span>
                     </div>
                     <div style="font-size: 11px; display: grid; gap: 4px;">
-                        <div><strong style="color: #888;">Plate:</strong> <span style="font-weight: 600;">${vehicle?.vehicleNumber || 'N/A'}</span></div>
-                        <div><strong style="color: #888;">IMEI:</strong> <span style="font-family: monospace; font-size: 10px;">${loc.imei}</span></div>
-                        <div><strong style="color: #888;">Ignition (ACC):</strong> <span style="font-weight: 600; color: ${loc.accStatus === 1 ? '#C8E600' : '#888'};">${loc.accStatus === 1 ? 'ON' : 'OFF'}</span></div>
-                        <div><strong style="color: #888;">Speed:</strong> <span style="font-weight: 700;">${speedLabel}</span></div>
-                        <div><strong style="color: #888;">Driver:</strong> <span style="font-weight: 600;">${vehicle?.driverName || 'Unassigned'}</span></div>
-                        <div style="font-size: 9px; color: #666; margin-top: 4px; text-align: right;">Updated: ${loc.gpsTime.split(' ')[1] || 'N/A'} UTC</div>
+                        <div><strong style="color: var(--text-muted);">Plate:</strong> <span style="font-weight: 600;">${vehicle?.vehicleNumber || 'N/A'}</span></div>
+                        <div><strong style="color: var(--text-muted);">IMEI:</strong> <span style="font-family: monospace; font-size: 10px;">${loc.imei}</span></div>
+                        <div><strong style="color: var(--text-muted);">Ignition (ACC):</strong> <span style="font-weight: 600; color: ${String(loc.accStatus) === '1' ? brandColor : brandColorDim};">${String(loc.accStatus) === '1' ? 'ON' : 'OFF'}</span></div>
+                        <div><strong style="color: var(--text-muted);">Speed:</strong> <span style="font-weight: 700;">${speedLabel}</span></div>
+                        <div><strong style="color: var(--text-muted);">Driver:</strong> <span style="font-weight: 600;">${vehicle?.driverName || 'Unassigned'}</span></div>
+                        <div style="font-size: 9px; color: var(--text-dim); margin-top: 4px; text-align: right;">Updated: ${(loc.gpsTime || '').split(' ')[1] || 'N/A'} UTC</div>
                     </div>
                 </div>
             `;
@@ -185,14 +247,15 @@ const GpsVehicles = () => {
                 console.warn("[GPS Map] Fit bounds error", err);
             }
         }
-    }, [locations, vehicles, activeView]);
+    }, [locations, vehicles, activeView, theme]);
 
     // Initialize/cleanup Single Vehicle tracking map container
     useEffect(() => {
         if (activeView === 'track' && selectedTrackVehicle && trackMapContainerRef.current) {
             const loc = locations.find(l => l.imei === selectedTrackVehicle.imei);
-            const lat = loc ? loc.lat : 9.0232;
-            const lng = loc ? loc.lng : -79.5244;
+            const isValidLoc = loc && loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0);
+            const lat = isValidLoc ? loc.lat : 9.0232;
+            const lng = isValidLoc ? loc.lng : -79.5244;
 
             if (!trackMapRef.current) {
                 trackMapRef.current = L.map(trackMapContainerRef.current, {
@@ -201,7 +264,11 @@ const GpsVehicles = () => {
 
                 L.control.zoom({ position: 'topright' }).addTo(trackMapRef.current);
 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                const tileUrl = theme === 'light' 
+                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+                L.tileLayer(tileUrl, {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                     maxZoom: 20
                 }).addTo(trackMapRef.current);
@@ -209,17 +276,18 @@ const GpsVehicles = () => {
                 trackMapRef.current.setView([lat, lng], 15);
             }
 
-            if (loc) {
+            if (loc && isValidLoc) {
                 const isOnline = loc.status === 1;
-                const color = isOnline ? '#C8E600' : '#f97316';
+                const color = isOnline ? (theme === 'light' ? '#4D7C0F' : '#C8E600') : '#f97316';
                 const pulseClass = isOnline ? 'gps-pulse-active' : '';
                 const statusLabel = isOnline ? 'Online' : 'Offline';
                 const speedLabel = isOnline ? `${loc.speed} km/h` : 'Stopped';
 
+                const borderColor = theme === 'light' ? '#FFFFFF' : '#171717';
                 const htmlMarker = `
                     <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
                         <span class="${pulseClass}" style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background-color: ${color}; opacity: 0.3;"></span>
-                        <span style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background-color: ${color}; border: 3px solid #171717; box-shadow: 0 0 12px rgba(0,0,0,0.8);"></span>
+                        <span style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background-color: ${color}; border: 3px solid ${borderColor}; box-shadow: 0 0 12px rgba(0,0,0,0.8);"></span>
                     </div>
                 `;
 
@@ -232,8 +300,8 @@ const GpsVehicles = () => {
                 });
 
                 const popupHtml = `
-                    <div style="background-color: #171717; color: #fff; font-family: 'Inter', sans-serif; min-width: 160px; padding: 4px; border-radius: 8px; text-align: center;">
-                        <div style="font-weight: 800; font-size: 12px; color: #C8E600;">${selectedTrackVehicle.deviceName}</div>
+                    <div style="background-color: var(--bg-card); color: var(--text-main); font-family: 'Inter', sans-serif; min-width: 160px; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid var(--border-main);">
+                        <div style="font-weight: 800; font-size: 12px; color: ${theme === 'light' ? '#4D7C0F' : '#C8E600'};">${selectedTrackVehicle.deviceName}</div>
                         <div style="font-size: 11px; margin-top: 4px; font-weight: 700; color: ${color};">${statusLabel} • ${speedLabel}</div>
                     </div>
                 `;
@@ -256,13 +324,13 @@ const GpsVehicles = () => {
         }
 
         return () => {
-            if (activeView !== 'track' && trackMapRef.current) {
+            if (trackMapRef.current) {
                 trackMapRef.current.remove();
                 trackMapRef.current = null;
                 trackMarkerRef.current = null;
             }
         };
-    }, [activeView, selectedTrackVehicle, locations]);
+    }, [activeView, selectedTrackVehicle, locations, theme]);
 
     // Filtered data memo
     const filteredVehicles = useMemo(() => {
@@ -437,20 +505,27 @@ const GpsVehicles = () => {
     }
 
     return (
-        <div className="p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-colors duration-300">
-            {/* Dark Leaflet Popup Custom Styling */}
+        <div 
+            className="p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-colors duration-300"
+            style={{
+                '--brand-dynamic': theme === 'light' ? '#4D7C0F' : '#C8E600',
+                '--brand-dynamic-light': theme === 'light' ? 'rgba(77, 124, 15, 0.1)' : 'rgba(200, 230, 0, 0.1)',
+                '--brand-dynamic-border': theme === 'light' ? 'rgba(77, 124, 15, 0.2)' : 'rgba(200, 230, 0, 0.2)',
+            } as React.CSSProperties}
+        >
+            {/* Dark/Light Leaflet Popup Custom Styling */}
             <style>{`
                 .dark-leaflet-popup .leaflet-popup-content-wrapper {
-                    background: #171717 !important;
-                    border: 1px solid #333333 !important;
+                    background: var(--bg-card) !important;
+                    border: 1px solid var(--border-main) !important;
                     border-radius: 12px !important;
                     padding: 0px !important;
-                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6) !important;
+                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2) !important;
                 }
                 .dark-leaflet-popup .leaflet-popup-tip {
-                    background: #171717 !important;
-                    border-left: 1px solid #333333 !important;
-                    border-right: 1px solid #333333 !important;
+                    background: var(--bg-card) !important;
+                    border-left: 1px solid var(--border-main) !important;
+                    border-right: 1px solid var(--border-main) !important;
                 }
                 .gps-pulse-active {
                     animation: gps-pulse-anim 1.8s infinite ease-in-out;
@@ -461,15 +536,15 @@ const GpsVehicles = () => {
                     100% { transform: scale(0.65); opacity: 0.6; }
                 }
                 .leaflet-container {
-                    background: #121212 !important;
+                    background: var(--bg-main) !important;
                 }
             `}</style>
 
             {/* Header section with Satellite radar animation */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[#C8E600]/10 flex items-center justify-center border border-[#C8E600]/20 shadow-[0_0_15px_rgba(200,230,0,0.1)] relative">
-                        <Crosshair className="text-[#C8E600] animate-pulse" size={28} />
+                    <div className="w-14 h-14 rounded-2xl bg-[var(--brand-dynamic-light)] flex items-center justify-center border border-[var(--brand-dynamic-border)] shadow-[0_0_15px_var(--brand-dynamic-light)] relative">
+                        <Crosshair className="text-[var(--brand-dynamic)] animate-pulse" size={28} />
                         <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[var(--bg-main)] animate-ping" />
                     </div>
                     <div>
@@ -479,7 +554,7 @@ const GpsVehicles = () => {
                                     ? `Tracking: ${selectedTrackVehicle.deviceName}`
                                     : t('sidebar.items.gpsVehicles', 'GPS Connected Vehicles')}
                             </h1>
-                            <span className="text-[10px] font-black uppercase bg-[#C8E600]/15 text-[#C8E600] px-2.5 py-1 rounded-full border border-[#C8E600]/25 flex items-center gap-1 shadow-sm">
+                            <span className="text-[10px] font-black uppercase bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] px-2.5 py-1 rounded-full border border-[var(--brand-dynamic-border)] flex items-center gap-1 shadow-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Telemetry
                             </span>
                         </div>
@@ -501,7 +576,7 @@ const GpsVehicles = () => {
                     <button
                         onClick={() => loadGpsData(true)}
                         disabled={refreshing}
-                        className="px-4 py-2.5 rounded-xl bg-[#C8E600] text-black font-extrabold text-xs flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_12px_rgba(200,230,0,0.2)]"
+                        className="px-4 py-2.5 rounded-xl bg-[var(--brand-dynamic)] text-[var(--bg-main)] font-extrabold text-xs flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_12px_var(--brand-dynamic-light)]"
                     >
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                         {refreshing ? 'Syncing...' : 'Refresh Telemetry'}
@@ -525,13 +600,13 @@ const GpsVehicles = () => {
                 <div className="flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-main)] overflow-hidden mb-6 w-full sm:w-fit">
                     <button
                         onClick={() => setActiveView('list')}
-                        className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-2 ${activeView === 'list' ? 'bg-[#C8E600] text-black shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
+                        className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-2 ${activeView === 'list' ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                     >
                         <SlidersHorizontal size={14} /> List View
                     </button>
                     <button
                         onClick={() => setActiveView('map')}
-                        className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-2 ${activeView === 'map' ? 'bg-[#C8E600] text-black shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
+                        className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-2 ${activeView === 'map' ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                     >
                         <MapPin size={14} /> Live Fleet Map
                     </button>
@@ -611,9 +686,9 @@ const GpsVehicles = () => {
                                                 e.stopPropagation();
                                                 setPlateStatusFilter(status.label as any);
                                             }}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${plateStatusFilter === status.label ? 'bg-[#C8E600] text-black shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${plateStatusFilter === status.label ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                                         >
-                                            {status.label} <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${plateStatusFilter === status.label ? 'bg-black/20 text-black' : 'bg-white/5 text-[var(--text-muted)]'}`}>{status.count}</span>
+                                            {status.label} <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${plateStatusFilter === status.label ? 'bg-[var(--bg-main)]/20 text-[var(--bg-main)]' : 'bg-[var(--border-main)] text-[var(--text-muted)]'}`}>{status.count}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -637,9 +712,9 @@ const GpsVehicles = () => {
                                                 e.stopPropagation();
                                                 setSelectedStatus(status.label);
                                             }}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${selectedStatus === status.label ? 'bg-[#C8E600] text-black shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${selectedStatus === status.label ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                                         >
-                                            {status.label} <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${selectedStatus === status.label ? 'bg-black/20 text-black' : 'bg-white/5 text-[var(--text-muted)]'}`}>{status.count}</span>
+                                            {status.label} <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${selectedStatus === status.label ? 'bg-[var(--bg-main)]/20 text-[var(--bg-main)]' : 'bg-[var(--border-main)] text-[var(--text-muted)]'}`}>{status.count}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -664,7 +739,9 @@ const GpsVehicles = () => {
                                 <tbody className="divide-y divide-[var(--border-main)]">
                                     {filteredVehicles.map((vehicle) => {
                                         const isOnline = vehicle.status === 'NORMAL';
-                                        const isOffline = vehicle.status === 'OFFLINE';
+                                        const loc = locations.find(l => l.imei === vehicle.imei);
+                                        const isOnlineLive = loc && loc.status === 1;
+                                        const speedLabel = isOnlineLive ? `${loc.speed} km/h` : 'Stopped';
                                         
                                         return (
                                             <tr 
@@ -681,7 +758,7 @@ const GpsVehicles = () => {
                                                             <Activity size={18} className={isOnline ? 'animate-pulse' : ''} />
                                                         </div>
                                                         <div>
-                                                            <div className="font-extrabold text-sm text-white">{vehicle.deviceName || 'Unnamed Device'}</div>
+                                                            <div className="font-extrabold text-sm text-[var(--text-main)]">{vehicle.deviceName || 'Unnamed Device'}</div>
                                                             <div className="text-xs text-[var(--text-dim)] font-bold mt-0.5 flex items-center gap-1.5">
                                                                 <span>{vehicle.mcType || 'VL802'}</span>
                                                                 <span className="w-1 h-1 rounded-full bg-[var(--border-main)]" />
@@ -690,8 +767,8 @@ const GpsVehicles = () => {
                                                             {/* Fleet-linked driver info */}
                                                             {linkedDataMap[vehicle.imei]?.driver && (
                                                                 <div className="flex items-center gap-1.5 mt-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
-                                                                    <span className="text-[10px] font-bold text-[#C8E600]">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-dynamic)]" />
+                                                                    <span className="text-[10px] font-bold text-[var(--brand-dynamic)]">
                                                                         {linkedDataMap[vehicle.imei]!.driver!.personalInfo?.fullName}
                                                                     </span>
                                                                     <span className="text-[9px] text-[var(--text-dim)] font-medium">
@@ -735,24 +812,39 @@ const GpsVehicles = () => {
                                                 </td>
                                                 
                                                 <td className="px-6 py-5">
-                                                    <div className="flex items-center">
-                                                        <span 
-                                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                                                isOnline ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-                                                                isOffline ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 
-                                                                'bg-red-500/10 text-red-400 border-red-500/20'
-                                                            }`}
-                                                        >
-                                                            {vehicle.status}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[9px] text-[var(--text-dim)] font-semibold mt-1">
-                                                        Bound to: {vehicle.enabledFlag === 1 ? 'Activated Engine Relay' : 'Bypass Switch'}
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span 
+                                                                className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                                                    isOnlineLive 
+                                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
+                                                                        : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/20'
+                                                                }`}
+                                                            >
+                                                                {isOnlineLive ? 'ONLINE' : 'OFFLINE'}
+                                                            </span>
+                                                            <span 
+                                                                className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
+                                                                    loc?.accStatus === 1 
+                                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
+                                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                                                                }`}
+                                                            >
+                                                                ACC {loc?.accStatus === 1 ? 'ON' : 'OFF'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs font-extrabold text-[var(--text-main)] flex items-center gap-1">
+                                                            <Gauge size={12} className="text-[var(--text-dim)]" />
+                                                            <span>{speedLabel}</span>
+                                                        </div>
+                                                        <div className="text-[9px] text-[var(--text-dim)] font-semibold">
+                                                            Profile: {vehicle.status} · {vehicle.enabledFlag === 1 ? 'Relay Active' : 'Bypass'}
+                                                        </div>
                                                     </div>
                                                 </td>
 
                                                 <td className="px-6 py-5">
-                                                    <div className="text-xs font-bold flex items-center gap-1.5 text-white">
+                                                    <div className="text-xs font-bold flex items-center gap-1.5 text-[var(--text-main)]">
                                                         <Calendar size={13} className="text-[var(--text-dim)]" />
                                                         {vehicle.expiration ? vehicle.expiration.split(' ')[0] : 'N/A'}
                                                     </div>
@@ -766,7 +858,7 @@ const GpsVehicles = () => {
                                                             setSelectedTrackVehicle(vehicle);
                                                             setActiveView('track');
                                                         }}
-                                                        className="px-4 py-2 rounded-xl bg-[#C8E600] text-black font-extrabold text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 hover:opacity-90 shadow-[0_3px_8px_rgba(200,230,0,0.15)]"
+                                                        className="px-4 py-2 rounded-xl bg-[var(--brand-dynamic)] text-[var(--bg-main)] font-extrabold text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 hover:opacity-90 shadow-[0_3px_8px_var(--brand-dynamic-light)]"
                                                     >
                                                         <MapPin size={13} /> Track
                                                     </button>
@@ -795,15 +887,15 @@ const GpsVehicles = () => {
                         className="w-full h-[60vh] md:h-[70vh] relative" 
                         style={{ zIndex: 1 }}
                     />
-                    <div className="absolute bottom-5 left-5 z-[10] bg-[#171717]/85 backdrop-blur-md p-3.5 rounded-2xl border border-[var(--border-main)] max-w-xs text-xs shadow-lg flex items-start gap-2.5">
-                        <Info size={16} className="text-[#C8E600] mt-0.5 flex-shrink-0" />
-                        <div>
-                            <h5 className="font-bold text-white mb-0.5">Live Fleet Overview</h5>
-                            <p className="text-[11px] text-gray-400 leading-normal">
-                                Click on any pulsing vehicle marker to check live speed, ignition (ACC) state, plate details, and operator details.
-                            </p>
-                        </div>
-                    </div>
+                    <div className="absolute bottom-5 left-5 z-[10] bg-[var(--bg-card)]/85 backdrop-blur-md p-3.5 rounded-2xl border border-[var(--border-main)] max-w-xs text-xs shadow-lg flex items-start gap-2.5">
+                                <Info size={16} className="text-[var(--brand-dynamic)] mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h5 className="font-bold text-[var(--text-main)] mb-0.5">Live Fleet Overview</h5>
+                                    <p className="text-[11px] text-[var(--text-muted)] leading-normal">
+                                        Click on any pulsing vehicle marker to check live speed, ignition (ACC) state, plate details, and operator details.
+                                    </p>
+                                </div>
+                            </div>
                 </div>
             ) : (
                 /* Dedicated single-vehicle tracking dashboard with hardware and location info */
@@ -824,7 +916,7 @@ const GpsVehicles = () => {
                                         setActiveView('list');
                                         setSelectedTrackVehicle(null);
                                     }}
-                                    className="px-4 py-2.5 rounded-xl bg-[#171717]/90 hover:bg-[#222]/95 text-white font-extrabold text-xs flex items-center gap-2 border border-[#333] cursor-pointer transition-all shadow-lg backdrop-blur-sm"
+                                    className="px-4 py-2.5 rounded-xl bg-[var(--bg-card)]/95 hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] font-extrabold text-xs flex items-center gap-2 border border-[var(--border-main)] cursor-pointer transition-all shadow-lg backdrop-blur-sm"
                                 >
                                     ← Back to Fleet List
                                 </button>
@@ -832,14 +924,14 @@ const GpsVehicles = () => {
 
                             {/* Floating location card details */}
                             {trackedLoc && (
-                                <div className="absolute bottom-4 left-4 right-4 lg:right-auto z-[10] bg-[#171717]/90 backdrop-blur-md p-4 rounded-2xl border border-[var(--border-main)] max-w-md shadow-xl flex items-start gap-3">
-                                    <Navigation className="text-[#C8E600] animate-pulse flex-shrink-0 mt-0.5" size={18} />
+                                <div className="absolute bottom-4 left-4 right-4 lg:right-auto z-[10] bg-[var(--bg-card)]/90 backdrop-blur-md p-4 rounded-2xl border border-[var(--border-main)] max-w-md shadow-xl flex items-start gap-3">
+                                    <Navigation className="text-[var(--brand-dynamic)] animate-pulse flex-shrink-0 mt-0.5" size={18} />
                                     <div>
-                                        <h4 className="font-bold text-xs text-white uppercase tracking-wider mb-1">Geographic Address</h4>
-                                        <p className="text-xs text-gray-300 font-medium leading-relaxed">
+                                        <h4 className="font-bold text-xs text-[var(--text-main)] uppercase tracking-wider mb-1">Geographic Address</h4>
+                                        <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
                                             {trackedLoc.locDesc || "Calculating positioning details..."}
                                         </p>
-                                        <div className="text-[10px] font-bold text-gray-500 mt-2">
+                                        <div className="text-[10px] font-bold text-[var(--text-dim)] mt-2">
                                             Coordinates: {formatCoords(trackedLoc.lat, trackedLoc.lng)}
                                         </div>
                                     </div>
@@ -853,11 +945,11 @@ const GpsVehicles = () => {
                             <div className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm space-y-4">
                                 <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center border border-[#C8E600]/20">
+                                        <div className="w-12 h-12 rounded-2xl bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] flex items-center justify-center border border-[var(--brand-dynamic-border)]">
                                             <Cpu size={24} />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-white">{selectedTrackVehicle.deviceName}</h3>
+                                            <h3 className="text-lg font-black text-[var(--text-main)]">{selectedTrackVehicle.deviceName}</h3>
                                             <p className="text-xs text-[var(--text-dim)] font-bold">IMEI: {selectedTrackVehicle.imei}</p>
                                         </div>
                                     </div>
@@ -865,7 +957,9 @@ const GpsVehicles = () => {
                                         {trackedLoc && (
                                             <span 
                                                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                                    trackedLoc.status === 1 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                                    trackedLoc.status === 1 
+                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
+                                                        : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/20'
                                                 }`}
                                             >
                                                 {trackedLoc.status === 1 ? 'Online' : 'Offline'}
@@ -884,8 +978,8 @@ const GpsVehicles = () => {
                                             <button
                                                 onClick={() => handleOpenLiveStream(selectedTrackVehicle.imei)}
                                                 disabled={liveStreamLoading}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold transition-all hover:bg-[#C8E600]/10 active:scale-95 disabled:opacity-50"
-                                                style={{ borderColor: 'rgba(200,230,0,0.3)', color: '#C8E600', background: 'var(--bg-input)' }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold transition-all hover:bg-[var(--brand-dynamic-light)] active:scale-95 disabled:opacity-50"
+                                                style={{ borderColor: 'var(--brand-dynamic-border)', color: 'var(--brand-dynamic)', background: 'var(--bg-input)' }}
                                             >
                                                 <Satellite size={12} />
                                                 {liveStreamLoading ? 'Loading...' : 'Live Stream'}
@@ -910,24 +1004,28 @@ const GpsVehicles = () => {
 
                             {/* Speed & Ignition telemetry */}
                             <div className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm space-y-5">
-                                <h4 className="text-xs font-black uppercase text-[#C8E600] border-b border-[var(--border-main)] pb-3">Telemetry Indicators</h4>
+                                <h4 className="text-xs font-black uppercase text-[var(--brand-dynamic)] border-b border-[var(--border-main)] pb-3">Telemetry Indicators</h4>
                                 
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <span className="text-[10px] font-bold text-[var(--text-dim)] uppercase tracking-wider">Live Speed</span>
-                                        <div className="text-3xl font-black mt-1 text-white">
+                                        <div className="text-3xl font-black mt-1 text-[var(--text-main)]">
                                             {trackedLoc && trackedLoc.status === 1 ? `${trackedLoc.speed} km/h` : '0 km/h'}
                                         </div>
                                     </div>
-                                    <div className="p-4 rounded-full bg-[#C8E600]/10 flex items-center justify-center border border-[#C8E600]/20 animate-pulse">
-                                        <Gauge size={28} className="text-[#C8E600]" />
+                                    <div className="p-4 rounded-full bg-[var(--brand-dynamic-light)] flex items-center justify-center border border-[var(--brand-dynamic-border)] animate-pulse">
+                                        <Gauge size={28} className="text-[var(--brand-dynamic)]" />
                                     </div>
                                 </div>
 
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center justify-between text-xs border-b border-[var(--border-main)]/30 pb-2.5">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">Ignition status (ACC)</span>
-                                        <span className={`font-extrabold px-2.5 py-0.5 rounded-lg text-[10px] border ${trackedLoc?.accStatus === 1 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-gray-800 text-gray-400 border-gray-700'}`}>
+                                        <span className={`font-extrabold px-2.5 py-0.5 rounded-lg text-[10px] border ${
+                                            trackedLoc?.accStatus === 1 
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                                        }`}>
                                             {trackedLoc?.accStatus === 1 ? 'ON (Engine Running)' : 'OFF (Engine Rest)'}
                                         </span>
                                     </div>
@@ -939,7 +1037,7 @@ const GpsVehicles = () => {
                                                     <Battery size={13} className={(trackedLoc?.electQuantity || 0) > 25 ? 'text-green-500' : 'text-red-500'} />
                                                     Hardware Battery
                                                 </span>
-                                                <span className="font-extrabold text-white">{trackedLoc?.electQuantity || 0}%</span>
+                                                <span className="font-extrabold text-[var(--text-main)]">{trackedLoc?.electQuantity || 0}%</span>
                                             </div>
                                             <div className="w-full bg-[var(--bg-input)] rounded-full h-1.5 overflow-hidden">
                                                 <div 
@@ -954,7 +1052,7 @@ const GpsVehicles = () => {
 
                             {/* Operator & Contract details */}
                             <div className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm space-y-4">
-                                <h4 className="text-xs font-black uppercase text-[#C8E600] border-b border-[var(--border-main)] pb-3">Operational Assignments</h4>
+                                <h4 className="text-xs font-black uppercase text-[var(--brand-dynamic)] border-b border-[var(--border-main)] pb-3">Operational Assignments</h4>
 
                                 {/* Fleet-linked driver (from OlaCars system) */}
                                 {(() => {
@@ -964,9 +1062,9 @@ const GpsVehicles = () => {
                                     return (
                                         <>
                                             {linkedDriver ? (
-                                                <div className="p-3.5 rounded-2xl border space-y-2.5" style={{ background: 'rgba(200,230,0,0.04)', borderColor: 'rgba(200,230,0,0.2)' }}>
+                                                <div className="p-3.5 rounded-2xl border space-y-2.5" style={{ background: 'var(--brand-dynamic-light)', borderColor: 'var(--brand-dynamic-border)' }}>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#C8E600]">Fleet System Driver</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-[var(--brand-dynamic)]">Fleet System Driver</span>
                                                         {linkedVehicle && (
                                                             <button
                                                                 onClick={(e) => { 
@@ -981,24 +1079,24 @@ const GpsVehicles = () => {
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className="w-9 h-9 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center font-black text-sm border border-[#C8E600]/20 flex-shrink-0">
+                                                        <div className="w-9 h-9 rounded-xl bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] flex items-center justify-center font-black text-sm border border-[var(--brand-dynamic-border)] flex-shrink-0">
                                                             {linkedDriver.personalInfo?.fullName?.charAt(0)?.toUpperCase() || 'D'}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-sm text-white">{linkedDriver.personalInfo?.fullName}</div>
+                                                            <div className="font-bold text-sm text-[var(--text-main)]">{linkedDriver.personalInfo?.fullName}</div>
                                                             <div className="text-[10px] font-mono text-[var(--text-dim)]">{linkedDriver.personalInfo?.phone}</div>
                                                             <div className="text-[9px] text-[var(--text-dim)]">{linkedDriver.personalInfo?.email}</div>
                                                         </div>
                                                     </div>
                                                     {linkedVehicle && (
-                                                        <div className="grid grid-cols-2 gap-2 pt-2 border-t" style={{ borderColor: 'rgba(200,230,0,0.1)' }}>
+                                                        <div className="grid grid-cols-2 gap-2 pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                                             <div>
                                                                 <span className="text-[9px] text-[var(--text-dim)] font-bold uppercase">Fleet Status</span>
-                                                                <div className="text-[10px] font-bold text-white mt-0.5">{linkedVehicle.status}</div>
+                                                                <div className="text-[10px] font-bold text-[var(--text-main)] mt-0.5">{linkedVehicle.status}</div>
                                                             </div>
                                                             <div>
                                                                 <span className="text-[9px] text-[var(--text-dim)] font-bold uppercase">Make/Model</span>
-                                                                <div className="text-[10px] font-bold text-white mt-0.5">
+                                                                <div className="text-[10px] font-bold text-[var(--text-main)] mt-0.5">
                                                                     {linkedVehicle.basicDetails?.make} {linkedVehicle.basicDetails?.model} {linkedVehicle.basicDetails?.year}
                                                                 </div>
                                                             </div>
@@ -1020,43 +1118,43 @@ const GpsVehicles = () => {
                                 <div className="space-y-3.5 text-xs">
                                     <div className="flex items-center justify-between border-b border-[var(--border-main)]/20 pb-2">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)] flex items-center gap-1"><User size={12} /> GPS Driver (Tracksolid)</span>
-                                        <span className="font-bold text-white">{selectedTrackVehicle.driverName || 'Unassigned'}</span>
+                                        <span className="font-bold text-[var(--text-main)]">{selectedTrackVehicle.driverName || 'Unassigned'}</span>
                                     </div>
                                     <div className="flex items-center justify-between border-b border-[var(--border-main)]/20 pb-2">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)] flex items-center gap-1"><Phone size={12} /> Driver Phone</span>
-                                        <span className="font-mono font-bold text-white">{selectedTrackVehicle.driverPhone || 'N/A'}</span>
+                                        <span className="font-mono font-bold text-[var(--text-main)]">{selectedTrackVehicle.driverPhone || 'N/A'}</span>
                                     </div>
-                                    <div className="flex items-center justify-between border-b border(--border-main)/20 pb-2">
+                                    <div className="flex items-center justify-between border-b border-[var(--border-main)]/20 pb-2">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">Plate Registration</span>
-                                        <span className="font-bold text-white">{selectedTrackVehicle.vehicleNumber || 'Pending'}</span>
+                                        <span className="font-bold text-[var(--text-main)]">{selectedTrackVehicle.vehicleNumber || 'Pending'}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">VIN / Frame Reference</span>
-                                        <span className="font-mono font-bold text-white">{selectedTrackVehicle.carFrame || 'N/A'}</span>
+                                        <span className="font-mono font-bold text-[var(--text-main)]">{selectedTrackVehicle.carFrame || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Service and expiration settings */}
                             <div className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm space-y-4">
-                                <h4 className="text-xs font-black uppercase text-[#C8E600] border-b border-[var(--border-main)] pb-3">Billing & Integration Lifecycle</h4>
+                                <h4 className="text-xs font-black uppercase text-[var(--brand-dynamic)] border-b border-[var(--border-main)] pb-3">Billing & Integration Lifecycle</h4>
 
                                 <div className="space-y-3 text-xs">
                                     <div className="flex justify-between">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">Activation Date</span>
-                                        <span className="font-bold text-white">{selectedTrackVehicle.activationTime}</span>
+                                        <span className="font-bold text-[var(--text-main)]">{selectedTrackVehicle.activationTime}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">Contract Expiration</span>
-                                        <span className="font-bold text-white">{selectedTrackVehicle.expiration}</span>
+                                        <span className="font-bold text-[var(--text-main)]">{selectedTrackVehicle.expiration}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">SIM Phone Card</span>
-                                        <span className="font-mono font-bold text-white">{selectedTrackVehicle.sim}</span>
+                                        <span className="font-mono font-bold text-[var(--text-main)]">{selectedTrackVehicle.sim}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[10px] font-bold text-[var(--text-dim)]">Account Group</span>
-                                        <span className="font-bold text-white">{selectedTrackVehicle.deviceGroup}</span>
+                                        <span className="font-bold text-[var(--text-main)]">{selectedTrackVehicle.deviceGroup}</span>
                                     </div>
                                 </div>
                             </div>

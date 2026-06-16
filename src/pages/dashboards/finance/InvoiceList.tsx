@@ -29,6 +29,21 @@ const InvoiceList = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [filterMonth, setFilterMonth] = useState<string>('');
+    const [filterYear, setFilterYear] = useState<string>('');
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+    const [metrics, setMetrics] = useState<{
+        totalGrossBilled: number;
+        totalNetSettled: number;
+        totalCurrentBalance: number;
+        isFilteredPeriod: boolean;
+    }>({
+        totalGrossBilled: 0,
+        totalNetSettled: 0,
+        totalCurrentBalance: 0,
+        isFilteredPeriod: false,
+    });
 
     useEffect(() => {
         if (location.state?.search) {
@@ -52,7 +67,7 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
 
     const handlePageChange = (pageNum: number) => {
         setPage(pageNum);
@@ -126,6 +141,8 @@ const InvoiceList = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (filterMonth) filters.month = filterMonth;
+            if (filterYear) filters.year = filterYear;
 
             const res = await getInvoicesRegistry(filters);
             console.log('[InvoiceList] API Response:', res);
@@ -140,6 +157,10 @@ const InvoiceList = () => {
                     total: pag.totalItems || dataArray.length,
                     pages: pag.totalPages || 1
                 });
+
+                if (res.metrics) {
+                    setMetrics(res.metrics);
+                }
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load');
@@ -147,7 +168,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
 
     useEffect(() => {
         fetchData();
@@ -156,8 +177,6 @@ const InvoiceList = () => {
     const handleRowClick = (id: string) => {
         navigate(`./${id}`);
     };
-
-
 
     const handleDeleteInvoice = async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this invoice?')) return;
@@ -190,6 +209,59 @@ const InvoiceList = () => {
                     { label: 'Invoices', active: true }
                 ]}
             />
+
+            {/* Small Dashboard Cards */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                    {/* Card 1: Gross Billed */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <FileText size={16} className="opacity-60 text-main animate-pulse" style={{ color: 'var(--brand-lime)' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Gross Billed (Filtered Period)' : 'Gross Billed (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                            ${metrics.totalGrossBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Filtered custom gross billed total' : 'Total amount of rental and workshop statements generated'}
+                        </p>
+                    </div>
+
+                    {/* Card 2: Net Settled */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 size={16} className="opacity-60" style={{ color: '#10b981' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Net Settled (Filtered Period)' : 'Net Settled (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: '#10b981' }}>
+                            ${metrics.totalNetSettled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Filtered custom total settled payments' : 'Total amount of recorded driver payments settled'}
+                        </p>
+                    </div>
+
+                    {/* Card 3: Current Balance */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Clock size={16} className="opacity-60" style={{ color: '#f59e0b' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Current Balance (Filtered Period)' : 'Current Balance (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2 text-orange-400" style={{ color: '#f59e0b' }}>
+                            ${metrics.totalCurrentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Outstanding operator balance in period' : 'Outstanding operator balance from last 30 days'}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-6 animate-in fade-in duration-500">
 
@@ -255,46 +327,123 @@ const InvoiceList = () => {
                             style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         />
                     </div>
-                    <div className="flex gap-3 flex-shrink-0">
-                        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                    <div className="flex gap-2 flex-shrink-0">
+                        <button 
+                            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                            className={`px-6 py-3 rounded-2xl border flex items-center gap-2 font-bold transition-all hover:bg-white/5 bg-transparent cursor-pointer ${isFilterPanelOpen ? 'bg-white/5 border-brand-lime' : ''}`}
+                            style={{ borderColor: isFilterPanelOpen ? 'var(--brand-lime)' : 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <Filter size={18} /> Filters
+                        </button>
+                    </div>
+                </div>
+
+                {/* Collapsible Filter Panel */}
+                {isFilterPanelOpen && (
+                    <div className="border rounded-[2rem] p-6 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Invoices</h3>
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setFilterMonth('');
+                                    setFilterYear('');
+                                    setStartDate('');
+                                    setEndDate('');
+                                    setStatusFilter('ALL');
+                                }}
+                                className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
+                                style={{ color: 'var(--brand-lime)' }}
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                            {/* Month Selector */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
+                                <select
+                                    value={filterMonth}
+                                    onChange={(e) => setFilterMonth(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">All Months</option>
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+
+                            {/* Year Selector */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Year</label>
+                                <select
+                                    value={filterYear}
+                                    onChange={(e) => setFilterYear(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="">All Years</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+
+                            {/* From Date */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
                                 <input
                                     type="date"
                                     value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
-                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                    style={{ color: 'var(--text-main)' }}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
-                            <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+
+                            {/* To Date */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
                                 <input
                                     type="date"
                                     value={endDate}
-                                    onChange={e => setEndDate(e.target.value)}
-                                    className="bg-transparent text-xs font-bold outline-none cursor-pointer"
-                                    style={{ color: 'var(--text-main)' }}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
                             </div>
-                        </div>
-                        <div className="relative flex-shrink-0">
-                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
-                            <select
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                className="pl-10 pr-8 py-3 border rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer select-none"
-                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                            >
-                                <option value="ALL" style={{ background: 'var(--bg-card)' }}>ALL STATUSES</option>
-                                <option value="PENDING" style={{ background: 'var(--bg-card)' }}>PENDING</option>
-                                <option value="PARTIAL" style={{ background: 'var(--bg-card)' }}>PARTIAL</option>
-                                <option value="PAID" style={{ background: 'var(--bg-card)' }}>PAID</option>
-                                <option value="OVERDUE" style={{ background: 'var(--bg-card)' }}>OVERDUE</option>
-                            </select>
+
+                            {/* Status Filter */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Status</label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="ALL">ALL STATUSES</option>
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="PARTIAL">PARTIAL</option>
+                                    <option value="PAID">PAID</option>
+                                    <option value="OVERDUE">OVERDUE</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Unified Grid Canvas */}
                 <div className="border shadow-lg rounded-[2rem] overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
