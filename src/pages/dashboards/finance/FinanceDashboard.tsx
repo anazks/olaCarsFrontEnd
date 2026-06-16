@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import OlaLoader from '../../../components/common/OlaLoader';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
@@ -50,10 +50,41 @@ const FinanceDashboard = () => {
     const [accountingBasis, setAccountingBasis] = useState<'ACCRUAL' | 'CASH'>('ACCRUAL');
     const [fiscalYearRange, setFiscalYearRange] = useState<string>('This Fiscal Year');
 
+    // Custom Date Range Filters
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+
     // Read from Redux store
-    const liveData = financeState.liveData;
+    const rawLiveData = financeState.liveData;
     const pendingPOs = financeState.pendingPOs;
     const tasks = financeState.tasks;
+
+    // Filter liveData based on custom date range selection
+    const liveData = useMemo(() => {
+        const start = startDate ? new Date(startDate) : null;
+        if (start) start.setHours(0, 0, 0, 0);
+        const end = endDate ? new Date(endDate) : null;
+        if (end) end.setHours(23, 59, 59, 999);
+
+        return {
+            invoices: (rawLiveData.invoices || []).filter(inv => {
+                const date = new Date(inv.generatedAt || inv.dueDate);
+                return (!start || date >= start) && (!end || date <= end);
+            }),
+            bills: (rawLiveData.bills || []).filter(b => {
+                const date = new Date(b.billDate || b.createdAt);
+                return (!start || date >= start) && (!end || date <= end);
+            }),
+            expenses: (rawLiveData.expenses || []).filter(e => {
+                const date = new Date(e.expenseDate || e.createdAt);
+                return (!start || date >= start) && (!end || date <= end);
+            }),
+            ledger: (rawLiveData.ledger || []).filter(entry => {
+                const date = new Date(entry.entryDate || entry.date);
+                return (!start || date >= start) && (!end || date <= end);
+            })
+        };
+    }, [rawLiveData, startDate, endDate]);
 
     const getCurrencySymbol = () => '$';
 
@@ -633,7 +664,152 @@ const FinanceDashboard = () => {
     };
 
     if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+        return (
+            <div className="container-responsive space-y-6 pb-12 animate-pulse">
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Finance Command Center', active: true }]} />
+
+                {/* Premium Header Control Deck Skeleton */}
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-white/5 pb-6">
+                    <div className="space-y-2">
+                        <div className="h-7 w-64 bg-white/10 rounded-xl" />
+                        <div className="h-4 w-96 max-w-full bg-white/5 rounded-lg" />
+                    </div>
+                    <div className="flex gap-3 w-full xl:w-auto">
+                        <div className="h-10 w-10 bg-white/5 rounded-xl border border-white/5" />
+                        <div className="h-10 w-36 bg-white/10 rounded-xl" />
+                    </div>
+                </div>
+
+                {/* 1. Receivables & Payables Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Receivables Skeleton */}
+                    <div className="rounded-2xl border p-6 flex flex-col justify-between h-[230px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="h-4 w-32 bg-white/10 rounded" />
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mt-4">
+                            <div className="space-y-4 w-full md:w-1/2">
+                                <div className="h-3 w-28 bg-white/5 rounded" />
+                                <div className="h-8 w-44 bg-white/10 rounded-xl" />
+                                <div className="space-y-2">
+                                    <div className="h-3 w-32 bg-white/5 rounded" />
+                                    <div className="h-3 w-28 bg-white/5 rounded" />
+                                </div>
+                            </div>
+                            <div className="h-[120px] w-full md:w-1/2 flex items-center justify-center">
+                                <div className="w-24 h-24 rounded-full border-8 border-white/5 border-t-white/10 animate-spin" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Payables Skeleton */}
+                    <div className="rounded-2xl border p-6 flex flex-col justify-between h-[230px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-center">
+                            <div className="h-4 w-32 bg-white/10 rounded" />
+                            <div className="h-6 w-12 bg-white/5 rounded-lg" />
+                        </div>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mt-4">
+                            <div className="space-y-4 w-full md:w-1/2">
+                                <div className="h-3 w-28 bg-white/5 rounded" />
+                                <div className="h-8 w-44 bg-white/10 rounded-xl" />
+                                <div className="space-y-2">
+                                    <div className="h-3 w-32 bg-white/5 rounded" />
+                                    <div className="h-3 w-28 bg-white/5 rounded" />
+                                </div>
+                            </div>
+                            <div className="h-[120px] w-full md:w-1/2 flex items-center justify-center">
+                                <div className="w-24 h-24 rounded-full border-8 border-white/5 border-t-white/10 animate-spin" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Income & Expense / Top Expenses Skeleton */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Income & Expense Chart Skeleton */}
+                    <div className="xl:col-span-2 rounded-2xl border p-6 h-[440px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            <div className="space-y-2">
+                                <div className="h-4 w-40 bg-white/10 rounded" />
+                                <div className="h-3 w-56 bg-white/5 rounded" />
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="h-8 w-28 bg-white/5 rounded-lg border border-white/5" />
+                                <div className="h-8 w-24 bg-white/5 rounded-lg border border-white/5" />
+                            </div>
+                        </div>
+                        <div className="flex gap-8 border-b border-white/5 pb-6">
+                            <div className="space-y-2">
+                                <div className="h-3 w-16 bg-white/5 rounded" />
+                                <div className="h-6 w-28 bg-white/10 rounded-lg" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-16 bg-white/5 rounded" />
+                                <div className="h-6 w-28 bg-white/10 rounded-lg" />
+                            </div>
+                        </div>
+                        {/* Mocking Chart bars */}
+                        <div className="h-[220px] w-full bg-white/5 rounded-xl flex items-end justify-around p-6">
+                            <div className="w-8 h-20 bg-white/10 rounded-t" />
+                            <div className="w-8 h-28 bg-white/5 rounded-t" />
+                            <div className="w-8 h-12 bg-white/10 rounded-t" />
+                            <div className="w-8 h-40 bg-white/5 rounded-t" />
+                            <div className="w-8 h-24 bg-white/10 rounded-t" />
+                            <div className="w-8 h-32 bg-white/5 rounded-t" />
+                            <div className="w-8 h-16 bg-white/10 rounded-t" />
+                        </div>
+                    </div>
+
+                    {/* Top Expenses Skeleton */}
+                    <div className="rounded-2xl border p-6 h-[440px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="h-4 w-32 bg-white/10 rounded mb-6" />
+                        <div className="flex-grow flex flex-col justify-center gap-6">
+                            <div className="space-y-2">
+                                <div className="h-3 w-20 bg-white/5 rounded" />
+                                <div className="h-4 bg-white/10 rounded-lg" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-16 bg-white/5 rounded" />
+                                <div className="h-4 bg-white/10 rounded-lg" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-24 bg-white/5 rounded" />
+                                <div className="h-4 bg-white/10 rounded-lg" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-12 bg-white/5 rounded" />
+                                <div className="h-4 bg-white/10 rounded-lg" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Cash Flow Area Chart Skeleton */}
+                <div className="rounded-2xl border p-6 h-[360px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="h-4 w-32 bg-white/10 rounded mb-6" />
+                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 flex-grow">
+                        <div className="xl:col-span-3 h-[240px] bg-white/5 rounded-xl flex items-end justify-around p-6">
+                            <div className="w-16 h-12 bg-white/10 rounded-t" />
+                            <div className="w-16 h-24 bg-white/5 rounded-t" />
+                            <div className="w-16 h-36 bg-white/10 rounded-t" />
+                            <div className="w-16 h-16 bg-white/5 rounded-t" />
+                        </div>
+                        <div className="flex flex-col justify-center space-y-4 xl:border-l border-white/5 xl:pl-8">
+                            <div className="space-y-2">
+                                <div className="h-3 w-32 bg-white/5 rounded" />
+                                <div className="h-5 w-24 bg-white/10 rounded" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-24 bg-white/5 rounded" />
+                                <div className="h-5 w-24 bg-white/10 rounded" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-28 bg-white/5 rounded" />
+                                <div className="h-5 w-24 bg-white/10 rounded" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const currentDataset = getLiveDataCalculated();
@@ -660,6 +836,40 @@ const FinanceDashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                    {/* Custom Date Range Filter */}
+                    <div 
+                        className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all w-full sm:w-auto overflow-x-auto"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <Calendar size={14} className="text-brand-lime flex-shrink-0" style={{ color: 'var(--brand-lime)' }} />
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-transparent border-none outline-none text-[10px] font-bold cursor-pointer text-main"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                            <span className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-transparent border-none outline-none text-[10px] font-bold cursor-pointer text-main"
+                                style={{ color: 'var(--text-main)' }}
+                            />
+                            {(startDate || endDate) && (
+                                <button 
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                    className="text-[8px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 ml-1.5 border border-red-500/20 px-2 py-0.5 rounded bg-red-500/5 transition-all cursor-pointer"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Refresh */}
                     <button
                         onClick={() => fetchDashboardData(true)}

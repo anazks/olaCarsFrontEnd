@@ -61,6 +61,69 @@ const DashboardHub = () => {
     const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
     const [endDate, setEndDate] = useState<string>(getToday());
 
+    // Generate month filter options for the last 12 calendar months dynamically
+    const monthOptions = useMemo(() => {
+        const options = [];
+        const d = new Date();
+        for (let i = 0; i < 12; i++) {
+            const year = d.getFullYear();
+            const month = d.getMonth();
+            const monthVal = String(month + 1).padStart(2, '0');
+            const value = `${year}-${monthVal}`;
+            const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            options.push({ value, label });
+            d.setMonth(d.getMonth() - 1);
+        }
+        return options;
+    }, []);
+
+    // Set startDate and endDate when a month is selected from the dropdown
+    const selectMonth = (monthStr: string) => {
+        if (monthStr === 'custom') return;
+        const [year, month] = monthStr.split('-').map(Number);
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+
+        const formatLocalDate = (dateObj: Date) => {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        setStartDate(formatLocalDate(start));
+        setEndDate(formatLocalDate(end));
+    };
+
+    // Calculate current selected month value in dropdown matching startDate and endDate
+    const currentSelectedMonth = useMemo(() => {
+        if (!startDate || !endDate) return 'custom';
+        
+        // Helper to format Date objects as local YYYY-MM-DD
+        const toDateStr = (dateObj: Date) => {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        const startParts = startDate.split('-').map(Number);
+        const endParts = endDate.split('-').map(Number);
+        
+        if (startParts.length === 3 && endParts.length === 3) {
+            const startYear = startParts[0];
+            const startMonth = startParts[1] - 1; // 0-indexed for Date
+            
+            const firstDay = new Date(startYear, startMonth, 1);
+            const lastDay = new Date(startYear, startMonth + 1, 0);
+            
+            if (startDate === toDateStr(firstDay) && endDate === toDateStr(lastDay)) {
+                return `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
+            }
+        }
+        return 'custom';
+    }, [startDate, endDate]);
+
     // Determine the base route prefix dynamically based on the current location path
     const basePrefix = location.pathname.startsWith('/admin/financial-admin')
         ? '/admin/financial-admin'
@@ -189,7 +252,8 @@ const DashboardHub = () => {
     }, [branches, ledgerEntries, activeBranchNames, startDate, endDate]);
 
     const monthlyRevenue = summaryData?.stats?.monthlyRevenue || 0;
-    const outstandingCollections = summaryData?.stats?.outstandingCollections || 0;
+    const totalPayables = summaryData?.stats?.totalPayables || 0;
+    const lastMonthBalanceDue = summaryData?.stats?.lastMonthBalanceDue || 0;
 
     // Define dashboard navigation items
     const dashboards = [
@@ -278,6 +342,10 @@ const DashboardHub = () => {
     // Colors list for dynamic line rendering
     const lineColors = ['#C8E600', '#3B82F6', '#F97316', '#8B5CF6'];
 
+    const payablesTrendVal = lastMonthBalanceDue === 0 ? 0 : ((totalPayables - lastMonthBalanceDue) / lastMonthBalanceDue) * 100;
+    const isTrendUp = payablesTrendVal >= 0;
+    const trendText = `${isTrendUp ? '+' : ''}${payablesTrendVal.toFixed(1)}%`;
+
     return (
         <div
             className="transition-colors duration-300 space-y-5 flex flex-col"
@@ -295,6 +363,30 @@ const DashboardHub = () => {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* Month Filter Dropdown */}
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors w-full sm:w-auto justify-between sm:justify-start" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <select
+                            value={currentSelectedMonth}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val !== 'custom') {
+                                    selectMonth(val);
+                                }
+                            }}
+                            className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer transition-colors w-full"
+                            style={{ color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
+                        >
+                            <option value="custom" className="bg-[var(--bg-card)]" style={{ color: 'var(--text-main)' }}>
+                                {t('dashboards.common.customRange', 'Custom Range')}
+                            </option>
+                            {monthOptions.map(opt => (
+                                <option key={opt.value} value={opt.value} className="bg-[var(--bg-card)]" style={{ color: 'var(--text-main)' }}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Date Range Inputs */}
                     <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors w-full sm:w-auto justify-between sm:justify-start" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center gap-2">
@@ -387,7 +479,7 @@ const DashboardHub = () => {
                     </div>
                 </div>
 
-                {/* Pending Collections Card */}
+                {/* Total Payables Card */}
                 <div
                     className="rounded-2xl p-4 shadow-sm border flex flex-col justify-between transition-all hover:-translate-y-0.5 duration-300 relative overflow-hidden"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -397,16 +489,22 @@ const DashboardHub = () => {
                         <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20">
                             <Briefcase size={16} />
                         </div>
-                        <div className="px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-0.5 bg-orange-500/10 text-orange-500">
-                            <ArrowUpRight size={12} /> +8.1%
+                        <div className={`px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-0.5 ${isTrendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                            {isTrendUp ? <ArrowUpRight size={12} /> : <div className="rotate-90"><ArrowUpRight size={12} /></div>} {trendText}
                         </div>
                     </div>
                     <div className="mt-3 relative z-10">
                         <div className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(outstandingCollections)}
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalPayables)}
                         </div>
-                        <div className="text-[10px] font-bold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            {t('dashboards.common.pendingCollections', 'Pending Collections')}
+                        <div className="text-[10px] font-bold mt-1 uppercase tracking-wider flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
+                            <span>{t('dashboards.common.totalPayables', 'Total Payables')}</span>
+                        </div>
+                        <div className="text-[10px] font-bold mt-2 pt-2 border-t border-[var(--border-main)]/50 flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
+                            <span>{t('dashboards.common.lastMonthBalanceDue', 'Last Month Balance Due')}</span>
+                            <span className="font-extrabold text-[var(--text-main)]">
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(lastMonthBalanceDue)}
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { 
     ArrowLeft, 
     Receipt, 
@@ -18,10 +19,21 @@ import * as billService from '../../../../services/billService';
 import type { Bill } from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import RecordPaymentModal from './RecordPaymentModal';
+import type { RootState } from '../../../../store';
+import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
 const BillDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const financeState = useSelector((state: RootState) => state.dashboard.finance);
+    const financeStateRef = useRef(financeState);
+
+    // Keep ref updated with latest store values
+    useEffect(() => {
+        financeStateRef.current = financeState;
+    }, [financeState]);
+
     const [bill, setBill] = useState<Bill | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -32,13 +44,28 @@ const BillDetail = () => {
         setLoading(true);
         try {
             const res = await billService.getBillById(id);
-            setBill(res.data);
+            const fetchedBill = res.data;
+            setBill(fetchedBill);
+            
+            // Sync to Redux cache if loaded
+            const currentFinanceState = financeStateRef.current;
+            if (currentFinanceState.isLoaded && fetchedBill) {
+                const updatedBills = currentFinanceState.liveData.bills.map((b: any) => 
+                    b._id === fetchedBill._id ? { ...b, ...fetchedBill } : b
+                );
+                dispatch(setFinanceDashboardData({
+                    liveData: {
+                        ...currentFinanceState.liveData,
+                        bills: updatedBills
+                    }
+                }));
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to fetch bill');
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    }, [id, dispatch]);
 
     useEffect(() => {
         fetchBill();
@@ -237,11 +264,11 @@ const BillDetail = () => {
                                 </div>
                             )}
                             <div className="flex justify-between items-center text-sm">
-                                <span style={{ color: 'var(--text-dim)' }}> Balance Due</span>
+                                <span style={{ color: 'var(--text-dim)' }}>Amount Paid</span>
                                 <span className="font-bold text-green-500">-${bill.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="pt-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>Amount Paid</span>
+                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>Balance Due</span>
                                 <span className="text-2xl font-black text-[#C8E600]">${bill.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>

@@ -232,7 +232,10 @@
       "refreshData": "Refresh Data",
       "monthlyTarget": "Monthly Target",
       "weekChange": "{{value}} this week",
-      "last12Months": "Last 12 months"
+      "last12Months": "Last 12 months",
+      "totalPayables": "Total Payables",
+      "lastMonthBalanceDue": "Last Month Balance Due",
+      "customRange": "Custom Range"
     },
     "executive": {
       "title": "Executive Dashboard",

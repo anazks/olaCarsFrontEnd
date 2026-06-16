@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { 
     Receipt, 
     Search, 
@@ -19,31 +20,60 @@ import * as billService from '../../../../services/billService';
 import type { Bill } from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
+import type { RootState } from '../../../../store';
+import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
 const BillList = () => {
     const navigate = useNavigate();
-    const [bills, setBills] = useState<Bill[]>([]);
-    const [loading, setLoading] = useState(true);
+    const dispatch = useDispatch();
+
+    // Redux store integration for caching
+    const financeState = useSelector((state: RootState) => state.dashboard.finance);
+    const reduxBills = financeState.liveData.bills;
+    const isLoaded = financeState.isLoaded;
+
+    const [loading, setLoading] = useState(!isLoaded || reduxBills.length === 0);
+    const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Filters states
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [filterMonth, setFilterMonth] = useState<string>('');
+    const [filterYear, setFilterYear] = useState<string>('');
+    const [filterFromDate, setFilterFromDate] = useState<string>('');
+    const [filterToDate, setFilterToDate] = useState<string>('');
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
     useEffect(() => {
-        fetchBills();
+        const CACHE_TTL = 30 * 1000; // 30 seconds
+        const cacheAge = Date.now() - (financeState.lastFetched || 0);
+        if (!isLoaded || reduxBills.length === 0 || cacheAge > CACHE_TTL) {
+            fetchBills();
+        }
     }, []);
 
     const fetchBills = async () => {
-        setLoading(true);
+        if (!isLoaded || reduxBills.length === 0) {
+            setLoading(true);
+        }
+        setRefreshing(true);
         try {
             const res = await billService.getAllBills();
-            setBills(res.data);
+            dispatch(setFinanceDashboardData({
+                liveData: {
+                    ...financeState.liveData,
+                    bills: res.data || []
+                }
+            }));
         } catch (err: any) {
             console.error('Failed to fetch bills:', err);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -60,11 +90,53 @@ const BillList = () => {
         setCurrentPage(1);
     };
 
-    const filteredBills = bills.filter(b => 
-        b.billNumber.toLowerCase().includes(search.toLowerCase()) ||
-        (typeof b.supplier === 'object' && b.supplier && b.supplier.name.toLowerCase().includes(search.toLowerCase())) ||
-        (b.notes && b.notes.toLowerCase().includes(search.toLowerCase()))
-    );
+    const getFilteredBills = () => {
+        return [...(reduxBills || [])]
+            .filter(b => {
+                // Search query
+                const matchesSearch = b.billNumber.toLowerCase().includes(search.toLowerCase()) ||
+                    (typeof b.supplier === 'object' && b.supplier && b.supplier.name.toLowerCase().includes(search.toLowerCase())) ||
+                    (b.notes && b.notes.toLowerCase().includes(search.toLowerCase()));
+
+                if (!matchesSearch) return false;
+
+                const billDate = new Date(b.billDate);
+
+                // From Date
+                if (filterFromDate) {
+                    const from = new Date(filterFromDate);
+                    from.setHours(0,0,0,0);
+                    if (billDate < from) return false;
+                }
+
+                // To Date
+                if (filterToDate) {
+                    const to = new Date(filterToDate);
+                    to.setHours(23,59,59,999);
+                    if (billDate > to) return false;
+                }
+
+                // Year
+                if (filterYear) {
+                    if (billDate.getFullYear().toString() !== filterYear) return false;
+                }
+
+                // Month
+                if (filterMonth) {
+                    if ((billDate.getMonth() + 1).toString() !== filterMonth) return false;
+                }
+
+                return true;
+            })
+            .sort((a, b) => new Date(b.billDate).getTime() - new Date(a.billDate).getTime());
+    };
+
+    const filteredBills = getFilteredBills();
+
+    // Reset pagination to page 1 if current filters leave fewer items than paginated page
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filterMonth, filterYear, filterFromDate, filterToDate]);
 
     // Pagination math
     const totalRecords = filteredBills.length;
@@ -97,9 +169,200 @@ const BillList = () => {
         return pages;
     };
 
+    const getMetrics = () => {
+        const now = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const hasFilter = filterMonth || filterYear || filterFromDate || filterToDate;
+
+        let totalBilled = 0;
+        let totalBalanceDue = 0;
+        let openCount = 0;
+        let partialCount = 0;
+        let paidCount = 0;
+
+        const billsToSum = hasFilter ? filteredBills : (reduxBills || []);
+
+        billsToSum.forEach(b => {
+            const billDate = new Date(b.billDate);
+            const isInPeriod = hasFilter || (billDate >= thirtyDaysAgo && billDate <= now);
+
+            if (isInPeriod) {
+                totalBilled += b.totalAmount || 0;
+                totalBalanceDue += b.balanceDue || 0;
+                
+                if (b.status === 'OPEN') openCount++;
+                else if (b.status === 'PARTIALLY_PAID') partialCount++;
+                else if (b.status === 'PAID') paidCount++;
+            }
+        });
+
+        return {
+            totalBilled,
+            totalBalanceDue,
+            openCount,
+            partialCount,
+            paidCount,
+            isFilteredPeriod: hasFilter
+        };
+    };
+
+    const metrics = getMetrics();
+
     return (
         <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '/admin/financial-admin' }, { label: 'Bills', active: true }]} />
+
+            {/* Small Dashboard Cards */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Card 1: Total Billed */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Receipt size={16} className="opacity-60 text-main animate-pulse" style={{ color: '#C8E600' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Total Billed (Filtered Period)' : 'Total Billed (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                            ${metrics.totalBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Filtered custom billing total' : 'Total amount of purchase bills generated'}
+                        </p>
+                    </div>
+
+                    {/* Card 2: Balance Due */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Clock size={16} className="opacity-60 text-main" style={{ color: '#f59e0b' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Balance Due (Filtered Period)' : 'Balance Due (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2 text-orange-400" style={{ color: '#f59e0b' }}>
+                            ${metrics.totalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Pending vendor payables in period' : 'Pending vendor payables from last 30 days'}
+                        </p>
+                    </div>
+
+                    {/* Card 3: Status Breakdown */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle size={16} className="opacity-60 text-main" style={{ color: '#C8E600' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Statuses (Filtered Period)' : 'Statuses (Last 30 Days)'}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                <p className="text-[9px] font-black text-amber-500 uppercase">Open</p>
+                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.openCount}</p>
+                            </div>
+                            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                                <p className="text-[9px] font-black text-blue-400 uppercase">Partial</p>
+                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.partialCount}</p>
+                            </div>
+                            <div className="p-2 rounded-xl bg-green-500/10 border border-green-500/20">
+                                <p className="text-[9px] font-black text-green-400 uppercase">Paid</p>
+                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.paidCount}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Collapsible Filter Panel */}
+            {isFilterPanelOpen && (
+                <div className="border rounded-[2rem] p-6 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Bills</h3>
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setFilterMonth('');
+                                setFilterYear('');
+                                setFilterFromDate('');
+                                setFilterToDate('');
+                            }}
+                            className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
+                            style={{ color: '#C8E600' }}
+                        >
+                            Reset Filters
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Month Selector */}
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
+                            <select
+                                value={filterMonth}
+                                onChange={(e) => setFilterMonth(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Months</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+
+                        {/* Year Selector */}
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Year</label>
+                            <select
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="">All Years</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+
+                        {/* From Date */}
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
+                            <input
+                                type="date"
+                                value={filterFromDate}
+                                onChange={(e) => setFilterFromDate(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+
+                        {/* To Date */}
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
+                            <input
+                                type="date"
+                                value={filterToDate}
+                                onChange={(e) => setFilterToDate(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Header section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -114,7 +377,7 @@ const BillList = () => {
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         title="Refresh bills list"
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                     </button>
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
@@ -154,7 +417,11 @@ const BillList = () => {
                         <option value={20}>20 per page</option>
                         <option value={50}>50 per page</option>
                     </select>
-                    <button className="px-6 py-3 rounded-2xl border flex items-center gap-2 font-bold transition-all hover:bg-white/5 bg-transparent cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                    <button 
+                        onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                        className={`px-6 py-3 rounded-2xl border flex items-center gap-2 font-bold transition-all hover:bg-white/5 bg-transparent cursor-pointer ${isFilterPanelOpen ? 'bg-white/5 border-brand-lime' : ''}`}
+                        style={{ borderColor: isFilterPanelOpen ? '#C8E600' : 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
                         <Filter size={18} /> Filters
                     </button>
                 </div>
