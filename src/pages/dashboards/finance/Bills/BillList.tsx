@@ -46,28 +46,60 @@ const BillList = () => {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [backendMetrics, setBackendMetrics] = useState({
+        totalBilled: 0,
+        totalBalanceDue: 0,
+        openCount: 0,
+        partialCount: 0,
+        paidCount: 0,
+        isFilteredPeriod: false
+    });
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    // Reset pagination to page 1 if search or other filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch, filterMonth, filterYear, filterFromDate, filterToDate]);
 
     useEffect(() => {
-        const CACHE_TTL = 30 * 1000; // 30 seconds
-        const cacheAge = Date.now() - (financeState.lastFetched || 0);
-        if (!isLoaded || reduxBills.length === 0 || cacheAge > CACHE_TTL) {
-            fetchBills();
-        }
-    }, []);
+        fetchBills();
+    }, [currentPage, pageSize, debouncedSearch, filterMonth, filterYear, filterFromDate, filterToDate]);
 
     const fetchBills = async () => {
-        if (!isLoaded || reduxBills.length === 0) {
-            setLoading(true);
-        }
         setRefreshing(true);
         try {
-            const res = await billService.getAllBills();
+            const res = await billService.getAllBills({
+                page: currentPage,
+                limit: pageSize,
+                search: debouncedSearch,
+                month: filterMonth,
+                year: filterYear,
+                fromDate: filterFromDate,
+                toDate: filterToDate
+            });
             dispatch(setFinanceDashboardData({
                 liveData: {
                     ...financeState.liveData,
                     bills: res.data || []
                 }
             }));
+            if (res.pagination) {
+                setTotalRecords(res.pagination.totalItems);
+            } else {
+                setTotalRecords(res.data?.length || 0);
+            }
+            if (res.metrics) {
+                setBackendMetrics(res.metrics);
+            }
         } catch (err: any) {
             console.error('Failed to fetch bills:', err);
         } finally {
@@ -86,63 +118,12 @@ const BillList = () => {
     // Reset page to 1 when search changes
     const handleSearchChange = (value: string) => {
         setSearch(value);
-        setCurrentPage(1);
     };
 
-    const getFilteredBills = () => {
-        return [...(reduxBills || [])]
-            .filter(b => {
-                // Search query
-                const matchesSearch = b.billNumber.toLowerCase().includes(search.toLowerCase()) ||
-                    (typeof b.supplier === 'object' && b.supplier && b.supplier.name.toLowerCase().includes(search.toLowerCase())) ||
-                    (b.notes && b.notes.toLowerCase().includes(search.toLowerCase()));
-
-                if (!matchesSearch) return false;
-
-                const billDate = new Date(b.billDate);
-
-                // From Date
-                if (filterFromDate) {
-                    const from = new Date(filterFromDate);
-                    from.setHours(0,0,0,0);
-                    if (billDate < from) return false;
-                }
-
-                // To Date
-                if (filterToDate) {
-                    const to = new Date(filterToDate);
-                    to.setHours(23,59,59,999);
-                    if (billDate > to) return false;
-                }
-
-                // Year
-                if (filterYear) {
-                    if (billDate.getFullYear().toString() !== filterYear) return false;
-                }
-
-                // Month
-                if (filterMonth) {
-                    if ((billDate.getMonth() + 1).toString() !== filterMonth) return false;
-                }
-
-                return true;
-            })
-            .sort((a, b) => new Date(b.billDate).getTime() - new Date(a.billDate).getTime());
-    };
-
-    const filteredBills = getFilteredBills();
-
-    // Reset pagination to page 1 if current filters leave fewer items than paginated page
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [search, filterMonth, filterYear, filterFromDate, filterToDate]);
-
-    // Pagination math
-    const totalRecords = filteredBills.length;
     const totalPages = Math.ceil(totalRecords / pageSize) || 1;
     
     const startIndex = (currentPage - 1) * pageSize;
-    const paginatedBills = filteredBills.slice(startIndex, startIndex + pageSize);
+    const paginatedBills = reduxBills || [];
 
     const handlePageChange = (pageNum: number) => {
         if (pageNum >= 1 && pageNum <= totalPages) {
@@ -168,46 +149,7 @@ const BillList = () => {
         return pages;
     };
 
-    const getMetrics = () => {
-        const now = new Date();
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const hasFilter = filterMonth || filterYear || filterFromDate || filterToDate;
-
-        let totalBilled = 0;
-        let totalBalanceDue = 0;
-        let openCount = 0;
-        let partialCount = 0;
-        let paidCount = 0;
-
-        const billsToSum = hasFilter ? filteredBills : (reduxBills || []);
-
-        billsToSum.forEach(b => {
-            const billDate = new Date(b.billDate);
-            const isInPeriod = hasFilter || (billDate >= thirtyDaysAgo && billDate <= now);
-
-            if (isInPeriod) {
-                totalBilled += b.totalAmount || 0;
-                totalBalanceDue += b.balanceDue || 0;
-                
-                if (b.status === 'OPEN') openCount++;
-                else if (b.status === 'PARTIALLY_PAID') partialCount++;
-                else if (b.status === 'PAID') paidCount++;
-            }
-        });
-
-        return {
-            totalBilled,
-            totalBalanceDue,
-            openCount,
-            partialCount,
-            paidCount,
-            isFilteredPeriod: hasFilter
-        };
-    };
-
-    const metrics = getMetrics();
+    const metrics = backendMetrics;
 
     return (
         <div className="space-y-6">

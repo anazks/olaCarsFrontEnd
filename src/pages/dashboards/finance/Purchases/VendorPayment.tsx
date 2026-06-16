@@ -49,7 +49,7 @@ const VendorPayment = () => {
 
     // Pagination
     const [page, setPage] = useState<number>(1);
-    const [limit] = useState<number>(25);
+    const [limit] = useState<number>(10);
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
     // Sorting
@@ -77,6 +77,23 @@ const VendorPayment = () => {
     const SortIcon = ({ field }: { field: string }) => {
         if (sortBy !== field) return <ArrowUpDown size={10} className="opacity-20 group-hover:opacity-100 transition-opacity" />;
         return sortOrder === 'asc' ? <ArrowUp size={10} className="text-brand-lime" /> : <ArrowDown size={10} className="text-brand-lime" />;
+    };
+
+    const getPageNumbers = () => {
+        const pagesToShow = 5;
+        let startPage = Math.max(1, page - Math.floor(pagesToShow / 2));
+        let endPage = startPage + pagesToShow - 1;
+
+        if (endPage > pagination.pages) {
+            endPage = pagination.pages;
+            startPage = Math.max(1, endPage - pagesToShow + 1);
+        }
+
+        const pages = [];
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+        return pages;
     };
 
     const fetchPayments = useCallback(async () => {
@@ -307,39 +324,43 @@ const VendorPayment = () => {
                     </table>
                 </div>
                 {!loading && payments.length > 0 && pagination && pagination.pages > 1 && (
-                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                        <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" 
+                         style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p className="text-xs font-bold text-dim">
                             Showing {payments.length} of {pagination.total} payments
                         </p>
+                        
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setPage(page - 1)}
-                                disabled={page === 1}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30"
+                                disabled={page === 1 || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <ChevronLeft size={18} />
                             </button>
+                            
                             <div className="flex items-center gap-1">
-                                {Array.from({ length: pagination.pages }, (_, i) => (
+                                {getPageNumbers().map((pageNum) => (
                                     <button
-                                        key={i + 1}
-                                        onClick={() => setPage(i + 1)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${page === i + 1 ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70'}`}
+                                        key={pageNum}
+                                        onClick={() => setPage(pageNum)}
+                                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${page === pageNum ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
                                         style={{ 
-                                            background: page === i + 1 ? 'var(--brand-lime)' : 'transparent',
-                                            color: page === i + 1 ? '#000' : 'var(--text-main)',
-                                            border: page === i + 1 ? 'none' : '1px solid var(--border-main)'
+                                            background: page === pageNum ? 'var(--brand-lime)' : 'transparent',
+                                            color: page === pageNum ? '#000' : 'var(--text-main)',
+                                            border: page === pageNum ? 'none' : '1px solid var(--border-main)'
                                         }}
                                     >
-                                        {i + 1}
+                                        {pageNum}
                                     </button>
                                 ))}
                             </div>
+                            
                             <button
                                 onClick={() => setPage(page + 1)}
-                                disabled={page === pagination.pages}
-                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30"
+                                disabled={page === pagination.pages || loading}
+                                className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <ChevronRight size={18} />

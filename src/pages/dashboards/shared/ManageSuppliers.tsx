@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BulkSupplierUpload from './BulkSupplierUpload';
 import {
@@ -111,6 +111,28 @@ const ManageSuppliers = () => {
             ...prev,
             page: newPage
         }));
+    };
+
+    const getPageNumbers = () => {
+        const totalPages = pagination?.totalPages || 1;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, filters.page - 1);
+        let end = Math.min(totalPages - 1, filters.page + 1);
+
+        if (filters.page <= 3) { end = 4; }
+        if (filters.page >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
     };
 
     const openCreateModal = () => {
@@ -491,34 +513,43 @@ const ManageSuppliers = () => {
                                     <button
                                         disabled={filters.page === 1}
                                         onClick={() => handlePageChange(filters.page - 1)}
-                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer bg-transparent"
+                                        style={{ borderColor: 'var(--border-main)' }}
                                     >
-                                        {t('management.common.pagination.previous')}
+                                        <ChevronLeft size={18} />
                                     </button>
                                     <div className="flex items-center gap-1">
-                                        {[...Array(pagination.totalPages)].map((_, i) => (
-                                            <button
-                                                key={i + 1}
-                                                onClick={() => handlePageChange(i + 1)}
-                                                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${filters.page === i + 1 ? 'shadow-lg shadow-lime/20' : 'hover:bg-white/10'}`}
-                                                style={{
-                                                    background: filters.page === i + 1 ? 'var(--brand-lime)' : 'var(--bg-input)',
-                                                    border: '1px solid var(--border-main)',
-                                                    color: filters.page === i + 1 ? '#000' : 'var(--text-main)'
-                                                }}
-                                            >
-                                                {i + 1}
-                                            </button>
-                                        ))}
+                                        {getPageNumbers().map((p, index) => {
+                                            if (p === '...') {
+                                                return (
+                                                    <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => handlePageChange(Number(p))}
+                                                    className={`w-9 h-9 rounded-lg text-xs font-black transition-all cursor-pointer ${filters.page === p ? 'shadow-lg scale-110 z-10' : 'opacity-70 hover:opacity-100'}`}
+                                                    style={{
+                                                        background: filters.page === p ? 'var(--brand-lime)' : 'transparent',
+                                                        border: filters.page === p ? 'none' : '1px solid var(--border-main)',
+                                                        color: filters.page === p ? '#000' : 'var(--text-main)'
+                                                    }}
+                                                >
+                                                    {p}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <button
                                         disabled={filters.page === pagination.totalPages}
                                         onClick={() => handlePageChange(filters.page + 1)}
-                                        className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        className="p-2 rounded-lg border border-white/10 text-dim hover:text-white disabled:opacity-20 transition-all cursor-pointer bg-transparent"
+                                        style={{ borderColor: 'var(--border-main)' }}
                                     >
-                                        {t('management.common.pagination.next')}
+                                        <ChevronRight size={18} />
                                     </button>
                                 </div>
                             </div>

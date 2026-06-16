@@ -36,7 +36,25 @@ export interface Bill {
     updatedAt: string;
 }
 
-export const getAllBills = async (params: any = {}): Promise<{ success: boolean; data: Bill[]; count: number }> => {
+export const getAllBills = async (params: any = {}): Promise<{ 
+    success: boolean; 
+    data: Bill[]; 
+    count: number; 
+    pagination?: {
+        totalItems: number;
+        totalPages: number;
+        currentPage: number;
+        limit: number;
+    };
+    metrics?: {
+        totalBilled: number;
+        totalBalanceDue: number;
+        openCount: number;
+        partialCount: number;
+        paidCount: number;
+        isFilteredPeriod: boolean;
+    };
+}> => {
     const response = await api.get('/api/bills', { params });
     return response.data;
 };
