@@ -17,8 +17,8 @@ import {
     Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions } from '../../../services/bankAccountService';
-import { getLedgerEntries, type LedgerEntry } from '../../../services/ledgerService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions, getBankAccountTransactions } from '../../../services/bankAccountService';
+import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getInvoicesByCustomer, type Invoice } from '../../../services/invoiceService';
@@ -205,21 +205,15 @@ const BankAccountLedger = () => {
             const accountData = res.data || res;
             setAccount(accountData);
 
-            // 2. Fetch the ledger entries for this linked code
-            const accCodeId = accountData.accountingCode?._id || accountData.accountingCode;
-            if (accCodeId) {
-                const filters = {
-                    accountingCode: typeof accCodeId === 'object' ? accCodeId._id : accCodeId,
-                    page,
-                    limit
-                };
-                const ledgerRes = await getLedgerEntries(filters);
-                setEntries(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
-                if (ledgerRes.pagination) {
-                    setPagination(ledgerRes.pagination);
-                }
-            } else {
-                setEntries([]);
+            // 2. Fetch the transactions for this bank account
+            const filters = {
+                page,
+                limit
+            };
+            const txRes = await getBankAccountTransactions(id, filters);
+            setEntries(Array.isArray(txRes.data) ? txRes.data : []);
+            if (txRes.pagination) {
+                setPagination(txRes.pagination);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch details');
