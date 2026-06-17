@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Shield,
   Wrench,
+  Crosshair,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -354,6 +355,17 @@ const ExecutiveSidebar = ({
       label: t("sidebar.sections.alerts"),
       icon: <Bell size={22} />,
       path: "/admin/admin/alerts",
+    },
+    {
+      id: "gps",
+      label: t("sidebar.sections.gps"),
+      icon: <Crosshair size={22} />,
+      subItems: [
+        {
+          label: t("sidebar.items.gpsVehicles", "Connected Vehicles"),
+          path: "/admin/admin/gps-vehicles",
+        }
+      ],
     },
     {
       id: "settings",

@@ -500,13 +500,13 @@ const GpsVehicles = () => {
         document.body.removeChild(link);
     };
 
-    if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+    if (loading && vehicles.length === 0) {
+        return <GpsVehiclesSkeleton />;
     }
 
     return (
         <div 
-            className="p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-colors duration-300"
+            className={`p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}
             style={{
                 '--brand-dynamic': theme === 'light' ? '#4D7C0F' : '#C8E600',
                 '--brand-dynamic-light': theme === 'light' ? 'rgba(77, 124, 15, 0.1)' : 'rgba(200, 230, 0, 0.1)',
@@ -549,10 +549,11 @@ const GpsVehicles = () => {
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h1 className="text-3xl font-black tracking-tight">
+                            <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                                 {activeView === 'track' && selectedTrackVehicle
                                     ? `Tracking: ${selectedTrackVehicle.deviceName}`
                                     : t('sidebar.items.gpsVehicles', 'GPS Connected Vehicles')}
+                                {loading && <RefreshCw className="animate-spin text-[var(--brand-dynamic)] ml-2" size={20} />}
                             </h1>
                             <span className="text-[10px] font-black uppercase bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] px-2.5 py-1 rounded-full border border-[var(--brand-dynamic-border)] flex items-center gap-1 shadow-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Telemetry
@@ -1165,5 +1166,68 @@ const GpsVehicles = () => {
         </div>
     );
 };
+
+const GpsVehiclesSkeleton = () => (
+    <div className="p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-pulse">
+        {/* Header section skeleton */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+            <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5" />
+                <div className="space-y-2">
+                    <div className="h-8 w-64 bg-white/10 rounded-lg" />
+                    <div className="h-4 w-96 max-w-full bg-white/5 rounded-lg" />
+                </div>
+            </div>
+            <div className="flex items-center gap-3">
+                <div className="h-10 w-28 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-36 bg-white/10 rounded-xl" />
+            </div>
+        </div>
+
+        {/* Telemetry Overview Cards Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map(idx => (
+                <div key={idx} className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] h-[120px] flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                        <div className="h-4 w-28 bg-white/5 rounded" />
+                        <div className="w-8 h-8 rounded-xl bg-white/5" />
+                    </div>
+                    <div className="h-7 w-16 bg-white/10 rounded" />
+                    <div className="h-3 w-24 bg-white/5 rounded mt-1" />
+                </div>
+            ))}
+        </div>
+
+        {/* Filter controls row skeleton */}
+        <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-4 mb-6 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)]">
+            <div className="h-10 w-full xl:w-80 bg-white/5 rounded-xl" />
+            <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+                <div className="h-10 w-64 bg-white/5 rounded-xl" />
+                <div className="h-10 w-64 bg-white/5 rounded-xl" />
+            </div>
+        </div>
+
+        {/* Hardware Telemetry List Skeleton */}
+        <div className="rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden shadow-sm p-6 space-y-4">
+            <div className="h-10 bg-white/5 rounded w-full" />
+            {[1, 2, 3, 4, 5].map(idx => (
+                <div key={idx} className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/5" />
+                        <div className="space-y-2">
+                            <div className="h-4 w-40 bg-white/10 rounded" />
+                            <div className="h-3 w-24 bg-white/5 rounded" />
+                        </div>
+                    </div>
+                    <div className="space-y-2 hidden md:block">
+                        <div className="h-4 w-28 bg-white/10 rounded" />
+                        <div className="h-3.5 w-36 bg-white/5 rounded" />
+                    </div>
+                    <div className="h-6 w-24 bg-white/5 rounded-full" />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default GpsVehicles;
