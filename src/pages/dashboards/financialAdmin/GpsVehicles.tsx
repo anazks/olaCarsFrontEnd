@@ -8,7 +8,6 @@ import {
     Copy, Check, FileSpreadsheet, User, Phone, MapPin, Gauge,
     Battery, Zap, Navigation, Link, ExternalLink, Satellite
 } from 'lucide-react';
-import OlaLoader from '../../../components/common/OlaLoader';
 import { getGpsVehiclesList, getGpsLocationsList, getDeviceLiveStreamingUrl, getDeviceMediaEventUrl, type GpsVehicle, type GpsLocation } from '../../../services/gpsService';
 import { getAllVehicles } from '../../../services/vehicleService';
 import { getAllDrivers } from '../../../services/driverService';

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../store';
@@ -16,7 +15,6 @@ import {
     AlertTriangle, CreditCard, AlertCircle,
     BarChart3, ArrowUpRight, ArrowDownRight, Clock, FileText, ClipboardList, Briefcase
 } from 'lucide-react';
-import { getLedgerEntries } from '../../services/ledgerService';
 import { getAllDrivers } from '../../services/driverService';
 import { getAllVehicles } from '../../services/vehicleService';
 import { getAllPurchaseOrders } from '../../services/purchaseOrderService';
@@ -57,7 +55,7 @@ const ExecutiveDashboard = () => {
 
     // Global Filters
     const [globalBranch, setGlobalBranch] = useState<string>('all');
-    const [globalSort] = useState<string>('desc');
+    const [globalSort] = useState<'asc' | 'desc'>('desc');
     const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 
@@ -101,7 +99,7 @@ const ExecutiveDashboard = () => {
 
             const [driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
                 getAllDrivers({ limit: 1, status: 'ACTIVE', branch: baseFilters.branch }),
-                getAllVehicles({ limit: 1, status: 'ACTIVE — RENTED,ACTIVE — AVAILABLE,W. GROUP ACTIVE', branch: baseFilters.branch }),
+                getAllVehicles({ limit: 1, status: 'ACTIVE — RENTED,ACTIVE — AVAILABLE,W. GROUP ACTIVE' as any, branch: baseFilters.branch }),
                 getAllPurchaseOrders({
                     limit: 500,
                     branch: baseFilters.branch,

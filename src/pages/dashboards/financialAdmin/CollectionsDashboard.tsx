@@ -30,7 +30,6 @@ import {
 import { getAllBranches } from '../../../services/branchService';
 import { useTheme } from '../../../context/ThemeContext';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import OlaLoader from '../../../components/common/OlaLoader';
 
 const CollectionsDashboard = () => {
     const { theme } = useTheme();

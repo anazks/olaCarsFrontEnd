@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import OlaLoader from '../../components/common/OlaLoader';
 import { useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
