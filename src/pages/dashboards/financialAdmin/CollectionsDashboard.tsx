@@ -9,7 +9,8 @@ import { getUserRole } from '../../../utils/auth';
 import {
     Library, DollarSign, ShieldAlert, Calendar,
     MapPin, Building, Search, Filter,
-    TrendingUp, Wallet, FileText, Clock, FilterX
+    TrendingUp, Wallet, FileText, Clock, FilterX,
+    RefreshCw
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useSelector, useDispatch } from 'react-redux';
@@ -308,11 +309,11 @@ const CollectionsDashboard = () => {
 
     // Inline Loading spinner component
     if (loading && !metrics) {
-        return <OlaLoader fullScreen size="lg" />;
+        return <CollectionsDashboardSkeleton />;
     }
 
     return (
-        <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+        <div className={`p-6 md:p-8 min-h-screen transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`} style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Dashboard', active: true }]} />
 
             
@@ -322,6 +323,7 @@ const CollectionsDashboard = () => {
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Library size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Collections Central
+                        {loading && <RefreshCw className="animate-spin text-brand-lime ml-1" size={16} />}
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5 flex items-center gap-2">
                         <span>Aggregate recovery analysis and forecasts</span>
@@ -900,6 +902,73 @@ const MetricStatCard = ({ title, value, description, icon, iconBg, highlight }: 
             <div className={`text-3xl font-black leading-none tracking-tight ${highlight ? 'text-red-500' : ''}`} style={{ color: highlight ? undefined : 'var(--text-main)' }}>{value}</div>
             <p className="text-[11px] font-black tracking-wider uppercase mt-2" style={{ color: 'var(--text-muted)' }}>{title}</p>
             <p className="text-[10px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>{description}</p>
+        </div>
+    </div>
+);
+
+const CollectionsDashboardSkeleton = () => (
+    <div className="p-6 md:p-8 min-h-screen transition-all duration-300 animate-pulse" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+        {/* Breadcrumbs placeholder */}
+        <div className="h-4 w-48 bg-white/5 rounded-lg mb-4" />
+
+        {/* Compact Header skeleton */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
+            <div className="space-y-2">
+                <div className="h-7 w-48 bg-white/10 rounded-lg" />
+                <div className="h-4 w-96 max-w-full bg-white/5 rounded-lg" />
+            </div>
+        </div>
+
+        {/* Control Board Filters Skeleton */}
+        <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto mb-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="h-10 w-36 bg-white/5 rounded-xl border border-white/5" />
+            <div className="h-10 w-36 bg-white/5 rounded-xl border border-white/5" />
+            <div className="h-10 w-48 bg-white/5 rounded-xl border border-white/5" />
+        </div>
+
+        {/* Metric Cards Grid Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map(idx => (
+                <div key={idx} className="rounded-3xl p-6 border shadow-sm flex flex-col justify-between h-[160px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="w-11 h-11 rounded-2xl bg-white/5" />
+                    <div className="mt-6 space-y-2">
+                        <div className="h-8 w-24 bg-white/10 rounded" />
+                        <div className="h-3 w-28 bg-white/5 rounded" />
+                        <div className="h-3.5 w-32 bg-white/5 rounded" />
+                    </div>
+                </div>
+            ))}
+        </div>
+
+        {/* Charts Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+            {/* Area Chart Card Skeleton */}
+            <div className="lg:col-span-8 rounded-3xl p-6 border h-[380px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="h-5 w-40 bg-white/10 rounded" />
+                <div className="h-[280px] bg-white/5 rounded-2xl flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                </div>
+            </div>
+
+            {/* Bar Chart Card Skeleton */}
+            <div className="lg:col-span-4 rounded-3xl p-6 border h-[380px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="h-5 w-32 bg-white/10 rounded" />
+                <div className="h-[280px] bg-white/5 rounded-2xl flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                </div>
+            </div>
+        </div>
+
+        {/* Bottom tables skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {[1, 2].map(idx => (
+                <div key={idx} className="lg:col-span-6 rounded-3xl p-6 border h-[340px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="h-5 w-40 bg-white/10 rounded" />
+                    <div className="h-56 bg-white/5 rounded-2xl mt-4 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                    </div>
+                </div>
+            ))}
         </div>
     </div>
 );

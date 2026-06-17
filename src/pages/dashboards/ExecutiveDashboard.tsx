@@ -97,15 +97,28 @@ const ExecutiveDashboard = () => {
             baseFilters.startDate = globalStartDate;
             baseFilters.endDate = globalEndDate;
 
-            const [ledgerRes, driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
-                getLedgerEntries({ limit: 10000, ...baseFilters }),
-                getAllDrivers({ limit: 1000, ...baseFilters }),
-                getAllVehicles({ limit: 1000, ...baseFilters }),
-                getAllPurchaseOrders({ limit: 500, ...baseFilters }),
+            const ledgerRes: PromiseSettledResult<any> = { status: 'fulfilled', value: { data: [] } };
+
+            const [driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
+                getAllDrivers({ limit: 1, status: 'ACTIVE', branch: baseFilters.branch }),
+                getAllVehicles({ limit: 1, status: 'ACTIVE — RENTED,ACTIVE — AVAILABLE,W. GROUP ACTIVE', branch: baseFilters.branch }),
+                getAllPurchaseOrders({
+                    limit: 500,
+                    branch: baseFilters.branch,
+                    startDate: oneMonthAgoStr,
+                    endDate: todayStr,
+                    sortOrder: globalSort,
+                    sortBy: 'createdAt'
+                }),
                 getStaffPerformance({ type: 'all', ...baseFilters }),
                 alertService.getActiveAlerts(),
                 getTasks({ limit: 1000, ...baseFilters }),
-                getInvoicesRegistry({ limit: 10000, branch: baseFilters.branch })
+                getInvoicesRegistry({
+                    limit: 10000,
+                    branch: baseFilters.branch,
+                    startDate: oneMonthAgoStr,
+                    endDate: todayStr
+                })
             ]);
 
             const aggregated = aggregateExecutiveData(
@@ -162,7 +175,7 @@ const ExecutiveDashboard = () => {
             return;
         }
 
-        const shouldShowLoader = !executiveState.isLoaded || !isFirstMount.current;
+        const shouldShowLoader = !executiveState.isLoaded;
         console.log('[DEBUG] Calling fetchData, shouldShowLoader:', shouldShowLoader);
         fetchData(shouldShowLoader);
         isFirstMount.current = false;
@@ -170,12 +183,12 @@ const ExecutiveDashboard = () => {
 
     // ─── Render Components ──────────────────────────────────────────
 
-    if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+    if (loading && !executiveState.isLoaded) {
+        return <ExecutiveDashboardSkeleton />;
     }
 
     return (
-        <div className="container-responsive space-y-6">
+        <div className={`container-responsive space-y-6 transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
 
             {/* Header & Master Filters */}
             <div className="flex flex-row justify-between items-center gap-2 lg:gap-6 border-b pb-4 lg:pb-6 w-full" style={{ borderColor: 'var(--border-main)' }}>
@@ -189,6 +202,7 @@ const ExecutiveDashboard = () => {
                         </div>
                         <span className="hidden sm:inline truncate">Executive Control Center</span>
                         <span className="sm:hidden truncate">Executive</span>
+                        {loading && <RefreshCw className="animate-spin text-[#D4F12E] ml-2 flex-shrink-0" size={20} />}
                     </h1>
                     <p className="text-[10px] lg:text-xs font-medium mt-0.5 lg:mt-1 truncate hidden md:block" style={{ color: 'var(--text-dim)' }}>
                         Real-time master aggregation across all operating domains
@@ -635,5 +649,105 @@ const ExecutiveDashboard = () => {
         </div>
     );
 };
+
+const ExecutiveDashboardSkeleton = () => (
+    <div className="container-responsive space-y-6 pb-12 animate-pulse">
+        {/* Header & Master Filters */}
+        <div className="flex flex-row justify-between items-center gap-2 lg:gap-6 border-b pb-4 lg:pb-6 w-full" style={{ borderColor: 'var(--border-main)' }}>
+            <div className="min-w-0 flex-1 mr-2 space-y-2">
+                <div className="h-8 w-64 bg-white/10 rounded-lg" />
+                <div className="h-4 w-96 max-w-full bg-white/5 rounded-lg hidden md:block" />
+            </div>
+            <div className="flex flex-row items-center gap-1.5 lg:gap-3 flex-shrink-0">
+                <div className="h-10 w-24 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-28 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-28 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-10 bg-white/5 rounded-xl border border-white/5" />
+            </div>
+        </div>
+
+        {/* Custom KPI Layout Skeleton */}
+        <div className="flex flex-col gap-6 mb-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+                {/* Left KPIs - 2x2 Grid Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:w-[55%]">
+                    {[1, 2, 3, 4].map(idx => (
+                        <div key={idx} className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between h-[120px]" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white/5" />
+                                    <div className="h-8 w-24 bg-white/10 rounded-lg" />
+                                </div>
+                                <div className="h-6 w-12 bg-white/5 rounded-md" />
+                            </div>
+                            <div className="h-4 w-32 bg-white/5 rounded mt-3" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Right Alerts Section Skeleton */}
+                <div className="rounded-2xl p-5 shadow-sm border lg:w-[45%] flex flex-col h-[256px]" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="h-5 w-20 bg-white/10 rounded-lg" />
+                        <div className="h-8 w-20 bg-white/5 rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                        <div className="bg-red-500/10 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 border border-red-500/20">
+                            <div className="w-8 h-8 rounded-md bg-white/10" />
+                            <div className="h-6 w-8 bg-white/10 rounded" />
+                            <div className="h-3 w-16 bg-white/5 rounded" />
+                        </div>
+                        <div className="bg-orange-500/10 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 border border-orange-500/20">
+                            <div className="w-8 h-8 rounded-md bg-white/10" />
+                            <div className="h-6 w-8 bg-white/10 rounded" />
+                            <div className="h-3 w-16 bg-white/5 rounded" />
+                        </div>
+                        <div className="bg-indigo-500/10 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 border border-indigo-500/20">
+                            <div className="w-8 h-8 rounded-md bg-white/10" />
+                            <div className="h-6 w-8 bg-white/10 rounded" />
+                            <div className="h-3 w-16 bg-white/5 rounded" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Row Skeleton */}
+            <div className="rounded-2xl p-5 shadow-sm border flex flex-col xl:flex-row items-center justify-between gap-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                {[1, 2, 3].map(idx => (
+                    <div key={idx} className="flex items-center gap-4 w-full xl:w-auto xl:pr-6 xl:border-r border-opacity-50 space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="w-10 h-10 rounded-xl bg-white/5 flex-shrink-0" />
+                        <div className="space-y-2">
+                            <div className="h-7 w-20 bg-white/10 rounded" />
+                            <div className="h-4 w-32 bg-white/5 rounded" />
+                        </div>
+                    </div>
+                ))}
+                <div className="w-full xl:w-auto space-y-2">
+                    <div className="h-4 w-36 bg-white/10 rounded" />
+                    <div className="flex gap-2">
+                        <div className="h-8 w-24 bg-white/5 rounded-xl" />
+                        <div className="h-8 w-24 bg-white/5 rounded-xl" />
+                        <div className="h-8 w-24 bg-white/5 rounded-xl" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* 6 Analytics Cards Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(idx => (
+                <div key={idx} className="rounded-3xl border p-6 flex flex-col shadow-sm h-[320px] justify-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-white/5" />
+                        <div className="h-5 w-40 bg-white/10 rounded-lg" />
+                    </div>
+                    <div className="h-[220px] w-full bg-white/5 rounded-2xl flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default ExecutiveDashboard;

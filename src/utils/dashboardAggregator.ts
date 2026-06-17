@@ -145,7 +145,9 @@ export const aggregateExecutiveData = (
             });
         });
 
-        newKpi.activeDrivers = activeDriversCount;
+        newKpi.activeDrivers = driverRes.value.pagination?.total !== undefined
+            ? driverRes.value.pagination.total
+            : activeDriversCount;
         newKpi.outstandingCollections = totalOverdue;
         newKpi.outstandingBalance = totalOverdue + totalPending;
         newKpi.collectionCompliance = totalDuePeriod > 0 ? (totalPaidPeriod / totalDuePeriod) * 100 : 0;
@@ -159,7 +161,9 @@ export const aggregateExecutiveData = (
                 activeVecs++;
             }
         });
-        newKpi.totalActiveVehicles = activeVecs;
+        newKpi.totalActiveVehicles = vehicleRes.value.pagination?.total !== undefined
+            ? vehicleRes.value.pagination.total
+            : activeVecs;
     }
 
     let finalFinanceTotals: any[] = [];

@@ -7,7 +7,8 @@ import {
 } from 'recharts';
 import {
     Car, Users, DollarSign, ShieldAlert, ArrowUpRight, Calendar,
-    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX, Eye, CheckCircle
+    MapPin, Building, ChevronRight, Briefcase, TrendingUp, Wallet, FilterX, Eye, CheckCircle,
+    RefreshCw
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { format } from 'date-fns';
@@ -143,8 +144,8 @@ const FinancialAdminDashboard = () => {
         setFilters(prev => ({ ...prev, [key]: val }));
     };
 
-    if (loading) {
-        return <OlaLoader fullScreen size="lg" />;
+    if (loading && !dashboardData) {
+        return <FinancialAdminDashboardSkeleton />;
     }
 
     const { stats, alerts, fleetStatus, revenueOverview, overduePayments, vehicleMovement } = dashboardData || {};
@@ -161,7 +162,7 @@ const FinancialAdminDashboard = () => {
 
     return (
         <div
-            className="p-6 md:p-8 min-h-screen transition-colors duration-300"
+            className={`p-6 md:p-8 min-h-screen transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}
             style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
         >
 
@@ -170,6 +171,7 @@ const FinancialAdminDashboard = () => {
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         <Briefcase className="text-[#C8E600]" /> Financial Dashboard
+                        {loading && <RefreshCw className="animate-spin text-[#C8E600] ml-2" size={20} />}
                     </h1>
                     <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Ecosystem Telemetry</p>
                 </div>
@@ -719,4 +721,129 @@ const AlertPill = ({ title, count, colorClass, desc, onClick }: any) => (
     </div>
 );
 
+const FinancialAdminDashboardSkeleton = () => (
+    <div className="p-6 md:p-8 min-h-screen transition-all duration-300 animate-pulse" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+        {/* HEADER SECTION SKELETON */}
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+            <div className="space-y-2">
+                <div className="h-8 w-64 bg-white/10 rounded-lg" />
+                <div className="h-4 w-32 bg-white/5 rounded-lg" />
+            </div>
+            <div className="shadow-sm border p-2 rounded-2xl flex flex-wrap items-center gap-3 w-full lg:w-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="h-10 w-36 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-36 bg-white/5 rounded-xl border border-white/5" />
+                <div className="h-10 w-48 bg-white/5 rounded-xl border border-white/5" />
+            </div>
+        </div>
+
+        {/* PRIMARY METRIC ROW SKELETON */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            {/* Large Stats Grid Skeleton */}
+            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map(idx => (
+                    <div key={idx} className="rounded-2xl p-5 shadow-sm border flex flex-col justify-between h-[120px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-white/5" />
+                            <div className="h-6 w-12 bg-white/5 rounded-md" />
+                        </div>
+                        <div className="mt-5 space-y-2">
+                            <div className="h-6 w-24 bg-white/10 rounded" />
+                            <div className="h-3.5 w-32 bg-white/5 rounded" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Alerts Side Strip Skeleton */}
+            <div className="lg:col-span-4 rounded-3xl p-6 shadow-sm border flex flex-col justify-between h-[260px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex justify-between items-center mb-5">
+                    <div className="h-6 w-32 bg-white/10 rounded" />
+                    <div className="w-8 h-8 rounded-xl bg-white/5" />
+                </div>
+                <div className="flex flex-col gap-3 flex-1 justify-center">
+                    <div className="h-11 bg-red-500/10 rounded-xl border border-red-500/20" />
+                    <div className="h-11 bg-orange-500/10 rounded-xl border border-orange-500/20" />
+                    <div className="h-11 bg-blue-500/10 rounded-xl border border-blue-500/20" />
+                </div>
+            </div>
+        </div>
+
+        {/* ANALYTICS ROW SKELETON */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            {/* Main Revenue Chart Skeleton */}
+            <div className="lg:col-span-8 rounded-3xl p-6 shadow-sm border h-[420px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex justify-between items-center mb-6">
+                    <div className="space-y-2">
+                        <div className="h-5 w-40 bg-white/10 rounded" />
+                        <div className="h-3.5 w-48 bg-white/5 rounded" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="space-y-2">
+                            <div className="h-3 w-28 bg-white/5 rounded" />
+                            <div className="h-6 w-20 bg-white/10 rounded" />
+                        </div>
+                    ))}
+                </div>
+                <div className="h-[240px] bg-white/5 rounded-2xl flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                </div>
+            </div>
+
+            {/* Fleet Donut Skeleton */}
+            <div className="lg:col-span-4 rounded-3xl p-6 shadow-sm border h-[420px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="space-y-2">
+                    <div className="h-5 w-32 bg-white/10 rounded" />
+                    <div className="h-3.5 w-40 bg-white/5 rounded" />
+                </div>
+                <div className="h-[200px] relative flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-full border-8 border-white/5 border-t-white/10 animate-spin" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded-lg">
+                            <div className="h-3 w-12 bg-white/5 rounded" />
+                            <div className="h-3 w-6 bg-white/10 rounded" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* BOTTOM SECTION SKELETON */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            {/* Interactive Tab Panel Skeleton */}
+            <div className="lg:col-span-7 rounded-3xl shadow-sm border p-6 h-[340px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex border-b pb-4 gap-8" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="h-4 w-16 bg-white/10 rounded" />
+                    <div className="h-4 w-16 bg-white/5 rounded" />
+                    <div className="h-4 w-20 bg-white/5 rounded" />
+                    <div className="h-4 w-24 bg-white/5 rounded" />
+                </div>
+                <div className="h-56 bg-white/5 rounded-2xl flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-white/10 animate-spin" />
+                </div>
+            </div>
+
+            {/* Arrears List Skeleton */}
+            <div className="lg:col-span-5 rounded-3xl p-6 shadow-sm border h-[340px] flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="h-5 w-32 bg-white/10 rounded" />
+                <div className="space-y-3 mt-4 flex-1 justify-center flex flex-col">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="space-y-2">
+                                <div className="h-4 w-32 bg-white/10 rounded" />
+                                <div className="h-3 w-20 bg-white/5 rounded" />
+                            </div>
+                            <div className="h-6 w-16 bg-white/10 rounded" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 export default FinancialAdminDashboard;
+

@@ -399,6 +399,10 @@ function App() {
                 element={<DriverVehicleAssignment />}
               />
               <Route
+                path="gps-vehicles"
+                element={<GpsVehicles />}
+              />
+              <Route
                 path="driver-performance"
                 element={<DriverPerformanceDashboard />}
               />
