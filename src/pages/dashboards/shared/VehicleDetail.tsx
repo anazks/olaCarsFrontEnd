@@ -224,8 +224,8 @@ const VehicleDetail = () => {
             setVehicle(data);
 
             try {
-                const driversRes = await getAllDrivers({ limit: 1000 });
-                const driver = driversRes.data?.find((d: any) => d.currentVehicle === id);
+                const driversRes = await getAllDrivers({ currentVehicle: id, limit: 1 });
+                const driver = driversRes.data?.[0];
                 setAssignedDriver(driver || null);
             } catch (dErr) {
                 console.error("Failed to load driver for vehicle:", dErr);

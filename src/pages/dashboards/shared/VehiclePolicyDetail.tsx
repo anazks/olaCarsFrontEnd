@@ -42,8 +42,8 @@ const VehiclePolicyDetail = () => {
             // Try to find if there is a driver assigned to this vehicle
             if (policyData.vehicle?._id) {
                 try {
-                    const driversRes = await getAllDrivers({ limit: 1000 }); // In production use an API to get driver by vehicle ID instead
-                    const assignedDriver = (driversRes as any).data?.find((d: any) => d.currentVehicle === policyData.vehicle?._id);
+                    const driversRes = await getAllDrivers({ currentVehicle: policyData.vehicle?._id, limit: 1 });
+                    const assignedDriver = (driversRes as any).data?.[0];
                     if (assignedDriver) {
                         setDriver(assignedDriver);
                     }

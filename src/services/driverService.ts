@@ -168,6 +168,7 @@ export interface DriverFilters {
     sortOrder?: 'asc' | 'desc';
     startDate?: string;
     endDate?: string;
+    currentVehicle?: string;
 }
 
 export interface BulkUploadResult {
@@ -225,6 +226,11 @@ export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
 
+export const cancelContract = async (id: string, notes?: string): Promise<Driver> => {
+    const response = await api.put(`/api/driver/${id}/cancel-contract`, { notes });
+    return response.data.data;
+};
+
 export const payAdditionalPayment = async (
     driverId: string,
     paymentId: string,
@@ -267,6 +273,7 @@ export const driverService = {
     uploadDocument: uploadDriverDocument,
     markRentAsPaid,
     deleteDriver,
+    cancelContract,
     bulkCreateDrivers,
     dataMigrateDrivers,
     payAdditionalPayment

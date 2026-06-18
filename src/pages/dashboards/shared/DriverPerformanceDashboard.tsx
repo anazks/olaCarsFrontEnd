@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
+import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
+import { getInvoices } from '../../../services/invoiceService';
+import type { Invoice } from '../../../services/invoiceService';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -42,7 +44,7 @@ const deduplicateRent = (tracking: Driver['rentTracking']): NonNullable<Driver['
     }, []);
 };
 
-const computeDriverMetrics = (driver: Driver): Omit<DriverMetrics, 'branchName'> => {
+const computeDriverMetrics = (driver: Driver, driverOverdueInvoices: Invoice[] = []): Omit<DriverMetrics, 'branchName'> => {
     const deduped = deduplicateRent(driver.rentTracking);
     const now = new Date();
 
@@ -52,13 +54,17 @@ const computeDriverMetrics = (driver: Driver): Omit<DriverMetrics, 'branchName'>
         return acc + Math.max(0, base - paid);
     }, 0);
 
-    const overdue = deduped
-        .filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < now)
-        .reduce((acc, r) => {
-            const base = r.totalDue || r.amount || 0;
-            const paid = r.amountPaid || 0;
-            return acc + Math.max(0, base - paid);
-        }, 0);
+    const overdue = driverOverdueInvoices.length > 0
+        ? driverOverdueInvoices.reduce((acc, inv) => acc + (inv.balance || 0), 0)
+        : deduped
+            .filter(r => r.status !== 'PAID' && r.dueDate && new Date(r.dueDate) < now)
+            .reduce((acc, r) => {
+                const base = r.totalDue || r.amount || 0;
+                const paid = r.amountPaid || 0;
+                return acc + Math.max(0, base - paid);
+            }, 0);
+
+    const outstandingAdjusted = Math.max(outstanding, overdue);
 
     const totalPaid = deduped.reduce((acc, r) => acc + (r.amountPaid || 0), 0);
     const totalDue = deduped.reduce((acc, r) => acc + (r.totalDue || r.amount || 0), 0);
@@ -77,7 +83,9 @@ const computeDriverMetrics = (driver: Driver): Omit<DriverMetrics, 'branchName'>
         });
 
     let currentWeekStatus: DriverMetrics['currentWeekStatus'] = 'N/A';
-    if (pendingSorted.length > 0) {
+    if (driverOverdueInvoices.length > 0) {
+        currentWeekStatus = 'OVERDUE';
+    } else if (pendingSorted.length > 0) {
         const next = pendingSorted[0];
         const isOverdue = next.dueDate && new Date(next.dueDate) < now;
         if (isOverdue) currentWeekStatus = 'OVERDUE';
@@ -90,7 +98,7 @@ const computeDriverMetrics = (driver: Driver): Omit<DriverMetrics, 'branchName'>
     // Weekly rent from the first tracking entry
     const weeklyRent = deduped.length > 0 ? deduped[0].amount : 0;
 
-    return { driver, outstanding, overdue, totalPaid, collectionRate, safetyTotal, currentWeekStatus, weeklyRent };
+    return { driver, outstanding: outstandingAdjusted, overdue, totalPaid, collectionRate, safetyTotal, currentWeekStatus, weeklyRent };
 };
 
 // ─── Main Component ───────────────────────────────────────────────────
@@ -108,6 +116,8 @@ const DriverPerformanceDashboard = () => {
 
     const [drivers, setDrivers] = useState<Driver[]>(fleetState.drivers);
     const [branches, setBranches] = useState<Branch[]>(fleetState.branches);
+    const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
+    const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
     const [loading, setLoading] = useState(!fleetState.isLoaded);
     const [selectedBranch, setSelectedBranch] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -141,6 +151,13 @@ const DriverPerformanceDashboard = () => {
             const driverData = res.data || [];
             setDrivers(driverData);
 
+            try {
+                const invRes = await getInvoices({ status: 'OVERDUE', limit: 1000 });
+                setOverdueInvoices(invRes.data || []);
+            } catch (invErr) {
+                console.error('Error fetching overdue invoices:', invErr);
+            }
+
             dispatch(setFleetDashboardData({
                 drivers: driverData,
                 branches: branchData
@@ -159,6 +176,9 @@ const DriverPerformanceDashboard = () => {
         if (isFirstMount.current) {
             isFirstMount.current = false;
             if (isCacheFresh) {
+                getInvoices({ status: 'OVERDUE', limit: 1000 })
+                    .then(invRes => setOverdueInvoices(invRes.data || []))
+                    .catch(err => console.error("Error fetching overdue invoices for cache:", err));
                 return; // skip fetching, render from cache
             }
         }
@@ -169,11 +189,15 @@ const DriverPerformanceDashboard = () => {
     // Process metrics
     const driverMetrics: DriverMetrics[] = useMemo(() => {
         return drivers.map(d => {
-            const metrics = computeDriverMetrics(d);
+            const driverOverdue = overdueInvoices.filter(inv => {
+                const invDriverId = typeof inv.driver === 'object' ? inv.driver?._id : inv.driver;
+                return invDriverId === d._id;
+            });
+            const metrics = computeDriverMetrics(d, driverOverdue);
             const branchName = typeof d.branch === 'object' ? (d.branch as any).name : 'Unknown';
             return { ...metrics, branchName };
         });
-    }, [drivers]);
+    }, [drivers, overdueInvoices]);
 
     // Filter + search + sort
     const filteredMetrics = useMemo(() => {
@@ -248,6 +272,33 @@ const DriverPerformanceDashboard = () => {
     }, [filteredMetrics, currentPage]);
 
     const totalPages = Math.ceil(filteredMetrics.length / pageSize);
+
+    const handlePageChange = (pageNum: number) => {
+        if (pageNum >= 1 && pageNum <= totalPages) {
+            setCurrentPage(pageNum);
+        }
+    };
+
+    const getPageNumbers = () => {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        const pages: (number | string)[] = [];
+        pages.push(1);
+
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3) { end = 4; }
+        if (currentPage >= totalPages - 2) { start = totalPages - 3; }
+
+        if (start > 2) { pages.push('...'); }
+        for (let i = start; i <= end; i++) { pages.push(i); }
+        if (end < totalPages - 1) { pages.push('...'); }
+        pages.push(totalPages);
+        return pages;
+    };
 
     // KPI Aggregates
     const kpis = useMemo(() => {
@@ -438,7 +489,7 @@ const DriverPerformanceDashboard = () => {
 
             {/* ── Navigation Shortcuts ────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button 
+                <button
                     onClick={() => navigate('../drivers')}
                     className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -458,7 +509,7 @@ const DriverPerformanceDashboard = () => {
                     </div>
                 </button>
 
-                <button 
+                <button
                     onClick={() => navigate('../vehicles')}
                     className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -584,7 +635,7 @@ const DriverPerformanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
+                                    <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
                                     <Bar dataKey="Drivers" radius={[4, 4, 0, 0]} maxBarSize={30}>
                                         {kpis.chartData.scoreData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -604,7 +655,7 @@ const DriverPerformanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
+                                    <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600 }} />
                                     <Bar dataKey="Drivers" radius={[4, 4, 0, 0]} maxBarSize={30}>
                                         {kpis.chartData.distanceData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -672,97 +723,184 @@ const DriverPerformanceDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginatedMetrics.map((m) => (
-                                    <tr
-                                        key={m.driver._id}
-                                        className="border-b transition-all hover:bg-white/[0.02] group cursor-pointer"
-                                        style={{ borderColor: 'rgba(255,255,255,0.03)' }}
-                                        onClick={() => navigateToDriver(m.driver._id)}
-                                    >
-                                        {/* Driver Name + Branch */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-brand-lime/10 text-brand-lime flex items-center justify-center text-xs font-black uppercase shrink-0">
-                                                    {m.driver.personalInfo?.fullName?.charAt(0) || '?'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold truncate max-w-[140px]" style={{ color: 'var(--text-main)' }}>
-                                                        {m.driver.personalInfo?.fullName}
-                                                    </p>
-                                                    <p className="text-[9px] font-medium text-dim flex items-center gap-1">
-                                                        <Building2 size={8} /> {m.branchName}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
+                                {paginatedMetrics.map((m) => {
+                                    const driverInvoices = overdueInvoices.filter(inv => {
+                                        const invDriverId = typeof inv.driver === 'object' ? inv.driver?._id : inv.driver;
+                                        return invDriverId === m.driver._id;
+                                    });
 
-                                        {/* Driving Score */}
-                                        <td className="px-4 py-3">
-                                            <span className={`text-sm font-black ${getScoreColor(m.driver.performance?.drivingScore || 0)}`}>
-                                                {m.driver.performance?.drivingScore || 0}
-                                            </span>
-                                        </td>
+                                    return (
+                                        <Fragment key={m.driver._id}>
+                                            <tr
+                                                className="border-b transition-all hover:bg-white/[0.02] group cursor-pointer"
+                                                style={{ borderColor: 'rgba(255,255,255,0.03)' }}
+                                                onClick={() => setExpandedDriverId(prev => prev === m.driver._id ? null : m.driver._id)}
+                                            >
+                                                {/* Driver Name + Branch */}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-dim hover:text-brand-lime transition-colors">
+                                                            {expandedDriverId === m.driver._id ? (
+                                                                <ChevronUp size={14} />
+                                                            ) : (
+                                                                <ChevronDown size={14} />
+                                                            )}
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-full bg-brand-lime/10 text-brand-lime flex items-center justify-center text-xs font-black uppercase shrink-0">
+                                                            {m.driver.personalInfo?.fullName?.charAt(0) || '?'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold truncate max-w-[140px]" style={{ color: 'var(--text-main)' }}>
+                                                                {m.driver.personalInfo?.fullName}
+                                                            </p>
+                                                            <p className="text-[9px] font-medium text-dim flex items-center gap-1">
+                                                                <Building2 size={8} /> {m.branchName}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
 
-                                        {/* Avg Speed */}
-                                        <td className="px-4 py-3">
-                                            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {m.driver.performance?.avgSpeed || 0} <span className="text-dim text-[9px]">km/h</span>
-                                            </span>
-                                        </td>
+                                                {/* Driving Score */}
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-sm font-black ${getScoreColor(m.driver.performance?.drivingScore || 0)}`}>
+                                                        {m.driver.performance?.drivingScore || 0}
+                                                    </span>
+                                                </td>
 
-                                        {/* Total Distance */}
-                                        <td className="px-4 py-3">
-                                            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {(m.driver.performance?.totalDistance || 0).toLocaleString()} <span className="text-dim text-[9px]">km</span>
-                                            </span>
-                                        </td>
+                                                {/* Avg Speed */}
+                                                <td className="px-4 py-3">
+                                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {m.driver.performance?.avgSpeed || 0} <span className="text-dim text-[9px]">km/h</span>
+                                                    </span>
+                                                </td>
 
-                                        {/* Fuel Efficiency */}
-                                        <td className="px-4 py-3">
-                                            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {m.driver.performance?.fuelEfficiency || 0} <span className="text-dim text-[9px]">km/L</span>
-                                            </span>
-                                        </td>
+                                                {/* Total Distance */}
+                                                <td className="px-4 py-3">
+                                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {(m.driver.performance?.totalDistance || 0).toLocaleString()} <span className="text-dim text-[9px]">km</span>
+                                                    </span>
+                                                </td>
 
-                                        {/* Safety Incidents */}
-                                        <td className="px-4 py-3">
-                                            <span className={`text-xs font-black ${m.safetyTotal > 5 ? 'text-red-500' : m.safetyTotal > 0 ? 'text-yellow-400' : 'text-brand-lime'}`}>
-                                                {m.safetyTotal}
-                                            </span>
-                                        </td>
+                                                {/* Fuel Efficiency */}
+                                                <td className="px-4 py-3">
+                                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {m.driver.performance?.fuelEfficiency || 0} <span className="text-dim text-[9px]">km/L</span>
+                                                    </span>
+                                                </td>
 
-                                        {/* Weekly Rent */}
-                                        <td className="px-4 py-3">
-                                            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                ${m.weeklyRent.toLocaleString()}
-                                            </span>
-                                        </td>
+                                                {/* Safety Incidents */}
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-xs font-black ${m.safetyTotal > 5 ? 'text-red-500' : m.safetyTotal > 0 ? 'text-yellow-400' : 'text-brand-lime'}`}>
+                                                        {m.safetyTotal}
+                                                    </span>
+                                                </td>
 
-                                        {/* Outstanding */}
-                                        <td className="px-4 py-3">
-                                            <span className={`text-xs font-black ${m.outstanding > 0 ? 'text-orange-400' : 'text-brand-lime'}`}>
-                                                ${m.outstanding.toLocaleString()}
-                                            </span>
-                                            {m.overdue > 0 && (
-                                                <p className="text-[8px] font-black text-red-500 mt-0.5">
-                                                    ${m.overdue.toLocaleString()} overdue
-                                                </p>
+                                                {/* Weekly Rent */}
+                                                <td className="px-4 py-3">
+                                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        ${m.weeklyRent.toLocaleString()}
+                                                    </span>
+                                                </td>
+
+                                                {/* Outstanding */}
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-xs font-black ${m.outstanding > 0 ? 'text-orange-400' : 'text-brand-lime'}`}>
+                                                        ${m.outstanding.toLocaleString()}
+                                                    </span>
+                                                    {m.overdue > 0 && (
+                                                        <p className="text-[8px] font-black text-red-500 mt-0.5">
+                                                            ${m.overdue.toLocaleString()} overdue
+                                                        </p>
+                                                    )}
+                                                </td>
+
+                                                {/* Status Badge */}
+                                                <td className="px-4 py-3">
+                                                    <StatusBadge status={m.currentWeekStatus} />
+                                                </td>
+
+                                                {/* Action */}
+                                                <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); navigateToDriver(m.driver._id); }}>
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <button className="p-1.5 rounded-lg bg-brand-lime/10 text-brand-lime hover:bg-brand-lime/20 transition-all">
+                                                            <Eye size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {expandedDriverId === m.driver._id && (
+                                                <tr style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                                                    <td colSpan={10} className="px-6 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.03)' }}>
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <h4 className="text-xs font-black uppercase tracking-wider text-brand-lime">
+                                                                    Overdue Invoices Details
+                                                                </h4>
+                                                                <span className="text-[10px] font-medium text-dim">
+                                                                    Total Overdue: {driverInvoices.length} Invoice(s)
+                                                                </span>
+                                                            </div>
+                                                            {driverInvoices.length > 0 ? (
+                                                                <div className="overflow-hidden rounded-xl border border-white/5 bg-black/20">
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b border-white/5 bg-white/5">
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Invoice No.</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Type</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Due Date</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Total Amount</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Paid</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim">Balance Due</th>
+                                                                                <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-dim text-right">Action</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {driverInvoices.map((inv) => (
+                                                                                <tr key={inv._id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-all">
+                                                                                    <td className="px-3 py-2 font-bold text-white">{inv.invoiceNumber}</td>
+                                                                                    <td className="px-3 py-2">
+                                                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${inv.invoiceType === 'RENTAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                                                                                inv.invoiceType === 'WORKSHOP' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                                                                                                    'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                                                                            }`}>
+                                                                                            {inv.invoiceType}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="px-3 py-2 text-dim">
+                                                                                        {new Date(inv.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                                    </td>
+                                                                                    <td className="px-3 py-2 font-bold text-white">${inv.totalAmountDue.toLocaleString()}</td>
+                                                                                    <td className="px-3 py-2 font-bold text-brand-lime">${inv.amountPaid.toLocaleString()}</td>
+                                                                                    <td className="px-3 py-2 font-bold text-red-500">${inv.balance.toLocaleString()}</td>
+                                                                                    <td className="px-3 py-2 text-right">
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                navigate(`../invoices/${inv._id}`);
+                                                                                            }}
+                                                                                            className="text-[10px] font-black text-brand-lime hover:underline uppercase tracking-wider"
+                                                                                        >
+                                                                                            View Invoice
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="p-4 text-center rounded-xl bg-white/5 border border-white/5">
+                                                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">No Overdue Invoices</p>
+                                                                    <p className="text-[9px] text-dim/60 mt-0.5">This driver currently has no invoices marked as OVERDUE in the system.</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
                                             )}
-                                        </td>
-
-                                        {/* Status Badge */}
-                                        <td className="px-4 py-3">
-                                            <StatusBadge status={m.currentWeekStatus} />
-                                        </td>
-
-                                        {/* Action */}
-                                        <td className="px-4 py-3">
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Eye size={16} className="text-brand-lime" />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                        </Fragment>
+                                    );
+                                })}
                                 {filteredMetrics.length === 0 && (
                                     <tr>
                                         <td colSpan={10} className="py-16 text-center">
@@ -778,20 +916,56 @@ const DriverPerformanceDashboard = () => {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="p-4 border-t flex items-center justify-between" style={{ borderColor: 'var(--border-main)' }}>
-                            <p className="text-[10px] font-bold text-dim">
-                                Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredMetrics.length)} of {filteredMetrics.length}
+                        <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors"
+                            style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                            <p className="text-xs font-bold text-dim">
+                                Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredMetrics.length)} of {filteredMetrics.length} drivers
                             </p>
-                            <div className="flex gap-1">
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${page === currentPage ? 'bg-brand-lime text-black' : 'bg-white/5 text-dim hover:bg-white/10'}`}
-                                    >
-                                        {page}
-                                    </button>
-                                ))}
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent text-xs"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+
+                                <div className="flex items-center gap-1">
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={p}
+                                                onClick={() => handlePageChange(Number(p))}
+                                                className={`w-8 h-8 rounded-lg text-xs font-black transition-all cursor-pointer ${currentPage === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{
+                                                    background: currentPage === p ? '#C8E600' : 'transparent',
+                                                    color: currentPage === p ? '#000' : 'var(--text-main)',
+                                                    border: currentPage === p ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent text-xs"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
                             </div>
                         </div>
                     )}

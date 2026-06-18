@@ -71,3 +71,8 @@ export const bulkUploadBankAccountTransactions = async (id: string, data: { bran
     return response.data;
 };
 
+export const getBankAccountTransactions = async (id: string, params?: any) => {
+    const response = await api.get(`/api/bank-accounts/${id}/transactions`, { params });
+    return response.data;
+};
+

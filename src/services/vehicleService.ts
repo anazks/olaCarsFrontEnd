@@ -51,7 +51,7 @@ export interface PurchaseDetails {
     currency: string;
     paymentMethod: PaymentMethod;
     financeDetails?: FinanceDetails;
-    branch: string | { _id: string; name: string; [key: string]: any };
+    branch: string | { _id: string; name: string;[key: string]: any };
     purchaseReceipt?: string;
 }
 
@@ -197,7 +197,7 @@ export interface RetirementDetails {
 export interface StatusHistoryEntry {
     status: VehicleStatus;
     changedAt: string;
-    changedBy?: string | { _id: string; fullName: string; role: string; [key: string]: any };
+    changedBy?: string | { _id: string; fullName: string; role: string;[key: string]: any };
     changedByRole?: string;
     notes?: string;
 }
@@ -340,7 +340,7 @@ export const getAvailableVehicles = async (filters: VehicleFilters = {}): Promis
 
 // POST assign vehicle to driver
 export const assignVehicleToDriver = async (
-    vehicleId: string, 
+    vehicleId: string,
     driverId: string,
     leaseDetails: {
         durationMonths: number;
@@ -373,7 +373,7 @@ export const uploadVehicleDocuments = async (id: string, formData: FormData): Pr
     console.group('--- API Call [START]: uploadVehicleDocuments ---');
     console.log('Vehicle ID:', id);
     console.log('API URL:', `/api/vehicle/${id}/upload-documents`);
-    
+
     // Log each part of the FormData
     const formDataEntries: Record<string, any> = {};
     formData.forEach((value, key) => {
@@ -405,7 +405,7 @@ export const progressVehicle = async (id: string, payload: ProgressVehiclePayloa
 
 // PUT update vehicle lease settings
 export const updateVehicleLeaseSettings = async (
-    id: string, 
+    id: string,
     payload: { durationWeeks: number; weeklyRent?: number; sellingValue?: number }
 ): Promise<Vehicle> => {
     const response = await api.put(`/api/vehicle/${id}/lease-settings`, payload);

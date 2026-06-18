@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, AlertCircle, FileCheck, Car, Tag, Download, Printer, CreditCard, History, ChevronDown, ChevronUp } from 'lucide-react';
-import { getDriverById, progressDriver, uploadDriverDocument, updateDriver } from '../../../services/driverService';
+import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, cancelContract } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
@@ -147,6 +147,28 @@ const DriverDetail = () => {
         } catch (err: any) {
             console.error("Failed to download PDF:", err);
             toast.error("Failed downloading contract PDF document.", { id: toastId });
+        }
+    };
+
+    const handleCancelContract = async () => {
+        if (!id) return;
+        const confirmCancel = window.confirm(
+            "Are you sure you want to cancel this contract? This will set both the driver and customer status to INACTIVE, release the assigned vehicle, and stop all future automated rent invoicing."
+        );
+        if (!confirmCancel) return;
+
+        const notes = window.prompt("Please enter a reason/note for cancelling the contract (optional):");
+        if (notes === null) return; // User clicked cancel on prompt
+
+        const toastId = toast.loading("Cancelling contract and releasing vehicle...");
+        try {
+            await cancelContract(id, notes || undefined);
+            toast.success("Contract cancelled successfully!", { id: toastId });
+            await fetchDriver();
+        } catch (err: any) {
+            console.error("Failed to cancel contract:", err);
+            const errMsg = err.response?.data?.message || err.message || "Failed to cancel contract.";
+            toast.error(errMsg, { id: toastId });
         }
     };
 
@@ -1201,12 +1223,14 @@ const DriverDetail = () => {
                                     <div className="px-2 py-0.5 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-wider border border-brand-lime/20 shadow-sm animate-pulse">
                                         Active Rental
                                     </div>
-                                    <button
-                                        onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
-                                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-brand-lime/30 text-white text-[10px] font-black uppercase tracking-widest transition-all"
-                                    >
-                                        View Vehicle
-                                    </button>
+                                    {isStaff && (
+                                        <button
+                                            onClick={handleCancelContract}
+                                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all"
+                                        >
+                                            Cancel Contract
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1215,7 +1239,10 @@ const DriverDetail = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 relative z-10">
                             {/* Left: Physical Vehicle Details */}
                             <div className="lg:col-span-5 space-y-3">
-                                <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex gap-3 items-center">
+                                <div 
+                                    onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
+                                    className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex gap-3 items-center cursor-pointer hover:bg-white/[0.03] hover:border-white/10 transition-all shadow-sm hover:shadow-md"
+                                >
                                     <div className="w-16 h-16 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
                                         {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
                                             <img
