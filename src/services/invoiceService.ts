@@ -37,6 +37,8 @@ export interface Invoice {
     payments: InvoicePayment[];
     generatedAt: string;
     pdfS3Key?: string;
+    createdAt?: string;
+    updatedAt?: string;
     // Manual invoice fields
     lineItems?: LineItem[];
     subtotal?: number;
