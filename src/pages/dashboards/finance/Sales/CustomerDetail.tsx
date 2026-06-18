@@ -22,7 +22,22 @@ const CustomerDetail = () => {
     const [payments, setPayments] = useState<any[]>([]);
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'statements'>('overview');
+    const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PAID', 'UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
+
+    const handleStatusToggle = (status: string) => {
+        setSelectedStatuses(prev => 
+            prev.includes(status) 
+                ? prev.filter(s => s !== status) 
+                : [...prev, status]
+        );
+    };
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -122,6 +137,8 @@ const CustomerDetail = () => {
     const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
 
     const handleExportStatement = () => {
+        if (!customer) return;
+        setIsExportModalOpen(false);
         const toastId = toast.loading("Generating Statement CSV...");
 
         try {
@@ -173,10 +190,24 @@ const CustomerDetail = () => {
 
             const txList: TransactionItem[] = [];
 
+            // Parse filters
+            const fromDateLimit = fromDate ? new Date(fromDate) : null;
+            if (fromDateLimit) fromDateLimit.setHours(0, 0, 0, 0);
+
+            const toDateLimit = toDate ? new Date(toDate) : null;
+            if (toDateLimit) toDateLimit.setHours(23, 59, 59, 999);
+
+            const allowedStatuses = selectedStatuses.map(s => s.toUpperCase());
+
             // Add Invoices
             invoices.forEach(inv => {
+                const date = new Date(inv.dueDate || inv.generatedAt || new Date());
+                if (fromDateLimit && date < fromDateLimit) return;
+                if (toDateLimit && date > toDateLimit) return;
+                if (allowedStatuses.length > 0 && !allowedStatuses.includes((inv.status || '').toUpperCase())) return;
+
                 txList.push({
-                    date: new Date(inv.dueDate || inv.generatedAt || new Date()),
+                    date,
                     type: 'Invoice',
                     refNumber: inv.invoiceNumber || '—',
                     description: inv.weekLabel ? `Rental Charge: ${inv.weekLabel}` : 'Rental Charge',
@@ -189,8 +220,12 @@ const CustomerDetail = () => {
             // Add Payments
             payments.forEach(pmt => {
                 if (pmt.status === 'VOID') return; // Ignore voided payments in financial statements
+                const date = new Date(pmt.paymentDate || new Date());
+                if (fromDateLimit && date < fromDateLimit) return;
+                if (toDateLimit && date > toDateLimit) return;
+
                 txList.push({
-                    date: new Date(pmt.paymentDate || new Date()),
+                    date,
                     type: 'Payment',
                     refNumber: pmt.paymentNumber || '—',
                     description: `Payment Received via ${pmt.paymentMethod || 'Other'}`,
@@ -202,8 +237,12 @@ const CustomerDetail = () => {
 
             // Add Credit Notes
             creditNotes.forEach(cn => {
+                const date = new Date(cn.creditNoteDate || new Date());
+                if (fromDateLimit && date < fromDateLimit) return;
+                if (toDateLimit && date > toDateLimit) return;
+
                 txList.push({
-                    date: new Date(cn.creditNoteDate || new Date()),
+                    date,
                     type: 'Credit Note',
                     refNumber: cn.creditNoteNumber || '—',
                     description: cn.reason ? `Credit Note: ${cn.reason}` : 'Credit Note Issued',
@@ -213,13 +252,34 @@ const CustomerDetail = () => {
                 });
             });
 
-            // Sort transactions chronologically
+            // Sort transactions chronologically to calculate running balances
             txList.sort((a, b) => a.date.getTime() - b.date.getTime());
 
             // Compute running balance
             let runningBalance = 0;
-            const transactionRows = txList.map(tx => {
+            txList.forEach(tx => {
                 runningBalance += tx.debit - tx.credit;
+                (tx as any).runningBalance = runningBalance;
+            });
+
+            // Now apply selected sorting options for final export list
+            txList.sort((a, b) => {
+                if (sortBy === 'status') {
+                    const statusA = a.status || '';
+                    const statusB = b.status || '';
+                    const cmp = statusA.localeCompare(statusB);
+                    if (cmp !== 0) {
+                        return sortOrder === 'asc' ? cmp : -cmp;
+                    }
+                }
+                
+                const timeA = a.date.getTime();
+                const timeB = b.date.getTime();
+                return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+            });
+
+            // Map to transaction rows for CSV
+            const transactionRows = txList.map(tx => {
                 return [
                     tx.date.toLocaleDateString(),
                     tx.type,
@@ -227,7 +287,7 @@ const CustomerDetail = () => {
                     tx.description,
                     tx.debit > 0 ? tx.debit.toFixed(2) : '0.00',
                     tx.credit > 0 ? tx.credit.toFixed(2) : '0.00',
-                    runningBalance.toFixed(2),
+                    ((tx as any).runningBalance || 0).toFixed(2),
                     tx.status
                 ];
             });
@@ -262,14 +322,20 @@ const CustomerDetail = () => {
     };
 
     const handleDownloadPdf = async () => {
-        if (!id) return;
+        setIsExportModalOpen(false);
         const toastId = toast.loading("Generating statement PDF from backend...");
         try {
-            // Note: Update backend route to use customer-based statement if available, or call standard statement with fallback
-            const res = await api.get(`/api/customers/${id}/statement/pdf`, { responseType: 'blob' }).catch(async () => {
+            const params = { 
+                sortBy, 
+                sortOrder,
+                fromDate: fromDate || undefined,
+                toDate: toDate || undefined,
+                statuses: selectedStatuses.join(',')
+            };
+            const res = await api.get(`/api/customers/${id}/statement/pdf`, { params, responseType: 'blob' }).catch(async () => {
                 // Fallback to driver statement if customer endpoint isn't fully routed yet
                 if (customer.driver?._id) {
-                    return await api.get(`/api/driver/${customer.driver._id}/statement/pdf`, { responseType: 'blob' });
+                    return await api.get(`/api/driver/${customer.driver._id}/statement/pdf`, { params, responseType: 'blob' });
                 }
                 throw new Error("Statement PDF not available for non-driver customers yet.");
             });
@@ -361,7 +427,7 @@ const CustomerDetail = () => {
                     )}
 
                     <button 
-                        onClick={handleExportStatement}
+                        onClick={() => { setExportFormat('csv'); setIsExportModalOpen(true); }}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95 cursor-pointer"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                     >
@@ -369,7 +435,7 @@ const CustomerDetail = () => {
                     </button>
 
                     <button 
-                        onClick={handleDownloadPdf}
+                        onClick={() => { setExportFormat('pdf'); setIsExportModalOpen(true); }}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
                         style={{ background: 'var(--brand-lime)' }}
                     >
@@ -418,6 +484,7 @@ const CustomerDetail = () => {
                     { id: 'invoices', label: 'Payables (Invoices)', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments Received', icon: <DollarSign size={14} /> },
                     { id: 'credit_notes', label: 'Credit Notes', icon: <FileSpreadsheet size={14} /> },
+                    { id: 'statements', label: 'Statements', icon: <FileText size={14} /> },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -450,7 +517,111 @@ const CustomerDetail = () => {
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
                 {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
+                {activeTab === 'statements' && <StatementsTab />}
             </div>
+
+            {isExportModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all">
+                    <div className="w-full max-w-md p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2">
+                                <FileText className="text-brand-lime" size={20} />
+                                <h3 className="text-sm font-black uppercase tracking-widest text-white">Export Statement {exportFormat.toUpperCase()}</h3>
+                            </div>
+                            <button onClick={() => setIsExportModalOpen(false)} className="text-dim hover:text-white transition-all text-xs font-bold">&times;</button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Date filters */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">From Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={fromDate}
+                                        onChange={(e) => setFromDate(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">To Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={toDate}
+                                        onChange={(e) => setToDate(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Status filters */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim block mb-1">Invoice Statuses</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {['PAID', 'UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].map((status) => (
+                                        <label key={status} className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input 
+                                                type="checkbox"
+                                                checked={selectedStatuses.includes(status)}
+                                                onChange={() => handleStatusToggle(status)}
+                                                className="rounded border-gray-300 text-brand-lime focus:ring-brand-lime"
+                                            />
+                                            <span className="text-[10px] font-bold tracking-wider text-dim hover:text-white transition-all uppercase">{status.replace('_', ' ')}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Sorting options */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Sort By</label>
+                                    <select 
+                                        value={sortBy} 
+                                        onChange={(e) => setSortBy(e.target.value as 'date' | 'status')}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border hover:bg-white/5 cursor-pointer"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="date" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Date</option>
+                                        <option value="status" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Invoice Status</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Sort Order</label>
+                                    <select 
+                                        value={sortOrder} 
+                                        onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border hover:bg-white/5 cursor-pointer"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="desc" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Newest First</option>
+                                        <option value="asc" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Oldest First</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button 
+                                    onClick={() => setIsExportModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={exportFormat === 'pdf' ? handleDownloadPdf : handleExportStatement}
+                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                                    style={{ background: 'var(--brand-lime)' }}
+                                >
+                                    Export {exportFormat.toUpperCase()}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -611,46 +782,85 @@ const EMITab = ({ customer, invoices }: { customer: Customer, invoices: Invoice[
     );
 };
 
-const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => (
-    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-        <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Invoice #</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Period</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Due</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
-                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                    {invoices.length === 0 ? (
-                        <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices generated for this customer.</td></tr>
-                    ) : (
-                        invoices.map((inv) => (
-                            <tr key={inv._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</td>
-                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{inv.weekLabel}</td>
-                                <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${inv.balance.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
-                                        inv.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                        inv.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
-                                        'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                    }`}>
-                                        {inv.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+const formatPeriod = (inv: Invoice) => {
+    if (!inv.weekLabel) return '—';
+    const match = inv.weekLabel.match(/^(Week|Month)\s+(\d+)\s*-\s*(.*)$/i);
+    if (match && inv.dueDate) {
+        const type = match[1];
+        const num = match[2];
+        const d = new Date(inv.dueDate);
+        if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${type} ${num} - ${day}/${month}/${year}`;
+        }
+    }
+    if (inv.dueDate) {
+        const d = new Date(inv.dueDate);
+        if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            if (inv.weekLabel.startsWith('Manual Invoice')) {
+                return `Manual Invoice - ${day}/${month}/${year}`;
+            }
+            if (inv.weekLabel.startsWith('Bulk Invoice')) {
+                return `Bulk Invoice - ${day}/${month}/${year}`;
+            }
+        }
+    }
+    return inv.weekLabel;
+};
+
+const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => {
+    const sortedInvoices = [...invoices].sort((a, b) => {
+        const dateA = new Date(a.dueDate || a.generatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.dueDate || b.generatedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+
+    return (
+        <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Invoice #</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Period</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Due</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
+                            <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                        {sortedInvoices.length === 0 ? (
+                            <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices generated for this customer.</td></tr>
+                        ) : (
+                            sortedInvoices.map((inv) => (
+                                <tr key={inv._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                    <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</td>
+                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatPeriod(inv)}</td>
+                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${inv.balance.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                            inv.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                            inv.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
+                                            'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                        }`}>
+                                            {inv.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const PaymentsTab = ({ payments }: { payments: any[] }) => (
     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
@@ -698,6 +908,20 @@ const PaymentsTab = ({ payments }: { payments: any[] }) => (
         </div>
     </div>
 );
+
+function StatementsTab() {
+    return (
+        <div className="flex flex-col items-center justify-center p-20 rounded-[2rem] border animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="w-16 h-16 rounded-2xl bg-brand-lime/10 flex items-center justify-center border border-brand-lime/20 mb-6">
+                <FileText className="text-brand-lime animate-pulse" size={28} />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-white mb-2">Update soon</h3>
+            <p className="text-xs font-semibold text-center leading-relaxed max-w-md" style={{ color: 'var(--text-dim)' }}>
+                This section is currently under development. Detailed statements, reports, and transactional histories will be available here soon.
+            </p>
+        </div>
+    );
+}
 
 const CreditNotesTab = ({ creditNotes }: { creditNotes: CreditNote[] }) => (
     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
