@@ -227,7 +227,7 @@ const ManageWorkshopManagers = () => {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          branchId: formData.workshopId,
+          workshopId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };
@@ -238,7 +238,7 @@ const ManageWorkshopManagers = () => {
           fullName: formData.fullName,
           email: formData.email,
           phone: formData.phone,
-          branchId: formData.workshopId,
+          workshopId: formData.workshopId,
           status: formData.status,
           permissions: formData.permissions,
         };

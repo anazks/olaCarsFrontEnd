@@ -10,6 +10,7 @@ import {
 } from '../../../services/merchendiseService';
 import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 
 const EditMerchendiser = () => {
     const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ const EditMerchendiser = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
     const [formData, setFormData] = useState({
         id: '',
@@ -27,7 +29,8 @@ const EditMerchendiser = () => {
         phone: '',
         password: '',
         status: 'ACTIVE',
-        permissions: [] as string[]
+        permissions: [] as string[],
+        supplier: ''
     });
 
     const user = getUser();
@@ -38,6 +41,18 @@ const EditMerchendiser = () => {
     useEffect(() => {
         if (id) loadData(id);
     }, [id]);
+
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                const res = await getAllSuppliers({ limit: 100 });
+                setSuppliers(res.data || []);
+            } catch (err) {
+                console.error('Failed to fetch suppliers', err);
+            }
+        };
+        fetchSuppliers();
+    }, []);
 
     const loadData = async (staffId: string) => {
         setLoading(true);
@@ -51,7 +66,8 @@ const EditMerchendiser = () => {
                 phone: data.phone || '',
                 password: '',
                 status: data.status,
-                permissions: data.permissions || []
+                permissions: data.permissions || [],
+                supplier: data.supplier?._id || ''
             });
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load details');
@@ -72,7 +88,8 @@ const EditMerchendiser = () => {
                 email: formData.email,
                 phone: formData.phone,
                 status: formData.status as any,
-                permissions: formData.permissions
+                permissions: formData.permissions,
+                supplier: formData.supplier || undefined
             };
             if (formData.password) payload.password = formData.password;
             await updateMerchendiser(payload);
@@ -145,6 +162,17 @@ const EditMerchendiser = () => {
                                         <option value="ACTIVE">Active</option>
                                         <option value="SUSPENDED">Suspended</option>
                                         <option value="LOCKED">Locked</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Vendor (Supplier)</label>
+                                    <select value={formData.supplier} onChange={(e) => setFormData({ ...formData, supplier: e.target.value })} className="w-full px-4 py-3 rounded-xl outline-none text-sm focus:ring-2 focus:ring-lime appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}>
+                                        <option value="">Select Vendor...</option>
+                                        {suppliers.map((sup) => (
+                                            <option key={sup._id} value={sup._id}>
+                                                {sup.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>

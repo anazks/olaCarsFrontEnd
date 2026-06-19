@@ -549,7 +549,7 @@ const PurchaseOrderList = () => {
                                             <div className="space-y-1">
                                                 <div className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                                     <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
-                                                    {typeof po.supplier === 'object' ? po.supplier.name : t('management.purchaseOrders.table.unknownVendor')}
+                                                    {typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || t('management.purchaseOrders.table.unknownVendor'))}
                                                 </div>
                                                 <div className="text-[10px] opacity-50 font-medium flex items-center gap-2 pl-3.5" style={{ color: 'var(--text-dim)' }}>
                                                     {typeof po.branch === 'object' ? po.branch.name : t('management.purchaseOrders.table.unknownBranch')}

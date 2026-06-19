@@ -68,7 +68,7 @@ export const getAllFinancialAdmins = async (filters: AdminFilters = {}): Promise
 // GET a financial admin by ID
 export const getFinancialAdminById = async (id: string): Promise<FinancialAdmin> => {
     const response = await api.get(`/api/finance-admin/${id}`);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // POST create a new financial admin
@@ -76,7 +76,7 @@ export const createFinancialAdmin = async (
     payload: CreateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
     const response = await api.post('/api/finance-admin', payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // PUT update a financial admin
@@ -84,7 +84,7 @@ export const updateFinancialAdmin = async (
     payload: UpdateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
     const response = await api.put(`/api/finance-admin/${payload.id}`, payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // DELETE a financial admin by ID

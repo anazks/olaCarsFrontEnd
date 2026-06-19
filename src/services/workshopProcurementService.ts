@@ -36,6 +36,12 @@ export interface ProcurementRequest {
     approvedByRole?: string;
     rejectionReason?: string;
     supplier?: ProcurementRequestSupplier;
+    supplierDetails?: {
+        name: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+    };
     notes?: string;
     merchandiserPrice?: number;
     merchandiserTotalAmount?: number;
