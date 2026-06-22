@@ -73,7 +73,7 @@ const BranchDetails = () => {
         fetchDetails();
     }, [id, dateRange]);
 
-    if (loading) {
+    if (loading && !data) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="w-12 h-12 border-4 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
@@ -158,7 +158,7 @@ const BranchDetails = () => {
     };
 
     return (
-        <div className="container-responsive space-y-8 animate-in fade-in duration-500 p-4 md:p-8">
+        <div className={`container-responsive space-y-8 animate-in fade-in duration-500 p-4 md:p-8 transition-all duration-300 ${loading ? 'opacity-65 pointer-events-none' : ''}`}>
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex items-center gap-4">
@@ -170,8 +170,9 @@ const BranchDetails = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                            <h1 className="text-xl font-black tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                                 {branch.name}
+                                {loading && <Loader2 className="animate-spin text-[#C8E600]" size={18} />}
                             </h1>
                             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">
                                 {branch.code}

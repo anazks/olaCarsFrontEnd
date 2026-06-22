@@ -178,7 +178,7 @@ const EditFinanceStaff = () => {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            <PermissionSelector userPermissions={userPermissions} selectedPermissions={formData.permissions} isAdmin={isAdmin} onChange={(perms) => setFormData({ ...formData, permissions: perms })} />
+                            <PermissionSelector staffName={formData.fullName} userPermissions={userPermissions} selectedPermissions={formData.permissions} isAdmin={isAdmin} onChange={(perms) => setFormData({ ...formData, permissions: perms })} />
                         </div>
                     )}
 

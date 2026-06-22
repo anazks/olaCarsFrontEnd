@@ -198,6 +198,7 @@ const EditFinancialAdmin = () => {
                     ) : (
                         <div className="space-y-4">
                             <PermissionSelector
+                                staffName={formData.fullName}
                                 userPermissions={userPermissions}
                                 selectedPermissions={formData.permissions}
                                 isAdmin={isAdmin}

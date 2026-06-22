@@ -129,7 +129,7 @@ const OperationalAdminDashboard = () => {
     if (!data) return null;
 
     return (
-        <div className="container-responsive space-y-6 md:space-y-8 py-4 md:py-6">
+        <div className={`container-responsive space-y-6 md:space-y-8 py-4 md:py-6 transition-all duration-300 ${loading ? 'opacity-65 pointer-events-none' : ''}`}>
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
@@ -139,7 +139,10 @@ const OperationalAdminDashboard = () => {
                         </div>
                         <span className="text-xs font-black uppercase tracking-widest text-[#148F85]">Live Operations</span>
                     </div>
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Operations Command</h1>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        Operations Command
+                        {loading && <RefreshCw className="animate-spin text-[#148F85] ml-2 flex-shrink-0" size={20} />}
+                    </h1>
                     <p className="text-xs md:text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Real-time fleet & logistics monitoring</p>
                 </div>
                 

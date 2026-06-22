@@ -68,7 +68,7 @@ export const getAllFinancialAdmins = async (filters: AdminFilters = {}): Promise
 // GET a financial admin by ID
 export const getFinancialAdminById = async (id: string): Promise<FinancialAdmin> => {
     const response = await api.get(`/api/finance-admin/${id}`);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // POST create a new financial admin

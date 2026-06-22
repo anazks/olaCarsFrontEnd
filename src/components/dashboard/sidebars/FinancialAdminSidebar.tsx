@@ -272,10 +272,12 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.paymentRequests"),
           path: "/admin/financial-admin/payment-requests",
         },
+        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/financial-admin/ledger",
         },
+        */
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",

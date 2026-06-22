@@ -612,6 +612,7 @@ const ManageFinancialAdmins = () => {
                             ) : (
                                 <div className="space-y-4 min-h-[300px]">
                                     <PermissionSelector
+                                        staffName={formData.fullName}
                                         userPermissions={userPermissions}
                                         selectedPermissions={formData.permissions}
                                         isAdmin={isAdmin}

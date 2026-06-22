@@ -173,7 +173,7 @@ const ExecutiveDashboard = () => {
             return;
         }
 
-        const shouldShowLoader = !executiveState.isLoaded;
+        const shouldShowLoader = true;
         console.log('[DEBUG] Calling fetchData, shouldShowLoader:', shouldShowLoader);
         fetchData(shouldShowLoader);
         isFirstMount.current = false;

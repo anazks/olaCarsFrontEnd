@@ -1243,6 +1243,7 @@ const ManageWorkshopStaff = () => {
               ) : (
                 <div className="space-y-6 min-h-[400px]">
                   <PermissionSelector
+                    staffName={formData.fullName}
                     userPermissions={userPermissions}
                     selectedPermissions={formData.permissions}
                     isAdmin={isAdmin}

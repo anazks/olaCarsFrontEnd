@@ -57,7 +57,7 @@ const DashboardHub = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
     const [endDate, setEndDate] = useState<string>(getToday());
 
@@ -348,7 +348,7 @@ const DashboardHub = () => {
 
     return (
         <div
-            className="transition-colors duration-300 space-y-5 flex flex-col"
+            className={`transition-colors duration-300 space-y-5 flex flex-col ${loading ? 'opacity-65 pointer-events-none' : ''}`}
             style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
         >
             {/* Header Section */}
@@ -357,6 +357,7 @@ const DashboardHub = () => {
                     <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
                         <LayoutGrid className="text-[#C8E600]" size={24} />
                         {t('sidebar.items.dashboard', 'Dashboard Hub')}
+                        {loading && <RefreshCw className="animate-spin text-[#C8E600] ml-2 flex-shrink-0" size={20} />}
                     </h1>
                     <p className="font-medium text-[11px]" style={{ color: 'var(--text-dim)' }}>
                         Ecosystem control center and specialized dashboard navigator
