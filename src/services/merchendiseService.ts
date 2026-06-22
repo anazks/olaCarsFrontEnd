@@ -8,6 +8,11 @@ export interface MerchendiseUser {
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions: string[];
+    supplier?: {
+        _id: string;
+        name: string;
+        email?: string;
+    };
     createdAt?: string;
     updatedAt?: string;
 }
@@ -42,6 +47,7 @@ export interface CreateMerchendisePayload {
     phone?: string;
     status?: string;
     permissions?: string[];
+    supplier?: string;
 }
 
 export interface UpdateMerchendisePayload {
@@ -52,6 +58,7 @@ export interface UpdateMerchendisePayload {
     phone?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions?: string[];
+    supplier?: string;
 }
 
 // GET all merchendisers with filters

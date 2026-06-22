@@ -53,6 +53,12 @@ export interface PurchaseOrder {
     paymentDate?: string;
     branch: string | Branch;
     supplier: string | Supplier;
+    supplierDetails?: {
+        name: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+    };
     createdBy: string;
     creatorRole: string;
     approvedBy?: string;

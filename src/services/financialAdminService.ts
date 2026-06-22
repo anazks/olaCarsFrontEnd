@@ -76,7 +76,7 @@ export const createFinancialAdmin = async (
     payload: CreateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
     const response = await api.post('/api/finance-admin', payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // PUT update a financial admin
@@ -84,7 +84,7 @@ export const updateFinancialAdmin = async (
     payload: UpdateFinancialAdminPayload
 ): Promise<FinancialAdmin> => {
     const response = await api.put(`/api/finance-admin/${payload.id}`, payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 // DELETE a financial admin by ID

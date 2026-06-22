@@ -142,6 +142,7 @@ const WorkshopPurchaseRequestDetail = () => {
     const canApprove = isFinanceApproval &&
         request.requestedBy?._id !== userId &&
         (userRole === 'admin' || userRole === 'financeadmin');
+    const isPricingAuditAvailable = request.merchandiserPrice !== undefined && request.merchandiserPrice !== null;
 
 
 
@@ -176,9 +177,14 @@ const WorkshopPurchaseRequestDetail = () => {
                         </button>
                         <button
                             onClick={() => openActionModal('APPROVE')}
-                            disabled={!!actionLoading}
+                            disabled={!!actionLoading || !isPricingAuditAvailable}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer border-none"
-                            style={{ background: '#C8E600', color: '#111' }}
+                            style={{
+                                background: isPricingAuditAvailable ? '#C8E600' : 'rgba(255,255,255,0.05)',
+                                color: isPricingAuditAvailable ? '#111' : 'rgba(255,255,255,0.2)',
+                                border: isPricingAuditAvailable ? 'none' : '1px solid rgba(255,255,255,0.1)'
+                            }}
+                            title={!isPricingAuditAvailable ? "Pricing audit not available from merchandiser" : ""}
                         >
                             <CheckCircle size={18} /> Approve Proposed
                         </button>
@@ -260,6 +266,37 @@ const WorkshopPurchaseRequestDetail = () => {
                                                 </a>
                                             );
                                         })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Display Supplier Details if available */}
+                            {request.supplierDetails && (
+                                <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                    <span className="text-[10px] uppercase font-bold text-[#C8E600] block mb-2">Audited Supplier Details</span>
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <span className="block text-[9px] uppercase font-bold text-dim mb-0.5" style={{ color: 'var(--text-dim)' }}>Supplier Name</span>
+                                            <span className="font-semibold text-main" style={{ color: 'var(--text-main)' }}>{request.supplierDetails.name || '—'}</span>
+                                        </div>
+                                        {request.supplierDetails.email && (
+                                            <div>
+                                                <span className="block text-[9px] uppercase font-bold text-dim mb-0.5" style={{ color: 'var(--text-dim)' }}>Supplier Email</span>
+                                                <span className="font-semibold text-main" style={{ color: 'var(--text-main)' }}>{request.supplierDetails.email}</span>
+                                            </div>
+                                        )}
+                                        {request.supplierDetails.phone && (
+                                            <div>
+                                                <span className="block text-[9px] uppercase font-bold text-dim mb-0.5" style={{ color: 'var(--text-dim)' }}>Supplier Phone</span>
+                                                <span className="font-semibold text-main" style={{ color: 'var(--text-main)' }}>{request.supplierDetails.phone}</span>
+                                            </div>
+                                        )}
+                                        {request.supplierDetails.address && (
+                                            <div className="col-span-2">
+                                                <span className="block text-[9px] uppercase font-bold text-dim mb-0.5" style={{ color: 'var(--text-dim)' }}>Supplier Address</span>
+                                                <span className="font-semibold text-main" style={{ color: 'var(--text-main)' }}>{request.supplierDetails.address}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -374,13 +411,22 @@ const WorkshopPurchaseRequestDetail = () => {
                         </div>
                     )}
 
-                    {request.supplier && (
+                    {(request.supplier || request.supplierDetails) && (
                         <div className="rounded-2xl border p-5 space-y-3" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: '#C8E600' }}>
                                 <Landmark size={14} /> Assigned Supplier
                             </div>
                             <div>
-                                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{request.supplier?.name}</p>
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                    {request.supplier?.name || request.supplierDetails?.name || '—'}
+                                </p>
+                                {request.supplierDetails && (
+                                    <div className="mt-2 text-xs space-y-1 opacity-60" style={{ color: 'var(--text-dim)' }}>
+                                        {request.supplierDetails.email && <p>Email: {request.supplierDetails.email}</p>}
+                                        {request.supplierDetails.phone && <p>Phone: {request.supplierDetails.phone}</p>}
+                                        {request.supplierDetails.address && <p>Address: {request.supplierDetails.address}</p>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -416,8 +462,9 @@ const WorkshopPurchaseRequestDetail = () => {
                                 </button>
                                 <button
                                     onClick={() => openActionModal('APPROVE')}
-                                    disabled={actionLoading !== null}
-                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                                    disabled={actionLoading !== null || !isPricingAuditAvailable}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white disabled:opacity-30 disabled:hover:bg-green-500/10 disabled:hover:text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                                    title={!isPricingAuditAvailable ? "Pricing audit not available from merchandiser" : ""}
                                 >
                                     {actionLoading === 'APPROVE' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                     Approve Request

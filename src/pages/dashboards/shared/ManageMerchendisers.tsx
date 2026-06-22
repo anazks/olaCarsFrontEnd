@@ -20,6 +20,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
 import { validatePhoneDetails } from '../../../utils/phoneValidation';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -69,13 +70,15 @@ const ManageMerchendisers = () => {
     // Modal state
     const [modalMode, setModalMode] = useState<ModalMode>(null);
     const [selectedMerch, setSelectedMerch] = useState<MerchendiseUser | null>(null);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
         password: '',
         phone: '',
         status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'LOCKED',
-        permissions: [] as string[]
+        permissions: [] as string[],
+        supplier: ''
     });
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
@@ -117,6 +120,18 @@ const ManageMerchendisers = () => {
         return () => clearTimeout(timer);
     }, [fetchData, searchQuery]);
 
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                const res = await getAllSuppliers({ limit: 100 });
+                setSuppliers(res.data || []);
+            } catch (err) {
+                console.error('Failed to fetch suppliers', err);
+            }
+        };
+        fetchSuppliers();
+    }, []);
+
     const openCreateModal = () => {
         setModalMode('create');
         setSelectedMerch(null);
@@ -126,7 +141,8 @@ const ManageMerchendisers = () => {
             password: '',
             phone: '',
             status: 'ACTIVE',
-            permissions: []
+            permissions: [],
+            supplier: ''
         });
         setActiveTab('details');
         setFormError(null);
@@ -190,7 +206,8 @@ const ManageMerchendisers = () => {
                     password: formData.password || undefined,
                     phone: formData.phone || undefined,
                     status: formData.status,
-                    permissions: formData.permissions
+                    permissions: formData.permissions,
+                    supplier: formData.supplier || undefined
                 };
                 await createMerchendiser(payload);
             } else if (modalMode === 'edit' && selectedMerch) {
@@ -433,7 +450,14 @@ const ManageMerchendisers = () => {
                                                 <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border text-lime" style={{ borderColor: 'var(--border-main)', color: 'var(--brand-lime)' }}>
                                                     <User size={14} />
                                                 </div>
-                                                <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{merch.fullName}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{merch.fullName}</span>
+                                                    {merch.supplier && (
+                                                        <span className="text-[10px] uppercase font-black tracking-wider text-lime mt-0.5" style={{ color: 'var(--brand-lime)' }}>
+                                                            Vendor: {merch.supplier.name}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -703,6 +727,24 @@ const ManageMerchendisers = () => {
                                             <option value="ACTIVE">ACTIVE</option>
                                             <option value="SUSPENDED">SUSPENDED</option>
                                             <option value="LOCKED">LOCKED</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest px-1 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                                            Vendor (Supplier)
+                                        </label>
+                                        <select
+                                            value={formData.supplier}
+                                            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer transition-all focus:ring-2 focus:ring-lime font-bold text-xs"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">Select Vendor...</option>
+                                            {suppliers.map((sup) => (
+                                                <option key={sup._id} value={sup._id}>
+                                                    {sup.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>

@@ -42,7 +42,7 @@ export interface CreateWorkshopManagerPayload {
     email: string;
     password: string;
     phone: string;
-    branchId: string;
+    workshopId: string;
     status?: string;
     permissions?: string[];
 }
@@ -53,7 +53,7 @@ export interface UpdateWorkshopManagerPayload {
     email?: string;
     password?: string;
     phone?: string;
-    branchId?: string;
+    workshopId?: string;
     status?: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions?: string[];
 }

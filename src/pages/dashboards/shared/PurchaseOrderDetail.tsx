@@ -326,7 +326,7 @@ const PurchaseOrderDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Supplier</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {typeof po.supplier === 'object' ? po.supplier.name : 'N/A'}
+                                        {typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A')}
                                     </p>
                                 </div>
                             </div>
