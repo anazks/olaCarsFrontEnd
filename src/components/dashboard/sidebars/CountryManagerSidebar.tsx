@@ -213,11 +213,13 @@ const CountryManagerSidebar = ({
           label: t("sidebar.items.paymentRequests"),
           path: "/admin/country-manager/payment-requests",
         },
+        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/country-manager/ledger",
           permission: "LEDGER_VIEW",
         },
+        */
         {
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/country-manager/finance-dashboard",

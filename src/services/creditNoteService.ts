@@ -30,6 +30,11 @@ export interface CreditNote {
     reason: string;
     notes?: string;
     status: 'OPEN' | 'APPLIED' | 'CLOSED' | 'VOID';
+    supportingDocument?: {
+        name: string;
+        url: string;
+        uploadedAt: string;
+    };
     createdAt: string;
 }
 
@@ -41,6 +46,7 @@ export interface CreateCreditNotePayload {
     reason: string;
     notes?: string;
     creditNoteDate?: string;
+    supportingDocument?: File;
 }
 
 export const getAllCreditNotes = async (params: any = {}) => {
@@ -57,7 +63,20 @@ export const getCreditNoteById = async (id: string) => {
 };
 
 export const createCreditNote = async (payload: CreateCreditNotePayload) => {
-    const res = await api.post('/api/credit-notes', payload);
+    let body: any = payload;
+    if (payload.supportingDocument && payload.supportingDocument instanceof File) {
+        const formData = new FormData();
+        Object.keys(payload).forEach((key) => {
+            const val = (payload as any)[key];
+            if (val !== undefined && val !== null) {
+                formData.append(key, val instanceof File ? val : String(val));
+            }
+        });
+        body = formData;
+    }
+    const res = await api.post('/api/credit-notes', body, {
+        headers: body instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return res.data;
 };
 

@@ -782,6 +782,7 @@ const ManageCountryManagers = () => {
                             ) : (
                                 <div className="space-y-4 min-h-[350px]">
                                     <PermissionSelector
+                                        staffName={formData.fullName}
                                         userPermissions={userPermissions}
                                         selectedPermissions={formData.permissions}
                                         isAdmin={isAdmin}

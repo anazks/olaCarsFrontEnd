@@ -137,10 +137,12 @@ const BranchFinStaffSidebar = ({
       label: t("sidebar.sections.finance"),
       icon: <Calculator size={22} />,
       subItems: [
+        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/branch-fin-staff/ledger",
         },
+        */
         {
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/branch-fin-staff/finance-dashboard",

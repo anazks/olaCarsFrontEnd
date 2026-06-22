@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Clock3, MapPin, TrendingUp, Calendar, BarChart3,
-    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search, Target
+    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search, Target, RefreshCw
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
@@ -185,7 +185,7 @@ const StaffPerformanceDashboard = () => {
     };
 
     return (
-        <div className="flex-1 w-full overflow-y-auto h-screen custom-scrollbar" style={{ backgroundColor: 'var(--bg-main)' }}>
+        <div className={`flex-1 w-full overflow-y-auto h-screen custom-scrollbar transition-all duration-300 ${loading ? 'opacity-65 pointer-events-none' : ''}`} style={{ backgroundColor: 'var(--bg-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Staff Performance Dashboard', active: true }]} />
 
             {/* Compact Header & Controls */}
@@ -195,6 +195,7 @@ const StaffPerformanceDashboard = () => {
                         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                             <Activity size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                             Resource Intelligence
+                            {loading && <RefreshCw className="animate-spin text-brand-lime ml-2 flex-shrink-0" size={18} />}
                         </h1>
                         <p className="text-xs font-medium text-dim mt-0.5">Telemetry analytics and workforce performance.</p>
                     </div>
@@ -305,7 +306,7 @@ const StaffPerformanceDashboard = () => {
             <div className="p-8 max-w-[1600px] mx-auto space-y-12 pb-24">
                 
                 {/* 2 per Row Charts - Strict Grid */}
-                {!loading && combinedList.length > 0 && (
+                {combinedList.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* 1. Distribution Matrix */}
                         <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">

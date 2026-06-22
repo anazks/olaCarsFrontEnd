@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     DollarSign, AlertCircle, X, Printer, ArrowLeft, 
     Edit3, FileSpreadsheet, FileCheck, Undo2, Filter, 
-    RefreshCw, CheckCircle2, Sun, Moon, User, Link
+    RefreshCw, CheckCircle2, Sun, Moon, User, Link, FileText
 } from 'lucide-react';
 import { getCreditNoteById, voidCreditNote, updateCreditNote, applyCreditNote } from '../../../../services/creditNoteService';
 import { getInvoicesByDriver } from '../../../../services/invoiceService';
@@ -464,6 +464,28 @@ const CreditNoteDetail = () => {
                                     </span>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {note.supportingDocument && (
+                        <div className="w-full max-w-4xl mx-auto p-5 bg-white/[0.02] border border-white/10 rounded-[2rem] flex items-center justify-between shadow-2xl animate-in fade-in duration-300">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                    <FileText size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Supporting Document</p>
+                                    <p className="text-[10px] text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>{note.supportingDocument.name}</p>
+                                </div>
+                            </div>
+                            <a 
+                                href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${note.supportingDocument.url}`}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="px-5 py-2.5 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white border border-indigo-500/20 text-indigo-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer block"
+                            >
+                                View Document
+                            </a>
                         </div>
                     )}
 
