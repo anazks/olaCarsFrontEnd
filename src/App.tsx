@@ -8,6 +8,7 @@ import {
 import { Toaster } from "react-hot-toast";
 import { useScrollReveal } from "./hooks/useScrollReveal";
 import { useAuthRefresh } from "./hooks/useAuthRefresh";
+import { useDOMTranslator } from "./hooks/useDOMTranslator";
 import { isTokenValid, logout, getToken } from "./utils/auth";
 import "./i18n";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -160,6 +161,9 @@ function App() {
 
   // Activity-aware background token & profile refresh (profile every 5 minutes)
   useAuthRefresh(300000);
+
+  // Auto-translate any hardcoded strings in dynamically generated DOM elements
+  useDOMTranslator();
 
   useEffect(() => {
     // Check token validity every 60 seconds — but only logout if there's

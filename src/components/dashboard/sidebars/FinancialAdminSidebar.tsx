@@ -384,7 +384,7 @@ const FinancialAdminSidebar = ({
       icon: <Library size={22} />,
       subItems: [
         {
-          label: "Manage Branches & Workshops",
+          label: t("sidebar.items.manageBranchesWorkshops", "Manage Branches & Workshops"),
           path: "/admin/financial-admin/manage-branches",
           permission: "BRANCH_VIEW",
         },

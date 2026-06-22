@@ -119,7 +119,7 @@ const CountryManagerSidebar = ({
       icon: <Library size={22} />,
       subItems: [
         {
-          label: "Manage Branches & Workshops",
+          label: t("sidebar.items.manageBranchesWorkshops", "Manage Branches & Workshops"),
           path: "/admin/country-manager/manage-branches",
           permission: "BRANCH_VIEW",
         },

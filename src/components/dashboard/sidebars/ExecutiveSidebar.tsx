@@ -153,7 +153,7 @@ const ExecutiveSidebar = ({
       icon: <Library size={22} />,
       subItems: [
         {
-          label: "Manage Branches & Workshops",
+          label: t("sidebar.items.manageBranchesWorkshops", "Manage Branches & Workshops"),
           path: "/admin/admin/manage-branches",
           permission: "BRANCH_VIEW",
         },
@@ -333,12 +333,12 @@ const ExecutiveSidebar = ({
     },
     {
       id: "workshop-management",
-      label: "Workshop Management",
+      label: t("sidebar.sections.workshopManagement", "Workshop Management"),
       icon: <Wrench size={22} />,
       subItems: [
-        { label: "Inventory", path: "/admin/admin/inventory" },
-        { label: "Scraps", path: "/admin/admin/scraps" },
-        { label: "Write Offs", path: "/admin/admin/write-offs" },
+        { label: t("sidebar.items.inventoryStock", "Inventory"), path: "/admin/admin/inventory" },
+        { label: t("sidebar.items.scraps", "Scraps"), path: "/admin/admin/scraps" },
+        { label: t("sidebar.items.writeOffs", "Write Offs"), path: "/admin/admin/write-offs" },
       ],
     },
     {

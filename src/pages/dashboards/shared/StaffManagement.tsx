@@ -158,7 +158,7 @@ const StaffManagement = () => {
                 <div>
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Users size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
-                        {t('sidebar.sections.staffManagement', 'Staff Management')}
+                        {t('sidebar.items.staffManagement', 'Staff Management')}
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5">Comprehensive administrative hierarchies, branch personnel, and workforce performance.</p>
                 </div>
