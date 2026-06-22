@@ -56,6 +56,7 @@ const CreditNotes = () => {
     const [notes, setNotes] = useState<string>('');
     const [creditNoteDate, setCreditNoteDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -269,7 +270,8 @@ const CreditNotes = () => {
                 amount: Number(amount),
                 reason,
                 notes,
-                creditNoteDate
+                creditNoteDate,
+                supportingDocument: supportingDocFile || undefined
             };
             
             // Resolve linked driver if available
@@ -304,6 +306,7 @@ const CreditNotes = () => {
         setReason('');
         setNotes('');
         setCreditNoteDate(new Date().toISOString().split('T')[0]);
+        setSupportingDocFile(null);
     };
 
     const selectedInvoiceData = useMemo(() => {
@@ -664,6 +667,58 @@ const CreditNotes = () => {
                             </div>
 
                             <div className="space-y-1.5"><label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>6. Notes</label><textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border rounded-xl text-xs resize-none outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
+
+                            {/* Supporting Document */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>7. Supporting Document (Optional)</label>
+                                <div 
+                                    className="border border-dashed rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 transition-all relative overflow-hidden group"
+                                    style={{ 
+                                        background: 'var(--bg-input)', 
+                                        borderColor: supportingDocFile ? 'var(--brand-lime)' : 'var(--border-main)' 
+                                    }}
+                                >
+                                    <input 
+                                        type="file" 
+                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0] || null;
+                                            setSupportingDocFile(file);
+                                        }}
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                                    />
+                                    <FileText 
+                                        size={20} 
+                                        className={supportingDocFile ? "text-brand-lime animate-pulse" : "text-dim opacity-50 group-hover:opacity-80 transition-opacity"} 
+                                    />
+                                    <div className="text-center z-0">
+                                        {supportingDocFile ? (
+                                            <>
+                                                <p className="text-[11px] font-bold text-white max-w-[200px] truncate">{supportingDocFile.name}</p>
+                                                <p className="text-[9px] text-dim mt-0.5">{(supportingDocFile.size / 1024).toFixed(1)} KB</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-[11px] font-semibold" style={{ color: 'var(--text-main)' }}>Click or Drag to Upload Document</p>
+                                                <p className="text-[8px] text-dim mt-0.5">PDF, Images, Excel, Word (Max 5MB)</p>
+                                            </>
+                                        )}
+                                    </div>
+                                    {supportingDocFile && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setSupportingDocFile(null);
+                                            }}
+                                            className="mt-1 px-2.5 py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[8px] font-black uppercase tracking-wider rounded-lg border border-rose-500/20 z-20 cursor-pointer relative"
+                                        >
+                                            Remove Document
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </form>
 
                         <div className="p-6 border-t flex gap-3" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.1)' }}>

@@ -46,6 +46,7 @@ const InvoiceDetail = () => {
     const [cnReason, setCnReason] = useState('Vehicle Downtime Adjustment');
     const [cnNotes, setCnNotes] = useState('');
     const [submittingCN, setSubmittingCN] = useState(false);
+    const [cnFile, setCnFile] = useState<File | null>(null);
 
     // Linked Credit Notes
     const [linkedCreditNotes, setLinkedCreditNotes] = useState<any[]>([]);
@@ -225,12 +226,14 @@ const InvoiceDetail = () => {
                 amount: Number(cnAmount),
                 reason: cnReason,
                 notes: cnNotes,
-                creditNoteDate: new Date().toISOString().split('T')[0]
+                creditNoteDate: new Date().toISOString().split('T')[0],
+                supportingDocument: cnFile || undefined
             });
             toast.success("Credit Note issued in OPEN status!");
             setIsCreditNoteModalOpen(false);
             setCnAmount(0);
             setCnNotes('');
+            setCnFile(null);
             await fetchInvoice();
             await fetchLinkedCreditNotes();
         } catch (err: any) {
@@ -685,6 +688,32 @@ const InvoiceDetail = () => {
                         )}
                     </div>
 
+                    {/* Supporting Document */}
+                    {invoice.supportingDocument && (
+                        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <FileText size={14} className="text-[#C8E600]" />
+                                <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Supporting Document</h3>
+                            </div>
+                            <div className="p-5 flex flex-col gap-3">
+                                <div className="flex items-center gap-2">
+                                    <FileText size={16} className="text-dim opacity-70" />
+                                    <span className="text-xs font-bold truncate max-w-[200px]" style={{ color: 'var(--text-main)' }}>
+                                        {invoice.supportingDocument.name}
+                                    </span>
+                                </div>
+                                <a 
+                                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${invoice.supportingDocument.url}`}
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-full text-center py-2 bg-white/5 border border-white/10 text-brand-lime font-black text-[10px] uppercase rounded-xl hover:bg-brand-lime/10 hover:border-brand-lime/20 transition-all cursor-pointer block"
+                                >
+                                    View / Download
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Linked Credit Notes */}
                     {linkedCreditNotes.length > 0 && (
                         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
@@ -766,7 +795,7 @@ const InvoiceDetail = () => {
                                 <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}><FileSpreadsheet size={18} className="text-indigo-400" /> Issue Credit Note</h2>
                                 <p className="text-xs text-dim">Create unposted credit adjustment against outstanding balance</p>
                             </div>
-                            <button onClick={() => setIsCreditNoteModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16} /></button>
+                            <button onClick={() => { setIsCreditNoteModalOpen(false); setCnFile(null); }} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16} /></button>
                         </div>
                         <form onSubmit={handleCreateCN} className="p-6 space-y-4">
                             <div className="space-y-1.5">
@@ -810,6 +839,58 @@ const InvoiceDetail = () => {
                                     className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
+                            </div>
+
+                            {/* Supporting Document */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Supporting Document (Optional)</label>
+                                <div 
+                                    className="border border-dashed rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 transition-all relative overflow-hidden group"
+                                    style={{ 
+                                        background: 'var(--bg-input)', 
+                                        borderColor: cnFile ? 'var(--brand-lime)' : 'var(--border-main)' 
+                                    }}
+                                >
+                                    <input 
+                                        type="file" 
+                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0] || null;
+                                            setCnFile(file);
+                                        }}
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                                    />
+                                    <FileText 
+                                        size={20} 
+                                        className={cnFile ? "text-brand-lime animate-pulse" : "text-dim opacity-50 group-hover:opacity-80 transition-opacity"} 
+                                    />
+                                    <div className="text-center z-0">
+                                        {cnFile ? (
+                                            <>
+                                                <p className="text-[11px] font-bold text-white max-w-[200px] truncate">{cnFile.name}</p>
+                                                <p className="text-[9px] text-dim mt-0.5">{(cnFile.size / 1024).toFixed(1)} KB</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-[11px] font-semibold" style={{ color: 'var(--text-main)' }}>Click or Drag to Upload Document</p>
+                                                <p className="text-[8px] text-dim mt-0.5">PDF, Images, Excel, Word (Max 5MB)</p>
+                                            </>
+                                        )}
+                                    </div>
+                                    {cnFile && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setCnFile(null);
+                                            }}
+                                            className="mt-1 px-2.5 py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[8px] font-black uppercase tracking-wider rounded-lg border border-rose-500/20 z-20 cursor-pointer relative"
+                                        >
+                                            Remove Document
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <button type="submit" disabled={submittingCN} className="w-full py-3.5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all cursor-pointer">
                                 {submittingCN ? "Issuing..." : "Issue Credit Note (Draft)"}

@@ -48,6 +48,7 @@ const CreateInvoicePage = () => {
     const [weekLabel, setWeekLabel] = useState('');
     const [notes, setNotes] = useState('');
     const [isTaxInclusive] = useState(true);
+    const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
         defaultItem()
@@ -242,7 +243,8 @@ const CreateInvoicePage = () => {
                 discountType: discountType === 'NONE' ? 'PERCENTAGE' : discountType,
                 discountValue: discountType !== 'NONE' ? parseFloat(discountValue) || 0 : 0,
                 notes,
-                status: isDraft ? 'DRAFT' : 'PENDING'
+                status: isDraft ? 'DRAFT' : 'PENDING',
+                supportingDocument: supportingDocFile || undefined
             });
             toast.success(isDraft ? 'Draft invoice saved!' : 'Manual invoice created!');
             navigate('../invoices');
@@ -627,6 +629,60 @@ const CreateInvoicePage = () => {
                                     className="w-full px-4 py-3 border rounded-2xl text-xs font-semibold outline-none resize-none focus:border-brand-lime transition-all duration-300 focus:ring-1 focus:ring-brand-lime/20"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
+                            </div>
+
+                            {/* Supporting Document */}
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-dim block" style={{ color: 'var(--text-dim)' }}>
+                                    Supporting Document (Optional)
+                                </label>
+                                <div 
+                                    className="border border-dashed rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group"
+                                    style={{ 
+                                        background: 'var(--bg-input)', 
+                                        borderColor: supportingDocFile ? 'var(--brand-lime)' : 'var(--border-main)' 
+                                    }}
+                                >
+                                    <input 
+                                        type="file" 
+                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0] || null;
+                                            setSupportingDocFile(file);
+                                        }}
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                                    />
+                                    <FileText 
+                                        size={24} 
+                                        className={supportingDocFile ? "text-brand-lime animate-pulse" : "text-dim opacity-50 group-hover:opacity-80 transition-opacity"} 
+                                    />
+                                    <div className="text-center z-0">
+                                        {supportingDocFile ? (
+                                            <>
+                                                <p className="text-xs font-bold text-white max-w-[250px] truncate">{supportingDocFile.name}</p>
+                                                <p className="text-[9px] text-dim mt-0.5">{(supportingDocFile.size / 1024).toFixed(1)} KB</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>Click or Drag to Upload Document</p>
+                                                <p className="text-[9px] text-dim mt-0.5">PDF, Images, Excel, Word (Max 5MB)</p>
+                                            </>
+                                        )}
+                                    </div>
+                                    {supportingDocFile && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setSupportingDocFile(null);
+                                            }}
+                                            className="mt-1 px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[9px] font-black uppercase tracking-wider rounded-lg border border-rose-500/20 z-20 cursor-pointer relative"
+                                        >
+                                            Remove Document
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

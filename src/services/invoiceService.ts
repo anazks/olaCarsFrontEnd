@@ -48,6 +48,11 @@ export interface Invoice {
     taxRate?: number;
     taxAmount?: number;
     notes?: string;
+    supportingDocument?: {
+        name: string;
+        url: string;
+        uploadedAt: string;
+    };
 }
 
 export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> => {
@@ -109,7 +114,23 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
 };
 
 export const createInvoice = async (data: any): Promise<Invoice> => {
-    const response = await api.post('/api/invoices', data);
+    let payload = data;
+    if (data.supportingDocument && data.supportingDocument instanceof File) {
+        const formData = new FormData();
+        Object.keys(data).forEach((key) => {
+            if (key === 'lineItems') {
+                formData.append(key, JSON.stringify(data[key]));
+            } else if (key === 'supportingDocument') {
+                formData.append(key, data[key]);
+            } else if (data[key] !== undefined && data[key] !== null) {
+                formData.append(key, String(data[key]));
+            }
+        });
+        payload = formData;
+    }
+    const response = await api.post('/api/invoices', payload, {
+        headers: payload instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return response.data.data;
 };
 
