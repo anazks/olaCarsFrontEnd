@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Map, Eye, Columns, ExternalLink } from 'lucide-react';
 
 // Fix default marker icon issue with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -105,11 +106,20 @@ const VehicleGpsMap = ({
 }: VehicleGpsMapProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
+    const [mapMode, setMapMode] = useState<'map' | 'street' | 'split'>('map');
 
     const isLive = !!realLocation;
     const position = isLive
         ? { latitude: realLocation!.lat, longitude: realLocation!.lng, speed: realLocation!.speed }
         : generateDummyPosition(vehicleId);
+
+    useEffect(() => {
+        if (mapInstanceRef.current) {
+            setTimeout(() => {
+                mapInstanceRef.current?.invalidateSize();
+            }, 150);
+        }
+    }, [mapMode]);
 
     useEffect(() => {
         if (!mapRef.current || mapInstanceRef.current) return;
@@ -202,17 +212,106 @@ const VehicleGpsMap = ({
     }
 
     return (
-        <div style={{ position: 'relative' }}>
-            {/* Map Container */}
+        <div style={{ position: 'relative', width: '100%', height }}>
+            {/* Mode Toggle Controls */}
             <div
-                ref={mapRef}
                 style={{
-                    height,
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    border: '1px solid var(--border-main)',
+                    position: 'absolute',
+                    top: '12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(10,10,10,0.85)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    gap: '4px',
                 }}
-            />
+            >
+                {[
+                    { mode: 'map', label: 'Map', icon: <Map size={12} /> },
+                    { mode: 'street', label: 'Street', icon: <Eye size={12} /> },
+                    { mode: 'split', label: 'Split', icon: <Columns size={12} /> },
+                ].map((btn) => (
+                    <button
+                        key={btn.mode}
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setMapMode(btn.mode as any);
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: mapMode === btn.mode ? '#C8E600' : 'transparent',
+                            color: mapMode === btn.mode ? '#0A0A0A' : '#888',
+                            border: 0,
+                            borderRadius: '6px',
+                            padding: '5px 10px',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            textTransform: 'uppercase',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        {btn.icon}
+                        <span>{btn.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Content Display */}
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: mapMode === 'split' ? 'row' : 'column',
+                    height: '100%',
+                    width: '100%',
+                    gap: mapMode === 'split' ? '12px' : '0px',
+                }}
+            >
+                {/* Map Container */}
+                <div
+                    ref={mapRef}
+                    style={{
+                        flex: 1,
+                        height: '100%',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '1px solid var(--border-main)',
+                        display: mapMode === 'street' ? 'none' : 'block',
+                    }}
+                />
+
+                {/* Street View Iframe */}
+                {mapMode !== 'map' && (
+                    <div
+                        style={{
+                            flex: 1,
+                            height: '100%',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border-main)',
+                            background: '#111',
+                        }}
+                    >
+                        <iframe
+                            src={`https://maps.google.com/maps?layer=c&cbll=${position.latitude},${position.longitude}&output=svembed`}
+                            width="100%"
+                            height="100%"
+                            style={{ border: 0 }}
+                            allowFullScreen
+                            loading="lazy"
+                            title="Street View"
+                        />
+                    </div>
+                )}
+            </div>
 
             {/* Floating Info Overlay */}
             <div
@@ -243,10 +342,26 @@ const VehicleGpsMap = ({
                     </span>
                 </div>
                 <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 600, color: '#fff' }}>{position.speed} km/h</span>
-                    <span style={{ margin: '0 6px', opacity: 0.4 }}>•</span>
+                    <span style={{ opacity: 0.4 }}>•</span>
                     <span>{position.latitude.toFixed(4)}°, {position.longitude.toFixed(4)}°</span>
+                    <span style={{ opacity: 0.4 }}>•</span>
+                    <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            color: '#C8E600',
+                            textDecoration: 'none',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <ExternalLink size={10} /> Google Maps
+                    </a>
                 </div>
             </div>
 

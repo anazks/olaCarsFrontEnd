@@ -6,7 +6,8 @@ import {
     Crosshair, Search, Cpu, Wifi, WifiOff, Database, 
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal, 
     Copy, Check, FileSpreadsheet, User, Phone, MapPin, Gauge,
-    Battery, Zap, Navigation, Link, ExternalLink, Satellite
+    Battery, Zap, Navigation, Link, ExternalLink, Satellite,
+    Map, Eye, Columns, ArrowLeft
 } from 'lucide-react';
 import { getGpsVehiclesList, getGpsLocationsList, getDeviceLiveStreamingUrl, getDeviceMediaEventUrl, type GpsVehicle, type GpsLocation } from '../../../services/gpsService';
 import { getAllVehicles } from '../../../services/vehicleService';
@@ -47,6 +48,15 @@ const GpsVehicles = () => {
     const trackMapContainerRef = useRef<HTMLDivElement | null>(null);
     const trackMapRef = useRef<L.Map | null>(null);
     const trackMarkerRef = useRef<L.Marker | null>(null);
+    const [trackMapMode, setTrackMapMode] = useState<'map' | 'street' | 'split'>('map');
+
+    useEffect(() => {
+        if (trackMapRef.current) {
+            setTimeout(() => {
+                trackMapRef.current?.invalidateSize();
+            }, 150);
+        }
+    }, [trackMapMode]);
 
     // Fetch GPS telemetry (devices + locations) + fleet vehicle/driver linkage
     const loadGpsData = async (isSilent = false) => {
@@ -505,7 +515,7 @@ const GpsVehicles = () => {
 
     return (
         <div 
-            className={`p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+            className={`p-4 md:p-6 min-h-[calc(100vh-112px)] flex flex-col text-[var(--text-main)] bg-[var(--bg-main)] animate-fadeIn transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}
             style={{
                 '--brand-dynamic': theme === 'light' ? '#4D7C0F' : '#C8E600',
                 '--brand-dynamic-light': theme === 'light' ? 'rgba(77, 124, 15, 0.1)' : 'rgba(200, 230, 0, 0.1)',
@@ -540,8 +550,20 @@ const GpsVehicles = () => {
             `}</style>
 
             {/* Header section with Satellite radar animation */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+            <div className="flex-shrink-0 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
                 <div className="flex items-center gap-4">
+                    {activeView === 'track' && (
+                        <button
+                            onClick={() => {
+                                setActiveView('list');
+                                setSelectedTrackVehicle(null);
+                            }}
+                            className="p-3 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] transition-all cursor-pointer flex items-center justify-center"
+                            title="Back to Fleet List"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
                     <div className="w-14 h-14 rounded-2xl bg-[var(--brand-dynamic-light)] flex items-center justify-center border border-[var(--brand-dynamic-border)] shadow-[0_0_15px_var(--brand-dynamic-light)] relative">
                         <Crosshair className="text-[var(--brand-dynamic)] animate-pulse" size={28} />
                         <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[var(--bg-main)] animate-ping" />
@@ -565,6 +587,28 @@ const GpsVehicles = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {activeView === 'track' && (
+                        <div className="flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-main)] overflow-hidden shadow-sm">
+                            {[
+                                { mode: 'map', label: 'Map', icon: <Map size={14} /> },
+                                { mode: 'street', label: 'Street View', icon: <Eye size={14} /> },
+                                { mode: 'split', label: 'Split View', icon: <Columns size={14} /> }
+                            ].map(btn => (
+                                <button
+                                    key={btn.mode}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setTrackMapMode(btn.mode as any);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex items-center gap-1.5 ${trackMapMode === btn.mode ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
+                                >
+                                    {btn.icon} {btn.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    
                     {activeView !== 'track' && (
                         <button 
                             onClick={handleExportCSV}
@@ -586,7 +630,7 @@ const GpsVehicles = () => {
 
             {/* Error banner if API connectivity fails */}
             {error && (
-                <div className="mb-6 p-4 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-400 flex items-start gap-3 shadow-lg">
+                <div className="flex-shrink-0 mb-6 p-4 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-400 flex items-start gap-3 shadow-lg">
                     <WifiOff size={20} className="mt-0.5 flex-shrink-0" />
                     <div>
                         <h4 className="font-bold text-sm">Offline Mock mode enabled</h4>
@@ -597,7 +641,7 @@ const GpsVehicles = () => {
 
             {/* List/Map Toggle Mode Tabs (Hidden in single track view) */}
             {activeView !== 'track' && (
-                <div className="flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-main)] overflow-hidden mb-6 w-full sm:w-fit">
+                <div className="flex-shrink-0 flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-main)] overflow-hidden mb-6 w-full sm:w-fit">
                     <button
                         onClick={() => setActiveView('list')}
                         className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-2 ${activeView === 'list' ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
@@ -614,10 +658,11 @@ const GpsVehicles = () => {
             )}
 
             {/* View Switching */}
-            {activeView === 'list' ? (
-                <>
-                    {/* Telemetry Overview Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <>
+                {activeView === 'list' ? (
+                    <>
+                        {/* Telemetry Overview Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 flex-shrink-0">
                         <div className="p-6 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] transition-all hover:-translate-y-1 hover:shadow-lg duration-300">
                             <div className="flex justify-between items-start mb-3">
                                 <div className="text-[var(--text-dim)] text-xs font-bold uppercase tracking-wider">Total Hardware Bindings</div>
@@ -655,8 +700,8 @@ const GpsVehicles = () => {
                         </div>
                     </div>
 
-                    {/* Filter controls row */}
-                    <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-4 mb-6 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)]">
+                        {/* Filter controls row */}
+                        <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-4 mb-6 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] flex-shrink-0">
                         <div className="relative w-full xl:w-80">
                             <input 
                                 type="text" 
@@ -728,12 +773,12 @@ const GpsVehicles = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-[var(--border-main)] text-[11px] font-black uppercase text-[var(--text-dim)] bg-[var(--bg-input)]/20">
-                                        <th className="px-6 py-4">Hardware Profile</th>
-                                        <th className="px-6 py-4">IMEI Identifier</th>
-                                        <th className="px-6 py-4">SIM Card Info</th>
-                                        <th className="px-6 py-4">Status & Sync</th>
-                                        <th className="px-6 py-4">Expiration Time</th>
-                                        <th className="px-6 py-4 text-center">Action</th>
+                                        <th className="px-6 py-4 bg-[var(--bg-card)]">Hardware Profile</th>
+                                        <th className="px-6 py-4 bg-[var(--bg-card)]">IMEI Identifier</th>
+                                        <th className="px-6 py-4 bg-[var(--bg-card)]">SIM Card Info</th>
+                                        <th className="px-6 py-4 bg-[var(--bg-card)]">Status & Sync</th>
+                                        <th className="px-6 py-4 bg-[var(--bg-card)]">Expiration Time</th>
+                                        <th className="px-6 py-4 text-center bg-[var(--bg-card)]">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border-main)]">
@@ -902,24 +947,35 @@ const GpsVehicles = () => {
                 selectedTrackVehicle && (
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
                         {/* Map Panel showing only selected vehicle (8 cols) */}
-                        <div className="lg:col-span-8 rounded-3xl border border-[var(--border-main)] overflow-hidden shadow-2xl bg-[var(--bg-card)] relative">
+                        <div className="lg:col-span-8 rounded-3xl border border-[var(--border-main)] overflow-hidden shadow-2xl bg-[var(--bg-card)] relative flex flex-col">
+
                             <div 
-                                ref={trackMapContainerRef} 
-                                className="w-full h-[55vh] lg:h-[75vh] relative" 
+                                className={`w-full h-[55vh] lg:h-[75vh] flex ${trackMapMode === 'split' ? 'flex-col md:flex-row p-3 gap-3' : ''}`}
                                 style={{ zIndex: 1 }}
-                            />
-                            
-                            {/* Floating back to list button */}
-                            <div className="absolute top-4 left-4 z-[10]">
-                                <button
-                                    onClick={() => {
-                                        setActiveView('list');
-                                        setSelectedTrackVehicle(null);
+                            >
+                                {/* Leaflet tracking map container */}
+                                <div 
+                                    ref={trackMapContainerRef} 
+                                    className="relative flex-1 h-full rounded-2xl overflow-hidden border border-[var(--border-main)]"
+                                    style={{ 
+                                        display: trackMapMode === 'street' ? 'none' : 'block',
                                     }}
-                                    className="px-4 py-2.5 rounded-xl bg-[var(--bg-card)]/95 hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] font-extrabold text-xs flex items-center gap-2 border border-[var(--border-main)] cursor-pointer transition-all shadow-lg backdrop-blur-sm"
-                                >
-                                    ← Back to Fleet List
-                                </button>
+                                />
+
+                                {/* Google Street View iframe */}
+                                {trackMapMode !== 'map' && (
+                                    <div className="flex-1 h-full rounded-2xl overflow-hidden border border-[var(--border-main)] bg-[#111]">
+                                        <iframe
+                                            src={`https://maps.google.com/maps?layer=c&cbll=${trackedLoc?.lat || 9.0232},${trackedLoc?.lng || -79.5244}&output=svembed`}
+                                            width="100%"
+                                            height="100%"
+                                            style={{ border: 0 }}
+                                            allowFullScreen
+                                            loading="lazy"
+                                            title="Street View"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Floating location card details */}
@@ -931,8 +987,27 @@ const GpsVehicles = () => {
                                         <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
                                             {trackedLoc.locDesc || "Calculating positioning details..."}
                                         </p>
-                                        <div className="text-[10px] font-bold text-[var(--text-dim)] mt-2">
-                                            Coordinates: {formatCoords(trackedLoc.lat, trackedLoc.lng)}
+                                        <div className="text-[10px] font-bold text-[var(--text-dim)] mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                                            <span>Coordinates: {formatCoords(trackedLoc.lat, trackedLoc.lng)}</span>
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${trackedLoc.lat},${trackedLoc.lng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 font-bold text-[var(--brand-dynamic)] hover:underline text-[9px] uppercase tracking-wider"
+                                                >
+                                                    <ExternalLink size={10} /> Maps
+                                                </a>
+                                                <span className="opacity-30">|</span>
+                                                <a
+                                                    href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${trackedLoc.lat},${trackedLoc.lng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 font-bold text-[var(--brand-dynamic)] hover:underline text-[9px] uppercase tracking-wider"
+                                                >
+                                                    <Eye size={10} /> Street View
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1162,12 +1237,13 @@ const GpsVehicles = () => {
                     </div>
                 )
             )}
+            </>
         </div>
     );
 };
 
 const GpsVehiclesSkeleton = () => (
-    <div className="p-6 md:p-8 min-h-screen text-[var(--text-main)] bg-[var(--bg-main)] animate-pulse">
+    <div className="p-4 md:p-6 min-h-[calc(100vh-112px)] flex flex-col text-[var(--text-main)] bg-[var(--bg-main)] animate-pulse">
         {/* Header section skeleton */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
             <div className="flex items-center gap-4">
