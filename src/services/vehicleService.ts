@@ -5,6 +5,7 @@ import api from './api';
 export type VehicleStatus =
     | 'PENDING ENTRY'
     | 'DOCUMENTS REVIEW'
+    | 'INSURANCE VERIFICATION'
     | 'INSPECTION REQUIRED'
     | 'INSPECTION FAILED'
     | 'REPAIR IN PROGRESS'
@@ -18,6 +19,7 @@ export type VehicleStatus =
     | 'TRANSFER PENDING'
     | 'TRANSFER COMPLETE'
     | 'RETIRED'
+    | 'PRE-BOOKED'
     | 'W. GROUP ACTIVE';
 
 export type PaymentMethod = 'Cash' | 'Bank Transfer' | 'Finance';
