@@ -19,8 +19,9 @@ import BulkBillUpload from './BulkBillUpload';
 import BulkVendorPaymentUpload from './BulkVendorPaymentUpload';
 import BulkExpenseUpload from './BulkExpenseUpload';
 import BulkLedgerUpload from './BulkLedgerUpload';
+import BulkRentUpdateUpload from './BulkRentUpdateUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | 'vehicle-rent' | null;
 
 const BulkUploadsHub = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -32,7 +33,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'vehicle-rent', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -323,6 +324,13 @@ const BulkUploadsHub = () => {
                 ['2026-06-01', 'Opening Balance', 'System migration opening balance', '50000.00', '0.00', '50000.00', 'DEBIT', '50000.00'],
                 ['2026-06-02', 'Invoice Payment Received', 'INV-002305 from Client Alpha', '1500.00', '0.00', '51500.00', 'DEBIT', '1500.00'],
                 ['2026-06-03', 'Office Utilities Paid', 'Electricity bill payment - SB-88772', '0.00', '320.00', '51180.00', 'CREDIT', '320.00']
+            ];
+        } else if (type === 'vehicle-rent') {
+            fileName = 'vehicle_weekly_rent_template.csv';
+            headers = ['Vehicle No', 'Vehicle Model', 'Weekly Rent', 'VIN Number'];
+            rows = [
+                ['KCC 123A', 'Toyota Corolla', '150', '1NXBR32E6NZ000001'],
+                ['KCD 456B', 'Nissan X-Trail', '180', 'JN1TA0CP8LX000002']
             ];
         }
 
@@ -1122,6 +1130,41 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 15: VEHICLE RENT UPDATE */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" style={{ backgroundColor: 'rgba(200, 230, 0, 0.1)' }}>
+                                <Upload size={20} style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Authorized</span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Vehicle Rent Bulk Update</h3>
+                            <p className="text-xs text-dim leading-relaxed">Bulk update weekly rent for vehicles. Auto-recalculates active driver rent plans, future unpaid invoices, carryover balances, and ledger double-entries.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleDownloadTemplate('vehicle-rent', 'xlsx')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">Excel</button>
+                                <span className="text-dim/30">|</span>
+                                <button onClick={() => handleDownloadTemplate('vehicle-rent', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
+                            </div>
+                        </div>
+                        <button onClick={() => setActiveModal('vehicle-rent')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Safety informational callout */}
@@ -1238,6 +1281,12 @@ const BulkUploadsHub = () => {
 
             <BulkLedgerUpload
                 isOpen={activeModal === 'ledger'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkRentUpdateUpload
+                isOpen={activeModal === 'vehicle-rent'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
             />

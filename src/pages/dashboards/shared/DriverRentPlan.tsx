@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Download, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
+import { ChevronLeft, FileText, Download, CheckCircle2, AlertCircle, TrendingUp, Eye } from 'lucide-react';
 import { getDriverById } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getInvoicesByDriver } from '../../../services/invoiceService';
@@ -141,7 +141,7 @@ const DriverRentPlan = () => {
                         <tbody className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                             {rentTracking.map((item) => {
                                 const periodNum = item.weekNumber;
-                                const invoice = invoices.find(inv => inv.weekNumber === periodNum);
+                                const invoice = invoices.find(inv => Number(inv.weekNumber) === Number(periodNum));
 
                                 return (
                                     <ScheduleRow
@@ -151,6 +151,7 @@ const DriverRentPlan = () => {
                                         invoice={invoice}
                                         baseAmount={item.amount}
                                         onDownload={() => invoice && handleDownloadInvoice(invoice)}
+                                        onView={() => invoice && navigate(`../invoices/${invoice._id}`)}
                                     />
                                 );
                             })}
@@ -172,7 +173,7 @@ const SummaryCard = ({ label, value, icon, color }: any) => (
     </div>
 );
 
-const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload }: any) => {
+const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload, onView }: any) => {
     const status = invoice?.status || 'PENDING';
     const totalDue = invoice?.totalAmountDue || baseAmount;
     const paid = invoice?.amountPaid || 0;
@@ -196,20 +197,33 @@ const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload }: any) =>
             <td className="p-6">
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                         status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                        status === 'OVERDUE' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
                             'bg-white/5 text-dim border-white/10'
                     }`}>
                     {status}
                 </span>
             </td>
             <td className="p-6 text-right">
-                {invoice && (
-                    <button
-                        onClick={onDownload}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-dim hover:text-white transition-all border border-white/5 ml-auto"
-                    >
-                        <Download size={14} />
-                        Download
-                    </button>
+                {invoice ? (
+                    <div className="flex items-center gap-2 justify-end">
+                        <button
+                            onClick={onView}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-all border border-blue-500/20"
+                            title={`View ${invoice.invoiceNumber}`}
+                        >
+                            <Eye size={13} />
+                            {invoice.invoiceNumber}
+                        </button>
+                        <button
+                            onClick={onDownload}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-dim hover:text-white transition-all border border-white/5"
+                            title="Download PDF"
+                        >
+                            <Download size={13} />
+                        </button>
+                    </div>
+                ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-dim/50">Not Generated</span>
                 )}
             </td>
         </tr>

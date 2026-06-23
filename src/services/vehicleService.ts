@@ -220,6 +220,11 @@ export interface Vehicle {
     transferDetails?: TransferDetails;
     retirementDetails?: RetirementDetails;
     status: VehicleStatus;
+    fleet?: {
+        _id: string;
+        fleetNumber: string;
+        status?: string;
+    } | null;
     handlingStaff?: {
         _id: string;
         fullName: string;
@@ -436,5 +441,16 @@ export const bulkCreateVehicles = async (vehicles: any[], branch?: string): Prom
     const payload: any = { vehicles };
     if (branch) payload.branch = branch;
     const response = await api.post('/api/vehicle/bulk', payload);
+    return response.data;
+};
+
+export interface BulkRentUpdateResult {
+    updated: Array<{ row: number; id: string; vin: string; registrationNumber: string; weeklyRent: number; driverUpdated: boolean }>;
+    errors: Array<{ row: number; message: string }>;
+}
+
+// POST bulk update vehicle rent
+export const bulkUpdateVehicleRent = async (updates: any[]): Promise<{ success: boolean; message: string; data: BulkRentUpdateResult }> => {
+    const response = await api.post('/api/vehicle/bulk-update-rent', { updates });
     return response.data;
 };

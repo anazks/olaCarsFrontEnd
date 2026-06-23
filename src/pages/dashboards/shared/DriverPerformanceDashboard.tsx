@@ -587,6 +587,13 @@ const DriverPerformanceDashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        onClick={() => navigate('../fleet')}
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-lime text-black hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5"
+                    >
+                        <Car size={14} />
+                        <span>Fleet Management</span>
+                    </button>
                     {/* Branch Filter */}
                     {isGlobalRole && branches.length > 0 && (
                         <div className="relative">
@@ -621,7 +628,7 @@ const DriverPerformanceDashboard = () => {
             </div>
 
             {/* ── Navigation Shortcuts ────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                     onClick={() => navigate('../drivers')}
                     className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
@@ -655,6 +662,26 @@ const DriverPerformanceDashboard = () => {
                         <div className="text-left">
                             <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Vehicle Fleet</h3>
                             <p className="text-[10px] font-medium text-dim">Manage inventory, maintenance, and vehicle assignments.</p>
+                        </div>
+                    </div>
+                    <div className="p-2 rounded-full bg-white/5 text-dim group-hover:text-brand-lime group-hover:bg-brand-lime/10 transition-all relative z-10">
+                        <ArrowUpRight size={20} />
+                    </div>
+                </button>
+
+                <button
+                    onClick={() => navigate('../fleet')}
+                    className="group p-5 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex items-center justify-between overflow-hidden relative"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-lime/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-lime/10 transition-colors" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="p-4 rounded-2xl bg-brand-lime/10 text-brand-lime group-hover:scale-110 transition-transform">
+                            <Users size={24} />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Fleet Management</h3>
+                            <p className="text-[10px] font-medium text-dim">Manage staff fleet assignments and vehicle relationships.</p>
                         </div>
                     </div>
                     <div className="p-2 rounded-full bg-white/5 text-dim group-hover:text-brand-lime group-hover:bg-brand-lime/10 transition-all relative z-10">
