@@ -98,6 +98,8 @@ import BillDetail from "./pages/dashboards/finance/Bills/BillDetail";
 
 // Vehicle Pages
 import VehicleList from "./pages/dashboards/shared/VehicleList";
+import FleetManagement from "./pages/dashboards/shared/FleetManagement";
+import AssignVehiclesToFleet from "./pages/dashboards/shared/AssignVehiclesToFleet";
 import CreateVehicle from "./pages/dashboards/shared/CreateVehicle";
 import VehicleDetail from "./pages/dashboards/shared/VehicleDetail";
 import VehicleWorkshopHistory from "./pages/dashboards/shared/VehicleWorkshopHistory";
@@ -353,6 +355,14 @@ function App() {
                 <Route
                   path="vehicles"
                   element={<VehicleList mode="active" />}
+                />
+                <Route
+                  path="fleet"
+                  element={<FleetManagement />}
+                />
+                <Route
+                  path="fleet/:id/assign-vehicles"
+                  element={<AssignVehiclesToFleet />}
                 />
                 <Route
                   path="pending-vehicles"
@@ -629,6 +639,10 @@ function App() {
                   element={<VehicleList mode="active" />}
                 />
                 <Route
+                  path="fleet"
+                  element={<FleetManagement />}
+                />
+                <Route
                   path="pending-vehicles"
                   element={<VehicleList mode="pending" />}
                 />
@@ -867,6 +881,10 @@ function App() {
                 <Route
                   path="vehicles"
                   element={<VehicleList mode="active" />}
+                />
+                <Route
+                  path="fleet"
+                  element={<FleetManagement />}
                 />
                 <Route
                   path="pending-vehicles"
@@ -1118,6 +1136,10 @@ function App() {
                   element={<VehicleList mode="active" />}
                 />
                 <Route
+                  path="fleet"
+                  element={<FleetManagement />}
+                />
+                <Route
                   path="pending-vehicles"
                   element={<VehicleList mode="pending" />}
                 />
@@ -1310,6 +1332,7 @@ function App() {
                 element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}
               >
                 <Route path="vehicles" element={<VehicleList />} />
+                <Route path="fleet" element={<FleetManagement />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
@@ -1423,6 +1446,10 @@ function App() {
                   element={<VehicleList mode="active" />}
                 />
                 <Route
+                  path="fleet"
+                  element={<FleetManagement />}
+                />
+                <Route
                   path="pending-vehicles"
                   element={<VehicleList mode="pending" />}
                 />
@@ -1527,6 +1554,7 @@ function App() {
                 element={<ProtectedRoute requiredPermission="VEHICLE_VIEW" />}
               >
                 <Route path="vehicles" element={<VehicleList />} />
+                <Route path="fleet" element={<FleetManagement />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"

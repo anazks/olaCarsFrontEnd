@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Settings, Calendar, Save, AlertCircle } from 'lucide-react';
-import { getGenerationSettings, updateGenerationSettings } from '../../../services/invoiceService';
+import { getGenerationSettings, updateGenerationSettings, getReconfigProgress, type ReconfigProgress } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
 interface InvoiceSettingsModalProps {
@@ -11,6 +11,8 @@ const InvoiceSettingsModal = ({ onClose }: InvoiceSettingsModalProps) => {
     const [generationDay, setGenerationDay] = useState<number>(3);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [reconfiguring, setReconfiguring] = useState(false);
+    const [progress, setProgress] = useState<ReconfigProgress | null>(null);
 
     const days = [
         { value: 0, label: 'Sunday' },
@@ -40,12 +42,29 @@ const InvoiceSettingsModal = ({ onClose }: InvoiceSettingsModalProps) => {
         setSaving(true);
         try {
             await updateGenerationSettings(generationDay);
-            toast.success('Generation day updated successfully');
-            onClose();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to update settings');
-        } finally {
             setSaving(false);
+            setReconfiguring(true);
+
+            // Poll progress
+            const interval = setInterval(async () => {
+                try {
+                    const prog = await getReconfigProgress();
+                    setProgress(prog);
+                    if (!prog.inProgress) {
+                        clearInterval(interval);
+                        setReconfiguring(false);
+                        toast.success('Rent plans reconfigured successfully');
+                        onClose();
+                    }
+                } catch (err) {
+                    clearInterval(interval);
+                    setReconfiguring(false);
+                    toast.error('Failed to monitor configuration progress');
+                }
+            }, 600);
+        } catch (err: any) {
+            setSaving(false);
+            toast.error(err.response?.data?.message || 'Failed to update settings');
         }
     };
 
@@ -62,9 +81,11 @@ const InvoiceSettingsModal = ({ onClose }: InvoiceSettingsModalProps) => {
                             <p className="text-[10px] font-bold text-dim uppercase tracking-widest">Configure scheduled generation rules</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer" style={{ color: 'var(--text-dim)' }}>
-                        <X size={18} />
-                    </button>
+                    {!reconfiguring && (
+                        <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer" style={{ color: 'var(--text-dim)' }}>
+                            <X size={18} />
+                        </button>
+                    )}
                 </div>
 
                 <div className="p-8 space-y-6">
@@ -72,6 +93,25 @@ const InvoiceSettingsModal = ({ onClose }: InvoiceSettingsModalProps) => {
                         <div className="py-10 flex flex-col items-center justify-center gap-4">
                             <div className="w-8 h-8 border-4 border-brand-lime border-t-transparent rounded-full animate-spin" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-dim">Loading Preferences...</span>
+                        </div>
+                    ) : reconfiguring ? (
+                        <div className="py-8 space-y-6 flex flex-col items-center justify-center">
+                            <div className="relative flex items-center justify-center">
+                                <div className="w-20 h-20 border-4 border-brand-lime/20 border-t-brand-lime rounded-full animate-spin" />
+                                <span className="absolute text-[12px] font-black text-brand-lime">{progress?.percentage || 0}%</span>
+                            </div>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-sm font-black uppercase tracking-wider animate-pulse" style={{ color: 'var(--text-main)' }}>Reconfiguring Rent Plans</h3>
+                                <p className="text-[10px] font-bold text-dim uppercase tracking-widest">
+                                    {progress ? `Processing ${progress.processed} of ${progress.total} Drivers` : 'Preparing calculations...'}
+                                </p>
+                            </div>
+                            <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/10">
+                                <div 
+                                    className="bg-brand-lime h-full transition-all duration-300 ease-out" 
+                                    style={{ width: `${progress?.percentage || 0}%` }}
+                                />
+                            </div>
                         </div>
                     ) : (
                         <>

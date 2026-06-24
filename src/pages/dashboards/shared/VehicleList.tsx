@@ -276,6 +276,16 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                             <Users size={14} className="opacity-70" /> {t('sidebar.items.drivers', 'Drivers')}
                         </button>
                     </HasPermission>
+
+                    <HasPermission permission="VEHICLE_VIEW">
+                        <button
+                            onClick={() => navigate('../fleet')}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <Users size={14} className="opacity-70 text-[var(--brand-lime)]" /> {t('sidebar.items.fleetManagement', 'Fleet Management')}
+                        </button>
+                    </HasPermission>
                     
                     <HasPermission permission="VEHICLE_CREATE">
                         <div className="flex gap-2">
@@ -534,7 +544,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                             
                                             <td className="px-4 py-2.5">
                                                 <div className="text-sm font-mono font-black" style={{ color: '#C8E600' }}>
-                                                    {v.basicDetails?.fleetNumber || 'UNASSIGNED'}
+                                                    {v.fleet?.fleetNumber ? `Fleet #${v.fleet.fleetNumber}` : (v.basicDetails?.fleetNumber ? `Fleet #${v.basicDetails.fleetNumber}` : 'UNASSIGNED')}
                                                 </div>
                                                 <div className="text-xs font-semibold mt-1 opacity-80" style={{ color: 'var(--text-dim)' }}>
                                                     {v.handlingStaff ? (typeof v.handlingStaff === 'object' ? v.handlingStaff.fullName : `ID: ${v.handlingStaff}`) : 'No Staff'}

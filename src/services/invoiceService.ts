@@ -156,7 +156,6 @@ export const deleteInvoice = async (invoiceId: string): Promise<void> => {
 export const deleteAllInvoices = async (): Promise<void> => {
     await api.delete('/api/invoices/all');
 };
-
 export const triggerWeeklyGeneration = async (): Promise<{generatedCount: number, skippedCount: number}> => {
     const response = await api.post('/api/invoices/generate-weekly');
     return response.data.data;
@@ -176,3 +175,14 @@ export const bulkUploadInvoices = async (data: { rows: any[], invoiceType: strin
     return response.data.data;
 };
 
+export interface ReconfigProgress {
+    inProgress: boolean;
+    processed: number;
+    total: number;
+    percentage: number;
+}
+
+export const getReconfigProgress = async (): Promise<ReconfigProgress> => {
+    const response = await api.get('/api/invoices/settings/reconfig-progress');
+    return response.data.data;
+};
