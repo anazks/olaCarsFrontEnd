@@ -40,6 +40,32 @@ const systemSettingsService = {
             console.error('Error updating PO threshold:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get whether the driver payment mailing system is enabled
+     */
+    getDriverPaymentEmailsEnabled: async (): Promise<boolean> => {
+        try {
+            const response = await api.get('/api/system-settings/driver_payment_emails_enabled');
+            return response.data.value === true || response.data.value === 'true';
+        } catch (error) {
+            console.error('Error fetching driver payment emails setting:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update the driver payment mailing system status (Admin only)
+     */
+    updateDriverPaymentEmailsEnabled: async (value: boolean): Promise<boolean> => {
+        try {
+            const response = await api.put('/api/system-settings/driver_payment_emails_enabled', { value });
+            return response.data.success;
+        } catch (error) {
+            console.error('Error updating driver payment emails setting:', error);
+            throw error;
+        }
     }
 };
 

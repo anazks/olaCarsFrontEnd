@@ -228,6 +228,14 @@ const PurchaseOrderDetail = () => {
                                 style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
                                 {s.icon} {po.status}
                             </div>
+                            {po.linkedPR && (
+                                <button
+                                    onClick={() => navigate(`/workshop-purchase-requests/${po.linkedPR._id || po.linkedPR.id}`)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/30 hover:bg-[#C8E600]/20 transition-all cursor-pointer"
+                                >
+                                    <ExternalLink size={12} /> View {po.linkedPR.requestNumber}
+                                </button>
+                            )}
                             {po.isBilled && (
                                 <span className="text-[10px] px-3 py-1 rounded-full bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20 font-black tracking-widest uppercase">BILLED</span>
                             )}
@@ -587,7 +595,7 @@ const PurchaseOrderDetail = () => {
                         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
                                 <History size={14} className="text-[#C8E600]" />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Edit History</h3>
+                                <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Order Edit History</h3>
                             </div>
                             <div className="p-5 space-y-6">
                                 {po.editHistory.map((entry, idx) => (
@@ -599,11 +607,47 @@ const PurchaseOrderDetail = () => {
                                             {new Date(entry.updatedAt || entry.editedAt || '').toLocaleDateString()} at {new Date(entry.updatedAt || entry.editedAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                         <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
-                                            {typeof entry.editedBy === 'object' ? (entry.editedBy as any)?.name : (entry.editedBy || entry.updatedBy)}
+                                            {typeof entry.editedBy === 'object' 
+                                                ? ((entry.editedBy as any)?.fullName || (entry.editedBy as any)?.name) 
+                                                : (entry.editedBy || entry.updatedBy)} {entry.editorRole ? `(${entry.editorRole})` : ''}
                                         </p>
                                         <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary || entry.changeSummary}"</p>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Linked Purchase Request History */}
+                    {po.linkedPR && (
+                        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <Clock size={14} className="text-[#C8E600]" />
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>PR History ({po.linkedPR.requestNumber})</h3>
+                                </div>
+                            </div>
+                            <div className="p-5 space-y-6">
+                                {po.linkedPR.editHistory && po.linkedPR.editHistory.length > 0 ? (
+                                    po.linkedPR.editHistory.map((entry: any, idx: number) => (
+                                        <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                            {idx !== (po.linkedPR.editHistory?.length || 0) - 1 && (
+                                                <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
+                                            )}
+                                            <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                                {new Date(entry.editedAt).toLocaleDateString()} at {new Date(entry.editedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {typeof entry.editedBy === 'object' 
+                                                    ? (entry.editedBy?.fullName || entry.editedBy?.name) 
+                                                    : entry.editedBy} ({entry.editorRole})
+                                            </p>
+                                            <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary}"</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>No PR history recorded yet.</p>
+                                )}
                             </div>
                         </div>
                     )}

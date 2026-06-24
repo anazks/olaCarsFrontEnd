@@ -488,6 +488,32 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         setParsedRows(prev => prev.filter((_, i) => i !== index));
     };
 
+    const downloadErrorRows = () => {
+        const errorRows = parsedRows.filter(r => r._rowErrors.length > 0);
+        if (errorRows.length === 0) return;
+
+        const cleanedRows = errorRows.map(row => {
+            const cleaned: any = {};
+            CSV_COLUMNS.forEach(col => {
+                const val = getRowVal(row, [col]);
+                cleaned[col] = val !== undefined ? val : '';
+            });
+            cleaned['Validation Errors'] = row._rowErrors.join('; ');
+            return cleaned;
+        });
+
+        const columnsWithErrors = [...CSV_COLUMNS, 'Validation Errors'];
+        const content = Papa.unparse(cleanedRows, { columns: columnsWithErrors });
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName.replace(/\.[^/.]+$/, "")}_errors.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Downloaded ${errorRows.length} error row(s) to fix.`);
+    };
+
     if (!isOpen) return null;
 
     const errorRowsCount = parsedRows.filter(r => r._rowErrors.length > 0).length;
@@ -629,6 +655,16 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
                                     {errorRowsCount > 0 && <span className="text-red-500">Errors: {errorRowsCount}</span>}
                                 </div>
                                 <div className="flex gap-2">
+                                    {errorRowsCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={downloadErrorRows}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-bold border hover:bg-input cursor-pointer transition-colors bg-transparent text-red-500 flex items-center gap-1.5"
+                                            style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                        >
+                                            <Download className="h-3.5 w-3.5" /> Download Error Rows (CSV)
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleReset}
                                         disabled={uploading}

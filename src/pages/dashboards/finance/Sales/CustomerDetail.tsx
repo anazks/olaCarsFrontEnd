@@ -4,7 +4,7 @@ import {
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
-    ArrowLeft, Zap, Briefcase
+    ArrowLeft, Zap, Briefcase, ChevronLeft, ChevronRight, Filter, X
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
@@ -517,7 +517,7 @@ const CustomerDetail = () => {
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
                 {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
-                {activeTab === 'statements' && <StatementsTab />}
+                {activeTab === 'statements' && <StatementsTab invoices={invoices} payments={payments} customerId={id || ''} />}
             </div>
 
             {isExportModalOpen && (
@@ -909,16 +909,313 @@ const PaymentsTab = ({ payments }: { payments: any[] }) => (
     </div>
 );
 
-function StatementsTab() {
+function StatementsTab({ invoices, payments, customerId }: { invoices: Invoice[]; payments: any[]; customerId: string }) {
+    const [filterFrom, setFilterFrom] = useState('');
+    const [filterTo, setFilterTo] = useState('');
+    const [downloading, setDownloading] = useState(false);
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+    const [dlFrom, setDlFrom] = useState('');
+    const [dlTo, setDlTo] = useState('');
+
+    const fmtDate = (d: Date) => {
+        const day = String(d.getDate()).padStart(2, '0');
+        const mon = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}/${mon}/${d.getFullYear()}`;
+    };
+
+    const viewStart = filterFrom ? (() => { const d = new Date(filterFrom); d.setHours(0,0,0,0); return d; })() : null;
+    const viewEnd = filterTo ? (() => { const d = new Date(filterTo); d.setHours(23,59,59,999); return d; })() : null;
+
+    const validPayments = payments.filter(p => p.status !== 'VOID');
+
+    const filterStart = viewStart || new Date(0);
+    const invoicesBefore = viewStart ? invoices.filter(inv => {
+        const d = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || 0);
+        return d < filterStart;
+    }) : [];
+    const paymentsBefore = viewStart ? validPayments.filter(pmt => {
+        const d = new Date(pmt.paymentDate || pmt.createdAt || 0);
+        return d < filterStart;
+    }) : [];
+    const totalInvoicedBefore = invoicesBefore.reduce((sum, inv) => sum + (inv.totalAmountDue || 0), 0);
+    const totalPaidBefore = paymentsBefore.reduce((sum, pmt) => sum + (pmt.amountReceived || 0), 0);
+    const openingBalance = totalInvoicedBefore - totalPaidBefore;
+
+    interface StatementRow {
+        date: Date;
+        type: 'opening' | 'invoice' | 'payment';
+        transactionLabel: string;
+        detailLine1: string;
+        detailLine2: string;
+        amount: number;
+        payment: number;
+        balance: number;
+        sortKey: number;
+    }
+
+    const rows: StatementRow[] = [];
+
+    const isInRange = (d: Date) => {
+        if (viewStart && d < viewStart) return false;
+        if (viewEnd && d > viewEnd) return false;
+        return true;
+    };
+
+    invoices.forEach(inv => {
+        const d = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || 0);
+        if (!isInRange(d)) return;
+        rows.push({
+            date: d, type: 'invoice', transactionLabel: 'Invoice',
+            detailLine1: `${inv.invoiceNumber} - due on ${fmtDate(d)}`,
+            detailLine2: '',
+            amount: inv.totalAmountDue || 0, payment: 0, balance: 0,
+            sortKey: d.getTime()
+        });
+    });
+
+    validPayments.forEach(pmt => {
+        const d = new Date(pmt.paymentDate || pmt.createdAt || 0);
+        if (!isInRange(d)) return;
+        if (pmt.invoices && pmt.invoices.length > 0) {
+            pmt.invoices.forEach((invApp: any) => {
+                rows.push({
+                    date: d, type: 'payment', transactionLabel: 'Payment Received',
+                    detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
+                    detailLine2: `$${(invApp.amountApplied || 0).toFixed(2)} for payment of ${invApp.invoiceNumber || 'INV'}`,
+                    amount: 0, payment: invApp.amountApplied || 0, balance: 0,
+                    sortKey: d.getTime() + 1
+                });
+            });
+            const totalApplied = pmt.invoices.reduce((s: number, i: any) => s + (i.amountApplied || 0), 0);
+            const excess = (pmt.amountReceived || 0) - totalApplied;
+            if (excess > 0.01) {
+                rows.push({
+                    date: d, type: 'payment', transactionLabel: 'Payment Received',
+                    detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
+                    detailLine2: `$${excess.toFixed(2)} prepayment credit (unapplied)`,
+                    amount: 0, payment: excess, balance: 0,
+                    sortKey: d.getTime() + 2
+                });
+            }
+        } else {
+            rows.push({
+                date: d, type: 'payment', transactionLabel: 'Payment Received',
+                detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
+                detailLine2: `$${(pmt.amountReceived || 0).toFixed(2)} received via ${pmt.paymentMethod || 'Other'}`,
+                amount: 0, payment: pmt.amountReceived || 0, balance: 0,
+                sortKey: d.getTime() + 1
+            });
+        }
+    });
+
+    rows.sort((a, b) => a.sortKey - b.sortKey);
+
+    let runningBal = openingBalance;
+    rows.forEach(row => {
+        runningBal += row.amount - row.payment;
+        row.balance = runningBal;
+    });
+
+    const closingBalance = rows.length > 0 ? rows[rows.length - 1].balance : openingBalance;
+
+    const handleDownloadPdf = async () => {
+        setDownloading(true);
+        setShowDownloadModal(false);
+        const toastId = toast.loading('Generating statement PDF...');
+        try {
+            const params: any = {};
+            if (dlFrom) params.fromDate = dlFrom;
+            if (dlTo) params.toDate = dlTo;
+            const res = await api.get(`/api/customers/${customerId}/statement/monthly-pdf`, {
+                params, responseType: 'blob'
+            });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `statement_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Statement PDF downloaded!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to download statement PDF:', err);
+            toast.error(err?.response?.data?.message || 'Failed to generate statement PDF', { id: toastId });
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    const hasFilter = filterFrom || filterTo;
+
     return (
-        <div className="flex flex-col items-center justify-center p-20 rounded-[2rem] border animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-            <div className="w-16 h-16 rounded-2xl bg-brand-lime/10 flex items-center justify-center border border-brand-lime/20 mb-6">
-                <FileText className="text-brand-lime animate-pulse" size={28} />
+        <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+            {/* Filter Bar + Download */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Filter size={14} style={{ color: 'var(--text-dim)' }} />
+                    <div className="space-y-0.5">
+                        <label className="text-[9px] font-black uppercase tracking-widest block" style={{ color: 'var(--text-dim)' }}>From</label>
+                        <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold outline-none border focus:border-brand-lime transition-all"
+                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    <div className="space-y-0.5">
+                        <label className="text-[9px] font-black uppercase tracking-widest block" style={{ color: 'var(--text-dim)' }}>To</label>
+                        <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold outline-none border focus:border-brand-lime transition-all"
+                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+                    {hasFilter && (
+                        <button onClick={() => { setFilterFrom(''); setFilterTo(''); }}
+                            className="p-1.5 rounded-lg border transition-all hover:bg-white/5 active:scale-95 cursor-pointer mt-3"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            title="Clear filters"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+
+                <button onClick={() => { setDlFrom(filterFrom); setDlTo(filterTo); setShowDownloadModal(true); }}
+                    disabled={downloading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'var(--brand-lime)' }}
+                >
+                    <Download size={14} />
+                    {downloading ? 'Generating...' : 'Download PDF'}
+                </button>
             </div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-white mb-2">Update soon</h3>
-            <p className="text-xs font-semibold text-center leading-relaxed max-w-md" style={{ color: 'var(--text-dim)' }}>
-                This section is currently under development. Detailed statements, reports, and transactional histories will be available here soon.
-            </p>
+
+            {/* Statement Table */}
+            <div className="rounded-[2rem] border overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transactions</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Details</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payments</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            {/* Opening Balance Row - only when filtered */}
+                            {viewStart && (
+                                <tr style={{ borderBottom: '1px solid var(--border-main)', backgroundColor: 'rgba(200, 230, 0, 0.03)' }}>
+                                    <td className="px-6 py-4 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>{fmtDate(viewStart)}</td>
+                                    <td className="px-6 py-4 text-xs font-black" style={{ color: 'var(--text-main)' }}>***Opening Balance***</td>
+                                    <td className="px-6 py-4"></td>
+                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                        {openingBalance > 0 ? openingBalance.toFixed(2) : ''}
+                                    </td>
+                                    <td className="px-6 py-4"></td>
+                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                        {openingBalance.toFixed(2)}
+                                    </td>
+                                </tr>
+                            )}
+
+                            {rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="p-12 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                        No transactions found{hasFilter ? ' for the selected date range' : ''}.
+                                    </td>
+                                </tr>
+                            ) : (
+                                rows.map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                        <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{fmtDate(row.date)}</td>
+                                        <td className="px-6 py-4 text-xs font-bold" style={{ color: row.type === 'invoice' ? 'var(--text-main)' : 'var(--brand-lime)' }}>
+                                            {row.transactionLabel}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-normal max-w-[280px]">
+                                            <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{row.detailLine1}</div>
+                                            {row.detailLine2 && (
+                                                <div className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>{row.detailLine2}</div>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                            {row.amount > 0 ? row.amount.toFixed(2) : ''}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-xs font-black text-emerald-400">
+                                            {row.payment > 0 ? row.payment.toFixed(2) : ''}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                            {row.balance.toFixed(2)}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+
+                            {/* Closing Balance Due */}
+                            <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                                <td colSpan={4}></td>
+                                <td className="px-6 py-5 text-right text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                    Balance Due
+                                </td>
+                                <td className="px-6 py-5 text-right text-sm font-black" style={{ color: closingBalance > 0 ? '#EF4444' : '#10B981' }}>
+                                    $ {closingBalance.toFixed(2)}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Download Modal with separate date filters */}
+            {showDownloadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all">
+                    <div className="w-full max-w-md p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2">
+                                <FileText className="text-brand-lime" size={20} style={{ color: 'var(--brand-lime)' }} />
+                                <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Download Statement PDF</h3>
+                            </div>
+                            <button onClick={() => setShowDownloadModal(false)} className="text-dim hover:text-white transition-all text-lg font-bold cursor-pointer" style={{ color: 'var(--text-dim)' }}>&times;</button>
+                        </div>
+
+                        <div className="space-y-5">
+                            <p className="text-[11px] font-medium leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                Select a date range for the PDF statement. Leave empty to download the full statement with all transactions.
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>From Date</label>
+                                    <input type="date" value={dlFrom} onChange={e => setDlFrom(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>To Date</label>
+                                    <input type="date" value={dlTo} onChange={e => setDlTo(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button onClick={() => setShowDownloadModal(false)}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all border cursor-pointer"
+                                    style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
+                                >Cancel</button>
+                                <button onClick={handleDownloadPdf}
+                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+                                    style={{ background: 'var(--brand-lime)' }}
+                                >Download PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

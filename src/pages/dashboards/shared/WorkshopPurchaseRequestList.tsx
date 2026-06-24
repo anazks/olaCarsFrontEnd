@@ -22,6 +22,21 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#22c55e',
             border: 'rgba(34, 197, 94, 0.3)',
         },
+        COST_APPROVED: {
+            bg: 'rgba(34, 197, 94, 0.1)',
+            text: '#22c55e',
+            border: 'rgba(34, 197, 94, 0.3)',
+        },
+        IN_TRANSIT: {
+            bg: 'rgba(99, 102, 241, 0.1)',
+            text: '#6366f1',
+            border: 'rgba(99, 102, 241, 0.3)',
+        },
+        RECEIVED: {
+            bg: 'rgba(16, 185, 129, 0.1)',
+            text: '#10b981',
+            border: 'rgba(16, 185, 129, 0.3)',
+        },
         REJECTED: {
             bg: 'rgba(239, 68, 68, 0.1)',
             text: '#ef4444',
@@ -31,13 +46,18 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(59, 130, 246, 0.1)',
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
+        },
+        WAITING_QUOTATION: {
+            bg: 'rgba(239, 68, 68, 0.1)',
+            text: '#ef4444',
+            border: 'rgba(239, 68, 68, 0.3)',
         }
     };
     const style = styles[status] || styles.APPROVED;
     return (
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-tighter w-fit"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status}
+            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status === 'WAITING_QUOTATION' ? 'Waiting Quotation' : status}
         </div>
     );
 };

@@ -10,7 +10,7 @@ import { getUserRole, getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
-    const styles = {
+    const styles: Record<ProcurementRequest['status'], { bg: string; text: string; border: string; icon: any }> = {
         PENDING: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
@@ -29,6 +29,24 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             border: 'rgba(34, 197, 94, 0.3)',
             icon: <CheckCircle size={14} />
         },
+        COST_APPROVED: {
+            bg: 'rgba(34, 197, 94, 0.1)',
+            text: '#22c55e',
+            border: 'rgba(34, 197, 94, 0.3)',
+            icon: <CheckCircle size={14} />
+        },
+        IN_TRANSIT: {
+            bg: 'rgba(99, 102, 241, 0.1)',
+            text: '#6366f1',
+            border: 'rgba(99, 102, 241, 0.3)',
+            icon: <Package size={14} />
+        },
+        RECEIVED: {
+            bg: 'rgba(16, 185, 129, 0.1)',
+            text: '#10b981',
+            border: 'rgba(16, 185, 129, 0.3)',
+            icon: <CheckCircle size={14} />
+        },
         REJECTED: {
             bg: 'rgba(239, 68, 68, 0.1)',
             text: '#ef4444',
@@ -40,6 +58,12 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#3b82f6',
             border: 'rgba(59, 130, 246, 0.3)',
             icon: <Receipt size={14} />
+        },
+        WAITING_QUOTATION: {
+            bg: 'rgba(239, 68, 68, 0.1)',
+            text: '#ef4444',
+            border: 'rgba(239, 68, 68, 0.3)',
+            icon: <Clock size={14} />
         }
     };
     const style = styles[status] || styles.APPROVED;
@@ -47,7 +71,7 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider w-fit"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
             {style.icon}
-            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status}
+            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status === 'WAITING_QUOTATION' ? 'Waiting Quotation' : status}
         </div>
     );
 };
@@ -162,6 +186,14 @@ const WorkshopPurchaseRequestDetail = () => {
                         </h1>
                         <div className="flex items-center gap-2 mt-1">
                             <StatusBadge status={request.status} />
+                            {request.linkedPO && (
+                                <button
+                                    onClick={() => navigate(`/purchase-orders/${request.linkedPO._id || request.linkedPO.id}`)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/30 hover:bg-[#C8E600]/20 transition-all cursor-pointer"
+                                >
+                                    <ExternalLink size={12} /> View {request.linkedPO.purchaseOrderNumber}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -170,8 +202,9 @@ const WorkshopPurchaseRequestDetail = () => {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => openActionModal('REJECT')}
-                            disabled={!!actionLoading}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 cursor-pointer bg-transparent"
+                            disabled={!!actionLoading || !isPricingAuditAvailable}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-500 cursor-pointer bg-transparent"
+                            title={!isPricingAuditAvailable ? "Pricing audit not available from merchandiser" : ""}
                         >
                             <XCircle size={18} /> Reject Proposed
                         </button>
@@ -193,13 +226,13 @@ const WorkshopPurchaseRequestDetail = () => {
             </div>
 
             {/* Rejection / Approval Banners */}
-            {request.status === 'REJECTED' && request.rejectionNote && (
+            {(request.status === 'REJECTED' || request.status === 'WAITING_QUOTATION') && (request.rejectionReason || request.rejectionNote) && (
                 <div className="flex items-start gap-3 p-4 rounded-xl text-sm animate-in fade-in"
                     style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
                     <AlertCircle size={18} className="mt-0.5 shrink-0" />
                     <div>
                         <p className="font-bold">Rejection Note</p>
-                        <p className="text-xs mt-1 opacity-90">{request.rejectionNote}</p>
+                        <p className="text-xs mt-1 opacity-90">{request.rejectionReason || request.rejectionNote}</p>
                     </div>
                 </div>
             )}
@@ -454,8 +487,9 @@ const WorkshopPurchaseRequestDetail = () => {
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => openActionModal('REJECT')}
-                                    disabled={actionLoading !== null}
-                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
+                                    disabled={actionLoading !== null || !isPricingAuditAvailable}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-30 disabled:hover:bg-red-500/10 disabled:hover:text-red-500"
+                                    title={!isPricingAuditAvailable ? "Pricing audit not available from merchandiser" : ""}
                                 >
                                     {actionLoading === 'REJECT' ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
                                     Reject
@@ -469,6 +503,68 @@ const WorkshopPurchaseRequestDetail = () => {
                                     {actionLoading === 'APPROVE' ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                     Approve Request
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PR Edit History */}
+                    {request.editHistory && request.editHistory.length > 0 && (
+                        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <Clock size={14} className="text-[#C8E600]" />
+                                <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Request History</h3>
+                            </div>
+                            <div className="p-5 space-y-6">
+                                {request.editHistory.map((entry, idx) => (
+                                    <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                        {idx !== (request.editHistory?.length || 0) - 1 && (
+                                            <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
+                                        )}
+                                        <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            {new Date(entry.editedAt).toLocaleDateString()} at {new Date(entry.editedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                        <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {typeof entry.editedBy === 'object' 
+                                                ? (entry.editedBy?.fullName || entry.editedBy?.name) 
+                                                : entry.editedBy} ({entry.editorRole})
+                                        </p>
+                                        <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary}"</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Linked Purchase Order History */}
+                    {request.linkedPO && (
+                        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <Receipt size={14} className="text-[#C8E600]" />
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>PO History ({request.linkedPO.purchaseOrderNumber})</h3>
+                                </div>
+                            </div>
+                            <div className="p-5 space-y-6">
+                                {request.linkedPO.editHistory && request.linkedPO.editHistory.length > 0 ? (
+                                    request.linkedPO.editHistory.map((entry: any, idx: number) => (
+                                        <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                            {idx !== (request.linkedPO.editHistory?.length || 0) - 1 && (
+                                                <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
+                                            )}
+                                            <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                                {new Date(entry.editedAt || entry.updatedAt).toLocaleDateString()} at {new Date(entry.editedAt || entry.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {typeof entry.editedBy === 'object' 
+                                                    ? (entry.editedBy?.fullName || entry.editedBy?.name) 
+                                                    : entry.editedBy} ({entry.editorRole})
+                                            </p>
+                                            <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary || entry.changeSummary}"</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>No PO history recorded yet.</p>
+                                )}
                             </div>
                         </div>
                     )}

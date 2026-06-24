@@ -16,7 +16,8 @@ import {
     AlertTriangle,
     Settings,
     Building2,
-    Upload
+    Upload,
+    Mail
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';
@@ -113,6 +114,13 @@ const DashboardSettings = () => {
     const [thresholdError, setThresholdError] = useState<string | null>(null);
     const [thresholdSuccess, setThresholdSuccess] = useState(false);
 
+    // Operations (Driver Payment Emails) State
+    const [emailsEnabled, setEmailsEnabled] = useState<boolean>(true);
+    const [loadingEmails, setLoadingEmails] = useState(false);
+    const [savingEmails, setSavingEmails] = useState(false);
+    const [emailsError, setEmailsError] = useState<string | null>(null);
+    const [emailsSuccess, setEmailsSuccess] = useState(false);
+
     // Fetch PO Threshold
     const fetchThreshold = useCallback(async () => {
         if (role !== 'admin' && role !== 'operationadmin') return;
@@ -128,11 +136,27 @@ const DashboardSettings = () => {
         }
     }, [role]);
 
+    // Fetch Driver Emails Setting
+    const fetchEmailsSetting = useCallback(async () => {
+        if (role !== 'admin' && role !== 'operationadmin') return;
+        setLoadingEmails(true);
+        setEmailsError(null);
+        try {
+            const enabled = await systemSettingsService.getDriverPaymentEmailsEnabled();
+            setEmailsEnabled(enabled);
+        } catch (err: any) {
+            setEmailsError(err.message || 'Failed to fetch mailing setting');
+        } finally {
+            setLoadingEmails(false);
+        }
+    }, [role]);
+
     useEffect(() => {
         if (activeTab === 'operations') {
             fetchThreshold();
+            fetchEmailsSetting();
         }
-    }, [activeTab, fetchThreshold]);
+    }, [activeTab, fetchThreshold, fetchEmailsSetting]);
 
     // Handlers
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,6 +204,24 @@ const DashboardSettings = () => {
             setThresholdError(err.message || 'Update failed');
         } finally {
             setSavingThreshold(false);
+        }
+    };
+
+    const handleToggleEmails = async (checked: boolean) => {
+        setSavingEmails(true);
+        setEmailsError(null);
+        setEmailsSuccess(false);
+        try {
+            await systemSettingsService.updateDriverPaymentEmailsEnabled(checked);
+            setEmailsEnabled(checked);
+            setEmailsSuccess(true);
+            toast.success(checked ? 'Driver payment mailing system enabled' : 'Driver payment mailing system suspended');
+            setTimeout(() => setEmailsSuccess(false), 3000);
+        } catch (err: any) {
+            setEmailsError(err.message || 'Failed to update mailing setting');
+            toast.error(err.message || 'Failed to update setting');
+        } finally {
+            setSavingEmails(false);
         }
     };
 
@@ -558,12 +600,71 @@ const DashboardSettings = () => {
                                 )}
                             </div>
 
+                            {/* Mailing System Toggle */}
+                            <div className="p-8 rounded-3xl border bg-card shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                        <Mail size={20} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
+                                        Driver Payments Mailing System
+                                    </h3>
+                                    <button 
+                                        onClick={fetchEmailsSetting}
+                                        className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+                                        style={{ color: 'var(--text-dim)' }}
+                                    >
+                                        <RefreshCw size={18} className={loadingEmails ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
+
+                                {loadingEmails ? (
+                                    <div className="py-12 flex flex-col items-center gap-4">
+                                        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }}></div>
+                                        <p className="text-sm font-medium animate-pulse" style={{ color: 'var(--text-dim)' }}>Fetching latest settings...</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between p-6 rounded-2xl border" style={{ background: "rgba(255,255,255,0.01)", borderColor: "var(--border-main)" }}>
+                                            <div className="space-y-1 pr-4">
+                                                <div className="text-sm font-black" style={{ color: "var(--text-main)" }}>
+                                                    {emailsEnabled ? 'Mailing System Active' : 'Mailing System Suspended'}
+                                                </div>
+                                                <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+                                                    Toggle to enable or temporarily suspend automated Nodemailer notifications for driver rent payments (Invoice Creation, 3-Day Reminder, Due Today, and Overdue Recovery).
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    disabled={savingEmails}
+                                                    checked={emailsEnabled}
+                                                    onChange={(e) => handleToggleEmails(e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                                            </label>
+                                        </div>
+
+                                        {emailsError && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-red-500/10 text-red-500 border border-red-500/20">
+                                                <AlertTriangle size={18} /> {emailsError}
+                                            </div>
+                                        )}
+
+                                        {emailsSuccess && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-green-500/10 text-green-500 border border-green-500/20">
+                                                <CheckCircle2 size={18} /> Mailing system setting updated successfully
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="p-6 rounded-2xl border border-dashed flex items-start gap-4" style={{ background: 'rgba(200,230,0,0.02)', borderColor: 'var(--border-main)' }}>
                                 <Shield size={20} style={{ color: 'var(--brand-lime)' }} className="mt-1 flex-shrink-0" />
                                 <div>
                                     <h4 className="text-sm font-black mb-1" style={{ color: 'var(--text-main)' }}>Policy Enforcement</h4>
                                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-                                        Changing the PO threshold will apply to all new purchase orders immediately. Existing pending orders will retain their original authorization requirements.
+                                        Changing the PO threshold or mailing system toggle will apply immediately. Existing settings will be overwritten and enforced globally.
                                     </p>
                                 </div>
                             </div>
