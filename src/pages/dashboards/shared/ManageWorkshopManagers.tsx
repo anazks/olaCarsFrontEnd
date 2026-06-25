@@ -190,25 +190,6 @@ const ManageWorkshopManagers = () => {
     setFormError(null);
   };
 
-  const openEditModal = (manager: WorkshopManager) => {
-    setModalMode("edit");
-    setSelectedManager(manager);
-    setFormData({
-      fullName: manager.fullName,
-      email: manager.email,
-      password: "",
-      phone: manager.phone || "",
-      workshopId:
-        typeof manager.branchId === "object"
-          ? manager.branchId?._id || ""
-          : manager.branchId,
-      status: manager.status,
-      permissions: manager.permissions || [],
-    });
-    setActiveTab("details");
-    setFormError(null);
-  };
-
   const closeModal = () => {
     setModalMode(null);
     setSelectedManager(null);

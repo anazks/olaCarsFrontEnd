@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Search, Car, Loader2, Plus, Minus, Check, AlertTriangle, Eye, Sparkles, Filter, X } from 'lucide-react';
+import { ArrowLeft, Search, Car, Loader2, Plus, Minus, Check, AlertTriangle, Sparkles } from 'lucide-react';
 import { getFleetById, type Fleet } from '../../../services/fleetService';
 import { getAllVehicles, editVehicle, type Vehicle } from '../../../services/vehicleService';
 import { getUserRole } from '../../../utils/auth';
@@ -40,7 +39,6 @@ const StatusBadge = ({ status }: { status: string }) => {
 export default function AssignVehiclesToFleet() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { t } = useTranslation();
     const userRole = getUserRole()?.toLowerCase() || '';
 
     // States

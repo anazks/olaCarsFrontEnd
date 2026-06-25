@@ -121,6 +121,13 @@ const DashboardSettings = () => {
     const [emailsError, setEmailsError] = useState<string | null>(null);
     const [emailsSuccess, setEmailsSuccess] = useState(false);
 
+    // Operations (Invoice Cron Enabled) State
+    const [cronEnabled, setCronEnabled] = useState<boolean>(true);
+    const [loadingCron, setLoadingCron] = useState(false);
+    const [savingCron, setSavingCron] = useState(false);
+    const [cronError, setCronError] = useState<string | null>(null);
+    const [cronSuccess, setCronSuccess] = useState(false);
+
     // Fetch PO Threshold
     const fetchThreshold = useCallback(async () => {
         if (role !== 'admin' && role !== 'operationadmin') return;
@@ -151,12 +158,28 @@ const DashboardSettings = () => {
         }
     }, [role]);
 
+    // Fetch Invoice Cron Suspended Setting
+    const fetchCronSetting = useCallback(async () => {
+        if (role !== 'admin' && role !== 'operationadmin') return;
+        setLoadingCron(true);
+        setCronError(null);
+        try {
+            const suspended = await systemSettingsService.getInvoiceCronSuspended();
+            setCronEnabled(!suspended);
+        } catch (err: any) {
+            setCronError(err.message || 'Failed to fetch cron setting');
+        } finally {
+            setLoadingCron(false);
+        }
+    }, [role]);
+
     useEffect(() => {
         if (activeTab === 'operations') {
             fetchThreshold();
             fetchEmailsSetting();
+            fetchCronSetting();
         }
-    }, [activeTab, fetchThreshold, fetchEmailsSetting]);
+    }, [activeTab, fetchThreshold, fetchEmailsSetting, fetchCronSetting]);
 
     // Handlers
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,6 +245,24 @@ const DashboardSettings = () => {
             toast.error(err.message || 'Failed to update setting');
         } finally {
             setSavingEmails(false);
+        }
+    };
+
+    const handleToggleCron = async (checked: boolean) => {
+        setSavingCron(true);
+        setCronError(null);
+        setCronSuccess(false);
+        try {
+            await systemSettingsService.updateInvoiceCronSuspended(!checked);
+            setCronEnabled(checked);
+            setCronSuccess(true);
+            toast.success(checked ? 'Invoice creation cron job enabled' : 'Invoice creation cron job suspended');
+            setTimeout(() => setCronSuccess(false), 3000);
+        } catch (err: any) {
+            setCronError(err.message || 'Failed to update cron setting');
+            toast.error(err.message || 'Failed to update setting');
+        } finally {
+            setSavingCron(false);
         }
     };
 
@@ -653,6 +694,65 @@ const DashboardSettings = () => {
                                         {emailsSuccess && (
                                             <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-green-500/10 text-green-500 border border-green-500/20">
                                                 <CheckCircle2 size={18} /> Mailing system setting updated successfully
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Cron Job Toggle */}
+                            <div className="p-8 rounded-3xl border bg-card shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                        <Settings size={20} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
+                                        Invoice Generation Cron Job
+                                    </h3>
+                                    <button 
+                                        onClick={fetchCronSetting}
+                                        className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+                                        style={{ color: 'var(--text-dim)' }}
+                                    >
+                                        <RefreshCw size={18} className={loadingCron ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
+
+                                {loadingCron ? (
+                                    <div className="py-12 flex flex-col items-center gap-4">
+                                        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }}></div>
+                                        <p className="text-sm font-medium animate-pulse" style={{ color: 'var(--text-dim)' }}>Fetching latest settings...</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between p-6 rounded-2xl border" style={{ background: "rgba(255,255,255,0.01)", borderColor: "var(--border-main)" }}>
+                                            <div className="space-y-1 pr-4">
+                                                <div className="text-sm font-black" style={{ color: "var(--text-main)" }}>
+                                                    {cronEnabled ? 'Cron Job Active' : 'Cron Job Suspended'}
+                                                </div>
+                                                <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+                                                    Toggle to enable or temporarily suspend the automated daily cron job that generates weekly invoices.
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    disabled={savingCron}
+                                                    checked={cronEnabled}
+                                                    onChange={(e) => handleToggleCron(e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                                            </label>
+                                        </div>
+
+                                        {cronError && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-red-500/10 text-red-500 border border-red-500/20">
+                                                <AlertTriangle size={18} /> {cronError}
+                                            </div>
+                                        )}
+
+                                        {cronSuccess && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-green-500/10 text-green-500 border border-green-500/20">
+                                                <CheckCircle2 size={18} /> Cron job setting updated successfully
                                             </div>
                                         )}
                                     </div>
