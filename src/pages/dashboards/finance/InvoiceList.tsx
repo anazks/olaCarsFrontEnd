@@ -5,7 +5,7 @@ import {
     Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
-import { getInvoicesRegistry, deleteInvoice, deleteAllInvoices } from '../../../services/invoiceService';
+import { getInvoicesRegistry, deleteAllInvoices } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
