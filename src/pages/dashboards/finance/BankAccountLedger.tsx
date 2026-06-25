@@ -13,11 +13,10 @@ import {
     Coins,
     Building2,
     Plus,
-    ArrowUpDown,
-    Trash2
+    ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions, getBankAccountTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -58,7 +57,6 @@ const BankAccountLedger = () => {
     const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
     const [loadingAccounts, setLoadingAccounts] = useState(false);
     const [recording, setRecording] = useState(false);
-    const [deletingAll, setDeletingAll] = useState(false);
 
     // Form states
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -85,31 +83,6 @@ const BankAccountLedger = () => {
         c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
-
-    const handleDeleteAllTransactions = async () => {
-        if (!id) return;
-        const confirmed = window.confirm(
-            'Are you sure you want to delete ALL transactions for this bank account?\n\n' +
-            'This will permanently delete all ledger entries and journal records, and reset the balance.\n\n' +
-            'This action CANNOT be undone!'
-        );
-        if (!confirmed) return;
-        setDeletingAll(true);
-        try {
-            const result = await deleteAllTransactions(id);
-            toast.success(result.message || 'All transactions deleted successfully!');
-            // Reload the ledger
-            setEntries([]);
-            setPagination({ total: 0, pages: 1, limit: 25 });
-            if (account) {
-                setAccount({ ...account, currentBalance: account.initialBalance || 0 });
-            }
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to delete transactions');
-        } finally {
-            setDeletingAll(false);
-        }
-    };
 
     useEffect(() => {
         if (isRecordPaymentModalOpen) {
