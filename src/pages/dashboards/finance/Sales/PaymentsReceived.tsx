@@ -7,6 +7,7 @@ import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
 import PaymentReceivedDetailModal from './PaymentReceivedDetailModal';
+import PaymentReceivedDetail from './PaymentReceivedDetail';
 import { getUserRole } from '../../../../utils/auth';
 
 interface InvoiceReference {
@@ -109,7 +110,7 @@ const PaymentsReceived = () => {
     };
 
     // Sorting
-    const [sortBy, setSortBy] = useState('createdAt');
+    const [sortBy, setSortBy] = useState('paymentDate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
@@ -167,6 +168,24 @@ const PaymentsReceived = () => {
         fetchPayments();
     }, [fetchPayments]);
 
+
+    if (selectedPayment) {
+        return (
+            <div className="container-responsive space-y-6 pb-12">
+                <Breadcrumbs 
+                    items={[
+                        { label: 'Sales', path: '#' },
+                        { label: 'Payments Received', active: false },
+                        { label: `Receipt ${selectedPayment.paymentNumber}`, active: true }
+                    ]} 
+                />
+                <PaymentReceivedDetail 
+                    payment={selectedPayment}
+                    onBack={() => setSelectedPayment(null)}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="container-responsive space-y-6 pb-12">
@@ -424,12 +443,6 @@ const PaymentsReceived = () => {
                 />
             )}
 
-            {selectedPayment && (
-                <PaymentReceivedDetailModal
-                    payment={selectedPayment}
-                    onClose={() => setSelectedPayment(null)}
-                />
-            )}
         </div>
     );
 };

@@ -487,16 +487,6 @@ const InvoiceList = () => {
                                             Current Balance <SortIcon field="balance" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('vehicle')}>
-                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Vehicle / Fleet <SortIcon field="vehicle" />
-                                        </div>
-                                    </th>
-                                    <th className="py-4 px-6 text-left w-[12%]">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Node Location
-                                        </div>
-                                    </th>
                                     <th className="py-4 px-6 text-left w-[12%] group cursor-pointer select-none" onClick={() => handleSort('generatedAt')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                                             <Calendar size={12} /> Invoice Date <SortIcon field="generatedAt" />
@@ -507,13 +497,12 @@ const InvoiceList = () => {
                                             <Calendar size={12} /> Due Date <SortIcon field="dueDate" />
                                         </div>
                                     </th>
-                                    <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={13} className="py-20 text-center">
+                                        <td colSpan={10} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Decrypting Ledger...</span>
@@ -522,7 +511,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={13} className="py-20 text-center">
+                                        <td colSpan={10} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
                                                 <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
@@ -531,7 +520,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : invoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={13} className="py-20 text-center">
+                                        <td colSpan={10} className="py-20 text-center">
                                             <div className="text-dim space-y-1 uppercase">
                                                 <FileText className="mx-auto opacity-20 mb-2" size={32} />
                                                 <p className="text-xs font-black tracking-widest">No statements recorded</p>
@@ -602,49 +591,11 @@ const InvoiceList = () => {
                                                     ${invoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                                        {invoice.vehicle?.legalDocs?.registrationNumber || 'N/A'}
-                                                    </span>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
-                                                        Fleet #{invoice.vehicle?.basicDetails?.fleetNumber || 'N/A'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                                        {(invoice.customer as any)?.branch?.name || invoice.driver?.branch?.name || 'N/A'}
-                                                    </span>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-dim">
-                                                        {(invoice.customer as any)?.branch?.city || (invoice.customer as any)?.branch?.country || invoice.driver?.branch?.country || 'N/A'}
-                                                    </span>
-                                                </div>
-                                            </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : 'N/A'}
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
-                                            </td>
-                                            <td className="py-4 px-6 text-center" onClick={e => e.stopPropagation()}>
-                                                <div className="flex justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleRowClick(invoice._id)}
-                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-brand-lime hover:border-brand-lime/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
-                                                        title="Inspect Invoice Document"
-                                                    >
-                                                        <Eye size={14} strokeWidth={2.5} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteInvoice(invoice._id)}
-                                                        className="p-2 bg-white/5 border border-white/10 text-[#A3A3A3] hover:text-rose-500 hover:border-rose-500/30 rounded-xl cursor-pointer shadow-inner active:scale-90 hover:scale-[1.05] transition-all duration-300 flex items-center justify-center"
-                                                        title="Delete Invoice"
-                                                    >
-                                                        <Trash2 size={14} strokeWidth={2.5} />
-                                                    </button>
-                                                </div>
                                             </td>
                                         </tr>
                                     ))
