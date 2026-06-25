@@ -59,6 +59,72 @@ export const getDeviceMediaEventUrl = async (imei: string): Promise<string> => {
     return response.data.data;
 };
 
+export interface GpsMileage {
+    imei: string;
+    startTime: string;
+    endTime: string;
+    elapsed: number;
+    distance: number;
+    avgSpeed: number;
+    totalMileage: number;
+}
+
+export interface GpsNotification {
+    _id?: string;
+    imei: string;
+    deviceName?: string;
+    msgType: string;
+    alarmType?: string;
+    alarmName?: string;
+    lat?: number;
+    lng?: number;
+    speed?: number;
+    avgSpeed?: number;
+    totalMileage?: number;
+    alarmTime?: string;
+    receivedAt?: string;
+}
+
+export const getGpsTripsReport = async (imei: string, startTime: string, endTime: string, startRow?: number): Promise<any[]> => {
+    const params = { imei, startTime, endTime, startRow: startRow || 1 };
+    const response = await api.get('/api/gps/trips-report', { params });
+    return response.data.data;
+};
+
+export const getGpsMileageList = async (imeis: string, startTime?: string, endTime?: string): Promise<GpsMileage[]> => {
+    const params = { imeis, startTime, endTime };
+    const response = await api.get('/api/gps/mileage', { params });
+    return response.data.data;
+};
+
+export const getGpsNotificationsList = async (imei?: string, limit?: number): Promise<GpsNotification[]> => {
+    const params = { imei, limit };
+    const response = await api.get('/api/gps/notifications', { params });
+    return response.data.data;
+};
+
+export interface GpsObdData {
+    imei: string;
+    dataReportTime: string;
+    odometerReading?: string;
+    deviceAccumulatedMileage?: string;
+    remainingFuel?: string | null;
+    remainingFuelPercentage?: string;
+    coolantTemperature?: string;
+    vehicleBatterVoltage?: string;
+    currentRPM?: string;
+    currentSpeed?: string;
+    vin?: string;
+}
+
+export const getGpsObdData = async (imei: string, startTime?: string, endTime?: string): Promise<any> => {
+    const params = { imei, startTime, endTime };
+    const response = await api.get('/api/gps/obd', { params });
+    console.log("[GPS Service] getGpsObdData RESPONSE:", response.data);
+    return response.data.data || response.data;
+};
+
+
 /**
  * Find GPS device matching a fleet vehicle by VIN (carFrame) or plate (vehicleNumber).
  * Primary match: GPS carFrame === fleet basicDetails.vin

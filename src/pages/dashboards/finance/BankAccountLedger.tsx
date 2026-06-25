@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
+import {
     ArrowLeft,
     List,
     AlertTriangle,
@@ -52,7 +52,7 @@ const BankAccountLedger = () => {
     // Dynamic bank statement import preview & branch selection
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<string>('');
-    
+
     // Record Payment Modal States
     const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false);
     const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
@@ -147,7 +147,7 @@ const BankAccountLedger = () => {
                 try {
                     const invoices = await getInvoicesByCustomer(selectedCustomer._id);
                     // Filter to keep only PENDING, PARTIAL, OVERDUE invoices
-                    const openInvoices = invoices.filter(inv => 
+                    const openInvoices = invoices.filter(inv =>
                         inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE'
                     );
                     setCustomerInvoices(openInvoices);
@@ -239,7 +239,7 @@ const BankAccountLedger = () => {
         // Find keys
         const firstRow = rawRows[0];
         const keys = Object.keys(firstRow);
-        
+
         let dateKey = '';
         let withdrawalKey = '';
         let depositKey = '';
@@ -444,7 +444,7 @@ const BankAccountLedger = () => {
 
             const res = await recordManualPayment(id, formData);
             toast.success(res.message || 'Payment recorded successfully');
-            
+
             // Reset states
             setIsRecordPaymentModalOpen(false);
             setPaymentAmount('');
@@ -456,7 +456,7 @@ const BankAccountLedger = () => {
             setShowCustomerList(false);
             setSelectedInvoiceId('');
             setCustomerInvoices([]);
-            
+
             // Reload ledger
             fetchData();
         } catch (err: any) {
@@ -578,11 +578,11 @@ const BankAccountLedger = () => {
             if (entry.runningBalance !== undefined && entry.runningBalance !== null) {
                 current = entry.runningBalance;
             } else {
-                const debit = entry.amount !== undefined 
-                    ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                const debit = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
                     : (entry.debit || 0);
-                const credit = entry.amount !== undefined 
-                    ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+                const credit = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
                     : (entry.credit || 0);
                 current = current + debit - credit;
             }
@@ -614,18 +614,18 @@ const BankAccountLedger = () => {
 
     return (
         <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
-            <Breadcrumbs 
+            <Breadcrumbs
                 items={[
                     { label: 'Finance', path: '#' },
                     { label: 'Bank Accounts', path: '../bank-accounts' },
                     { label: `${account.accountName || account.bankName} Ledger`, active: true }
-                ]} 
+                ]}
             />
 
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
                 <div>
-                    <button 
+                    <button
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
                         style={{ color: 'var(--brand-lime)' }}
@@ -647,28 +647,28 @@ const BankAccountLedger = () => {
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
-                                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    <button 
+                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
+                    {/* <button 
                         onClick={handleDeleteAllTransactions}
                         disabled={deletingAll}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Trash2 size={14} strokeWidth={3} />
                         {deletingAll ? 'Deleting...' : 'Clear All Transactions'}
-                    </button>
-                    <button 
+                    </button> */}
+                    <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 active:scale-95 shadow-md border border-white/10 cursor-pointer"
                     >
                         <Plus size={14} strokeWidth={3} /> Record Payment
                     </button>
-                    <button 
+                    <button
                         onClick={() => setIsBulkUploadOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <FileSpreadsheet size={14} strokeWidth={3} /> Bulk Re-entry
                     </button>
-                    <button 
+                    <button
                         onClick={() => setIsImportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                         style={{ backgroundColor: 'var(--brand-lime)' }}
@@ -699,7 +699,7 @@ const BankAccountLedger = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
-                                    <th 
+                                    <th
                                         className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50 cursor-pointer select-none hover:text-white transition-colors"
                                         onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
                                     >
@@ -719,22 +719,22 @@ const BankAccountLedger = () => {
                                 {sortedEntries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime()) 
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                                    const formattedDate = !isNaN(dateObj.getTime())
+                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                                         : entryDateStr;
 
-                                    const debitVal = entry.amount !== undefined 
-                                        ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                                    const debitVal = entry.amount !== undefined
+                                        ? (entry.type === 'DEBIT' ? entry.amount : 0)
                                         : (entry.debit || 0);
-                                        
-                                    const creditVal = entry.amount !== undefined 
-                                        ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+
+                                    const creditVal = entry.amount !== undefined
+                                        ? (entry.type === 'CREDIT' ? entry.amount : 0)
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr 
+                                        <tr
                                             key={entry._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/bank-accounts/')[0];
@@ -745,10 +745,10 @@ const BankAccountLedger = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                 {renderDescriptionWithLinks(entry.description)}
-                                                 {entry.referenceId && (
-                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
-                                                 )}
+                                                {renderDescriptionWithLinks(entry.description)}
+                                                {entry.referenceId && (
+                                                    <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2 text-xs opacity-70" style={{ color: 'var(--text-dim)' }}>
@@ -772,7 +772,7 @@ const BankAccountLedger = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className="font-mono text-sm font-bold text-blue-400">
-                                                    {(runningBalancesMap[entry._id] !== undefined) 
+                                                    {(runningBalancesMap[entry._id] !== undefined)
                                                         ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
                                                         : '-'}
                                                 </span>
@@ -791,9 +791,9 @@ const BankAccountLedger = () => {
                         <div className="text-sm" style={{ color: 'var(--text-dim)' }}>
                             Showing <span className="font-bold" style={{ color: 'var(--text-main)' }}>{((page - 1) * limit) + 1}</span> to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{Math.min(page * limit, pagination.total)}</span> of <span className="font-bold" style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
-                            <select 
+                            <select
                                 value={limit}
                                 onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
                                 className="px-2 py-1 rounded border text-xs outline-none bg-transparent"
@@ -810,15 +810,15 @@ const BankAccountLedger = () => {
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
                                 >
                                     Previous
                                 </button>
-                                
+
                                 <div className="flex items-center px-4">
                                     <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
                                         Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
@@ -829,8 +829,8 @@ const BankAccountLedger = () => {
                                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                     disabled={page === pagination.pages}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
@@ -858,8 +858,8 @@ const BankAccountLedger = () => {
                         <form onSubmit={handleImportSubmit} className="p-8 space-y-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Account</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={`${account.accountName || account.bankName} (${account.accountCode || 'N/A'})`}
                                     disabled
                                     className="w-full border rounded-2xl px-4 py-3 text-sm font-bold opacity-60"
@@ -869,7 +869,7 @@ const BankAccountLedger = () => {
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Branch</label>
-                                <select 
+                                <select
                                     value={selectedBranchId}
                                     onChange={e => setSelectedBranchId(e.target.value)}
                                     className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
@@ -897,8 +897,8 @@ const BankAccountLedger = () => {
                                             <p className="text-[10px] text-dim">Maximum file size: 5MB</p>
                                         </div>
                                     )}
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                                         onChange={handleFileChange}
                                         className="absolute inset-0 opacity-0 cursor-pointer"
@@ -974,7 +974,7 @@ const BankAccountLedger = () => {
                             </div>
 
                             <div className="pt-4 flex gap-3">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         setIsImportModalOpen(false);
@@ -986,7 +986,7 @@ const BankAccountLedger = () => {
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={importing || parsedTransactions.filter(tx => tx.isValid).length === 0}
                                     className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
@@ -1021,8 +1021,8 @@ const BankAccountLedger = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Deposit Date</label>
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         value={depositDate}
                                         onChange={e => setDepositDate(e.target.value)}
                                         className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
@@ -1033,7 +1033,7 @@ const BankAccountLedger = () => {
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Mode</label>
-                                    <select 
+                                    <select
                                         value={paymentMode}
                                         onChange={e => setPaymentMode(e.target.value)}
                                         className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
@@ -1056,7 +1056,7 @@ const BankAccountLedger = () => {
                                             Loading other accounts...
                                         </div>
                                     ) : (
-                                        <select 
+                                        <select
                                             value={fromAccountId}
                                             onChange={e => setFromAccountId(e.target.value)}
                                             className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
@@ -1080,8 +1080,8 @@ const BankAccountLedger = () => {
                                     <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Select Customer</label>
                                         <div className="relative">
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 placeholder="Search customer by name or ID..."
                                                 value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
                                                 onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
@@ -1147,8 +1147,8 @@ const BankAccountLedger = () => {
                                                 >
                                                     <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>-- Select an Invoice --</option>
                                                     {customerInvoices.map(inv => (
-                                                        <option 
-                                                            key={inv._id} 
+                                                        <option
+                                                            key={inv._id}
                                                             value={inv._id}
                                                             style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                                         >
@@ -1166,8 +1166,8 @@ const BankAccountLedger = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         step="0.01"
                                         min="0.01"
                                         value={paymentAmount}
@@ -1181,7 +1181,7 @@ const BankAccountLedger = () => {
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Currency</label>
-                                    <select 
+                                    <select
                                         value={paymentCurrency}
                                         onChange={e => setPaymentCurrency(e.target.value)}
                                         className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
@@ -1203,8 +1203,8 @@ const BankAccountLedger = () => {
                                         ) : (
                                             <p className="text-xs text-dim truncate">Click to upload file</p>
                                         )}
-                                        <input 
-                                            type="file" 
+                                        <input
+                                            type="file"
                                             accept="image/*,application/pdf"
                                             onChange={e => setSupportingDocFile(e.target.files?.[0] || null)}
                                             className="absolute inset-0 opacity-0 cursor-pointer"
@@ -1216,7 +1216,7 @@ const BankAccountLedger = () => {
                             {/* Row 3: Description */}
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description</label>
-                                <textarea 
+                                <textarea
                                     value={paymentDescription}
                                     onChange={e => setPaymentDescription(e.target.value)}
                                     placeholder="Enter payment description details"
@@ -1226,7 +1226,7 @@ const BankAccountLedger = () => {
                             </div>
 
                             <div className="pt-4 flex gap-3">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         setIsRecordPaymentModalOpen(false);
@@ -1237,7 +1237,7 @@ const BankAccountLedger = () => {
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={recording}
                                     className="flex-[2] py-3 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
