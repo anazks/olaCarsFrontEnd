@@ -69,6 +69,7 @@ export interface PurchaseOrder {
     editHistory: EditHistoryEntry[];
     createdAt: string;
     updatedAt: string;
+    linkedPR?: any;
 }
 
 export interface CreatePurchaseOrderPayload {

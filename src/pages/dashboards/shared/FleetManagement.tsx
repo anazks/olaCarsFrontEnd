@@ -677,7 +677,7 @@ export default function FleetManagement() {
                                 </div>
                             ) : (
                                 <div className="divide-y divide-[var(--border-main)]">
-                                    {viewingFleetVehicles.vehicles.map((v: any, index) => (
+                                    {viewingFleetVehicles.vehicles.map((v: any) => (
                                         <div key={v._id} className="py-3 flex items-center justify-between">
                                             <div>
                                                 <div className="font-bold text-[var(--text-main)]">

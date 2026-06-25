@@ -23,12 +23,26 @@ export interface ProcurementRequestSupplier {
     name: string;
 }
 
+export interface EditHistoryEntry {
+    editedAt: string;
+    editedBy?: {
+        _id: string;
+        fullName?: string;
+        name?: string;
+        email?: string;
+        role?: string;
+    } | string;
+    editorRole: string;
+    previousStatus: string;
+    changesSummary: string;
+}
+
 export interface ProcurementRequest {
     _id: string;
     requestNumber: string;
     part: ProcurementRequestPart;
     quantity: number;
-    status: 'PENDING' | 'PENDING_FINANCE_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO';
+    status: 'PENDING' | 'PENDING_FINANCE_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'COST_APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'WAITING_QUOTATION';
     branch: ProcurementRequestBranch;
     requestedBy: ProcurementRequestUser;
     requestedByRole: string;
@@ -51,6 +65,8 @@ export interface ProcurementRequest {
     approvalNote?: string;
     createdAt: string;
     updatedAt: string;
+    editHistory?: EditHistoryEntry[];
+    linkedPO?: any;
 }
 
 export interface PaginationMetadata {
@@ -68,7 +84,7 @@ export interface PaginatedResponse<T> {
 export interface ProcurementRequestFilters {
     page?: number;
     limit?: number;
-    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'PENDING_FINANCE_APPROVAL';
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'PENDING_FINANCE_APPROVAL' | 'WAITING_QUOTATION';
     branch?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
