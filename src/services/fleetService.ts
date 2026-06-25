@@ -3,24 +3,11 @@ import api from './api';
 export interface Fleet {
     _id: string;
     fleetNumber: string;
-    assignedStaff: {
-        _id: string;
-        fullName: string;
-        email: string;
-        phone: string;
-    };
+    assignedStaff?: any;
     assignedStaffModel: 'OperationStaff' | 'FinanceStaff';
     status: 'ACTIVE' | 'INACTIVE';
     description?: string;
-    vehicles?: Array<{
-        _id: string;
-        basicDetails?: {
-            make?: string;
-            model?: string;
-            year?: number;
-            vin?: string;
-        };
-    }>;
+    vehicles?: any[];
     createdAt?: string;
     updatedAt?: string;
 }

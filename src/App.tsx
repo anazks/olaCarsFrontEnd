@@ -128,6 +128,7 @@ import ChartOfAccounts from "./pages/dashboards/finance/ChartOfAccounts";
 import AccountingCodeDetails from "./pages/dashboards/finance/AccountingCodeDetails";
 import GeneralLedger from "./pages/dashboards/finance/GeneralLedger";
 import LedgerEntryDetailPage from "./pages/dashboards/finance/LedgerEntryDetailPage";
+import BankTransactionDetailPage from "./pages/dashboards/finance/BankTransactionDetailPage";
 import FinanceDashboard from "./pages/dashboards/finance/FinanceDashboard";
 import FinancialStatements from "./pages/dashboards/finance/FinancialStatements";
 import BalanceSheet from "./pages/dashboards/finance/BalanceSheet";
@@ -452,6 +453,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="fixed-assets" element={<FixedAssets />} />
@@ -993,6 +995,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="fixed-assets" element={<FixedAssets />} />
@@ -1214,6 +1217,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
@@ -1627,6 +1631,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />

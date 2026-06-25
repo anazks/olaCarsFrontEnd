@@ -6,6 +6,7 @@ export interface WorkshopManager {
     email: string;
     phone: string;
     branchId: any;
+    workshopId?: any;
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions: string[];

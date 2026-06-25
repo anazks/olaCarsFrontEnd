@@ -738,7 +738,7 @@ const BankAccountLedger = () => {
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/bank-accounts/')[0];
-                                                navigate(`${basePath}/ledger/${entry._id}`);
+                                                navigate(`${basePath}/bank-transactions/${entry._id}`);
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
