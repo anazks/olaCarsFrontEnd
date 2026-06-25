@@ -6,7 +6,6 @@ import {
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
-import PaymentReceivedDetailModal from './PaymentReceivedDetailModal';
 import PaymentReceivedDetail from './PaymentReceivedDetail';
 import { getUserRole } from '../../../../utils/auth';
 

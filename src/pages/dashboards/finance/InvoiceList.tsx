@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     FileText, RefreshCw, Filter, Search, CheckCircle2,
-    Clock, AlertCircle, Eye, ChevronLeft, ChevronRight, Calendar, Plus,
+    Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
 import { getInvoicesRegistry, deleteInvoice, deleteAllInvoices } from '../../../services/invoiceService';
@@ -178,16 +178,7 @@ const InvoiceList = () => {
         navigate(`./${id}`);
     };
 
-    const handleDeleteInvoice = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this invoice?')) return;
-        try {
-            await deleteInvoice(id);
-            toast.success('Invoice deleted successfully');
-            fetchData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to delete invoice');
-        }
-    };
+
 
     const handleDeleteAll = async () => {
         if (!window.confirm('CRITICAL: Are you sure you want to delete ALL invoices? This action cannot be undone.')) return;
