@@ -74,6 +74,7 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
     const [parsedParts, setParsedParts] = useState<ParsedPart[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [result, setResult] = useState<any | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -84,7 +85,7 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
     const fetchBranches = useCallback(async () => {
         setBranchesLoading(true);
         try {
-            const data = await getAllBranches();
+            const data = await getAllBranches({ type: 'WORKSHOP', limit: 100 });
             const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
             setBranches(list);
         } catch { /* non-critical */ }
@@ -113,7 +114,7 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
             return isNaN(n) ? undefined : n;
         };
 
-        const partNameVal = row['Item Name'] || row['CF.Item Name'] || row['item name'] || row['partName'] || row['part name'] || '';
+        const partNameVal = row['Name'] || row['name'] || row['Item Name'] || row['CF.Item Name'] || row['item name'] || row['partName'] || row['part name'] || '';
         const partNumberVal = row['SKU'] || row['Item ID'] || row['partNumber'] || row['part number'] || row['sku'] || '';
 
         if (!partNameVal || !String(partNameVal).trim()) {
@@ -128,7 +129,7 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
         const resolvedNumber = partNumberVal ? String(partNumberVal).trim().toUpperCase() : '';
 
         // Validate Rate (selling price)
-        const rateRaw = row['Rate'] || row['rate'] || row['Selling Price'] || row['unitCost'];
+        const rateRaw = row['Selling Rate'] || row['selling rate'] || row['Rate'] || row['rate'] || row['Selling Price'] || row['unitCost'];
         const rateVal = cleanNumber(rateRaw);
         if (rateRaw === undefined || rateRaw === '') {
             errors.push('Missing required field: Rate (selling price)');
@@ -151,7 +152,7 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
         }
 
         // Validate Reorder Point if present
-        const reorderRaw = row['Reorder Point'] || row['ReorderPoint'] || row['reorderLevel'];
+        const reorderRaw = row['Reorder Level'] || row['reorder level'] || row['Reorder Point'] || row['ReorderPoint'] || row['reorderLevel'];
         const reorderVal = cleanNumber(reorderRaw);
         if (reorderRaw !== undefined && reorderRaw !== '' && reorderVal === undefined) {
             errors.push('Reorder Point must be a numeric value.');
@@ -335,18 +336,55 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
         setBranchError(null);
 
         setUploading(true);
+        setUploadProgress(0);
 
         try {
             // Strip out internal fields before sending to API
             const payload = validParts.map(({ _rowErrors, _resolvedName, _resolvedNumber, ...rest }) => rest);
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
 
-            const res = await bulkCreateParts(payload, branchToSend);
-            setResult(res.data);
+            let allCreated: any[] = [];
+            let allErrors: any[] = [];
 
-            const msg = `${res.data.created.length} part(s) synced successfully${res.data.errors.length > 0 ? `, ${res.data.errors.length} error(s)` : ''}.`;
+            const chunkSize = 50;
+            const totalChunks = Math.ceil(payload.length / chunkSize);
+
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = payload.slice(i * chunkSize, (i + 1) * chunkSize);
+                try {
+                    const res = await bulkCreateParts(chunk, branchToSend);
+                    const resData = res.data || res;
+                    if (resData.created) {
+                        allCreated.push(...resData.created);
+                    }
+                    if (resData.errors) {
+                        const adjustedErrors = resData.errors.map((e: any) => ({
+                            ...e,
+                            row: i * chunkSize + e.row
+                        }));
+                        allErrors.push(...adjustedErrors);
+                    }
+                } catch (chunkErr: any) {
+                    const errorMsg = chunkErr?.response?.data?.message || "Chunk upload failed";
+                    chunk.forEach((_, idx) => {
+                        allErrors.push({
+                            row: i * chunkSize + idx + 1,
+                            message: errorMsg
+                        });
+                    });
+                }
+                setUploadProgress(Math.round(((i + 1) / totalChunks) * 100));
+            }
+
+            const finalResult = {
+                created: allCreated,
+                errors: allErrors
+            };
+            setResult(finalResult);
+
+            const msg = `${allCreated.length} part(s) synced successfully${allErrors.length > 0 ? `, ${allErrors.length} error(s)` : ''}.`;
             toast.success(msg);
-            if (res.data.created.length > 0) {
+            if (allCreated.length > 0) {
                 onSuccess();
             }
         } catch (err: any) {
@@ -356,10 +394,40 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
         }
     };
 
+    const getFailedRows = useCallback(() => {
+        const frontendFailed = parsedParts.filter(p => p._rowErrors.length > 0);
+        const validParts = parsedParts.filter(p => p._rowErrors.length === 0);
+        const backendFailed = (result?.errors || []).map((err: any) => {
+            const part = validParts[err.row - 1];
+            return part ? { ...part, _rowErrors: [err.message] } : null;
+        }).filter(Boolean) as ParsedPart[];
+        return [...frontendFailed, ...backendFailed];
+    }, [parsedParts, result]);
+
+    const downloadFailedRows = useCallback(() => {
+        const failed = getFailedRows();
+        if (failed.length === 0) {
+            toast.error('No failed rows to download.');
+            return;
+        }
+
+        const exportData = failed.map(({ _rowErrors, _resolvedName, _resolvedNumber, ...rest }) => ({
+            ...rest,
+            'Upload Errors': _rowErrors.join('; ')
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Failed Rows");
+        XLSX.writeFile(workbook, 'failed_inventory_rows.xlsx');
+        toast.success('Failed rows downloaded successfully.');
+    }, [getFailedRows]);
+
     const handleReset = () => {
         setParsedParts([]);
         setFileName('');
         setResult(null);
+        setUploadProgress(0);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -496,15 +564,17 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
                             </div>
                         </div>
                     )}
-
                     {/* Progress Indicator */}
                     {uploading && (
                         <div className="p-10 rounded-2xl border flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in duration-300" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                             <Loader2 size={32} className="animate-spin text-[#D4F12E]" />
                             <div className="space-y-2 w-full max-w-md">
                                 <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                    Uploading Inventory Records...
+                                    Uploading Inventory Records... {uploadProgress}%
                                 </p>
+                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                                    <div className="bg-[#D4F12E] h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                                </div>
                                 <p className="text-[11px] font-medium" style={{ color: 'var(--text-dim)' }}>
                                     Resolving accounts payable/receivable, taxes, and supplier connections. Please wait.
                                 </p>
@@ -563,9 +633,19 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
                                         )}
                                     </div>
                                 </div>
-                                <button onClick={handleReset} className="text-xs font-bold text-rose-400 hover:underline bg-transparent border-none cursor-pointer">
-                                    Clear File
-                                </button>
+                                <div className="flex gap-3 items-center">
+                                    {errorCount > 0 && (
+                                        <button
+                                            onClick={downloadFailedRows}
+                                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer"
+                                        >
+                                            <Download size={12} /> Download Failed Rows
+                                        </button>
+                                    )}
+                                    <button onClick={handleReset} className="text-xs font-bold text-rose-400 hover:underline bg-transparent border-none cursor-pointer">
+                                        Clear File
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="border rounded-xl overflow-hidden max-h-[350px] overflow-y-auto" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
@@ -587,7 +667,8 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
                                             const hasErrors = row._rowErrors.length > 0;
                                             const pNum = row._resolvedNumber || '—';
                                             const pName = row._resolvedName || '—';
-                                            const rate = row['Rate'] || row['rate'] || row['Selling Price'] || '—';
+                                            const rawRate = row['Selling Rate'] || row['selling rate'] || row['Rate'] || row['rate'] || row['Selling Price'];
+                                            const rate = rawRate !== undefined && rawRate !== null ? String(rawRate).replace(/^[\$\€\£\¥\s]+/, '').trim() : '—';
                                             const stock = row['Stock On Hand'] || row['Opening Stock'] || '0';
                                             const locationName = row['Location Name'] || row['LocationName'] || '—';
                                             const vendor = row['Vendor'] || '—';
@@ -666,6 +747,15 @@ const BulkInventoryUpload = ({ isOpen, onClose, onSuccess }: BulkInventoryUpload
                             )}
 
                             <div className="flex justify-end gap-3 pt-3">
+                                {getFailedRows().length > 0 && (
+                                    <button
+                                        onClick={downloadFailedRows}
+                                        className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all hover:bg-rose-500/10 cursor-pointer"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <Download size={12} className="inline mr-1" /> Download Failed Rows
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleReset}
                                     className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all hover:bg-white/5 bg-transparent cursor-pointer"

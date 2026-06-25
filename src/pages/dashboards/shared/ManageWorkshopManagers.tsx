@@ -826,7 +826,7 @@ const ManageWorkshopManagers = () => {
                         </button>
                         <HasPermission permission="STAFF_EDIT">
                           <button
-                            onClick={() => openEditModal(manager)}
+                            onClick={() => navigate(`edit/${manager._id}`)}
                             className="p-2 rounded-lg hover:bg-lime/10 transition-colors"
                             style={{ color: "var(--text-dim)" }}
                             title={t("management.common.edit", {

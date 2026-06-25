@@ -43,6 +43,7 @@ import EditBranchManager from "./pages/dashboards/shared/EditBranchManager";
 import EditFinanceStaff from "./pages/dashboards/shared/EditFinanceStaff";
 import EditOperationStaff from "./pages/dashboards/shared/EditOperationStaff";
 import EditWorkshopStaff from "./pages/dashboards/shared/EditWorkshopStaff";
+import EditWorkshopManager from "./pages/dashboards/shared/EditWorkshopManager";
 import EditMerchendiser from "./pages/dashboards/shared/EditMerchendiser";
 import ManageCountryManagers from "./pages/dashboards/shared/ManageCountryManagers";
 import ManageBranches from "./pages/dashboards/shared/ManageBranches";
@@ -280,6 +281,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -577,6 +582,10 @@ function App() {
                   element={<ManageWorkshopManagers />}
                 />
                 <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
+                />
+                <Route
                   path="manage-workshop-staff"
                   element={<ManageWorkshopStaff />}
                 />
@@ -820,6 +829,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -1084,6 +1097,10 @@ function App() {
                   element={<ManageWorkshopManagers />}
                 />
                 <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
+                />
+                <Route
                   path="manage-workshop-staff"
                   element={<ManageWorkshopStaff />}
                 />
@@ -1279,6 +1296,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
