@@ -6,6 +6,7 @@ export interface WorkshopManager {
     email: string;
     phone: string;
     branchId: any;
+    workshopId?: any;
     role: string;
     status: 'ACTIVE' | 'SUSPENDED' | 'LOCKED';
     permissions: string[];
@@ -69,16 +70,21 @@ export const createWorkshopManager = async (
     payload: CreateWorkshopManagerPayload
 ): Promise<WorkshopManager> => {
     const response = await api.post('/api/workshop-manager', payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 export const updateWorkshopManager = async (
     payload: UpdateWorkshopManagerPayload
 ): Promise<WorkshopManager> => {
     const response = await api.put(`/api/workshop-manager/${payload.id}`, payload);
-    return response.data;
+    return response.data.data || response.data;
 };
 
 export const deleteWorkshopManager = async (id: string): Promise<void> => {
     await api.delete(`/api/workshop-manager/${id}`);
+};
+
+export const getWorkshopManagerById = async (id: string): Promise<WorkshopManager> => {
+    const response = await api.get(`/api/workshop-manager/${id}`);
+    return response.data.data || response.data;
 };

@@ -43,6 +43,7 @@ import EditBranchManager from "./pages/dashboards/shared/EditBranchManager";
 import EditFinanceStaff from "./pages/dashboards/shared/EditFinanceStaff";
 import EditOperationStaff from "./pages/dashboards/shared/EditOperationStaff";
 import EditWorkshopStaff from "./pages/dashboards/shared/EditWorkshopStaff";
+import EditWorkshopManager from "./pages/dashboards/shared/EditWorkshopManager";
 import EditMerchendiser from "./pages/dashboards/shared/EditMerchendiser";
 import ManageCountryManagers from "./pages/dashboards/shared/ManageCountryManagers";
 import ManageBranches from "./pages/dashboards/shared/ManageBranches";
@@ -127,6 +128,7 @@ import ChartOfAccounts from "./pages/dashboards/finance/ChartOfAccounts";
 import AccountingCodeDetails from "./pages/dashboards/finance/AccountingCodeDetails";
 import GeneralLedger from "./pages/dashboards/finance/GeneralLedger";
 import LedgerEntryDetailPage from "./pages/dashboards/finance/LedgerEntryDetailPage";
+import BankTransactionDetailPage from "./pages/dashboards/finance/BankTransactionDetailPage";
 import FinanceDashboard from "./pages/dashboards/finance/FinanceDashboard";
 import FinancialStatements from "./pages/dashboards/finance/FinancialStatements";
 import BalanceSheet from "./pages/dashboards/finance/BalanceSheet";
@@ -280,6 +282,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -447,6 +453,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="fixed-assets" element={<FixedAssets />} />
@@ -575,6 +582,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -822,6 +833,10 @@ function App() {
                   element={<ManageWorkshopManagers />}
                 />
                 <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
+                />
+                <Route
                   path="manage-workshop-staff"
                   element={<ManageWorkshopStaff />}
                 />
@@ -980,6 +995,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="fixed-assets" element={<FixedAssets />} />
@@ -1082,6 +1098,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -1197,6 +1217,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
@@ -1279,6 +1300,10 @@ function App() {
                 <Route
                   path="manage-workshop-managers"
                   element={<ManageWorkshopManagers />}
+                />
+                <Route
+                  path='manage-workshop-managers/edit/:id'
+                  element={<EditWorkshopManager />}
                 />
                 <Route
                   path="manage-workshop-staff"
@@ -1606,6 +1631,7 @@ function App() {
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
+              <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />

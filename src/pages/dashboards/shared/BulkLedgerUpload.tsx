@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
@@ -20,11 +20,12 @@ interface ParsedTransaction {
     "Running Balance": number;
     "Transaction Type": "DEBIT" | "CREDIT";
     Amount: number;
+    transactionId?: string;
     _rowErrors: string[];
 }
 
 const TEMPLATE_HEADERS = [
-    'Date', 'Description', 'Transaction Details', 'Debit', 'Credit', 'Running Balance', 'Transaction Type', 'Amount'
+    'Date', 'Description', 'Transaction Details', 'Debit', 'Credit', 'Running Balance', 'Transaction Type', 'Transaction ID'
 ];
 
 const SAMPLE_ROWS = [
@@ -36,7 +37,7 @@ const SAMPLE_ROWS = [
         Credit: 0.00,
         "Running Balance": 50000.00,
         "Transaction Type": 'DEBIT',
-        Amount: 50000.00
+        "Transaction ID": 'TXN00001'
     },
     {
         Date: '2026-06-02',
@@ -46,7 +47,7 @@ const SAMPLE_ROWS = [
         Credit: 0.00,
         "Running Balance": 51500.00,
         "Transaction Type": 'DEBIT',
-        Amount: 1500.00
+        "Transaction ID": 'TXN00002'
     },
     {
         Date: '2026-06-03',
@@ -56,9 +57,54 @@ const SAMPLE_ROWS = [
         Credit: 320.00,
         "Running Balance": 51180.00,
         "Transaction Type": 'CREDIT',
-        Amount: 320.00
+        "Transaction ID": 'TXN00003'
     }
 ];
+
+const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
+    // Parse as 2D array first
+    const rows2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    if (!rows2D || rows2D.length === 0) return [];
+
+    // Find the header row index
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(rows2D.length, 30); i++) {
+        const row = rows2D[i];
+        if (Array.isArray(row)) {
+            // Count matching target keywords
+            const matchCount = row.filter(cell => {
+                if (cell === undefined || cell === null) return false;
+                const cleanCell = String(cell).trim().toLowerCase();
+                return ['date', 'description', 'debit', 'credit', 'amount', 'transaction_type', 'transaction_details', 'transaction_id'].some(k => cleanCell.includes(k) || k.includes(cleanCell));
+            }).length;
+            if (matchCount >= 2) {
+                headerIdx = i;
+                break;
+            }
+        }
+    }
+
+    if (headerIdx >= 0) {
+        const headers = rows2D[headerIdx].map(h => String(h || '').trim());
+        return rows2D.slice(headerIdx + 1)
+            .map(row => {
+                const obj: any = {};
+                headers.forEach((header, colIdx) => {
+                    if (header) {
+                        obj[header] = row[colIdx];
+                    }
+                });
+                return obj;
+            })
+            .filter(row => {
+                // Keep only rows that have at least one non-empty value
+                return Object.values(row).some(v => v !== undefined && v !== null && String(v).trim() !== '');
+            });
+    }
+
+    // Fallback if no header row was detected
+    return XLSX.utils.sheet_to_json(ws);
+};
 
 const getRowVal = (r: any, keys: string[]): any => {
     if (!r) return undefined;
@@ -81,6 +127,30 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState('');
     const [clearExisting, setClearExisting] = useState(true);
+
+    const [accountSearchQuery, setAccountSearchQuery] = useState('');
+    const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+    const accountDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
+                setIsAccountDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const selectedAccount = accounts.find(acc => acc._id === selectedAccountId);
+    const filteredAccounts = accounts.filter(acc => {
+        const name = (acc.accountName || acc.bankName || '').toLowerCase();
+        const num = (acc.accountNumber || '').toLowerCase();
+        const query = accountSearchQuery.toLowerCase();
+        return name.includes(query) || num.includes(query);
+    });
 
     const [loadingData, setLoadingData] = useState(false);
     const [rows, setRows] = useState<ParsedTransaction[]>([]);
@@ -179,20 +249,23 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         return isNaN(parsed) ? 0 : parsed;
     };
 
-    const validateRow = useCallback((row: any): string[] => {
+        const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         
         const dateVal = getRowVal(row, ['date', 'Date']);
         const descVal = getRowVal(row, ['description', 'Description']) || '';
-        const detailsVal = getRowVal(row, ['transaction details', 'Transaction Details', 'details']) || '';
+        const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
         const rawDebit = getRowVal(row, ['debit', 'Debit']);
         const rawCredit = getRowVal(row, ['credit', 'Credit']);
         const rawAmount = getRowVal(row, ['amount', 'Amount']);
-        const rawType = getRowVal(row, ['transaction type', 'Transaction Type', 'type']) || '';
+        const rawType = getRowVal(row, ['transaction_type', 'transaction type', 'Transaction Type', 'type']) || '';
 
         const debitVal = cleanNumber(rawDebit);
         const creditVal = cleanNumber(rawCredit);
-        const amountVal = cleanNumber(rawAmount);
+        let amountVal = cleanNumber(rawAmount);
+        if (amountVal === 0) {
+            amountVal = debitVal > 0 ? debitVal : creditVal;
+        }
 
         if (!dateVal) {
             errors.push('Missing Date');
@@ -240,13 +313,17 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 
                 const dateVal = getRowVal(row, ['date', 'Date']);
                 const descVal = getRowVal(row, ['description', 'Description']) || '';
-                const detailsVal = getRowVal(row, ['transaction details', 'Transaction Details', 'details']) || '';
+                const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
                 const debitVal = cleanNumber(getRowVal(row, ['debit', 'Debit']));
                 const creditVal = cleanNumber(getRowVal(row, ['credit', 'Credit']));
-                const runningBalVal = cleanNumber(getRowVal(row, ['running balance', 'Running Balance', 'runningBal']));
-                const rawType = String(getRowVal(row, ['transaction type', 'Transaction Type', 'type']) || '').trim();
+                const runningBalVal = cleanNumber(getRowVal(row, ['running_balance', 'running balance', 'Running Balance', 'runningBal']));
+                const rawType = String(getRowVal(row, ['transaction_type', 'transaction type', 'Transaction Type', 'type']) || '').trim();
                 const rawAmount = getRowVal(row, ['amount', 'Amount']);
-                const amountVal = cleanNumber(rawAmount);
+                let amountVal = cleanNumber(rawAmount);
+                if (amountVal === 0) {
+                    amountVal = debitVal > 0 ? debitVal : creditVal;
+                }
+                const txIdVal = getRowVal(row, ['transaction_id', 'transactionId', 'Transaction ID', 'reference_number', 'reference number', 'referenceNumber']);
 
                 const typeStr = rawType.toUpperCase();
                 const parsedDate = parseDateFlexible(dateVal);
@@ -302,6 +379,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     "Running Balance": runningBalVal,
                     "Transaction Type": resolvedType,
                     Amount: amountVal,
+                    transactionId: txIdVal ? String(txIdVal) : undefined,
                     _rowErrors: rowErrors
                 } as ParsedTransaction;
             });
@@ -317,7 +395,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     const data = new Uint8Array(e.target?.result as ArrayBuffer);
                     const wb = XLSX.read(data, { type: 'array' });
                     const ws = wb.Sheets[wb.SheetNames[0]];
-                    processData(XLSX.utils.sheet_to_json(ws));
+                    processData(parseSheetToJSON(ws));
                 } catch { toast.error('Failed to parse Excel file.'); }
             };
             reader.readAsArrayBuffer(f);
@@ -327,7 +405,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 try {
                     const wb = XLSX.read(e.target?.result, { type: 'string' });
                     const ws = wb.Sheets[wb.SheetNames[0]];
-                    processData(XLSX.utils.sheet_to_json(ws));
+                    processData(parseSheetToJSON(ws));
                 } catch { toast.error('Failed to parse CSV file.'); }
             };
             reader.readAsText(f);
@@ -400,6 +478,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         setRows([]);
         setFileName('');
         setResult(null);
+        setAccountSearchQuery('');
+        setIsAccountDropdownOpen(false);
         if (fileRef.current) fileRef.current.value = '';
     };
 
@@ -473,21 +553,78 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                         <span className="text-xs text-dim">Loading accounts...</span>
                                     </div>
                                 ) : (
-                                    <div className="relative">
-                                        <select
-                                            value={selectedAccountId}
-                                            onChange={(e) => setSelectedAccountId(e.target.value)}
-                                            className="w-full px-4 py-2.5 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
+                                    <div className="relative" ref={accountDropdownRef}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
+                                            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime text-left"
                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         >
-                                            <option value="">— Select Account —</option>
-                                            {accounts.map(acc => (
-                                                <option key={acc._id} value={acc._id}>
-                                                    {acc.accountName || acc.bankName} ({acc.accountNumber})
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                            <span className="truncate pr-2">
+                                                {selectedAccount 
+                                                    ? `${selectedAccount.accountName || selectedAccount.bankName} (${selectedAccount.accountNumber})` 
+                                                    : '— Select Account —'}
+                                            </span>
+                                            <ChevronDown size={16} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
+                                        </button>
+
+                                        {isAccountDropdownOpen && (
+                                            <div 
+                                                className="absolute left-0 right-0 mt-1.5 rounded-xl border shadow-2xl z-50 overflow-hidden flex flex-col max-h-[250px]"
+                                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                                            >
+                                                {/* Search Input */}
+                                                <div className="p-2 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <Search size={14} style={{ color: 'var(--text-dim)' }} />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search account..."
+                                                        value={accountSearchQuery}
+                                                        onChange={(e) => setAccountSearchQuery(e.target.value)}
+                                                        className="w-full bg-transparent text-xs font-semibold outline-none py-1"
+                                                        style={{ color: 'var(--text-main)' }}
+                                                        autoFocus
+                                                    />
+                                                    {accountSearchQuery && (
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setAccountSearchQuery('')}
+                                                            className="p-1 hover:bg-white/10 rounded-full border-none cursor-pointer"
+                                                        >
+                                                            <X size={12} style={{ color: 'var(--text-dim)' }} />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* List */}
+                                                <div className="overflow-y-auto flex-1 custom-scrollbar max-h-[180px]">
+                                                    {filteredAccounts.length === 0 ? (
+                                                        <div className="p-3 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
+                                                            No accounts found
+                                                        </div>
+                                                    ) : (
+                                                        filteredAccounts.map(acc => (
+                                                            <button
+                                                                key={acc._id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedAccountId(acc._id);
+                                                                    setIsAccountDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-4 py-2 text-xs font-bold transition-all flex flex-col gap-0.5 border-none cursor-pointer ${selectedAccountId === acc._id ? 'bg-lime/10' : 'hover:bg-white/5'}`}
+                                                                style={{ 
+                                                                    borderBottom: '1px solid rgba(255,255,255,0.02)',
+                                                                    color: selectedAccountId === acc._id ? 'var(--brand-lime)' : 'var(--text-main)'
+                                                                }}
+                                                            >
+                                                                <span>{acc.accountName || acc.bankName}</span>
+                                                                <span className="text-[10px] font-normal" style={{ color: 'var(--text-dim)' }}>{acc.accountNumber}</span>
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -620,6 +757,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                 <th className="py-3 px-4">Running Balance</th>
                                                 <th className="py-3 px-4">Type</th>
                                                 <th className="py-3 px-4">Amount</th>
+                                                <th className="py-3 px-4">Transaction ID</th>
                                                 <th className="py-3 px-4">Validation</th>
                                                 <th className="py-3 px-4 text-right">Action</th>
                                             </tr>
@@ -639,6 +777,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                         </span>
                                                     </td>
                                                     <td className="py-3 px-4 font-mono font-bold">${row.Amount.toFixed(2)}</td>
+                                                    <td className="py-3 px-4 font-mono text-white/60">{row.transactionId || '-'}</td>
                                                     <td className="py-3 px-4">
                                                         {row._rowErrors.length > 0 ? (
                                                             <div className="flex flex-col text-rose-500" title={row._rowErrors.join(', ')}>

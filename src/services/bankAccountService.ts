@@ -76,3 +76,8 @@ export const getBankAccountTransactions = async (id: string, params?: any) => {
     return response.data;
 };
 
+export const getBankTransactionById = async (transactionId: string): Promise<any> => {
+    const response = await api.get(`/api/bank-accounts/transactions/${transactionId}`);
+    return response.data.data || response.data;
+};
+
