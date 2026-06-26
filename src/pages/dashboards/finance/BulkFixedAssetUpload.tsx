@@ -4,7 +4,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
 import { bulkUploadFixedAssets, getFixedAssetTypes } from '../../../services/fixedAssetService';
-import type { FixedAsset } from '../../../services/fixedAssetService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import { getAllVehicles } from '../../../services/vehicleService';
 
@@ -124,18 +123,16 @@ const BulkFixedAssetUpload = ({ isOpen, onClose, onSuccess }: BulkFixedAssetUplo
     const [accountingCodes, setAccountingCodes] = useState<any[]>([]);
     const [fixedAssetTypes, setFixedAssetTypes] = useState<any[]>([]);
     const [vehicles, setVehicles] = useState<any[]>([]);
-    const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
     React.useEffect(() => {
         if (isOpen) {
             const fetchMetadata = async () => {
-                setIsLoadingMetadata(true);
                 try {
                     const [codesRes, typesRes, vehiclesRes] = await Promise.all([
                         getAllAccountingCodes({ limit: 5000, select: 'code,name', skipPopulate: 'true' }),
                         getFixedAssetTypes(),
                         getAllVehicles({ limit: 5000, select: 'basicDetails.make,basicDetails.model,legalDocs.registrationNumber', skipPopulate: 'true' } as any)
-                    ]);
+                    ]) as [any, any, any];
                     
                     const codesList = Array.isArray(codesRes) ? codesRes : (codesRes.data || []);
                     setAccountingCodes(codesList);
@@ -147,8 +144,6 @@ const BulkFixedAssetUpload = ({ isOpen, onClose, onSuccess }: BulkFixedAssetUplo
                 } catch (err) {
                     console.error('Failed to load metadata for validation', err);
                     toast.error('Failed to load chart of accounts or vehicles list.');
-                } finally {
-                    setIsLoadingMetadata(false);
                 }
             };
             fetchMetadata();
