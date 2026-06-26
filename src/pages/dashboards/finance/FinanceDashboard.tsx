@@ -103,7 +103,7 @@ const FinanceDashboard = () => {
             const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes, poRes] = await Promise.all([
                 getLedgerEntries().catch(() => ({ data: [] as LedgerEntry[] })),
                 getTasks({ assignedTo: user?.id || user?._id }).catch(() => [] as StaffTask[]),
-                getInvoices({ limit: 1000 }).catch(() => ({ data: [] as Invoice[] })),
+                getInvoices({ limit: 1000, sortBy: 'dueDate', sortOrder: 'desc' }).catch(() => ({ data: [] as Invoice[] })),
                 getAllBills({ limit: 1000 }).catch(() => ({ data: [] as Bill[] })),
                 getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] as Expense[] })),
                 getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
@@ -322,16 +322,19 @@ const FinanceDashboard = () => {
         const now = new Date();
 
         // 1. Receivables
-        let recTotal = 0;
+        let recTotal = 0; // Net Settled
         let recCurrent = 0;
         let recOverdue = 0;
         liveData.invoices.forEach(inv => {
             const unpaid = inv.balance !== undefined ? inv.balance : (inv.totalAmountDue - inv.amountPaid);
-            if (unpaid <= 0) return;
-            recTotal += unpaid;
-            const isOverdue = inv.status === 'OVERDUE' || new Date(inv.dueDate) < now;
-            if (isOverdue) recOverdue += unpaid;
-            else recCurrent += unpaid;
+            const paid = inv.amountPaid || 0;
+            recTotal += paid; // Net Settled
+            
+            if (unpaid > 0) {
+                const isOverdue = inv.status === 'OVERDUE' || new Date(inv.dueDate) < now;
+                if (isOverdue) recOverdue += unpaid;
+                else recCurrent += unpaid;
+            }
         });
 
         // 2. Payables
@@ -628,6 +631,7 @@ const FinanceDashboard = () => {
         return {
             receivables: {
                 totalUnpaid: recTotal,
+                unpaidSum: recCurrent + recOverdue,
                 current: recCurrent,
                 overdue: recOverdue,
             },
@@ -913,7 +917,7 @@ const FinanceDashboard = () => {
 
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="space-y-1 w-full md:w-1/2">
-                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Invoices</p>
+                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Net Settled Invoices</p>
                             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-main)' }}>
                                 {formatCurrency(currentDataset.receivables.totalUnpaid)}
                             </h2>
@@ -936,7 +940,7 @@ const FinanceDashboard = () => {
                         </div>
 
                         <div className="h-[140px] w-full md:w-1/2 flex justify-center relative">
-                            {currentDataset.receivables.totalUnpaid === 0 ? (
+                            {currentDataset.receivables.unpaidSum === 0 ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-dim text-xs opacity-50">
                                     <PieIcon size={32} className="mb-2 opacity-50" />
                                     <span>No Receivables</span>
@@ -1674,6 +1678,57 @@ const FinanceDashboard = () => {
                             </div>
                         </div>
                     </div>
+            </div>
+
+            {/* Real-time System Diagnostics Console */}
+            <div className="rounded-2xl border p-6 mt-6 bg-black/40 border-white/5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                        <Activity size={14} className="text-brand-lime animate-pulse" />
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-main)' }}>
+                            System Diagnostics Console
+                        </h4>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Operational
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div className="space-y-1">
+                        <span className="text-dim font-bold block text-[10px] uppercase tracking-wider">Raw Invoices Cache</span>
+                        <p className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                            {rawLiveData.invoices?.length || 0} items
+                        </p>
+                    </div>
+                    <div className="space-y-1">
+                        <span className="text-dim font-bold block text-[10px] uppercase tracking-wider">Filtered Invoices</span>
+                        <p className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                            {liveData.invoices?.length || 0} items
+                        </p>
+                    </div>
+                    <div className="space-y-1">
+                        <span className="text-dim font-bold block text-[10px] uppercase tracking-wider">Settled portion (Paid &gt; 0)</span>
+                        <p className="text-lg font-bold text-emerald-400">
+                            {liveData.invoices?.filter(inv => (inv.amountPaid || 0) > 0).length || 0} items
+                        </p>
+                    </div>
+                    <div className="space-y-1">
+                        <span className="text-dim font-bold block text-[10px] uppercase tracking-wider">Net Settled sum</span>
+                        <p className="text-lg font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                            {formatCurrency(liveData.invoices?.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0) || 0)}
+                        </p>
+                    </div>
+                </div>
+                {rawLiveData.invoices && rawLiveData.invoices.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-white/5 text-[10px] text-dim font-medium space-y-1.5">
+                        <p>
+                            <span className="font-bold text-main">First Invoice in Cache:</span> {rawLiveData.invoices[0].invoiceNumber} ({new Date(rawLiveData.invoices[0].generatedAt || rawLiveData.invoices[0].dueDate).toLocaleDateString()}) | Paid: {formatCurrency(rawLiveData.invoices[0].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[0].totalAmountDue || 0)}
+                        </p>
+                        <p>
+                            <span className="font-bold text-main">Last Invoice in Cache:</span> {rawLiveData.invoices[rawLiveData.invoices.length - 1].invoiceNumber} ({new Date(rawLiveData.invoices[rawLiveData.invoices.length - 1].generatedAt || rawLiveData.invoices[rawLiveData.invoices.length - 1].dueDate).toLocaleDateString()}) | Paid: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].totalAmountDue || 0)}
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

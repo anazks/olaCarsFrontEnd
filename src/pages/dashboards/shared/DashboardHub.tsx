@@ -475,7 +475,7 @@ const DashboardHub = () => {
                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monthlyRevenue)}
                         </div>
                         <div className="text-[10px] font-bold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                            {t('dashboards.common.monthlyRevenue', 'Monthly Revenue')}
+                            {t('dashboards.common.monthlyRevenue', 'Total Amount Received')}
                         </div>
                     </div>
                 </div>
@@ -499,10 +499,10 @@ const DashboardHub = () => {
                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalPayables)}
                         </div>
                         <div className="text-[10px] font-bold mt-1 uppercase tracking-wider flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
-                            <span>{t('dashboards.common.totalPayables', 'Total Payables')}</span>
+                            <span>{t('dashboards.common.totalPayables', 'Invoices Balance Due')}</span>
                         </div>
                         <div className="text-[10px] font-bold mt-2 pt-2 border-t border-[var(--border-main)]/50 flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
-                            <span>{t('dashboards.common.lastMonthBalanceDue', 'Last Month Balance Due')}</span>
+                            <span>{t('dashboards.common.lastMonthBalanceDue', 'Last Month Invoice Balance')}</span>
                             <span className="font-extrabold text-[var(--text-main)]">
                                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(lastMonthBalanceDue)}
                             </span>

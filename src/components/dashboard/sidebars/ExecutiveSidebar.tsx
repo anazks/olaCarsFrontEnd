@@ -273,12 +273,10 @@ const ExecutiveSidebar = ({
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/admin/finance-dashboard",
         },
-        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/admin/ledger",
         },
-        */
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/admin/financial-statements",
