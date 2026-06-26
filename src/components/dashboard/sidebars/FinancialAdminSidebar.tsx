@@ -280,10 +280,13 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
           path: "/admin/financial-admin/bulk-ledger-upload",
         },
+        */
+        /*
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",
         },
+        */
         {
           label: t("sidebar.items.manualJournals"),
           path: "/admin/financial-admin/manual-journals",

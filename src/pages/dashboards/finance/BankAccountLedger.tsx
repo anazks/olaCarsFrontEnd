@@ -13,11 +13,10 @@ import {
     Coins,
     Building2,
     Plus,
-    ArrowUpDown,
-    Trash2
+    ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, deleteAllTransactions, getBankAccountTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -58,7 +57,6 @@ const BankAccountLedger = () => {
     const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
     const [loadingAccounts, setLoadingAccounts] = useState(false);
     const [recording, setRecording] = useState(false);
-    const [deletingAll, setDeletingAll] = useState(false);
 
     // Form states
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -85,31 +83,6 @@ const BankAccountLedger = () => {
         c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
-
-    const handleDeleteAllTransactions = async () => {
-        if (!id) return;
-        const confirmed = window.confirm(
-            'Are you sure you want to delete ALL transactions for this bank account?\n\n' +
-            'This will permanently delete all ledger entries and journal records, and reset the balance.\n\n' +
-            'This action CANNOT be undone!'
-        );
-        if (!confirmed) return;
-        setDeletingAll(true);
-        try {
-            const result = await deleteAllTransactions(id);
-            toast.success(result.message || 'All transactions deleted successfully!');
-            // Reload the ledger
-            setEntries([]);
-            setPagination({ total: 0, pages: 1, limit: 25 });
-            if (account) {
-                setAccount({ ...account, currentBalance: account.initialBalance || 0 });
-            }
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to delete transactions');
-        } finally {
-            setDeletingAll(false);
-        }
-    };
 
     useEffect(() => {
         if (isRecordPaymentModalOpen) {
@@ -517,7 +490,7 @@ const BankAccountLedger = () => {
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
                         onClick={(e) => { e.stopPropagation(); handleBillClick(billNum); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#C8E600] hover:underline self-start bg-[#C8E600]/10 border border-[#C8E600]/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start"
                     >
                         <Receipt size={11} strokeWidth={2.5} />
                         View Bill ({billNum})
@@ -533,8 +506,7 @@ const BankAccountLedger = () => {
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
                     <button
                         onClick={(e) => { e.stopPropagation(); handleInvoiceClick(invNum); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-lime hover:underline self-start bg-lime/10 border border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
-                        style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
+                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start"
                     >
                         <FileText size={11} strokeWidth={2.5} />
                         View Invoice ({invNum})
@@ -627,8 +599,7 @@ const BankAccountLedger = () => {
                 <div>
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
-                        style={{ color: 'var(--brand-lime)' }}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted hover:text-brand-black dark:hover:text-lime transition-colors mb-4 group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Accounts
                     </button>
@@ -645,7 +616,7 @@ const BankAccountLedger = () => {
                             {account.accountType || 'Bank'}
                         </span>
                     </div>
-                    <p className="text-sm font-mono text-white/50">Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
+                    <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
                     {/* <button 
@@ -658,13 +629,13 @@ const BankAccountLedger = () => {
                     </button> */}
                     <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 active:scale-95 shadow-md border border-white/10 cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <Plus size={14} strokeWidth={3} /> Record Payment
                     </button>
                     <button
                         onClick={() => setIsBulkUploadOpen(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border border-amber-500/30 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <FileSpreadsheet size={14} strokeWidth={3} /> Bulk Re-entry
                     </button>
@@ -679,9 +650,9 @@ const BankAccountLedger = () => {
             </div>
 
             <div className="rounded-2xl border bg-card overflow-hidden transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="p-4 border-b border-white/5 flex items-center gap-2">
-                    <List size={18} className="text-white/50" />
-                    <h3 className="font-bold text-sm tracking-wide text-white/80">Account Transactions</h3>
+                <div className="p-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                    <List size={18} style={{ color: 'var(--text-dim)' }} />
+                    <h3 className="font-bold text-sm tracking-wide" style={{ color: 'var(--text-main)' }}>Account Transactions</h3>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -698,9 +669,9 @@ const BankAccountLedger = () => {
                     ) : (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
                                     <th
-                                        className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50 cursor-pointer select-none hover:text-white transition-colors"
+                                        className="px-6 py-4 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-brand-black dark:hover:text-white transition-colors"
                                         onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
                                     >
                                         <div className="flex items-center gap-1">
@@ -708,11 +679,11 @@ const BankAccountLedger = () => {
                                             <ArrowUpDown size={13} className={`transition-transform duration-200 ${sortDirection === 'asc' ? 'rotate-180' : ''}`} />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Description</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white/50">Audit Trace</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Deposits</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Withdrawals</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right text-white/50">Running Balance</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Audit Trace</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Deposits</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Withdrawals</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Running Balance</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -809,10 +780,10 @@ const BankAccountLedger = () => {
                                 <button
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
-                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5"
                                     style={{
-                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
-                                        color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'var(--sidebar-active)',
+                                        color: page === 1 ? 'var(--text-dim)' : 'var(--sidebar-active)',
                                         background: 'transparent'
                                     }}
                                 >
@@ -821,17 +792,17 @@ const BankAccountLedger = () => {
 
                                 <div className="flex items-center px-4">
                                     <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
-                                        Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
+                                        Page <span className="font-bold" style={{ color: 'var(--sidebar-active)' }}>{page}</span> of {pagination.pages}
                                     </span>
                                 </div>
 
                                 <button
                                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                     disabled={page === pagination.pages}
-                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
+                                    className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 dark:hover:bg-white/5"
                                     style={{
-                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
-                                        color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'var(--sidebar-active)',
+                                        color: page === pagination.pages ? 'var(--text-dim)' : 'var(--sidebar-active)',
                                         background: 'transparent'
                                     }}
                                 >
@@ -890,7 +861,7 @@ const BankAccountLedger = () => {
                                 <div className="border border-dashed rounded-2xl p-6 text-center space-y-3 hover:border-lime/50 transition-all relative" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                                     <FileSpreadsheet size={32} className="mx-auto text-dim opacity-40" />
                                     {importFile ? (
-                                        <p className="text-xs font-bold text-lime" style={{ color: 'var(--brand-lime)' }}>{importFile.name}</p>
+                                        <p className="text-xs font-bold text-emerald-700 dark:text-lime">{importFile.name}</p>
                                     ) : (
                                         <div className="space-y-1">
                                             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Drag statement here or click to browse</p>
@@ -915,7 +886,7 @@ const BankAccountLedger = () => {
                                             setImportFile(null);
                                             setParsedTransactions([]);
                                         }}
-                                        className="text-[10px] text-red-400 hover:underline cursor-pointer"
+                                        className="text-[10px] text-red-600 dark:text-red-400 hover:underline cursor-pointer"
                                     >
                                         Clear Uploaded File
                                     </button>
@@ -927,10 +898,10 @@ const BankAccountLedger = () => {
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
                                         Transactions Preview ({parsedTransactions.length} rows, {parsedTransactions.filter(t => t.isValid).length} valid)
                                     </label>
-                                    <div className="space-y-4 max-h-[200px] overflow-y-auto border rounded-xl p-3 bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="space-y-4 max-h-[200px] overflow-y-auto border rounded-xl p-3 bg-black/5 dark:bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
                                         <table className="w-full text-left border-collapse text-[11px]">
                                             <thead>
-                                                <tr className="border-b text-white/50" style={{ borderColor: 'var(--border-main)' }}>
+                                                <tr className="border-b text-muted dark:text-white/50" style={{ borderColor: 'var(--border-main)' }}>
                                                     <th className="pb-1">Date</th>
                                                     <th className="pb-1">Details</th>
                                                     <th className="pb-1 text-right">Debit (Dep)</th>
@@ -938,14 +909,14 @@ const BankAccountLedger = () => {
                                                     <th className="pb-1 text-center">Status</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-white/5">
+                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {parsedTransactions.map((tx, idx) => (
-                                                    <tr key={idx} className="hover:bg-white/5">
+                                                    <tr key={idx} className="hover:bg-black/5 dark:hover:bg-white/5">
                                                         <td className="py-1.5 pr-2 font-mono whitespace-nowrap">{tx.date}</td>
                                                         <td className="py-1.5 pr-2 max-w-[180px] truncate">
-                                                            <div className="font-bold text-white/80">{tx.description || 'Bank Line'}</div>
-                                                            {tx.payee && <div className="text-[9px] text-white/45">Payee: {tx.payee}</div>}
-                                                            {tx.referenceNumber && <div className="text-[9px] text-white/45 font-mono">Ref: {tx.referenceNumber}</div>}
+                                                            <div className="font-bold text-main dark:text-white/80" style={{ color: 'var(--text-main)' }}>{tx.description || 'Bank Line'}</div>
+                                                            {tx.payee && <div className="text-[9px] text-muted dark:text-white/45">Payee: {tx.payee}</div>}
+                                                            {tx.referenceNumber && <div className="text-[9px] text-muted dark:text-white/45 font-mono">Ref: {tx.referenceNumber}</div>}
                                                         </td>
                                                         <td className="py-1.5 pr-2 text-right font-mono font-bold text-green-400">
                                                             {tx.type === 'DEBIT' ? tx.amount.toFixed(2) : ''}
@@ -968,8 +939,8 @@ const BankAccountLedger = () => {
                                 </div>
                             )}
 
-                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-xs text-dim bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
-                                <Info size={16} className="text-lime flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-lime)' }} />
+                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-xs bg-black/5 dark:bg-white/5 border" style={{ borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                <Info size={16} className="text-emerald-700 dark:text-lime flex-shrink-0 mt-0.5" />
                                 <span className="leading-relaxed font-semibold">Ola Cars reconciles imported statement lines directly as ledger entries, automatically updating the current bank account balance.</span>
                             </div>
 
@@ -981,7 +952,7 @@ const BankAccountLedger = () => {
                                         setImportFile(null);
                                         setParsedTransactions([]);
                                     }}
-                                    className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border cursor-pointer"
+                                    className="flex-1 py-4 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel
@@ -1098,10 +1069,10 @@ const BankAccountLedger = () => {
                                                             type="button"
                                                             key={c._id}
                                                             onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
+                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
                                                         >
-                                                            <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                                <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
+                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                <span className="text-[10px] font-black text-emerald-700 dark:text-lime">
                                                                     {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
                                                                 </span>
                                                             </div>
@@ -1116,8 +1087,8 @@ const BankAccountLedger = () => {
                                         </div>
                                         {selectedCustomer && (
                                             <div className="flex items-center justify-between mt-1 text-xs">
-                                                <span className="text-emerald-400 font-bold">Selected: {selectedCustomer.name} ({selectedCustomer.customerId})</span>
-                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-red-400 hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected: {selectedCustomer.name} ({selectedCustomer.customerId})</span>
+                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
                                             </div>
                                         )}
                                     </div>
@@ -1199,7 +1170,7 @@ const BankAccountLedger = () => {
                                     <div className="border border-dashed rounded-2xl px-4 py-3 text-center relative cursor-pointer flex items-center justify-center gap-2 h-[46px]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                                         <Upload size={14} className="text-dim opacity-60 flex-shrink-0" />
                                         {supportingDocFile ? (
-                                            <p className="text-xs font-bold text-lime truncate max-w-[150px]" style={{ color: 'var(--brand-lime)' }}>{supportingDocFile.name}</p>
+                                            <p className="text-xs font-bold text-emerald-700 dark:text-lime truncate max-w-[150px]">{supportingDocFile.name}</p>
                                         ) : (
                                             <p className="text-xs text-dim truncate">Click to upload file</p>
                                         )}
@@ -1232,7 +1203,7 @@ const BankAccountLedger = () => {
                                         setIsRecordPaymentModalOpen(false);
                                         setSupportingDocFile(null);
                                     }}
-                                    className="flex-1 py-3 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border cursor-pointer"
+                                    className="flex-1 py-3 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel

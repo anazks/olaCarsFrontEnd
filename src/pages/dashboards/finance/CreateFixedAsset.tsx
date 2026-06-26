@@ -168,9 +168,10 @@ const CreateFixedAsset = () => {
                 }
 
                 // Fetch bills
+                let fetchedBills: any[] = [];
                 try {
-                    const billsRes = await getAllBills({ limit: 1000 });
-                    setBills(billsRes.data || []);
+                    const billsRes = await getAllBills({ limit: 50 });
+                    fetchedBills = billsRes.data || [];
                 } catch (billsErr) {
                     console.error("Failed to load bills:", billsErr);
                 }
@@ -203,7 +204,7 @@ const CreateFixedAsset = () => {
 
                         fixedAssetAccount: typeof asset.fixedAssetAccount === 'object' && asset.fixedAssetAccount ? asset.fixedAssetAccount._id : (typeof asset.fixedAssetAccount === 'string' ? asset.fixedAssetAccount : ''),
                         accumulatedDepreciationAccount: typeof asset.accumulatedDepreciationAccount === 'object' && asset.accumulatedDepreciationAccount ? asset.accumulatedDepreciationAccount._id : (typeof asset.accumulatedDepreciationAccount === 'string' ? asset.accumulatedDepreciationAccount : ''),
-                        depreciationExpenseAccount: typeof asset.depreciationExpenseAccount === 'object' && asset.depreciationExpenseAccount ? asset.depreciationExpenseAccount._id : (typeof asset.depreciationExpenseAccount === 'string' ? asset.depreciationExpenseAccount : ''),
+                        depreciationExpenseAccount: typeof asset.depreciationExpenseAccount === 'object' && asset.depreciationExpenseAccount ? asset.depreciationExpenseAccount._id : (typeof asset.fixedAssetAccount === 'string' ? asset.depreciationExpenseAccount : ''),
                         linkedVehicle: typeof asset.linkedVehicle === 'object' && asset.linkedVehicle ? asset.linkedVehicle._id : (typeof asset.linkedVehicle === 'string' ? asset.linkedVehicle : ''),
                         originalBill: typeof asset.originalBill === 'object' && asset.originalBill ? asset.originalBill._id : (typeof asset.originalBill === 'string' ? asset.originalBill : ''),
                         status: asset.status || 'Draft',
@@ -232,7 +233,20 @@ const CreateFixedAsset = () => {
                             return prev;
                         });
                     }
+
+                    // Prepend original bill to options if not present
+                    if (asset.originalBill) {
+                        const linkedBillVal = typeof asset.originalBill === 'object' && asset.originalBill ? asset.originalBill : null;
+                        if (linkedBillVal && linkedBillVal._id) {
+                            const exists = fetchedBills.some(b => b._id === linkedBillVal._id);
+                            if (!exists) {
+                                fetchedBills = [linkedBillVal, ...fetchedBills];
+                            }
+                        }
+                    }
                 }
+
+                setBills(fetchedBills);
             } catch (err: any) {
                 setError('Failed to load form lookup data.');
                 console.error(err);
@@ -415,7 +429,7 @@ const CreateFixedAsset = () => {
     const handleBillSuccess = async () => {
         try {
             const oldBills = [...bills];
-            const billsRes = await getAllBills({ limit: 1000 });
+            const billsRes = await getAllBills({ limit: 50 });
             const newBills = billsRes.data || [];
             setBills(newBills);
 

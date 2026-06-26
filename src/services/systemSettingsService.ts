@@ -66,6 +66,32 @@ const systemSettingsService = {
             console.error('Error updating driver payment emails setting:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get whether the invoice cron job is suspended
+     */
+    getInvoiceCronSuspended: async (): Promise<boolean> => {
+        try {
+            const response = await api.get('/api/system-settings/invoice_cron_suspended');
+            return response.data.value === true || response.data.value === 'true';
+        } catch (error) {
+            console.error('Error fetching invoice cron suspended setting:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update the invoice cron suspended status (Admin only)
+     */
+    updateInvoiceCronSuspended: async (value: boolean): Promise<boolean> => {
+        try {
+            const response = await api.put('/api/system-settings/invoice_cron_suspended', { value });
+            return response.data.success;
+        } catch (error) {
+            console.error('Error updating invoice cron suspended setting:', error);
+            throw error;
+        }
     }
 };
 

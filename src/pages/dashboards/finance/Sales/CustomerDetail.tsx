@@ -4,7 +4,7 @@ import {
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
-    ArrowLeft, Zap, Briefcase, ChevronLeft, ChevronRight, Filter, X
+    ArrowLeft, Zap, Briefcase, Filter, X
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';

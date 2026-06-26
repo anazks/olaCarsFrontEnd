@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Users, Shield, Trash2, Edit2, Eye, ChevronLeft, ChevronRight, Check, X, FileText, Car } from 'lucide-react';
+import { Plus, RefreshCw, Search, Users, Shield, Trash2, Edit2, Eye, ChevronLeft, ChevronRight, X, Car, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -13,6 +13,7 @@ import {
 } from '../../../services/fleetService';
 import { getAllOperationStaff } from '../../../services/operationStaffService';
 import { getAllFinanceStaff } from '../../../services/financeStaffService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
 
 interface StaffOption {
@@ -32,6 +33,8 @@ export default function FleetManagement() {
     const [operationStaff, setOperationStaff] = useState<StaffOption[]>([]);
     const [financeStaff, setFinanceStaff] = useState<StaffOption[]>([]);
     const [staffLoading, setStaffLoading] = useState(false);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [branchesLoading, setBranchesLoading] = useState(false);
 
     // Filters & Pagination
     const [search, setSearch] = useState('');
@@ -66,6 +69,7 @@ export default function FleetManagement() {
     const [formFleetNumber, setFormFleetNumber] = useState('');
     const [formAssignedStaffModel, setFormAssignedStaffModel] = useState<'OperationStaff' | 'FinanceStaff'>('OperationStaff');
     const [formAssignedStaff, setFormAssignedStaff] = useState('');
+    const [formBranchId, setFormBranchId] = useState('');
     const [formStatus, setFormStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
     const [formDescription, setFormDescription] = useState('');
     const [isAutoGenerate, setIsAutoGenerate] = useState(true);
@@ -119,6 +123,19 @@ export default function FleetManagement() {
         }
     };
 
+    // Load Branch Options
+    const fetchBranches = async () => {
+        setBranchesLoading(true);
+        try {
+            const res = await getAllBranches({ limit: 1000, status: 'ACTIVE' });
+            setBranches(res.data || []);
+        } catch (err) {
+            console.error('Error fetching branch list:', err);
+        } finally {
+            setBranchesLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchFleets();
     }, [fetchFleets]);
@@ -126,6 +143,7 @@ export default function FleetManagement() {
     useEffect(() => {
         if (isFormOpen) {
             fetchStaffOptions();
+            fetchBranches();
         }
     }, [isFormOpen]);
 
@@ -148,6 +166,7 @@ export default function FleetManagement() {
         setFormFleetNumber('');
         setFormAssignedStaffModel('OperationStaff');
         setFormAssignedStaff('');
+        setFormBranchId('');
         setFormStatus('ACTIVE');
         setFormDescription('');
         setIsAutoGenerate(true);
@@ -161,6 +180,7 @@ export default function FleetManagement() {
         setFormFleetNumber(fleet.fleetNumber);
         setFormAssignedStaffModel(fleet.assignedStaffModel);
         setFormAssignedStaff(fleet.assignedStaff?._id || '');
+        setFormBranchId(fleet.branchId?._id || fleet.branchId || '');
         setFormStatus(fleet.status);
         setFormDescription(fleet.description || '');
         setIsAutoGenerate(false);
@@ -178,6 +198,11 @@ export default function FleetManagement() {
             return;
         }
 
+        if (!formBranchId) {
+            setFormError('Please select a branch');
+            return;
+        }
+
         if (!formAssignedStaff) {
             setFormError('Please assign a staff member');
             return;
@@ -189,6 +214,7 @@ export default function FleetManagement() {
                 fleetNumber: isAutoGenerate && !selectedFleet ? undefined : formFleetNumber.trim(),
                 assignedStaff: formAssignedStaff,
                 assignedStaffModel: formAssignedStaffModel,
+                branchId: formBranchId,
                 status: formStatus,
                 description: formDescription.trim() || undefined
             };
@@ -361,6 +387,7 @@ export default function FleetManagement() {
                         <thead>
                             <tr className="border-b border-[var(--border-main)] bg-gray-50/5">
                                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fleet Number</th>
+                                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Branch</th>
                                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned Staff</th>
                                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Staff Role</th>
                                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Vehicles Assigned</th>
@@ -371,14 +398,14 @@ export default function FleetManagement() {
                         <tbody className="divide-y divide-[var(--border-main)]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-gray-500">
+                                    <td colSpan={7} className="p-8 text-center text-gray-500">
                                         <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--brand-lime)]" />
                                         Loading fleets...
                                     </td>
                                 </tr>
                             ) : fleets.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                                    <td colSpan={7} className="p-8 text-center text-gray-400">
                                         No fleet assignments found matching filters.
                                     </td>
                                 </tr>
@@ -387,6 +414,17 @@ export default function FleetManagement() {
                                     <tr key={fleet._id} className="hover:bg-gray-50/5 transition-all">
                                         <td className="p-4 font-black text-[var(--text-main)]">
                                             #{fleet.fleetNumber}
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                                                <Building className="w-3.5 h-3.5 text-gray-400" />
+                                                <span>{fleet.branchId?.name || 'Unassigned'}</span>
+                                            </div>
+                                            {fleet.branchId?.code && (
+                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                    Code: {fleet.branchId.code}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="p-4">
                                             <div className="font-bold text-[var(--text-main)]">
@@ -556,6 +594,24 @@ export default function FleetManagement() {
                                     disabled={isAutoGenerate && !selectedFleet}
                                     className="w-full px-4 py-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--brand-lime)] disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
+                            </div>
+
+                            {/* Branch Assignment */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Branch Assignment</label>
+                                <select
+                                    value={formBranchId}
+                                    onChange={(e) => setFormBranchId(e.target.value)}
+                                    disabled={branchesLoading}
+                                    className="w-full px-4 py-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--brand-lime)] disabled:opacity-50"
+                                >
+                                    <option value="">-- Choose branch --</option>
+                                    {branches.map(b => (
+                                        <option key={b._id} value={b._id}>
+                                            {b.name} ({b.code})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Staff Role */}
