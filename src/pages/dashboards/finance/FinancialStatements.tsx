@@ -7,7 +7,7 @@ import api from '../../../services/api';
 import toast from 'react-hot-toast';
 
 const FinancialStatements = () => {
-    const activeTab = 'PL';
+    const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
     const [reportData, setReportData] = useState<any>(null);
@@ -105,6 +105,30 @@ const FinancialStatements = () => {
     return (
         <div className="container-responsive space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Financial Statements', active: true }]} />
+
+            {/* Tab Selector */}
+            <div className="flex border-b border-white/5 gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                <button
+                    onClick={() => setActiveTab('PL')}
+                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'PL'
+                            ? 'border-brand-lime text-brand-lime font-black'
+                            : 'border-transparent text-dim hover:text-white'
+                    }`}
+                >
+                    Income Statement (P&L)
+                </button>
+                <button
+                    onClick={() => setActiveTab('BS')}
+                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'BS'
+                            ? 'border-brand-lime text-brand-lime font-black'
+                            : 'border-transparent text-dim hover:text-white'
+                    }`}
+                >
+                    Balance Sheet
+                </button>
+            </div>
 
             {/* Compact Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
@@ -324,12 +348,12 @@ const BSView = ({ data }: { data: any }) => (
                     {data?.assets?.map((item: any, i: number) => (
                         <div key={i} className="flex justify-between items-center">
                             <span className="text-sm text-dim">{item.name}</span>
-                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
+                            <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     ))}
                     <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                         <span className="text-sm font-bold text-[var(--text-main)]">Total Assets</span>
-                        <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.assetsTotal?.toLocaleString()}</span>
+                        <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.assetsTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                 </div>
             </section>
@@ -344,12 +368,12 @@ const BSView = ({ data }: { data: any }) => (
                         {data?.liabilities?.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center">
                                 <span className="text-sm text-dim">{item.name}</span>
-                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
+                                <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                             </div>
                         ))}
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)]">Total Liabilities</span>
-                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.liabilitiesTotal?.toLocaleString()}</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.liabilitiesTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 </section>
@@ -363,12 +387,12 @@ const BSView = ({ data }: { data: any }) => (
                         {data?.equity?.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center">
                                 <span className="text-sm text-dim">{item.name}</span>
-                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString()}</span>
+                                <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                             </div>
                         ))}
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)]">Total Equity</span>
-                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${data?.equityTotal?.toLocaleString()}</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.equityTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     </div>
                 </section>
@@ -380,12 +404,12 @@ const BSView = ({ data }: { data: any }) => (
             <div className="bg-[var(--bg-input)] px-8 py-4 rounded-2xl border border-[var(--border-main)] flex items-center gap-6">
                 <div className="text-center">
                     <p className="text-[10px] text-dim uppercase">Assets</p>
-                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${data?.assetsTotal?.toLocaleString()}</p>
+                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${(data?.assetsTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                 </div>
                 <div className="text-xl opacity-20">=</div>
                 <div className="text-center">
                     <p className="text-[10px] text-dim uppercase">Liabilities + Equity</p>
-                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${(data?.liabilitiesTotal + data?.equityTotal)?.toLocaleString()}</p>
+                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${((data?.liabilitiesTotal || 0) + (data?.equityTotal || 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                 </div>
             </div>
         </section>
