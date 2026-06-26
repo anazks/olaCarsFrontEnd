@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     X, Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet,
-    Loader2, Play, Calendar, AlertCircle, History, Clock, FileDown, Trash2
+    Loader2, Play, Calendar, AlertCircle, History, Clock, FileDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -48,7 +48,6 @@ const BulkLedgerUploadPage = () => {
 
     // Metadata validation cache
     const [accounts, setAccounts] = useState<any[]>([]);
-    const [loadingMeta, setLoadingMeta] = useState(false);
 
     // Operation states
     const [isProcessing, setIsProcessing] = useState(false); // file reading
@@ -77,7 +76,6 @@ const BulkLedgerUploadPage = () => {
 
     // Load validation metadata & history
     const loadMetadataAndHistory = useCallback(async () => {
-        setLoadingMeta(true);
         setLoadingHistory(true);
         try {
             const [codes, historyList] = await Promise.allSettled([
@@ -97,7 +95,6 @@ const BulkLedgerUploadPage = () => {
             console.error("Failed to load upload metadata", err);
             toast.error("Failed to initialize upload settings.");
         } finally {
-            setLoadingMeta(false);
             setLoadingHistory(false);
         }
     }, []);
@@ -211,7 +208,7 @@ const BulkLedgerUploadPage = () => {
     };
 
     // Client-side row validator wrapper
-    const validateRowData = (row: any, index: number, accountMap: Record<string, boolean>, localDups: Record<string, boolean>) => {
+    const validateRowData = (row: any, accountMap: Record<string, boolean>, localDups: Record<string, boolean>) => {
         const errorsList: string[] = [];
 
         // Fetch flex values matching standard names
@@ -238,11 +235,9 @@ const BulkLedgerUploadPage = () => {
         const desc = getVal(["Description", "description", "transaction_details"]);
         const txnType = getVal(["Transaction Type", "transaction_type"]);
 
-        // Resolve Type and Amount (supporting both Debit/Credit columns or single Type/Amount columns)
-        let type = "DEBIT";
+        // Resolve Amount (supporting both Debit/Credit columns or single Type/Amount columns)
         let amount = 0;
         const amountStr = getVal(["Amount", "amount"]);
-        const typeStr = getVal(["Type (Debit/Credit)", "type", "debit_credit"]);
 
         const debitVal = getVal(["debit", "debit_amount", "dr"]);
         const creditVal = getVal(["credit", "credit_amount", "cr"]);
@@ -250,28 +245,16 @@ const BulkLedgerUploadPage = () => {
         if (debitVal !== undefined && debitVal !== null && debitVal !== "") {
             const parsed = parseFloat(debitVal);
             if (!isNaN(parsed)) {
-                type = "DEBIT";
                 amount = parsed;
             }
         } else if (creditVal !== undefined && creditVal !== null && creditVal !== "") {
             const parsed = parseFloat(creditVal);
             if (!isNaN(parsed)) {
-                type = "CREDIT";
                 amount = parsed;
             }
         } else if (amountStr !== undefined && amountStr !== null && amountStr !== "") {
             const parsed = parseFloat(amountStr);
             amount = isNaN(parsed) ? 0 : parsed;
-            if (typeStr) {
-                const normType = String(typeStr).toUpperCase().trim();
-                if (["CREDIT", "CR"].includes(normType)) {
-                    type = "CREDIT";
-                } else {
-                    type = "DEBIT";
-                }
-            } else {
-                type = "DEBIT";
-            }
         }
 
         // Validate account
@@ -363,7 +346,7 @@ const BulkLedgerUploadPage = () => {
             const limit = Math.min(index + batchSize, total);
             for (let i = index; i < limit; i++) {
                 const row = rows[i];
-                const res = validateRowData(row, i, accountMap, localDups);
+                const res = validateRowData(row, accountMap, localDups);
                 if (!res.isValid) {
                     collectedErrors.push({ row: i + 2, error: res.errors });
                 } else {
@@ -532,7 +515,7 @@ const BulkLedgerUploadPage = () => {
 
                     if (data.status === "COMPLETED") {
                         if (data.failedRows > 0) {
-                            toast.warning(`Import complete with ${data.failedRows} error(s).`);
+                            toast(`Import complete with ${data.failedRows} error(s).`, { icon: '⚠️' });
                         } else {
                             toast.success("All records imported successfully!");
                         }

@@ -65,7 +65,7 @@ export const bulkUpsertAccountingCodes = async (codes: Partial<CreateAccountingC
     return response.data.data || response.data;
 };
 
-export const importLedger = async (file: File, skipDuplicates: boolean): Promise<{ success: boolean; importId: string }> => {
+export const importLedger = async (file: File, skipDuplicates: boolean): Promise<{ success: boolean; importId: string; message?: string }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('skipDuplicates', String(skipDuplicates));
