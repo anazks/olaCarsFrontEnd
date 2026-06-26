@@ -279,10 +279,12 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/ledger",
         },
         */
+        /*
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/admin/financial-statements",
         },
+        */
         {
           label: t("sidebar.items.manualJournals"),
           path: "/admin/admin/manual-journals",

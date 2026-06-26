@@ -278,10 +278,12 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/ledger",
         },
         */
+        /*
         {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",
         },
+        */
         {
           label: t("sidebar.items.manualJournals"),
           path: "/admin/financial-admin/manual-journals",
