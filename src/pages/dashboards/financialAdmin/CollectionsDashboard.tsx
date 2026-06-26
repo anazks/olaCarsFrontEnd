@@ -390,7 +390,7 @@ const CollectionsDashboard = () => {
 
 
             {/* STAT CARDS COMPACT GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 my-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 my-8">
                 <MetricStatCard 
                     title="Total Billed" 
                     value={`$${(metrics?.totalInvoiced || 0).toLocaleString()}`} 
@@ -412,14 +412,14 @@ const CollectionsDashboard = () => {
                     icon={<Clock size={22} className="text-amber-500" />}
                     iconBg="bg-amber-500/10"
                 />
-                <MetricStatCard 
+                {/* <MetricStatCard 
                     title="Total Overdue" 
                     value={`$${(metrics?.overdueAmount || 0).toLocaleString()}`} 
                     description="Delinquent balance"
                     highlight={true}
                     icon={<ShieldAlert size={22} className="text-red-500" />}
                     iconBg="bg-red-500/10"
-                />
+                /> */}
             </div>
 
             {/* REVENUE FLOW CHART & HIGHLIGHT STATS ROW */}

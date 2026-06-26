@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, Zap, TrendingUp, ShieldCheck, CreditCard, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
+import { Users, Gauge, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, ArrowDownRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -10,7 +10,7 @@ import type { Invoice } from '../../../services/invoiceService';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import { getUser, getUserRole } from '../../../utils/auth';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
@@ -1317,6 +1317,7 @@ const DriverPerformanceDashboard = () => {
 
 // ─── Sub-Components ───────────────────────────────────────────────────
 
+/*
 const KPICard = ({ label, value, icon, color, bgColor, borderColor, sub, trend, pulse }: {
     label: string; value: string; icon: React.ReactNode; color: string;
     bgColor: string; borderColor: string; sub?: string; trend?: 'up' | 'down'; pulse?: boolean;
@@ -1340,6 +1341,7 @@ const KPICard = ({ label, value, icon, color, bgColor, borderColor, sub, trend, 
         </div>
     </div>
 );
+*/
 
 const SafetyStat = ({ label, count, color }: { label: string; count: number; color: 'red' | 'orange' | 'yellow' }) => {
     const colors = {
