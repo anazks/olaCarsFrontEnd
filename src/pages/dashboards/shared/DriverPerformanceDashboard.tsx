@@ -587,13 +587,13 @@ const DriverPerformanceDashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button
+                    {/* <button
                         onClick={() => navigate('../fleet')}
                         className="px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-lime text-black hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5"
                     >
                         <Car size={14} />
                         <span>Fleet Management</span>
-                    </button>
+                    </button> */}
                     {/* Branch Filter */}
                     {isGlobalRole && branches.length > 0 && (
                         <div className="relative">
@@ -691,7 +691,7 @@ const DriverPerformanceDashboard = () => {
             </div>
 
             {/* ── KPI Cards ───────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <KPICard
                     label="Active Drivers"
                     value={kpis.count.toString()}
@@ -745,7 +745,7 @@ const DriverPerformanceDashboard = () => {
                     sub={kpis.overdueDrivers > 0 ? `${kpis.overdueDrivers} driver${kpis.overdueDrivers > 1 ? 's' : ''}` : 'None'}
                     pulse={kpis.totalOverdue > 0}
                 />
-            </div>
+            </div> */}
 
             {/* ── Graphical Analytics ────────────────────────────────────── */}
             {filteredMetrics.length > 0 && (
@@ -810,7 +810,7 @@ const DriverPerformanceDashboard = () => {
                     </div>
 
                     {/* Payment Status */}
-                    <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-[10px] font-black uppercase tracking-wider text-dim mb-4">Driver Payment Status</h3>
                         <div className="h-[180px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
@@ -825,10 +825,10 @@ const DriverPerformanceDashboard = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Fleet Rents */}
-                    <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-[10px] font-black uppercase tracking-wider text-dim mb-4">Fleet Rents Value ($)</h3>
                         <div className="h-[180px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
@@ -843,10 +843,10 @@ const DriverPerformanceDashboard = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Score Distribution */}
-                    <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-[10px] font-black uppercase tracking-wider text-dim mb-4">Driving Scores</h3>
                         <div className="h-[180px] w-full mt-2">
                             <ResponsiveContainer width="100%" height="100%">
@@ -863,10 +863,10 @@ const DriverPerformanceDashboard = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Distance Distribution */}
-                    <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* <div className="rounded-2xl border p-5 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-[10px] font-black uppercase tracking-wider text-dim mb-4">Distance Covered (km)</h3>
                         <div className="h-[180px] w-full mt-2">
                             <ResponsiveContainer width="100%" height="100%">
@@ -883,7 +883,7 @@ const DriverPerformanceDashboard = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </div> */}
 
 
                 </div>

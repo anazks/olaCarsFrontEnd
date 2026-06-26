@@ -6,6 +6,7 @@ export interface Fleet {
     assignedStaff?: any;
     assignedStaffModel: 'OperationStaff' | 'FinanceStaff';
     status: 'ACTIVE' | 'INACTIVE';
+    branchId?: any;
     description?: string;
     vehicles?: any[];
     createdAt?: string;
