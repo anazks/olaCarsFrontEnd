@@ -488,9 +488,9 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                             Fleet & Staff <SortIcon field="basicDetails.fleetNumber" />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('basicDetails.vin')}>
+                                    <th className="px-4 py-2.5 cursor-pointer group" onClick={() => handleSort('legalDocs.registrationNumber')}>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {t('management.vehicles.table.vin', 'Plate No / Reg')} <SortIcon field="basicDetails.vin" />
+                                            {t('management.vehicles.table.vin', 'Plate No / Reg')} <SortIcon field="legalDocs.registrationNumber" />
                                         </div>
                                     </th>
                                     <th className="px-4 py-2.5">
@@ -553,7 +553,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                             
                                             <td className="px-4 py-2.5">
                                                 <div className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {v.basicDetails?.vin || 'NO PLATE NO'}
+                                                    {v.legalDocs?.registrationNumber || v.basicDetails?.fleetNumber || '—'}
                                                 </div>
                                             </td>
                                             
