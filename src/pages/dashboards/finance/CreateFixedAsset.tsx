@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, AlertCircle, Info, Settings, Plus } from 'lucide-react';
-import { createFixedAsset, getFixedAssetById, updateFixedAsset, calculateDepreciationPreview } from '../../../services/fixedAssetService';
-import type { DepreciationScheduleEntry, DepreciationInterval, FixedAssetStatus } from '../../../services/fixedAssetService';
+import { createFixedAsset, getFixedAssetById, updateFixedAsset, calculateDepreciationPreview, getFixedAssetTypes, createFixedAssetType } from '../../../services/fixedAssetService';
+import type { DepreciationScheduleEntry, DepreciationInterval, FixedAssetStatus, FixedAssetType } from '../../../services/fixedAssetService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import { getAllVehicles, createVehicle } from '../../../services/vehicleService';
@@ -39,14 +39,7 @@ const CreateFixedAsset = () => {
 
     // Custom option lists & modals state
     const [locations, setLocations] = useState<string[]>([]);
-    const [fixedAssetTypes, setFixedAssetTypes] = useState<string[]>([
-        'Vehicles',
-        'Furniture and Fixtures',
-        'Computer Equipment',
-        'Machinery and Equipment',
-        'Buildings',
-        'Other Assets'
-    ]);
+    const [fixedAssetTypes, setFixedAssetTypes] = useState<FixedAssetType[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [countryManagers, setCountryManagers] = useState<any[]>([]);
 
@@ -138,16 +131,26 @@ const CreateFixedAsset = () => {
         const fetchMasterData = async () => {
             setLoading(true);
             try {
-                // Fetch chart of accounts
-                const accData = await getAllAccountingCodes({ limit: 1000 });
-                setAccounts(Array.isArray(accData) ? accData : ((accData as any).data || []));
+                // Fetch lookup data in parallel to optimize page load performance
+                const [typesData, accData, vehRes, branchRes, managerRes, billsRes] = await Promise.all([
+                    getFixedAssetTypes(),
+                    getAllAccountingCodes({ limit: 2000, select: 'code,name', skipPopulate: 'true' }),
+                    getAllVehicles({ limit: 1000, select: 'basicDetails.make,basicDetails.model,legalDocs.registrationNumber', skipPopulate: 'true' } as any),
+                    getAllBranches({ limit: 100, select: 'name', skipPopulate: 'true' } as any),
+                    getAllCountryManagers({ limit: 100, select: 'personalInfo.fullName', skipPopulate: 'true' } as any).catch(mgrErr => {
+                        console.error("Failed to load country managers:", mgrErr);
+                        return { data: [] };
+                    }),
+                    getAllBills({ limit: 50, select: 'billNumber,billDate,totalAmount', skipPopulate: 'true' } as any).catch(billsErr => {
+                        console.error("Failed to load bills:", billsErr);
+                        return { data: [] };
+                    })
+                ]);
 
-                // Fetch vehicles
-                const vehRes = await getAllVehicles({ limit: 100 });
+                setFixedAssetTypes(typesData);
+                setAccounts(Array.isArray(accData) ? accData : ((accData as any).data || []));
                 setVehicles(vehRes.data || []);
 
-                // Fetch branches
-                const branchRes = await getAllBranches({ limit: 100 });
                 const branchesList = branchRes.data || [];
                 setBranches(branchesList);
                 const branchNames = branchesList.map(b => b.name);
@@ -159,22 +162,18 @@ const CreateFixedAsset = () => {
                     }
                 }
 
-                // Fetch country managers
-                try {
-                    const managerRes = await getAllCountryManagers({ limit: 100 });
-                    setCountryManagers(managerRes.data || []);
-                } catch (mgrErr) {
-                    console.error("Failed to load country managers:", mgrErr);
+                // Set default type to Vehicles if not in edit mode
+                if (!isEditMode && typesData.length > 0) {
+                    const vehicleType = typesData.find(t => t.name.toLowerCase() === 'vehicles');
+                    if (vehicleType) {
+                        setFormData(prev => ({ ...prev, fixedAssetType: vehicleType._id }));
+                    } else {
+                        setFormData(prev => ({ ...prev, fixedAssetType: typesData[0]._id }));
+                    }
                 }
 
-                // Fetch bills
-                let fetchedBills: any[] = [];
-                try {
-                    const billsRes = await getAllBills({ limit: 50 });
-                    fetchedBills = billsRes.data || [];
-                } catch (billsErr) {
-                    console.error("Failed to load bills:", billsErr);
-                }
+                setCountryManagers(managerRes.data || []);
+                let fetchedBills = billsRes.data || [];
 
                 // If edit mode, load existing asset
                 if (isEditMode) {
@@ -192,7 +191,7 @@ const CreateFixedAsset = () => {
                         purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                         disposalValue: String(asset.disposalValue || 0),
                         warrantyExpirationDate: asset.warrantyExpirationDate ? new Date(asset.warrantyExpirationDate).toISOString().split('T')[0] : '',
-                        fixedAssetType: asset.fixedAssetType || 'Vehicles',
+                        fixedAssetType: typeof asset.fixedAssetType === 'object' && asset.fixedAssetType ? asset.fixedAssetType._id : (asset.fixedAssetType || ''),
                         description: asset.description || '',
 
                         depreciationMethod: asset.depreciationMethod || 'Straight-Line',
@@ -226,9 +225,11 @@ const CreateFixedAsset = () => {
                     }
                     if (asset.fixedAssetType) {
                         const fat = asset.fixedAssetType;
+                        const fatId = typeof fat === 'object' && fat ? fat._id : fat;
+                        const fatName = typeof fat === 'object' && fat ? fat.name : fat;
                         setFixedAssetTypes(prev => {
-                            if (!prev.includes(fat)) {
-                                return [...prev, fat];
+                            if (!prev.some(t => t._id === fatId)) {
+                                return [...prev, { _id: fatId, name: fatName }];
                             }
                             return prev;
                         });
@@ -240,7 +241,7 @@ const CreateFixedAsset = () => {
                         if (linkedBillVal && linkedBillVal._id) {
                             const exists = fetchedBills.some(b => b._id === linkedBillVal._id);
                             if (!exists) {
-                                fetchedBills = [linkedBillVal, ...fetchedBills];
+                                fetchedBills = [linkedBillVal as any, ...fetchedBills];
                             }
                         }
                     }
@@ -447,22 +448,26 @@ const CreateFixedAsset = () => {
         }
     };
 
-    const handleAddAssetTypeSubmit = (e: React.FormEvent) => {
+    const handleAddAssetTypeSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmed = newAssetTypeName.trim();
         if (!trimmed) {
             toast.error('Asset Type name cannot be empty');
             return;
         }
-        if (fixedAssetTypes.includes(trimmed)) {
+        if (fixedAssetTypes.some(t => t.name.toLowerCase() === trimmed.toLowerCase())) {
             toast.error('Asset Type already exists');
             return;
         }
-        setFixedAssetTypes(prev => [...prev, trimmed]);
-        setFormData(prev => ({ ...prev, fixedAssetType: trimmed }));
-        setIsAssetTypeModalOpen(false);
-        setNewAssetTypeName('');
-        toast.success(`Asset Type "${trimmed}" added!`);
+        try {
+            const newType = await createFixedAssetType({ name: trimmed });
+            setFixedAssetTypes(prev => [...prev, newType]);
+            setFormData(prev => ({ ...prev, fixedAssetType: newType._id }));
+            setIsAssetTypeModalOpen(false);
+            setNewAssetTypeName('');
+        } catch (err) {
+            console.error("Failed to create fixed asset type:", err);
+        }
     };
 
     const handleAccountSuccess = (newAccount: AccountingCode) => {
@@ -736,7 +741,7 @@ const CreateFixedAsset = () => {
                                     <span title="Select the class of fixed asset"><Info size={13} className="opacity-60 cursor-help" /></span>
                                 </label>
                                 <SearchableSelect
-                                    options={fixedAssetTypes.map(type => ({ value: type, label: type }))}
+                                    options={fixedAssetTypes.map(type => ({ value: type._id, label: type.name }))}
                                     value={formData.fixedAssetType}
                                     onChange={val => setFormData({ ...formData, fixedAssetType: val })}
                                     placeholder="Select Fixed Asset Type"
