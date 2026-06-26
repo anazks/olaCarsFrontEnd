@@ -247,7 +247,11 @@ const FixedAssetDetail = () => {
                         <div className="space-y-3 pt-2 text-xs">
                             <div className="flex justify-between border-b border-white/5 pb-2">
                                 <span style={{ color: 'var(--text-dim)' }}>Asset Type</span>
-                                <span className="font-semibold" style={{ color: 'var(--text-main)' }}>{asset.fixedAssetType || 'Vehicles'}</span>
+                                <span className="font-semibold" style={{ color: 'var(--text-main)' }}>
+                                    {typeof asset.fixedAssetType === 'object' && asset.fixedAssetType
+                                        ? asset.fixedAssetType.name
+                                        : (asset.fixedAssetType || 'Vehicles')}
+                                </span>
                             </div>
                             <div className="flex justify-between border-b border-white/5 pb-2">
                                 <span style={{ color: 'var(--text-dim)' }}>Location</span>

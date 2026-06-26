@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Layers, Clipboard, AlertTriangle, ArrowUpRight, Search } from 'lucide-react';
-import { getAllFixedAssets } from '../../../services/fixedAssetService';
-import type { FixedAsset } from '../../../services/fixedAssetService';
+import { Plus, RefreshCw, Layers, Clipboard, AlertTriangle, ArrowUpRight, Search, Tag, Edit2, Trash2, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getAllFixedAssets, getFixedAssetTypes, createFixedAssetType, updateFixedAssetType, deleteFixedAssetType } from '../../../services/fixedAssetService';
+import BulkFixedAssetUpload from './BulkFixedAssetUpload';
+import type { FixedAsset, FixedAssetType } from '../../../services/fixedAssetService';
+import Modal from '../../../components/Modal';
+import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -19,7 +22,64 @@ const FixedAssets = () => {
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const navigate = useNavigate();
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0
+    });
+
+    const getPageNumbers = () => {
+        const totalPages = pagination.totalPages;
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+        const pages: (number | string)[] = [];
+        pages.push(1);
+        const page = pagination.page;
+        let start = Math.max(2, page - 1);
+        let end = Math.min(totalPages - 1, page + 1);
+
+        if (page <= 3) {
+            end = 4;
+        }
+        if (page >= totalPages - 2) {
+            start = totalPages - 3;
+        }
+
+        if (start > 2) {
+            pages.push('...');
+        }
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+        if (end < totalPages - 1) {
+            pages.push('...');
+        }
+        pages.push(totalPages);
+        return pages;
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
+            setPagination(prev => ({ ...prev, page: newPage }));
+        }
+    };
+
+    const handleLimitChange = (newLimit: number) => {
+        setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
+    };
+
+    // Fixed Asset Types Management state
+    const [isTypesModalOpen, setIsTypesModalOpen] = useState(false);
+    const [assetTypes, setAssetTypes] = useState<FixedAssetType[]>([]);
+    const [loadingTypes, setLoadingTypes] = useState(false);
+    const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+    const [typeName, setTypeName] = useState('');
+    const [typeDescription, setTypeDescription] = useState('');
+    const [submittingType, setSubmittingType] = useState(false);
 
     const userRole = getUserRole() || '';
     const isFinancialAdmin = ['admin', 'financeadmin', 'financialadmin'].includes(userRole.toLowerCase());
@@ -34,18 +94,37 @@ const FixedAssets = () => {
         setLoading(true);
         setError(null);
         try {
-            const params: any = {};
+            const params: any = {
+                page: pagination.page,
+                limit: pagination.limit
+            };
             if (statusFilter !== 'ALL') params.status = statusFilter;
             if (searchQuery.trim()) params.search = searchQuery.trim();
 
-            const data = await getAllFixedAssets(params);
-            setAssets(data);
+            const res = await getAllFixedAssets(params);
+            if (res && res.data) {
+                setAssets(res.data);
+                setPagination(prev => ({
+                    ...prev,
+                    total: res.pagination?.total || 0,
+                    totalPages: res.pagination?.pages || 0,
+                    page: res.pagination?.page || prev.page
+                }));
+            } else {
+                setAssets(res || []);
+                setPagination(prev => ({
+                    ...prev,
+                    total: (res || []).length,
+                    totalPages: 1,
+                    page: 1
+                }));
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch fixed assets');
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, searchQuery]);
+    }, [statusFilter, searchQuery, pagination.page, pagination.limit]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -54,7 +133,94 @@ const FixedAssets = () => {
         return () => clearTimeout(timer);
     }, [fetchAssets, searchQuery, statusFilter]);
 
+    const fetchAssetTypes = useCallback(async () => {
+        setLoadingTypes(true);
+        try {
+            const data = await getFixedAssetTypes();
+            setAssetTypes(data);
+        } catch (err) {
+            console.error("Failed to fetch fixed asset types", err);
+        } finally {
+            setLoadingTypes(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isTypesModalOpen) {
+            fetchAssetTypes();
+        }
+    }, [isTypesModalOpen, fetchAssetTypes]);
+
+    const handleTypeSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedName = typeName.trim();
+        if (!trimmedName) {
+            toast.error("Asset Type name cannot be empty");
+            return;
+        }
+
+        setSubmittingType(true);
+        try {
+            if (editingTypeId) {
+                const updated = await updateFixedAssetType(editingTypeId, {
+                    name: trimmedName,
+                    description: typeDescription.trim(),
+                });
+                setAssetTypes(prev => prev.map(t => t._id === editingTypeId ? updated : t));
+                toast.success(`Asset Type "${trimmedName}" updated!`);
+            } else {
+                if (assetTypes.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
+                    toast.error("An Asset Type with this name already exists");
+                    setSubmittingType(false);
+                    return;
+                }
+                const newType = await createFixedAssetType({
+                    name: trimmedName,
+                    description: typeDescription.trim(),
+                });
+                setAssetTypes(prev => [...prev, newType]);
+                toast.success(`Asset Type "${trimmedName}" created!`);
+            }
+            setTypeName('');
+            setTypeDescription('');
+            setEditingTypeId(null);
+        } catch (err) {
+            console.error("Failed to save fixed asset type", err);
+        } finally {
+            setSubmittingType(false);
+        }
+    };
+
+    const handleEditType = (type: FixedAssetType) => {
+        setEditingTypeId(type._id);
+        setTypeName(type.name);
+        setTypeDescription(type.description || '');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingTypeId(null);
+        setTypeName('');
+        setTypeDescription('');
+    };
+
+    const handleDeleteType = async (id: string, name: string) => {
+        if (!window.confirm(`Are you sure you want to delete the asset type "${name}"?`)) {
+            return;
+        }
+
+        try {
+            await deleteFixedAssetType(id);
+            setAssetTypes(prev => prev.filter(t => t._id !== id));
+            toast.success(`Asset Type "${name}" deleted!`);
+        } catch (err) {
+            console.error("Failed to delete fixed asset type", err);
+        }
+    };
+
     const getBookValue = (asset: FixedAsset) => {
+        if (asset.currentValue !== undefined && asset.currentValue !== null) {
+            return asset.currentValue;
+        }
         if (asset.depreciationSchedule && asset.depreciationSchedule.length > 0) {
             // Find last posted entry
             const posted = asset.depreciationSchedule
@@ -87,13 +253,29 @@ const FixedAssets = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {isFinancialAdmin && (
-                        <button
-                            onClick={() => navigate(`/admin/${getRolePath()}/fixed-assets/new`)}
-                            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                            style={{ backgroundColor: 'var(--brand-lime)' }}
-                        >
-                            <Plus size={14} strokeWidth={3} /> Capitalize Asset
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setIsTypesModalOpen(true)}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide border transition-all hover:bg-white/5 active:scale-95 cursor-pointer"
+                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <Tag size={14} /> Asset Types
+                            </button>
+                            <button
+                                onClick={() => setIsUploadModalOpen(true)}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide border transition-all hover:bg-white/5 active:scale-95 cursor-pointer"
+                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <Upload size={14} /> Import Assets
+                            </button>
+                            <button
+                                onClick={() => navigate(`/admin/${getRolePath()}/fixed-assets/new`)}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                                style={{ backgroundColor: 'var(--brand-lime)' }}
+                            >
+                                <Plus size={14} strokeWidth={3} /> Capitalize Asset
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -113,7 +295,7 @@ const FixedAssets = () => {
                         type="text"
                         placeholder="Search by asset name or code..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl outline-none text-sm transition-colors focus:ring-1 focus:ring-lime"
                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                     />
@@ -123,7 +305,7 @@ const FixedAssets = () => {
                     {['ALL', 'Draft', 'Pending', 'Active', 'Inactive'].map((status) => (
                         <button
                             key={status}
-                            onClick={() => setStatusFilter(status)}
+                            onClick={() => { setStatusFilter(status); setPagination(prev => ({ ...prev, page: 1 })); }}
                             className="px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer"
                             style={{
                                 background: statusFilter === status ? '#C8E600' : 'rgba(255,255,255,0.02)',
@@ -179,7 +361,15 @@ const FixedAssets = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{asset.name}</div>
-                                            <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{asset.code}</div>
+                                            <div className="flex gap-2 items-center text-[10px] mt-1">
+                                                <span className="font-mono" style={{ color: 'var(--text-dim)' }}>{asset.code}</span>
+                                                <span style={{ color: 'var(--text-dim)' }}>•</span>
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider" style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-dim)', border: '1px solid var(--border-main)' }}>
+                                                    {typeof asset.fixedAssetType === 'object' && asset.fixedAssetType
+                                                        ? asset.fixedAssetType.name
+                                                        : (asset.fixedAssetType || 'Vehicles')}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
                                             {typeof asset.fixedAssetAccount === 'object' ? asset.fixedAssetAccount.name : '—'}
@@ -217,8 +407,195 @@ const FixedAssets = () => {
                             })}
                         </tbody>
                     </table>
+                    
+                    {/* Pagination Controls */}
+                    <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors shadow-[0_-1px_0_0_rgba(0,0,0,0.05)]" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                Showing {assets.length} of {pagination.total} fixed assets
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Rows per page:</span>
+                                <select
+                                    value={pagination.limit}
+                                    onChange={(e) => handleLimitChange(Number(e.target.value))}
+                                    className="px-2 py-1 rounded bg-[var(--bg-input)] border border-[var(--border-main)] text-xs font-bold outline-none cursor-pointer focus:ring-1 focus:ring-lime"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    {[25, 50, 100].map(val => (
+                                        <option key={val} value={val} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{val}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        {pagination.totalPages > 1 && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(pagination.page - 1)}
+                                    disabled={pagination.page === 1 || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    {getPageNumbers().map((p, index) => {
+                                        if (p === '...') {
+                                            return (
+                                                <span key={`ell-${index}`} className="px-2 text-dim text-xs font-black select-none">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={p}
+                                                onClick={() => handlePageChange(Number(p))}
+                                                className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${pagination.page === p ? 'shadow-lg scale-110 z-10' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
+                                                style={{ 
+                                                    background: pagination.page === p ? 'var(--brand-lime)' : 'transparent',
+                                                    color: pagination.page === p ? '#000' : 'var(--text-main)',
+                                                    border: pagination.page === p ? 'none' : '1px solid var(--border-main)'
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => handlePageChange(pagination.page + 1)}
+                                    disabled={pagination.page === pagination.totalPages || loading}
+                                    className="p-2 rounded-lg border transition-all hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
+            {/* Manage Asset Types Modal */}
+            <Modal isOpen={isTypesModalOpen} onClose={() => { setIsTypesModalOpen(false); handleCancelEdit(); }} title="Manage Fixed Asset Types" size="2xl">
+                <div className="space-y-6 text-xs font-semibold max-h-[80vh] overflow-y-auto pr-1">
+                    {/* Upper form to Add/Edit */}
+                    <form onSubmit={handleTypeSubmit} className="space-y-4 p-4 rounded-xl border transition-all" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#C8E600] flex items-center gap-1.5">
+                            {editingTypeId ? 'Edit Asset Type' : 'Add New Asset Type'}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                    Type Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Computer Equipment"
+                                    value={typeName}
+                                    onChange={e => setTypeName(e.target.value)}
+                                    className="w-full px-4 py-2.5 border rounded-xl outline-none focus:border-[#C8E600] transition-all font-semibold"
+                                    style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                    Description
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Brief description of the asset category"
+                                    value={typeDescription}
+                                    onChange={e => setTypeDescription(e.target.value)}
+                                    className="w-full px-4 py-2.5 border rounded-xl outline-none focus:border-[#C8E600] transition-all font-semibold"
+                                    style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            {editingTypeId && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="px-4 py-2 rounded-lg border font-bold hover:bg-white/5 transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    Cancel Edit
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={submittingType}
+                                className="px-5 py-2 rounded-lg font-black text-black bg-[#C8E600] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                                style={{ background: '#C8E600' }}
+                            >
+                                {submittingType ? 'Saving...' : editingTypeId ? 'Update Type' : 'Create Type'}
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Lower list/table of Types */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                            Existing Asset Types
+                        </h3>
+                        {loadingTypes ? (
+                            <div className="flex justify-center py-6">
+                                <div className="w-6 h-6 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : assetTypes.length === 0 ? (
+                            <div className="text-center py-8 border rounded-xl" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                No fixed asset types found.
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--border-main)' }}>
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-black/5 dark:bg-white/5 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Name</th>
+                                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Description</th>
+                                            <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {assetTypes.map(type => (
+                                            <tr key={type._id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                                <td className="px-4 py-3 font-bold text-sm" style={{ color: 'var(--text-main)' }}>{type.name}</td>
+                                                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>{type.description || '—'}</td>
+                                                <td className="px-4 py-3 text-right space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditType(type)}
+                                                        className="p-1.5 bg-black/[0.02] dark:bg-white/5 rounded-lg border border-black/10 dark:border-white/10 hover:border-[#C8E600] transition-all cursor-pointer inline-flex items-center justify-center"
+                                                        style={{ color: 'var(--text-muted)' }}
+                                                    >
+                                                        <Edit2 size={12} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteType(type._id, type.name)}
+                                                        className="p-1.5 bg-black/[0.02] dark:bg-white/5 rounded-lg border border-black/10 dark:border-white/10 hover:border-red-500 transition-all cursor-pointer inline-flex items-center justify-center"
+                                                        style={{ color: 'var(--text-muted)' }}
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+            <BulkFixedAssetUpload
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onSuccess={() => {
+                    setIsUploadModalOpen(false);
+                    fetchAssets();
+                }}
+            />
         </div>
     );
 };
