@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
     DollarSign, Search, Filter, RefreshCw, Calendar, X,
-    ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal
+    ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Coins
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
@@ -63,6 +63,17 @@ const PaymentsReceived = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+
+    interface PaymentMetrics {
+        totalReceived: number;
+        totalSurplus: number;
+        mtdTotal: number;
+        methodBreakdown: Record<string, number>;
+        monthlyTrends: { month: string; year: number; total: number }[];
+    }
+    const [metrics, setMetrics] = useState<PaymentMetrics | null>(null);
 
     // Modals
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -119,7 +130,7 @@ const PaymentsReceived = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, methodFilter, sortBy, sortOrder]);
+    }, [debouncedSearch, methodFilter, sortBy, sortOrder, startDate, endDate]);
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
@@ -141,6 +152,8 @@ const PaymentsReceived = () => {
             const params: any = { page, limit, sortBy, sortOrder };
             if (methodFilter !== 'ALL') params.paymentMethod = methodFilter;
             if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
 
             const res = await api.get('/api/payments-received', {
                 params,
@@ -149,6 +162,9 @@ const PaymentsReceived = () => {
             if (res) {
                 const dataArray = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
                 setPayments(dataArray);
+                if (res.data?.metrics) {
+                    setMetrics(res.data.metrics);
+                }
                 if (res.data?.pagination) {
                     setPagination({
                         total: res.data.pagination.total || 0,
@@ -161,7 +177,7 @@ const PaymentsReceived = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, debouncedSearch, methodFilter, sortBy, sortOrder]);
+    }, [page, limit, debouncedSearch, methodFilter, sortBy, sortOrder, startDate, endDate]);
 
     useEffect(() => {
         fetchPayments();
@@ -226,6 +242,118 @@ const PaymentsReceived = () => {
                 </div>
             </div>
 
+            {/* Monthly Dashboard Metrics */}
+            {metrics && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Coins size={16} className="text-brand-lime animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                Total Amount Received (Filtered Date)
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                            ${metrics.totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2 text-dim">
+                            Total payments received within the selected date range
+                        </p>
+                    </div>
+
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Calendar size={16} className="text-emerald-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                Monthly Dashboard (MTD)
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2 text-emerald-400">
+                            ${metrics.mtdTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2 text-dim">
+                            Total payments received during current month
+                        </p>
+                    </div>
+
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <DollarSign size={16} className="text-amber-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                Surplus / Credit balance
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2 text-amber-400">
+                            ${metrics.totalSurplus.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2 text-dim">
+                            Prepayment credits not allocated to specific invoices
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Monthly Trend & Breakdown Dashboard Segment */}
+            {metrics && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-500">
+                    {/* Method Breakdown */}
+                    <div className="border shadow-md rounded-[2rem] p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-xs font-black uppercase tracking-widest mb-4" style={{ color: 'var(--text-main)' }}>
+                            Payments by Method
+                        </h3>
+                        <div className="space-y-3">
+                            {Object.entries(metrics.methodBreakdown).length === 0 ? (
+                                <p className="text-xs text-dim italic">No method data recorded</p>
+                            ) : (
+                                Object.entries(metrics.methodBreakdown).map(([method, total]) => {
+                                    const percentage = metrics.totalReceived > 0 ? (total / metrics.totalReceived) * 100 : 0;
+                                    return (
+                                        <div key={method} className="space-y-1">
+                                            <div className="flex justify-between text-xs font-semibold">
+                                                <span style={{ color: 'var(--text-main)' }}>{method}</span>
+                                                <span className="text-brand-lime font-black">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({percentage.toFixed(1)}%)</span>
+                                            </div>
+                                            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-brand-lime" 
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Monthly Trends */}
+                    <div className="border shadow-md rounded-[2rem] p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <h3 className="text-xs font-black uppercase tracking-widest mb-4" style={{ color: 'var(--text-main)' }}>
+                            Monthly Received Trends (Last 6 Months)
+                        </h3>
+                        <div className="space-y-3">
+                            {metrics.monthlyTrends.map(({ month, year, total }) => {
+                                const maxVal = Math.max(...metrics.monthlyTrends.map(t => t.total)) || 1;
+                                const barWidth = (total / maxVal) * 100;
+                                return (
+                                    <div key={`${month}-${year}`} className="flex items-center gap-4 text-xs font-semibold">
+                                        <span className="w-16 text-dim text-[10px] font-black uppercase">{month}</span>
+                                        <div className="flex-1 h-3 rounded bg-white/5 overflow-hidden">
+                                            <div 
+                                                className="h-full bg-brand-lime opacity-80 rounded" 
+                                                style={{ width: `${Math.max(3, barWidth)}%` }}
+                                            />
+                                        </div>
+                                        <span className="w-20 text-right font-black" style={{ color: 'var(--text-main)' }}>
+                                            ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Dynamic Unified Filter Bar */}
             <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-2xl border shadow-sm w-fit" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Search Wrapper */}
@@ -263,12 +391,37 @@ const PaymentsReceived = () => {
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim text-[8px]">▼</div>
                 </div>
 
+                {/* Date range filters */}
+                <div className="relative flex items-center gap-2 px-3 py-1.5 border rounded-xl" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                    <Calendar size={12} className="text-dim" />
+                    <input 
+                        type="date" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="bg-transparent outline-none text-xs font-semibold text-white focus:ring-0 cursor-pointer w-28"
+                        style={{ color: 'var(--text-main)' }}
+                    />
+                </div>
+                <div className="text-[10px] font-black uppercase text-dim">to</div>
+                <div className="relative flex items-center gap-2 px-3 py-1.5 border rounded-xl" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                    <Calendar size={12} className="text-dim" />
+                    <input 
+                        type="date" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="bg-transparent outline-none text-xs font-semibold text-white focus:ring-0 cursor-pointer w-28"
+                        style={{ color: 'var(--text-main)' }}
+                    />
+                </div>
+
                 {/* Clear Filter Button */}
-                {(searchQuery || methodFilter !== 'ALL') && (
+                {(searchQuery || methodFilter !== 'ALL' || startDate || endDate) && (
                     <button
                         onClick={() => {
                             setSearchQuery('');
                             setMethodFilter('ALL');
+                            setStartDate('');
+                            setEndDate('');
                         }}
                         className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
                         title="Reset Constraints"

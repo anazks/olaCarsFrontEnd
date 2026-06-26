@@ -64,3 +64,40 @@ export const bulkUpsertAccountingCodes = async (codes: Partial<CreateAccountingC
     const response = await api.post('/api/accounting-code/bulk', { codes });
     return response.data.data || response.data;
 };
+
+export const importLedger = async (file: File, skipDuplicates: boolean): Promise<{ success: boolean; importId: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('skipDuplicates', String(skipDuplicates));
+    const response = await api.post('/api/accounting/ledger/import', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        // @ts-ignore
+        skipToast: true,
+    });
+    return response.data;
+};
+
+export const getImportProgress = async (importId: string): Promise<any> => {
+    const response = await api.get(`/api/accounting/ledger/import/progress/${importId}`, {
+        // @ts-ignore
+        skipToast: true,
+    });
+    return response.data.data || response.data;
+};
+
+export const getImportHistory = async (): Promise<any> => {
+    const response = await api.get('/api/accounting/import-history');
+    return response.data.data || response.data;
+};
+
+export const getSampleExcelBlob = async (): Promise<Blob> => {
+    const response = await api.get('/api/accounting/ledger/sample', {
+        responseType: 'blob',
+        // @ts-ignore
+        skipToast: true,
+    });
+    return response.data;
+};
+

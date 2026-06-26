@@ -127,6 +127,7 @@ import TaxManagement from "./pages/dashboards/finance/TaxManagement";
 import ChartOfAccounts from "./pages/dashboards/finance/ChartOfAccounts";
 import AccountingCodeDetails from "./pages/dashboards/finance/AccountingCodeDetails";
 import GeneralLedger from "./pages/dashboards/finance/GeneralLedger";
+import BulkLedgerUploadPage from "./pages/dashboards/finance/BulkLedgerUploadPage";
 import LedgerEntryDetailPage from "./pages/dashboards/finance/LedgerEntryDetailPage";
 import BankTransactionDetailPage from "./pages/dashboards/finance/BankTransactionDetailPage";
 import FinanceDashboard from "./pages/dashboards/finance/FinanceDashboard";
@@ -452,6 +453,7 @@ function App() {
                 element={<AccountingCodeDetails />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
@@ -994,6 +996,7 @@ function App() {
                 element={<AccountingCodeDetails />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
@@ -1216,6 +1219,7 @@ function App() {
                 element={<AccountingCodeDetails />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />
@@ -1630,6 +1634,7 @@ function App() {
                 element={<AccountingCodeDetails />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
+              <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
               <Route path="bank-transactions/:id" element={<BankTransactionDetailPage />} />
               <Route path="manual-journals" element={<ManualJournals />} />

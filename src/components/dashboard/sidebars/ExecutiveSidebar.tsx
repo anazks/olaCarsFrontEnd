@@ -273,10 +273,13 @@ const ExecutiveSidebar = ({
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/admin/finance-dashboard",
         },
-        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/admin/ledger",
+        },
+        {
+          label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
+          path: "/admin/admin/bulk-ledger-upload",
         },
         */
         /*

@@ -41,6 +41,21 @@ export const useDashboardPrefetcher = () => {
     const collectionsState = useSelector((state: RootState) => state.dashboard.collections);
     const fleetState = useSelector((state: RootState) => state.dashboard.fleet);
 
+    // Maintain a fresh ref of states to read current cache data inside useEffect without triggering re-runs
+    const stateRef = useRef({ executiveState, financeState, collectionsState, fleetState });
+    useEffect(() => {
+        stateRef.current = { executiveState, financeState, collectionsState, fleetState };
+    });
+
+    const execLoaded = executiveState.isLoaded;
+    const execLastFetched = executiveState.lastFetched;
+    const finLoaded = financeState.isLoaded;
+    const finLastFetched = financeState.lastFetched;
+    const collLoaded = collectionsState.isLoaded;
+    const collLastFetched = collectionsState.lastFetched;
+    const fleetLoaded = fleetState.isLoaded;
+    const fleetLastFetched = fleetState.lastFetched;
+
     useEffect(() => {
         const token = getToken();
         if (!token) return;
@@ -59,12 +74,20 @@ export const useDashboardPrefetcher = () => {
             const now = Date.now();
             const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
+            // Read fresh snapshot of current states from the ref
+            const { 
+                executiveState: currentExec, 
+                financeState: currentFin, 
+                collectionsState: currentColl, 
+                fleetState: currentFleet 
+            } = stateRef.current;
+
             // Define individual prefetch tasks
             const tasks: Promise<any>[] = [];
 
             // 1. Executive Control Center
-            const execCacheAge = now - (executiveState.lastFetched || 0);
-            const shouldPrefetchExec = role === 'admin' && (!executiveState.isLoaded || execCacheAge > CACHE_TIMEOUT);
+            const execCacheAge = now - (currentExec.lastFetched || 0);
+            const shouldPrefetchExec = role === 'admin' && (!currentExec.isLoaded || execCacheAge > CACHE_TIMEOUT);
             if (shouldPrefetchExec) {
                 tasks.push((async () => {
                     try {
@@ -112,7 +135,7 @@ export const useDashboardPrefetcher = () => {
                             invoiceRes,
                             startD,
                             endD,
-                            executiveState.kpiData
+                            currentExec.kpiData
                         );
 
                         dispatch(setExecutiveDashboardData({
@@ -126,16 +149,16 @@ export const useDashboardPrefetcher = () => {
             }
 
             // 2. Finance Dashboard
-            const finCacheAge = now - (financeState.lastFetched || 0);
+            const finCacheAge = now - (currentFin.lastFetched || 0);
             const allowedFinRoles = ['admin', 'financialadmin', 'financeadmin', 'financestaff', 'countrymanager', 'branchmanager'];
-            const shouldPrefetchFin = allowedFinRoles.includes(role) && (!financeState.isLoaded || finCacheAge > CACHE_TIMEOUT);
+            const shouldPrefetchFin = allowedFinRoles.includes(role) && (!currentFin.isLoaded || finCacheAge > CACHE_TIMEOUT);
             if (shouldPrefetchFin) {
                 tasks.push((async () => {
                     try {
                         const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes, poRes] = await Promise.all([
                             getLedgerEntries().catch(() => ({ data: [] })),
                             getTasks({ assignedTo: userId }).catch(() => []),
-                            getInvoices({ limit: 1000 }).catch(() => ({ data: [] })),
+                            getInvoices({ limit: 1000, sortBy: 'dueDate', sortOrder: 'desc' }).catch(() => ({ data: [] })),
                             getAllBills({ limit: 1000 }).catch(() => ({ data: [] })),
                             getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] })),
                             getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
@@ -186,9 +209,9 @@ export const useDashboardPrefetcher = () => {
             }
 
             // 3. Collections Dashboard
-            const collCacheAge = now - (collectionsState.lastFetched || 0);
+            const collCacheAge = now - (currentColl.lastFetched || 0);
             const allowedCollRoles = ['admin', 'financialadmin', 'financeadmin', 'financestaff', 'countrymanager', 'branchmanager', 'operationadmin', 'operationstaff', 'branchopstaff'];
-            const shouldPrefetchColl = allowedCollRoles.includes(role) && (!collectionsState.isLoaded || collCacheAge > CACHE_TIMEOUT);
+            const shouldPrefetchColl = allowedCollRoles.includes(role) && (!currentColl.isLoaded || collCacheAge > CACHE_TIMEOUT);
             if (shouldPrefetchColl) {
                 tasks.push((async () => {
                     try {
@@ -233,9 +256,9 @@ export const useDashboardPrefetcher = () => {
             }
 
             // 4. Fleet Dashboard (Driver Performance)
-            const fleetCacheAge = now - (fleetState.lastFetched || 0);
+            const fleetCacheAge = now - (currentFleet.lastFetched || 0);
             const allowedFleetRoles = ['admin', 'financialadmin', 'financeadmin', 'operationadmin', 'operationstaff', 'countrymanager', 'branchmanager', 'financestaff'];
-            const shouldPrefetchFleet = allowedFleetRoles.includes(role) && (!fleetState.isLoaded || fleetCacheAge > CACHE_TIMEOUT);
+            const shouldPrefetchFleet = allowedFleetRoles.includes(role) && (!currentFleet.isLoaded || fleetCacheAge > CACHE_TIMEOUT);
             if (shouldPrefetchFleet) {
                 tasks.push((async () => {
                     try {
@@ -267,5 +290,5 @@ export const useDashboardPrefetcher = () => {
         };
 
         prefetch();
-    }, [dispatch, executiveState, financeState, collectionsState, fleetState]);
+    }, [dispatch, execLoaded, execLastFetched, finLoaded, finLastFetched, collLoaded, collLastFetched, fleetLoaded, fleetLastFetched]);
 };

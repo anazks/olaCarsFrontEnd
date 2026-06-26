@@ -94,6 +94,7 @@ export const aggregateExecutiveData = (
     }
 
     let periodRev = 0;
+    let pendingInvoicesBalance = 0;
     if (invoiceRes && invoiceRes.status === 'fulfilled') {
         const invoiceValue = invoiceRes.value;
         const invoices = Array.isArray(invoiceValue)
@@ -108,11 +109,22 @@ export const aggregateExecutiveData = (
                         periodRev += inv.totalAmountDue || inv.amountPaid || 0;
                     }
                 }
+            } else if (inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE') {
+                if (inv.dueDate) {
+                    const dueDate = new Date(inv.dueDate);
+                    if (!isNaN(dueDate.getTime())) {
+                        if (dueDate >= startD && dueDate <= endD) {
+                            pendingInvoicesBalance += inv.balance || 0;
+                        }
+                    }
+                }
             }
         });
     }
     newKpi.monthlyRevenue = periodRev;
     newKpi.last12MonthRevenue = periodRev;
+    newKpi.outstandingCollections = pendingInvoicesBalance;
+    newKpi.outstandingBalance = pendingInvoicesBalance;
 
     if (driverRes.status === 'fulfilled') {
         const drivers = driverRes.value.data || [];
@@ -148,8 +160,6 @@ export const aggregateExecutiveData = (
         newKpi.activeDrivers = driverRes.value.pagination?.total !== undefined
             ? driverRes.value.pagination.total
             : activeDriversCount;
-        newKpi.outstandingCollections = totalOverdue;
-        newKpi.outstandingBalance = totalOverdue + totalPending;
         newKpi.collectionCompliance = totalDuePeriod > 0 ? (totalPaidPeriod / totalDuePeriod) * 100 : 0;
     }
 

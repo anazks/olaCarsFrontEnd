@@ -221,7 +221,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const year = parseInt(parts[0], 10);
                 const month = parseInt(parts[1], 10) - 1;
                 const day = parseInt(parts[2], 10);
-                const date = new Date(year, month, day);
+                const date = new Date(Date.UTC(year, month, day));
                 if (!isNaN(date.getTime())) return date;
             } else {
                 const part1 = parseInt(parts[0], 10);
@@ -234,7 +234,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     day = part2;
                     month = part1;
                 }
-                const date = new Date(year, month - 1, day);
+                const date = new Date(Date.UTC(year, month - 1, day));
                 if (!isNaN(date.getTime())) return date;
             }
         }

@@ -272,10 +272,13 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.paymentRequests"),
           path: "/admin/financial-admin/payment-requests",
         },
-        /*
         {
           label: t("sidebar.items.generalLedger"),
           path: "/admin/financial-admin/ledger",
+        },
+        {
+          label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
+          path: "/admin/financial-admin/bulk-ledger-upload",
         },
         */
         /*
