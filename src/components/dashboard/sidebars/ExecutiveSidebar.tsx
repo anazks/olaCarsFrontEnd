@@ -278,6 +278,10 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/ledger",
         },
         {
+          label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
+          path: "/admin/admin/bulk-ledger-upload",
+        },
+        {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/admin/financial-statements",
         },

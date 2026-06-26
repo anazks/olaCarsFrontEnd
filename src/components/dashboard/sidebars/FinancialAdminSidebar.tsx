@@ -277,6 +277,10 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/ledger",
         },
         {
+          label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
+          path: "/admin/financial-admin/bulk-ledger-upload",
+        },
+        {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/financial-admin/financial-statements",
         },
