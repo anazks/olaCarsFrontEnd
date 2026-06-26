@@ -504,7 +504,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                         </div>
                                     </th>
                                     <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>
-                                        {t('management.vehicles.table.price', 'Value')}
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -571,10 +571,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                                             </td>
                                             
                                             <td className="px-4 py-2.5 text-right">
-                                                <div className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
-                                                    {v.purchaseDetails?.currency || "AED"} {(v.purchaseDetails?.purchasePrice || 0).toLocaleString()}
-                                                </div>
-                                                <div className="mt-1 flex justify-end">
+                                                <div className="flex justify-end">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); navigate(detailPath, { state: { from: location.pathname } }); }}
                                                         className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-[#C8E600] hover:text-black hover:scale-110 shadow-sm border border-white/10"
