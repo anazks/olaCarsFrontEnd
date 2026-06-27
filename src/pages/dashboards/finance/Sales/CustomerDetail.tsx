@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
-    ArrowLeft, Zap, Briefcase, Filter, X
+    ArrowLeft, Zap, Briefcase, Filter, X,
+    ChevronLeft, ChevronRight, Search
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
@@ -55,7 +56,7 @@ const CustomerDetail = () => {
             const [invoicesResult, creditNotesResult, paymentsResult] = await Promise.allSettled([
                 getInvoicesByCustomer(customerId),
                 getAllCreditNotes({ customerId }),
-                api.get('/api/payments-received', { params: { customerId, limit: 100 } })
+                api.get('/api/payments-received', { params: { customerId, limit: 10000 } })
             ]);
 
             setInvoices(invoicesResult.status === 'fulfilled' ? invoicesResult.value : []);
@@ -445,29 +446,12 @@ const CustomerDetail = () => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <QuickStatCard 
                     label="Customer Status" 
                     value={customer.status} 
                     icon={<Zap size={16} />} 
                     color={customer.status === 'ACTIVE' ? 'emerald' : 'rose'} 
-                />
-                <QuickStatCard 
-                    label="Current Balance" 
-                    value={`$${outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
-                    icon={<DollarSign size={16} />} 
-                    color={outstandingBalance > 0 ? 'rose' : 'emerald'}
-                />
-                <QuickStatCard 
-                    label="Prepayment Credit (Extra)" 
-                    value={`$${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
-                    icon={<CheckCircle2 size={16} />} 
-                    color={prepaymentBalance > 0 ? 'emerald' : undefined}
-                />
-                <QuickStatCard 
-                    label="Total Received" 
-                    value={`$${totalPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
-                    icon={<DollarSign size={16} />} 
                 />
                 <QuickStatCard 
                     label="Branch" 
@@ -814,100 +798,264 @@ const formatPeriod = (inv: Invoice) => {
 };
 
 const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => {
-    const sortedInvoices = [...invoices].sort((a, b) => {
-        const dateA = new Date(a.dueDate || a.generatedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.dueDate || b.generatedAt || b.createdAt || 0).getTime();
-        return dateB - dateA;
-    });
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const limit = 10;
+
+    // Reset page when search constraints modify
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    const filtered = useMemo(() => {
+        return invoices.filter(inv => {
+            const num = (inv.invoiceNumber || '').toLowerCase();
+            const week = (inv.weekLabel || '').toLowerCase();
+            const status = (inv.status || '').toLowerCase();
+            const query = search.toLowerCase();
+            return num.includes(query) || week.includes(query) || status.includes(query);
+        }).sort((a, b) => {
+            const dateA = new Date(a.dueDate || a.generatedAt || a.createdAt || 0).getTime();
+            const dateB = new Date(b.dueDate || b.generatedAt || b.createdAt || 0).getTime();
+            return dateB - dateA;
+        });
+    }, [invoices, search]);
+
+    const paginated = useMemo(() => {
+        const start = (page - 1) * limit;
+        return filtered.slice(start, start + limit);
+    }, [filtered, page]);
+
+    const totalPages = Math.ceil(filtered.length / limit) || 1;
 
     return (
-        <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-            <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse whitespace-nowrap">
-                    <thead>
-                        <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Invoice #</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Period</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Due</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
-                            <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                        {sortedInvoices.length === 0 ? (
-                            <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices generated for this customer.</td></tr>
-                        ) : (
-                            sortedInvoices.map((inv) => (
-                                <tr key={inv._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                    <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</td>
-                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatPeriod(inv)}</td>
-                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${inv.balance.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
-                                            inv.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                            inv.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
-                                            'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                        }`}>
-                                            {inv.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+        <div className="space-y-4">
+            {/* Search Input */}
+            <div className="relative max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
+                <input
+                    type="text"
+                    placeholder="Search invoice number, period or status..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-xl outline-none text-xs font-semibold focus:border-brand-lime/30 transition-all"
+                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                />
+                {search && (
+                    <button 
+                        onClick={() => setSearch('')} 
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 hover:text-white transition-colors text-xs font-bold bg-transparent border-none cursor-pointer"
+                        style={{ color: 'var(--text-dim)' }}
+                    >
+                        ✕
+                    </button>
+                )}
             </div>
+
+            {/* Table */}
+            <div className="rounded-[2rem] border overflow-hidden animate-in fade-in duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Invoice #</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Period</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Due</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            {paginated.length === 0 ? (
+                                <tr><td colSpan={5} className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices found matching criteria.</td></tr>
+                            ) : (
+                                paginated.map((inv) => (
+                                    <tr key={inv._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                        <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</td>
+                                        <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatPeriod(inv)}</td>
+                                        <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${inv.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                                inv.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                                inv.status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
+                                                'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                            }`}>
+                                                {inv.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-between items-center px-6 py-3 border rounded-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold" style={{ color: 'var(--text-dim)' }}>
+                        Showing {Math.min(filtered.length, (page - 1) * limit + 1)}-{Math.min(filtered.length, page * limit)} of {filtered.length} Invoices
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-1.5 border rounded-xl hover:bg-[var(--sidebar-hover)] active:scale-95 transition-all disabled:opacity-30 text-[var(--text-main)] cursor-pointer flex items-center justify-center"
+                            style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
+                        <span className="text-xs font-black px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl" style={{ color: 'var(--text-main)' }}>
+                            {page} / {totalPages}
+                        </span>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-1.5 border rounded-xl hover:bg-[var(--sidebar-hover)] active:scale-95 transition-all disabled:opacity-30 text-[var(--text-main)] cursor-pointer flex items-center justify-center"
+                            style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-const PaymentsTab = ({ payments }: { payments: any[] }) => (
-    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-        <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>PR #</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Method</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Received</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount Applied</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Extra</th>
-                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                    {payments.length === 0 ? (
-                        <tr><td colSpan={7} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No payment records found for this customer.</td></tr>
-                    ) : (
-                        payments.map((pmt) => {
-                            const applied = pmt.invoices?.reduce((s: number, i: any) => s + (i.amountApplied || 0), 0) || 0;
-                            const extra = Math.max(0, pmt.amountReceived - applied);
-                            return (
-                                <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                    <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</td>
-                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-brand-lime uppercase" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentMethod}</td>
-                                    <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>+ ${pmt.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                    <td className="px-6 py-4 text-right text-xs font-bold text-white">${applied.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                    <td className={`px-6 py-4 text-right text-xs font-black ${extra > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
-                                        {extra > 0 ? `$${extra.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
-                                            {pmt.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            );
-                        })
-                    )}
-                </tbody>
-            </table>
+const PaymentsTab = ({ payments }: { payments: any[] }) => {
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const limit = 10;
+
+    // Reset page when search constraints modify
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    const filtered = useMemo(() => {
+        return payments.filter(pmt => {
+            const num = (pmt.paymentNumber || '').toLowerCase();
+            const method = (pmt.paymentMethod || '').toLowerCase();
+            const status = (pmt.status || '').toLowerCase();
+            const query = search.toLowerCase();
+            return num.includes(query) || method.includes(query) || status.includes(query);
+        }).sort((a, b) => {
+            return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
+        });
+    }, [payments, search]);
+
+    const paginated = useMemo(() => {
+        const start = (page - 1) * limit;
+        return filtered.slice(start, start + limit);
+    }, [filtered, page]);
+
+    const totalPages = Math.ceil(filtered.length / limit) || 1;
+
+    return (
+        <div className="space-y-4">
+            {/* Search Input */}
+            <div className="relative max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
+                <input
+                    type="text"
+                    placeholder="Search payment receipt, method or status..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-xl outline-none text-xs font-semibold focus:border-brand-lime/30 transition-all"
+                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                />
+                {search && (
+                    <button 
+                        onClick={() => setSearch('')} 
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 hover:text-white transition-colors text-xs font-bold bg-transparent border-none cursor-pointer"
+                        style={{ color: 'var(--text-dim)' }}
+                    >
+                        ✕
+                    </button>
+                )}
+            </div>
+
+            {/* Table */}
+            <div className="rounded-[2rem] border overflow-hidden animate-in fade-in duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>PR #</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Method</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Received</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount Applied</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Extra</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                            {paginated.length === 0 ? (
+                                <tr><td colSpan={7} className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No payments found matching criteria.</td></tr>
+                            ) : (
+                                paginated.map((pmt) => {
+                                    const applied = pmt.invoices?.reduce((s: number, i: any) => s + (i.amountApplied || 0), 0) || 0;
+                                    const extra = Math.max(0, pmt.amountReceived - applied);
+                                    return (
+                                        <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                            <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</td>
+                                            <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 text-xs font-bold text-brand-lime uppercase" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentMethod}</td>
+                                            <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>+ ${pmt.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            <td className="px-6 py-4 text-right text-xs font-bold text-white">${applied.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            <td className={`px-6 py-4 text-right text-xs font-black ${extra > 0 ? 'text-[#C8E600]' : 'text-dim'}`}>
+                                                {extra > 0 ? `$${extra.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                                                    {pmt.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-between items-center px-6 py-3 border rounded-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold" style={{ color: 'var(--text-dim)' }}>
+                        Showing {Math.min(filtered.length, (page - 1) * limit + 1)}-{Math.min(filtered.length, page * limit)} of {filtered.length} Payments
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-1.5 border rounded-xl hover:bg-[var(--sidebar-hover)] active:scale-95 transition-all disabled:opacity-30 text-[var(--text-main)] cursor-pointer flex items-center justify-center"
+                            style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
+                        <span className="text-xs font-black px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl" style={{ color: 'var(--text-main)' }}>
+                            {page} / {totalPages}
+                        </span>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-1.5 border rounded-xl hover:bg-[var(--sidebar-hover)] active:scale-95 transition-all disabled:opacity-30 text-[var(--text-main)] cursor-pointer flex items-center justify-center"
+                            style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 function StatementsTab({ invoices, payments, customerId }: { invoices: Invoice[]; payments: any[]; customerId: string }) {
     const [filterFrom, setFilterFrom] = useState('');
