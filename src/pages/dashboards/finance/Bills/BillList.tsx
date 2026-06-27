@@ -177,8 +177,6 @@ const BillList = () => {
         return pages;
     };
 
-    const metrics = backendMetrics;
-
     return (
         <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '/admin/financial-admin' }, { label: 'Bills', active: true }]} />
