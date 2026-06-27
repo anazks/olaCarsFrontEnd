@@ -72,14 +72,7 @@ const BillList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [backendMetrics, setBackendMetrics] = useState({
-        totalBilled: 0,
-        totalBalanceDue: 0,
-        openCount: 0,
-        partialCount: 0,
-        paidCount: 0,
-        isFilteredPeriod: false
-    });
+
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     // Debounce search input
@@ -122,9 +115,7 @@ const BillList = () => {
             } else {
                 setTotalRecords(res.data?.length || 0);
             }
-            if (res.metrics) {
-                setBackendMetrics(res.metrics);
-            }
+
         } catch (err: any) {
             console.error('Failed to fetch bills:', err);
         } finally {
