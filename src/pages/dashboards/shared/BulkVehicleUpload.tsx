@@ -16,6 +16,7 @@ interface ParsedVehicle {
     vin: string;
     registrationNumber: string;
     fleetNumber?: string;
+    weeklyRent?: number;
     status?: string;
     _rowErrors: string[];
 }
@@ -29,7 +30,7 @@ interface BulkVehicleUploadProps {
 const AUTO_ASSIGN_ROLES = ['operationstaff', 'financestaff', 'branchmanager'];
 
 const CSV_COLUMNS = [
-    'Sl No', 'Vehicle No', 'FLEET NO', 'STATUS OF THE VEHICLES', 'VEHICLES MODELS', 'VIN NUMBER', 'YEAR OF ACTIVE'
+    'Sl No', 'Vehicle No', 'FLEET NO', 'STATUS OF THE VEHICLES', 'VEHICLES MODELS', 'WEEKLY RENT', 'VIN NUMBER', 'YEAR OF ACTIVE'
 ];
 
 const SAMPLE_DATA = [
@@ -39,6 +40,7 @@ const SAMPLE_DATA = [
         'FLEET NO': 'FL-001',
         'STATUS OF THE VEHICLES': 'Active',
         'VEHICLES MODELS': 'Toyota Corolla',
+        'WEEKLY RENT': 150,
         'VIN NUMBER': '1NXBR32E6NZ000001',
         'YEAR OF ACTIVE': 2022
     },
@@ -48,6 +50,7 @@ const SAMPLE_DATA = [
         'FLEET NO': 'FL-002',
         'STATUS OF THE VEHICLES': 'Maintenance',
         'VEHICLES MODELS': 'Nissan X-Trail',
+        'WEEKLY RENT': 180,
         'VIN NUMBER': 'JN1TA0CP8LX000002',
         'YEAR OF ACTIVE': 2021
     }
@@ -279,6 +282,9 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const yearVal = normalized["YEAR OF ACTIVE"] || normalized["YEAR_OF_ACTIVE"] || normalized["YEAR"] || "";
         const year = parseYear(yearVal);
 
+        const weeklyRentVal = normalized["WEEKLY RENT"] || normalized["WEEKLY_RENT"] || "";
+        const weeklyRent = weeklyRentVal !== "" && !isNaN(Number(weeklyRentVal)) ? Number(weeklyRentVal) : undefined;
+
         return {
             make,
             model,
@@ -286,6 +292,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             vin,
             registrationNumber,
             fleetNumber,
+            weeklyRent,
             status,
         };
     };
@@ -306,7 +313,9 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             }
         }
 
-
+        if (row.weeklyRent !== undefined && (isNaN(Number(row.weeklyRent)) || Number(row.weeklyRent) < 0)) {
+            errors.push('WEEKLY RENT must be a positive number');
+        }
 
         if (!row.registrationNumber?.trim()) {
             errors.push('Missing Vehicle No (Plate Number)');
@@ -463,13 +472,22 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                         allErrors.push(...adjustedErrors);
                     }
                 } catch (batchErr: any) {
-                    const errMsg = batchErr?.response?.data?.message || batchErr.message || 'Batch creation failed';
-                    batch.forEach((_, batchIdx) => {
-                        allErrors.push({
-                            row: i + batchIdx + 1,
-                            message: errMsg
+                    const errorResponseData = batchErr?.response?.data;
+                    if (errorResponseData?.data?.errors && Array.isArray(errorResponseData.data.errors)) {
+                        const adjustedErrors = errorResponseData.data.errors.map((err: any) => ({
+                            ...err,
+                            row: i + err.row
+                        }));
+                        allErrors.push(...adjustedErrors);
+                    } else {
+                        const errMsg = errorResponseData?.message || batchErr.message || 'Batch creation failed';
+                        batch.forEach((_, batchIdx) => {
+                            allErrors.push({
+                                row: i + batchIdx + 1,
+                                message: errMsg
+                            });
                         });
-                    });
+                    }
                 }
                 
                 const currentProgress = Math.min(100, Math.round(((i + batch.length) / totalVehicles) * 100));
@@ -928,6 +946,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                                             <th className="p-3 font-black text-dim uppercase">Year of Active</th>
                                             <th className="p-3 font-black text-dim uppercase">VIN Number</th>
                                             <th className="p-3 font-black text-dim uppercase">Vehicle No</th>
+                                            <th className="p-3 font-black text-dim uppercase">Weekly Rent</th>
                                             <th className="p-3 font-black text-dim uppercase">Status of the Vehicles</th>
                                             <th className="p-3 font-black text-dim uppercase text-right">Errors / Status</th>
                                         </tr>
@@ -940,6 +959,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                                                 <td className="p-3 text-main">{row.year || '—'}</td>
                                                 <td className="p-3 font-mono text-main">{row.vin || '—'}</td>
                                                 <td className="p-3 text-main">{row.registrationNumber || '—'}</td>
+                                                <td className="p-3 text-main">{row.weeklyRent !== undefined ? row.weeklyRent : '—'}</td>
                                                 <td className="p-3 text-main">{row.status || '—'}</td>
                                                 <td className="p-3 text-right">
                                                     {row._rowErrors.length > 0 ? (

@@ -416,11 +416,13 @@ const InvoiceDetail = () => {
                                     <User size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Operator / Driver</p>
+                                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Customer</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {(invoice.driver as any)?.personalInfo?.fullName || 'N/A'}
+                                        {(invoice.customer as any)?.name || (invoice.driver as any)?.personalInfo?.fullName || 'N/A'}
                                     </p>
-                                    <span className="text-[10px] text-dim block" style={{ color: 'var(--text-dim)' }}>ID: {(invoice.driver as any)?.driverId || 'N/A'}</span>
+                                    <span className="text-[10px] text-dim block" style={{ color: 'var(--text-dim)' }}>
+                                        ID: {(invoice.customer as any)?.customerId || (invoice.driver as any)?.driverId || 'N/A'}
+                                    </span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
