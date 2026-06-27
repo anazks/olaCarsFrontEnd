@@ -63,8 +63,20 @@ const PaymentsReceived = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
+    const getDefaultStartDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    };
+
+    const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
+    const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
 
     interface PaymentMetrics {
         totalReceived: number;
@@ -415,13 +427,13 @@ const PaymentsReceived = () => {
                 </div>
 
                 {/* Clear Filter Button */}
-                {(searchQuery || methodFilter !== 'ALL' || startDate || endDate) && (
+                {(searchQuery || methodFilter !== 'ALL' || startDate !== getDefaultStartDate() || endDate !== getDefaultEndDate()) && (
                     <button
                         onClick={() => {
                             setSearchQuery('');
                             setMethodFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
+                            setStartDate(getDefaultStartDate());
+                            setEndDate(getDefaultEndDate());
                         }}
                         className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
                         title="Reset Constraints"

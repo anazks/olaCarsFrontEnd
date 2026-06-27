@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { useTheme } from '../../../context/ThemeContext';
 import {
     Crosshair, Search, Cpu, Wifi, WifiOff, Database,
@@ -19,6 +20,16 @@ import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip as RechartsTooltip,
+    ReferenceLine
+} from 'recharts';
 
 const GpsVehicles = () => {
     const { theme } = useTheme();
@@ -49,6 +60,29 @@ const GpsVehicles = () => {
     const [tripsError, setTripsError] = useState<string | null>(null);
     const [tripsStartStr, setTripsStartStr] = useState<string>('');
     const [tripsEndStr, setTripsEndStr] = useState<string>('');
+
+    // Sort and format trips data chronologically for the Line Chart
+    const sortedChartData = useMemo(() => {
+        if (!tripsData || tripsData.length === 0) return [];
+        return [...tripsData]
+            .filter(trip => trip.startTime && trip.startTime !== 'N/A')
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+            .map(trip => {
+                let label = '';
+                try {
+                    const date = new Date(trip.startTime);
+                    label = `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+                } catch {
+                    label = trip.startTime;
+                }
+                return {
+                    ...trip,
+                    chartLabel: label,
+                    avgSpeed: Number(trip.avgSpeed || 0),
+                    maxSpeed: Number(trip.maxSpeed || trip.topSpeed || 0)
+                };
+            });
+    }, [tripsData]);
 
     // View state: 'list' (fleet table), 'map' (fleet map), 'track' (single vehicle tracking detail page), 'alerts' (push notifications log)
     const [activeView, setActiveView] = useState<'list' | 'map' | 'track' | 'alerts'>('list');
@@ -178,10 +212,10 @@ const GpsVehicles = () => {
                     console.log("[GpsVehicles Component] Fetching OBD data for:", selectedTrackVehicle.imei);
                     const obdResponse = await getGpsObdData(selectedTrackVehicle.imei);
                     console.log("[GpsVehicles Component] OBD API response:", obdResponse);
-                    
+
                     const obdRecord = obdResponse?.data?.result?.[0] || obdResponse?.result?.[0] || null;
                     console.log("[GpsVehicles Component] OBD resolved record:", obdRecord);
-                    
+
                     if (isMounted) {
                         setObdData(obdRecord);
                     }
@@ -192,9 +226,9 @@ const GpsVehicles = () => {
                     }
                 }
             };
-            
+
             fetchObd();
-            
+
             // Poll OBD data every 20 seconds
             const interval = setInterval(fetchObd, 20000);
             return () => {
@@ -615,8 +649,9 @@ const GpsVehicles = () => {
         try {
             const startTimeFormatted = startT.replace('T', ' ') + ':00';
             const endTimeFormatted = endT.replace('T', ' ') + ':00';
-            
+
             const data = await getGpsTripsReport(imei, startTimeFormatted, endTimeFormatted);
+            console.log(data, "----reportsssssssssssssss")
             setTripsData(Array.isArray(data) ? data : []);
         } catch (err: any) {
             console.error("Failed to fetch trips report", err);
@@ -633,12 +668,12 @@ const GpsVehicles = () => {
         const pad = (n: number) => String(n).padStart(2, '0');
         const startTStr = `${startD.getFullYear()}-${pad(startD.getMonth() + 1)}-${pad(startD.getDate())}T${pad(startD.getHours())}:${pad(startD.getMinutes())}`;
         const endTStr = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}T${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
-        
+
         setTripsStartStr(startTStr);
         setTripsEndStr(endTStr);
         setShowTripsModal(true);
         setTripsData([]);
-        
+
         handleFetchTrips(imei, startTStr, endTStr);
     };
 
@@ -668,6 +703,70 @@ const GpsVehicles = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleExportTripsExcel = () => {
+        if (!selectedTrackVehicle || tripsData.length === 0) return;
+        
+        const dateStr = new Date().toISOString().split('T')[0];
+        const periodStr = `${tripsStartStr.replace('T', ' ')} to ${tripsEndStr.replace('T', ' ')}`;
+        
+        const aoaData = [
+            ["OlaCars Fleet Telemetry - Trips History Report"],
+            ["Device Name:", selectedTrackVehicle.deviceName],
+            ["IMEI Number:", selectedTrackVehicle.imei],
+            ["Plate Number:", selectedTrackVehicle.vehicleNumber || 'N/A'],
+            ["Query Period:", periodStr],
+            ["Export Date:", new Date().toLocaleString()],
+            [], // Blank row spacing
+            [
+                "Departure Time", 
+                "Departure Latitude", 
+                "Departure Longitude", 
+                "Arrival Time", 
+                "Arrival Latitude", 
+                "Arrival Longitude", 
+                "Duration", 
+                "Distance (km)", 
+                "Avg Speed (km/h)", 
+                "Max Speed (km/h)"
+            ]
+        ];
+
+        tripsData.forEach(trip => {
+            aoaData.push([
+                trip.startTime || 'N/A',
+                trip.startLat || 0,
+                trip.startLng || 0,
+                trip.endTime || 'N/A',
+                trip.endLat || 0,
+                trip.endLng || 0,
+                formatDuration(trip.runTimeSecond),
+                Number(((trip.distance || 0) / 1000).toFixed(2)),
+                trip.avgSpeed || 0,
+                trip.maxSpeed || trip.topSpeed || 0
+            ]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Trips Report");
+
+        const wscols = [
+            { wch: 22 }, // Departure Time
+            { wch: 18 }, // Departure Latitude
+            { wch: 18 }, // Departure Longitude
+            { wch: 22 }, // Arrival Time
+            { wch: 18 }, // Arrival Latitude
+            { wch: 18 }, // Arrival Longitude
+            { wch: 12 }, // Duration
+            { wch: 14 }, // Distance (km)
+            { wch: 16 }, // Avg Speed (km/h)
+            { wch: 16 }  // Max Speed (km/h)
+        ];
+        worksheet['!cols'] = wscols;
+
+        XLSX.writeFile(workbook, `Trips_Report_IMEI_${selectedTrackVehicle.imei}_${dateStr}.xlsx`);
     };
 
     const handleExportTripsPDF = () => {
@@ -1253,11 +1352,10 @@ const GpsVehicles = () => {
                                                 <div className="text-[10px] text-[var(--text-dim)] font-mono font-medium">{item.imei}</div>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black border ${
-                                                    item.alarmType === 'OVERSPEED' || item.alarmName?.toLowerCase().includes('overspeed')
-                                                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                }`}>
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black border ${item.alarmType === 'OVERSPEED' || item.alarmName?.toLowerCase().includes('overspeed')
+                                                    ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                                    : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                    }`}>
                                                     {item.alarmName || item.alarmType || item.msgType}
                                                 </span>
                                             </td>
@@ -1719,7 +1817,7 @@ const GpsVehicles = () => {
 
             {showTripsModal && selectedTrackVehicle && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
-                    <div 
+                    <div
                         className="bg-[var(--bg-card)] border border-[var(--border-main)] w-full max-w-5xl rounded-3xl shadow-2xl p-6 flex flex-col gap-6 animate-fadeIn relative my-8"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -1742,12 +1840,19 @@ const GpsVehicles = () => {
                                     Device: <span className="text-[var(--text-main)]">{selectedTrackVehicle.deviceName}</span> • IMEI: <span className="text-[var(--text-main)]">{selectedTrackVehicle.imei}</span>
                                 </p>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleExportTripsExcel}
+                                    disabled={tripsData.length === 0 || tripsLoading}
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 text-[var(--text-main)]"
+                                >
+                                    <FileSpreadsheet size={14} className="text-emerald-500" /> Export Excel
+                                </button>
                                 <button
                                     onClick={handleExportTripsCSV}
                                     disabled={tripsData.length === 0 || tripsLoading}
-                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 text-[var(--text-main)]"
+                                    className="px-4 py-2 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 text-[var(--text-main)] animate-fadeIn"
                                 >
                                     <FileSpreadsheet size={14} /> Export CSV
                                 </button>
@@ -1790,6 +1895,120 @@ const GpsVehicles = () => {
                                 {tripsLoading ? 'Querying...' : 'Filter History'}
                             </button>
                         </div>
+
+                        {/* Speed Line Chart */}
+                        {!tripsLoading && !tripsError && sortedChartData.length > 0 && (
+                            <div className="p-4 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-input)]/10 flex flex-col gap-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Gauge size={16} className="text-[var(--brand-dynamic)] animate-pulse" />
+                                        <h4 className="font-bold text-xs uppercase tracking-wider text-[var(--text-main)]">Speed Profile (km/h)</h4>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-wider">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-dynamic)]"></span>
+                                            <span className="text-[var(--text-dim)]">Avg Speed</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                                            <span className="text-[var(--text-dim)]">Max Speed (&le; 100)</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                                            <span className="text-rose-500 font-black">Over Speed (&gt; 100)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="h-[180px] w-full mt-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={sortedChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" opacity={0.2} />
+                                            <XAxis 
+                                                dataKey="chartLabel" 
+                                                stroke="var(--text-dim)" 
+                                                fontSize={9} 
+                                                tickLine={false} 
+                                                axisLine={false}
+                                            />
+                                            <YAxis 
+                                                stroke="var(--text-dim)" 
+                                                fontSize={9} 
+                                                tickLine={false} 
+                                                axisLine={false}
+                                                domain={[0, (dataMax: number) => Math.max(120, Math.ceil(dataMax + 10))]}
+                                            />
+                                            <RechartsTooltip
+                                                content={({ active, payload }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const data = payload[0].payload;
+                                                        const isOver = data.maxSpeed > 100;
+                                                        return (
+                                                            <div className="bg-[var(--bg-card)] border border-[var(--border-main)] p-3 rounded-xl shadow-lg text-[10px] space-y-1">
+                                                                <p className="font-bold text-[var(--text-main)]">{data.startTime}</p>
+                                                                <p className="text-[var(--text-dim)]">Average Speed: <span className="font-bold text-[var(--text-main)]">{data.avgSpeed} km/h</span></p>
+                                                                <p className="text-[var(--text-dim)]">Max Speed: <span className={`font-bold ${isOver ? 'text-rose-500' : 'text-cyan-500'}`}>{data.maxSpeed} km/h</span></p>
+                                                                {isOver && (
+                                                                    <div className="mt-1.5 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 font-extrabold text-[8px] uppercase tracking-wider text-center animate-pulse">
+                                                                        Overspeed Violation!
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }}
+                                            />
+                                            <ReferenceLine 
+                                                y={100} 
+                                                stroke="#f43f5e" 
+                                                strokeDasharray="4 4" 
+                                                strokeWidth={1.5}
+                                                label={{ 
+                                                    value: '100 km/h Limit', 
+                                                    fill: '#f43f5e', 
+                                                    fontSize: 8, 
+                                                    fontWeight: 'black',
+                                                    position: 'top' 
+                                                }} 
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="avgSpeed" 
+                                                name="Avg Speed"
+                                                stroke="var(--brand-dynamic)" 
+                                                strokeWidth={2}
+                                                dot={{ r: 2, fill: 'var(--brand-dynamic)', strokeWidth: 0 }}
+                                                activeDot={{ r: 4 }}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="maxSpeed" 
+                                                name="Max Speed"
+                                                stroke="#06b6d4" 
+                                                strokeWidth={2}
+                                                activeDot={{ r: 5 }}
+                                                dot={(props: any) => {
+                                                    const { cx, cy, payload } = props;
+                                                    const speed = payload.maxSpeed;
+                                                    const isOverSpeed = speed > 100;
+                                                    return (
+                                                        <circle
+                                                            cx={cx}
+                                                            cy={cy}
+                                                            r={isOverSpeed ? 4.5 : 2.5}
+                                                            fill={isOverSpeed ? '#f43f5e' : '#06b6d4'}
+                                                            stroke={isOverSpeed ? '#ffe4e6' : 'none'}
+                                                            strokeWidth={isOverSpeed ? 1.5 : 0}
+                                                            key={`dot-maxSpeed-${payload.startTime}-${speed}-${cx}-${cy}`}
+                                                        />
+                                                    );
+                                                }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Report Table Body */}
                         <div className="flex-1 min-h-[300px] max-h-[50vh] overflow-y-auto border border-[var(--border-main)] rounded-2xl bg-[var(--bg-input)]/10">
