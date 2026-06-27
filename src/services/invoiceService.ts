@@ -61,7 +61,7 @@ export const getInvoicesByDriver = async (driverId: string): Promise<Invoice[]> 
 };
 
 export const getInvoicesByCustomer = async (customerId: string): Promise<Invoice[]> => {
-    const response = await api.get(`/api/invoices?customer=${customerId}&limit=100`);
+    const response = await api.get(`/api/invoices?customer=${customerId}&limit=10000`);
     return response.data.data || [];
 };
 
