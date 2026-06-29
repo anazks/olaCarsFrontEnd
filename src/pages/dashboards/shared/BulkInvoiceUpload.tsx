@@ -25,7 +25,7 @@ const CSV_COLUMNS = [
     'Item Name', 'Item Desc', 'Quantity', 'Discount', 'Discount Amount',
     'Item Total', 'Item Price', 'Account', 'Account Code', 'Line Item Location Name',
     'Invoice Shipment Status', 'Manually Shipped Quantity', 'Tax ID', 'Item Tax',
-    'Item Tax %', 'Item Tax Amount', 'Item Tax Type'
+    'Item Tax %', 'Item Tax Amount', 'Item Tax Type', 'Week Number'
 ];
 
 const SAMPLE_DATA = [
@@ -67,7 +67,8 @@ const SAMPLE_DATA = [
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
         'Item Tax Amount': '28.8',
-        'Item Tax Type': 'Taxable'
+        'Item Tax Type': 'Taxable',
+        'Week Number': '23'
     },
     {
         'Invoice Date': '2026-06-02',
@@ -107,7 +108,8 @@ const SAMPLE_DATA = [
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
         'Item Tax Amount': '16.0',
-        'Item Tax Type': 'Taxable'
+        'Item Tax Type': 'Taxable',
+        'Week Number': '24'
     }
 ];
 
@@ -204,6 +206,9 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [availableCustomerNames, setAvailableCustomerNames] = useState<Set<string>>(new Set());
     const [availableCustomerIds, setAvailableCustomerIds] = useState<Set<string>>(new Set());
     const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [verifiedInvoices, setVerifiedInvoices] = useState<Map<string, { exists: boolean, lineItems?: string[] }>>(new Map());
+    const [verifyingInvoices, setVerifyingInvoices] = useState(false);
+    const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
 
     useEffect(() => {
         if (isOpen) {
@@ -230,6 +235,68 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             setLoadingCustomers(false);
         }
     }, [isOpen]);
+
+    // Asynchronously verify parsed invoice numbers against database
+    useEffect(() => {
+        if (!isOpen || parsedRows.length === 0) return;
+
+        const uniqueTokens = new Set<string>();
+        parsedRows.forEach(row => {
+            const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '';
+            if (invNo) {
+                uniqueTokens.add(invNo.toString().trim());
+            }
+        });
+
+        if (uniqueTokens.size === 0) return;
+
+        const tokensToVerify = Array.from(uniqueTokens).filter(t => !verifiedInvoices.has(t.toLowerCase()));
+        if (tokensToVerify.length === 0) return;
+
+        const verifyInvoicesAsync = async () => {
+            setVerifyingInvoices(true);
+            const { getInvoices } = await import('../../../services/invoiceService');
+
+            const newVerifications = new Map<string, { exists: boolean, lineItems?: string[] }>();
+            const CONCURRENCY = 5;
+            for (let i = 0; i < tokensToVerify.length; i += CONCURRENCY) {
+                const chunk = tokensToVerify.slice(i, i + CONCURRENCY);
+                await Promise.all(chunk.map(async (token) => {
+                    try {
+                        const res = await getInvoices({ search: token, limit: 10 });
+                        const matchedInvoice = res.data?.find((inv: any) => {
+                            const dbNum = (inv.invoiceNumber || '').trim().toLowerCase();
+                            const queryNum = token.trim().toLowerCase();
+                            return dbNum === queryNum;
+                        });
+
+                        if (matchedInvoice) {
+                            newVerifications.set(token.toLowerCase(), {
+                                exists: true,
+                                lineItems: matchedInvoice.lineItems?.map((item: any) => item.name.toLowerCase().trim()) || []
+                            });
+                        } else {
+                            newVerifications.set(token.toLowerCase(), { exists: false });
+                        }
+                    } catch (err) {
+                        console.error(`Error verifying invoice ${token}:`, err);
+                        newVerifications.set(token.toLowerCase(), { exists: false });
+                    }
+                }));
+            }
+
+            setVerifiedInvoices(prev => {
+                const updated = new Map(prev);
+                newVerifications.forEach((val, key) => {
+                    updated.set(key, val);
+                });
+                return updated;
+            });
+            setVerifyingInvoices(false);
+        };
+
+        verifyInvoicesAsync();
+    }, [parsedRows, isOpen]);
 
     const matchNameFlexibly = (inputName: string, dbNames: Set<string>): boolean => {
         const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
@@ -302,19 +369,29 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                 errors.push('Invalid Due Date (expected DD-MM-YYYY or YYYY-MM-DD)');
             }
         }
+
+        const invNo = (getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '').toString().trim();
+        const itemName = (getRowVal(row, ['Item Name', 'itemName']) || '').toString().trim();
+
+        if (invNo && itemName) {
+            const verification = verifiedInvoices.get(invNo.toLowerCase());
+            if (verification?.exists && verification.lineItems?.includes(itemName.toLowerCase())) {
+                errors.push(`Item "${itemName}" already exists on Invoice "${invNo}"`);
+            }
+        }
         
         return errors;
-    }, [availableCustomerNames, availableCustomerIds]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices]);
 
-    // Re-validate rows when customer lists load
+    // Re-validate rows when customer lists or verified invoices change
     useEffect(() => {
-        if (parsedRows.length > 0 && availableCustomerNames.size > 0) {
+        if (parsedRows.length > 0 && (availableCustomerNames.size > 0 || verifiedInvoices.size > 0)) {
             setParsedRows(prev => prev.map(row => ({
                 ...row,
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableCustomerNames, availableCustomerIds, validateRow]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -492,6 +569,9 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         setParsedRows([]);
         setFileName('');
         setResult(null);
+        setVerifiedInvoices(new Map());
+        setVerifyingInvoices(false);
+        setRowFilter('all');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -522,6 +602,12 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
 
     const validCount = parsedRows.filter(r => r._rowErrors.length === 0).length;
     const errorCount = parsedRows.filter(r => r._rowErrors.length > 0).length;
+
+    const filteredRows = parsedRows.filter(row => {
+        if (rowFilter === 'valid') return row._rowErrors.length === 0;
+        if (rowFilter === 'invalid') return row._rowErrors.length > 0;
+        return true;
+    });
 
     const getUniqueInvoicesCount = () => {
         const invoiceKeys = new Set();
@@ -626,42 +712,54 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         <div className="flex gap-4 mt-1 text-xs">
                                             <span className="text-emerald-500 font-bold">{validCount} valid rows ({uniqueInvoicesCount} invoices)</span>
                                             {errorCount > 0 && <span className="text-rose-500 font-bold">{errorCount} errors</span>}
-                                            {loadingCustomers && (
+                                            {(loadingCustomers || verifyingInvoices) && (
                                                 <span className="text-blue-500 font-bold flex items-center gap-1">
-                                                    <Loader2 size={12} className="animate-spin" /> Verifying names...
+                                                    <Loader2 size={12} className="animate-spin" /> Verifying data...
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    {errorCount > 0 && !uploading && (
-                                        <>
-                                            <button 
-                                                onClick={handleDownloadInvalid} 
-                                                className="px-4 py-2 rounded-lg text-xs font-bold border border-amber-500 text-amber-500 hover:bg-amber-500/5 transition-colors"
-                                            >
-                                                Download Invalid Rows
-                                            </button>
-                                            <button 
-                                                onClick={handleRemoveInvalid} 
-                                                className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-50 transition-colors"
-                                            >
-                                                Remove All Invalid
-                                            </button>
-                                        </>
-                                    )}
-                                    <button onClick={handleReset} disabled={uploading} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5 disabled:opacity-40" style={{ borderColor: 'var(--border-main)' }}>
-                                        Change File
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingCustomers}
-                                        className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02]"
-                                        style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                <div className="flex items-center gap-3">
+                                    <select
+                                        value={rowFilter}
+                                        onChange={(e) => setRowFilter(e.target.value as 'all' | 'valid' | 'invalid')}
+                                        className="text-xs font-bold px-3 py-2 rounded-lg border focus:outline-none"
+                                        style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                     >
-                                        {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                                        {uploading ? 'Processing...' : `Upload ${uniqueInvoicesCount} Invoices`}
-                                    </button>
+                                        <option value="all">All Rows ({parsedRows.length})</option>
+                                        <option value="valid">Valid Rows ({validCount})</option>
+                                        <option value="invalid">Invalid Rows ({errorCount})</option>
+                                    </select>
+                                    <div className="flex gap-2">
+                                        {errorCount > 0 && !uploading && (
+                                            <>
+                                                <button 
+                                                    onClick={handleDownloadInvalid} 
+                                                    className="px-4 py-2 rounded-lg text-xs font-bold border border-amber-500 text-amber-500 hover:bg-amber-500/5 transition-colors"
+                                                >
+                                                    Download Invalid Rows
+                                                </button>
+                                                <button 
+                                                    onClick={handleRemoveInvalid} 
+                                                    className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-50 transition-colors"
+                                                >
+                                                    Remove All Invalid
+                                                </button>
+                                            </>
+                                        )}
+                                        <button onClick={handleReset} disabled={uploading} className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-black/5 disabled:opacity-40" style={{ borderColor: 'var(--border-main)' }}>
+                                            Change File
+                                        </button>
+                                        <button
+                                            onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingCustomers || verifyingInvoices}
+                                            className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02]"
+                                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                        >
+                                            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                            {uploading ? 'Processing...' : `Upload ${uniqueInvoicesCount} Invoices`}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -699,7 +797,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                            {parsedRows.map((row, idx) => (
+                                            {filteredRows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '-'}</td>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '-'}</td>

@@ -4,8 +4,9 @@ import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Inf
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import { bulkCreateCustomers, type BulkCustomerUploadResult } from '../../../services/customerService';
+import { bulkCreateCustomers, getAllCustomers, type BulkCustomerUploadResult } from '../../../services/customerService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import { getAllDrivers } from '../../../services/driverService';
 import { getDecodedToken } from '../../../utils/auth';
 
 interface ParsedCustomer {
@@ -13,6 +14,7 @@ interface ParsedCustomer {
     _resolvedName?: string;
     _vehicleNo?: string;
     _rowErrors: string[];
+    _rowWarnings?: string[];
 }
 
 interface BulkCustomerUploadProps {
@@ -138,21 +140,8 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
     const [selectedBranch, setSelectedBranch] = useState('');
     const [branchError, setBranchError] = useState<string | null>(null);
 
-    const fetchBranches = useCallback(async () => {
-        setBranchesLoading(true);
-        try {
-            const data = await getAllBranches();
-            const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
-            setBranches(list);
-        } catch { /* non-critical */ }
-        finally { setBranchesLoading(false); }
-    }, []);
-
-    useEffect(() => {
-        if (isOpen && needsBranchSelection) {
-            fetchBranches();
-        }
-    }, [isOpen, needsBranchSelection]);
+    const [existingCustomers, setExistingCustomers] = useState<any[]>([]);
+    const [existingDrivers, setExistingDrivers] = useState<any[]>([]);
 
     const validateRow = useCallback((row: any): { resolvedName: string; vehicleNo: string; errors: string[] } => {
         const errors: string[] = [];
@@ -182,10 +171,31 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
             }
         }
 
+        // Phone validation
+        const phoneVal = row['Phone'] || row['MobilePhone'] || row['Mobile Phone'] || '';
+        if (phoneVal && String(phoneVal).trim()) {
+            const phoneRegex = /^\+?[0-9\s\-()]+$/;
+            if (!phoneRegex.test(String(phoneVal).trim())) {
+                errors.push(`Invalid phone format: "${phoneVal}"`);
+            }
+        }
+
         // Opening Balance must be numeric
         const obVal = row['Opening Balance'] || row['OpeningBalance'];
         if (obVal !== undefined && obVal !== '' && isNaN(Number(obVal))) {
             errors.push('Opening Balance must be a number.');
+        }
+
+        // Opening Balance Exchange Rate must be numeric
+        const obExRateVal = row['Opening Balance Exchange Rate'] || row['OpeningBalanceExchangeRate'];
+        if (obExRateVal !== undefined && obExRateVal !== '' && isNaN(Number(obExRateVal))) {
+            errors.push('Opening Balance Exchange Rate must be a number.');
+        }
+
+        // Credit Limit must be numeric
+        const creditLimitVal = row['Credit Limit'] || row['CreditLimit'];
+        if (creditLimitVal !== undefined && creditLimitVal !== '' && isNaN(Number(creditLimitVal))) {
+            errors.push('Credit Limit must be a number.');
         }
 
         // Tax Percentage must be numeric
@@ -194,12 +204,106 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
             errors.push('Tax Percentage must be a number.');
         }
 
+        // Active Date validation
+        const activeDateVal = row['CF.ACTIVE DATE'] || row['cf.active date'] || row['CF.Active Date'] || '';
+        if (activeDateVal && String(activeDateVal).trim() && isNaN(Date.parse(String(activeDateVal))) && isNaN(Number(activeDateVal))) {
+            errors.push(`Invalid CF.ACTIVE DATE: "${activeDateVal}"`);
+        }
+
+        // End Date validation
+        const endDateVal = row['CF.END DATE'] || row['cf.end date'] || row['CF.End Date'] || '';
+        if (endDateVal && String(endDateVal).trim() && isNaN(Date.parse(String(endDateVal))) && isNaN(Number(endDateVal))) {
+            errors.push(`Invalid CF.END DATE: "${endDateVal}"`);
+        }
+
         // Vehicle No extraction
         const vehicleNo = row['CF.VEHICLE NO :'] || row['CF.VEHICLE NO:'] || row['CF.VEHICLE NO'] ||
             row['cf.vehicle no :'] || row['cf.vehicle no:'] || row['cf.vehicle no'] || '';
 
         return { resolvedName, vehicleNo: String(vehicleNo).trim(), errors };
     }, []);
+
+    const checkFileDuplicates = (rows: ParsedCustomer[]) => {
+        const seenNames = new Set<string>();
+
+        rows.forEach((row) => {
+            const nameVal = row._resolvedName?.toLowerCase();
+
+            if (nameVal && seenNames.has(nameVal)) {
+                row._rowErrors.push(`Duplicate Name "${row._resolvedName}" inside this file.`);
+            }
+
+            if (nameVal) seenNames.add(nameVal);
+        });
+    };
+
+    const checkDbDuplicates = useCallback((rows: ParsedCustomer[], custs = existingCustomers, drivs = existingDrivers) => {
+        rows.forEach((row) => {
+            const nameVal = row._resolvedName?.toLowerCase();
+
+            const matchCustomer = custs.find((c: any) => {
+                const dbName = (c.name || '').toLowerCase();
+                return nameVal && dbName === nameVal;
+            });
+            if (matchCustomer) {
+                row._rowErrors.push(`Duplicate customer name in database: "${matchCustomer.name}"`);
+            }
+
+            const matchDriver = drivs.find((d: any) => {
+                const dbName = (d.personalInfo?.fullName || '').toLowerCase();
+                return nameVal && dbName === nameVal;
+            });
+            if (matchDriver) {
+                row._rowErrors.push(`Duplicate driver name in database: "${matchDriver.personalInfo?.fullName}"`);
+            }
+        });
+    }, [existingCustomers, existingDrivers]);
+
+    const fetchBranches = useCallback(async () => {
+        setBranchesLoading(true);
+        try {
+            const data = await getAllBranches();
+            const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+            setBranches(list);
+        } catch { /* non-critical */ }
+        finally { setBranchesLoading(false); }
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            if (needsBranchSelection) {
+                fetchBranches();
+            }
+            Promise.all([
+                getAllCustomers({ limit: 10000 }),
+                getAllDrivers({ limit: 10000 })
+            ]).then(([custRes, drivRes]) => {
+                const customers = Array.isArray(custRes) ? custRes : (custRes as any)?.data ?? [];
+                const drivers = (drivRes as any)?.data ?? [];
+                
+                setExistingCustomers(customers);
+                setExistingDrivers(drivers);
+
+                // Run checkDbDuplicates if there are parsedCustomers
+                setParsedCustomers(prev => {
+                    if (prev.length === 0) return prev;
+                    const updated = prev.map(row => {
+                        const { errors } = validateRow(row);
+                        return {
+                            ...row,
+                            _rowErrors: errors,
+                            _rowWarnings: []
+                        };
+                    });
+                    checkFileDuplicates(updated);
+                    checkDbDuplicates(updated, customers, drivers);
+                    return updated;
+                });
+            }).catch(err => {
+                console.error("Failed to load existing database records:", err);
+            });
+        }
+    }, [isOpen, needsBranchSelection, fetchBranches, validateRow, checkDbDuplicates]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -224,8 +328,11 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
                             _resolvedName: resolvedName,
                             _vehicleNo: vehicleNo,
                             _rowErrors: errors,
+                            _rowWarnings: [],
                         };
                     });
+                    checkFileDuplicates(rows);
+                    checkDbDuplicates(rows);
                     setParsedCustomers(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the Excel file.');
@@ -250,8 +357,11 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
                             _resolvedName: resolvedName,
                             _vehicleNo: vehicleNo,
                             _rowErrors: errors,
+                            _rowWarnings: [],
                         };
                     });
+                    checkFileDuplicates(rows);
+                    checkDbDuplicates(rows);
                     setParsedCustomers(rows);
                     if (rows.length === 0) {
                         toast.error('No data rows found in the file.');
@@ -399,6 +509,7 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
     const validCount = parsedCustomers.filter(c => c._rowErrors.length === 0).length;
     const errorCount = parsedCustomers.filter(c => c._rowErrors.length > 0).length;
     const vehicleLinkedCount = parsedCustomers.filter(c => c._vehicleNo && c._rowErrors.length === 0).length;
+    const warningCount = parsedCustomers.filter(c => c._rowErrors.length === 0 && c._rowWarnings && c._rowWarnings.length > 0).length;
 
     if (!isOpen) return null;
 
@@ -618,6 +729,11 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
                                                 {errorCount} Errors
                                             </span>
                                         )}
+                                        {warningCount > 0 && (
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                {warningCount} Matches System
+                                            </span>
+                                        )}
                                         {vehicleLinkedCount > 0 && (
                                             <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                                 {vehicleLinkedCount} Vehicle Links
@@ -660,6 +776,14 @@ const BulkCustomerUpload = ({ isOpen, onClose, onSuccess }: BulkCustomerUploadPr
                                                                 <span className="max-w-[250px] overflow-hidden text-ellipsis block" title={row._rowErrors.join(', ')}>
                                                                     {row._rowErrors[0]}
                                                                     {row._rowErrors.length > 1 && ` (+${row._rowErrors.length - 1} more)`}
+                                                                </span>
+                                                            </div>
+                                                        ) : row._rowWarnings && row._rowWarnings.length > 0 ? (
+                                                            <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                                                                <AlertTriangle size={14} className="shrink-0" />
+                                                                <span className="max-w-[250px] overflow-hidden text-ellipsis block" title={row._rowWarnings.join(', ')}>
+                                                                    {row._rowWarnings[0]}
+                                                                    {row._rowWarnings.length > 1 && ` (+${row._rowWarnings.length - 1} more)`}
                                                                 </span>
                                                             </div>
                                                         ) : (
