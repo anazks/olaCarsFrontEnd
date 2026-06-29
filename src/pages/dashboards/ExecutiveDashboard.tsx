@@ -36,7 +36,8 @@ const ExecutiveDashboard = () => {
     const dispatch = useDispatch();
     const executiveState = useSelector((state: RootState) => state.dashboard.executive);
 
-    const [loading, setLoading] = useState(!executiveState.isLoaded);
+    const [kpiLoading, setKpiLoading] = useState(!executiveState.isLoaded);
+    const [restLoading, setRestLoading] = useState(!executiveState.isLoaded);
     const [branches, setBranches] = useState<any[]>(executiveState.branches);
     const isFirstMount = useRef(true);
 
@@ -70,7 +71,10 @@ const ExecutiveDashboard = () => {
     };
 
     const fetchData = async (showLoadingSpinner = true) => {
-        if (showLoadingSpinner) setLoading(true);
+        if (showLoadingSpinner) {
+            setKpiLoading(true);
+            setRestLoading(true);
+        }
         try {
             let fetchedBranches = branches;
             if (branches.length === 0) {
@@ -97,9 +101,47 @@ const ExecutiveDashboard = () => {
 
             const ledgerRes: PromiseSettledResult<any> = { status: 'fulfilled', value: { data: [] } };
 
-            const [driverRes, vehicleRes, poRes, staffRes, alertRes, taskRes, invoiceRes] = await Promise.allSettled([
+            // Stage 1: Load KPI-related data first (Drivers, Vehicles, Alerts, Invoices)
+            const [driverRes, vehicleRes, alertRes, invoiceRes] = await Promise.allSettled([
                 getAllDrivers({ limit: 1, status: 'ACTIVE', branch: baseFilters.branch }),
                 getAllVehicles({ limit: 1, status: 'ACTIVE — RENTED,ACTIVE — AVAILABLE,W. GROUP ACTIVE' as any, branch: baseFilters.branch }),
+                alertService.getActiveAlerts(),
+                getInvoicesRegistry({
+                    limit: 10000,
+                    branch: baseFilters.branch,
+                    startDate: oneMonthAgoStr,
+                    endDate: todayStr
+                })
+            ]);
+
+            const mockRejected = (): PromiseSettledResult<any> => ({
+                status: 'rejected',
+                reason: new Error('Not loaded yet')
+            });
+
+            // Perform initial partial aggregation for KPIs
+            const partialAggregated = aggregateExecutiveData(
+                ledgerRes,
+                driverRes,
+                vehicleRes,
+                mockRejected(), // poRes
+                mockRejected(), // staffRes
+                alertRes,
+                mockRejected(), // taskRes
+                invoiceRes,
+                startD,
+                endD,
+                executiveState.kpiData
+            );
+
+            dispatch(setExecutiveDashboardData({
+                ...partialAggregated,
+                branches: fetchedBranches
+            }));
+            setKpiLoading(false);
+
+            // Stage 2: Load the remaining analytical/telemetry data (POs, Staff, Tasks)
+            const [poRes, staffRes, taskRes] = await Promise.allSettled([
                 getAllPurchaseOrders({
                     limit: 500,
                     branch: baseFilters.branch,
@@ -109,17 +151,11 @@ const ExecutiveDashboard = () => {
                     sortBy: 'createdAt'
                 }),
                 getStaffPerformance({ type: 'all', ...baseFilters }),
-                alertService.getActiveAlerts(),
-                getTasks({ limit: 1000, ...baseFilters }),
-                getInvoicesRegistry({
-                    limit: 10000,
-                    branch: baseFilters.branch,
-                    startDate: oneMonthAgoStr,
-                    endDate: todayStr
-                })
+                getTasks({ limit: 1000, ...baseFilters })
             ]);
 
-            const aggregated = aggregateExecutiveData(
+            // Perform complete aggregation with all data sources
+            const fullAggregated = aggregateExecutiveData(
                 ledgerRes,
                 driverRes,
                 vehicleRes,
@@ -130,18 +166,19 @@ const ExecutiveDashboard = () => {
                 invoiceRes,
                 startD,
                 endD,
-                executiveState.kpiData
+                partialAggregated.kpiData
             );
 
             dispatch(setExecutiveDashboardData({
-                ...aggregated,
+                ...fullAggregated,
                 branches: fetchedBranches
             }));
 
         } catch (e) {
             console.error('Failed fetching data', e);
         } finally {
-            setLoading(false);
+            setKpiLoading(false);
+            setRestLoading(false);
         }
     };
 
@@ -181,12 +218,12 @@ const ExecutiveDashboard = () => {
 
     // ─── Render Components ──────────────────────────────────────────
 
-    if (loading && !executiveState.isLoaded) {
+    if (kpiLoading && !executiveState.isLoaded) {
         return <ExecutiveDashboardSkeleton />;
     }
 
     return (
-        <div className={`container-responsive space-y-6 transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`container-responsive space-y-6 transition-all duration-300 ${kpiLoading ? 'opacity-60 pointer-events-none' : ''}`}>
 
             {/* Header & Master Filters */}
             <div className="flex flex-row justify-between items-center gap-2 lg:gap-6 border-b pb-4 lg:pb-6 w-full" style={{ borderColor: 'var(--border-main)' }}>
@@ -200,7 +237,7 @@ const ExecutiveDashboard = () => {
                         </div>
                         <span className="hidden sm:inline truncate">Executive Control Center</span>
                         <span className="sm:hidden truncate">Executive</span>
-                        {loading && <RefreshCw className="animate-spin text-[#D4F12E] ml-2 flex-shrink-0" size={20} />}
+                        {restLoading && <RefreshCw className="animate-spin text-[#D4F12E] ml-2 flex-shrink-0" size={20} />}
                     </h1>
                     <p className="text-[10px] lg:text-xs font-medium mt-0.5 lg:mt-1 truncate hidden md:block" style={{ color: 'var(--text-dim)' }}>
                         Real-time master aggregation across all operating domains
@@ -266,10 +303,10 @@ const ExecutiveDashboard = () => {
 
                     <button
                         onClick={() => fetchData(true)}
-                        disabled={loading}
+                        disabled={restLoading}
                         className="flex items-center gap-1 lg:gap-2 px-2 py-1.5 lg:px-4 lg:py-2 bg-lime text-black rounded-lg text-xs lg:text-sm font-bold transition-all hover:bg-lime/90 disabled:opacity-50 cursor-pointer"
                     >
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={restLoading ? 'animate-spin' : ''} />
                         <span className="hidden xl:inline">{t('dashboards.common.refreshData')}</span>
                     </button>
                 </div>
@@ -289,7 +326,13 @@ const ExecutiveDashboard = () => {
                                             <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] text-[#22c55e] flex items-center justify-center">
                                                 <Car size={20} />
                                             </div>
-                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.totalActiveVehicles.toLocaleString()}</span>
+                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {kpiLoading ? (
+                                                    <span className="inline-block h-8 w-16 bg-white/10 rounded animate-pulse" />
+                                                ) : (
+                                                    kpiData.totalActiveVehicles.toLocaleString()
+                                                )}
+                                            </span>
                                         </div>
                                         <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
                                             <ArrowUpRight size={14} /> 4.6%
@@ -306,7 +349,9 @@ const ExecutiveDashboard = () => {
                                                 <DollarSign size={20} />
                                             </div>
                                             <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {kpiData.monthlyRevenue > 9999
+                                                {kpiLoading ? (
+                                                    <span className="inline-block h-8 w-24 bg-white/10 rounded animate-pulse" />
+                                                ) : kpiData.monthlyRevenue > 9999
                                                     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(kpiData.monthlyRevenue)
                                                     : `$${kpiData.monthlyRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                                             </span>
@@ -325,7 +370,13 @@ const ExecutiveDashboard = () => {
                                             <div className="w-10 h-10 rounded-xl bg-[#fff7ed] text-[#ea580c] flex items-center justify-center">
                                                 <BarChart3 size={20} />
                                             </div>
-                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.outstandingCollections.toLocaleString()}</span>
+                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {kpiLoading ? (
+                                                    <span className="inline-block h-8 w-24 bg-white/10 rounded animate-pulse" />
+                                                ) : (
+                                                    `$${kpiData.outstandingCollections.toLocaleString()}`
+                                                )}
+                                            </span>
                                         </div>
                                         <div className="bg-[#fef2f2] text-[#ef4444] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
                                             <ArrowDownRight size={14} /> 3.8%
@@ -341,7 +392,13 @@ const ExecutiveDashboard = () => {
                                             <div className="w-10 h-10 rounded-full bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center">
                                                 <Users size={20} />
                                             </div>
-                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.activeDrivers.toLocaleString()}</span>
+                                            <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {kpiLoading ? (
+                                                    <span className="inline-block h-8 w-16 bg-white/10 rounded animate-pulse" />
+                                                ) : (
+                                                    kpiData.activeDrivers.toLocaleString()
+                                                )}
+                                            </span>
                                         </div>
                                         <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
                                             <ArrowUpRight size={14} /> 2.1%
@@ -370,7 +427,13 @@ const ExecutiveDashboard = () => {
                                         onClick={() => navigate('/admin/admin/alerts')}
                                     >
                                         <div className="bg-white text-[#ef4444] p-1.5 rounded-md mb-3"><AlertTriangle size={16} /></div>
-                                        <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.critical.length}</span>
+                                        <span className="text-3xl font-bold mb-1">
+                                            {kpiLoading ? (
+                                                <span className="inline-block h-8 w-8 bg-white/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.alertsDetailed.critical.length
+                                            )}
+                                        </span>
                                         <span className="text-xs font-semibold opacity-90">Critical</span>
                                     </div>
                                     {/* Major */}
@@ -379,7 +442,13 @@ const ExecutiveDashboard = () => {
                                         onClick={() => navigate('/admin/admin/alerts')}
                                     >
                                         <div className="bg-white text-[#f97316] p-1.5 rounded-md mb-3"><AlertCircle size={16} /></div>
-                                        <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.major.length}</span>
+                                        <span className="text-3xl font-bold mb-1">
+                                            {kpiLoading ? (
+                                                <span className="inline-block h-8 w-8 bg-white/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.alertsDetailed.major.length
+                                            )}
+                                        </span>
                                         <span className="text-xs font-semibold opacity-90">Major</span>
                                     </div>
                                     {/* Minor */}
@@ -388,7 +457,13 @@ const ExecutiveDashboard = () => {
                                         onClick={() => navigate('/admin/admin/alerts')}
                                     >
                                         <div className="bg-white text-[#4f46e5] p-1.5 rounded-md mb-3"><Clock size={16} /></div>
-                                        <span className="text-3xl font-bold mb-1">{kpiData.alertsDetailed.minor.length}</span>
+                                        <span className="text-3xl font-bold mb-1">
+                                            {kpiLoading ? (
+                                                <span className="inline-block h-8 w-8 bg-white/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.alertsDetailed.minor.length
+                                            )}
+                                        </span>
                                         <span className="text-xs font-semibold opacity-90">Minor</span>
                                     </div>
                                 </div>
@@ -404,7 +479,13 @@ const ExecutiveDashboard = () => {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>{kpiData.collectionCompliance.toFixed(0)}%</span>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {kpiLoading ? (
+                                                <span className="inline-block h-8 w-16 bg-white/10 rounded animate-pulse" />
+                                            ) : (
+                                                `${kpiData.collectionCompliance.toFixed(0)}%`
+                                            )}
+                                        </span>
                                         <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
                                             <ArrowUpRight size={10} /> +2%
                                         </div>
@@ -419,7 +500,13 @@ const ExecutiveDashboard = () => {
                                     <DollarSign size={20} />
                                 </div>
                                 <div>
-                                    <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.last12MonthRevenue.toLocaleString()}</span>
+                                    <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                        {kpiLoading ? (
+                                            <span className="inline-block h-8 w-28 bg-white/10 rounded animate-pulse" />
+                                        ) : (
+                                            `$${kpiData.last12MonthRevenue.toLocaleString()}`
+                                        )}
+                                    </span>
                                     <span className="text-sm font-medium block mt-1" style={{ color: 'var(--text-dim)' }}>{getDynamicRevenueLabel()}</span>
                                 </div>
                             </div>
@@ -430,7 +517,13 @@ const ExecutiveDashboard = () => {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>${kpiData.outstandingBalance.toLocaleString()}</span>
+                                        <span className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {kpiLoading ? (
+                                                <span className="inline-block h-8 w-28 bg-white/10 rounded animate-pulse" />
+                                            ) : (
+                                                `$${kpiData.outstandingBalance.toLocaleString()}`
+                                            )}
+                                        </span>
                                         <div className="bg-[#f0fdf4] text-[#22c55e] px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1">
                                             <ArrowUpRight size={10} /> +11%
                                         </div>
@@ -446,23 +539,42 @@ const ExecutiveDashboard = () => {
                                 <div className="flex flex-wrap gap-2">
                                     <div className="bg-[#fee2e2] text-[#b91c1c] px-3 py-2 rounded-xl flex items-center gap-2">
                                         <div className="bg-[#ef4444] text-white p-1 rounded-md"><Clock size={12} /></div>
-                                        <span className="font-bold text-lg leading-none">{kpiData.tasks.overdue < 10 ? `0${kpiData.tasks.overdue}` : kpiData.tasks.overdue}</span>
+                                        <span className="font-bold text-lg leading-none">
+                                            {restLoading ? (
+                                                <span className="inline-block h-4 w-6 bg-red-900/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.tasks.overdue < 10 ? `0${kpiData.tasks.overdue}` : kpiData.tasks.overdue
+                                            )}
+                                        </span>
                                         <span className="text-xs font-medium opacity-80">Overdue Tasks</span>
                                     </div>
                                     <div className="bg-[#fef3c7] text-[#b45309] px-3 py-2 rounded-xl flex items-center gap-2">
                                         <div className="bg-[#f59e0b] text-white p-1 rounded-md"><FileText size={12} /></div>
-                                        <span className="font-bold text-lg leading-none">{kpiData.tasks.upcoming < 10 ? `0${kpiData.tasks.upcoming}` : kpiData.tasks.upcoming}</span>
+                                        <span className="font-bold text-lg leading-none">
+                                            {restLoading ? (
+                                                <span className="inline-block h-4 w-6 bg-yellow-900/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.tasks.upcoming < 10 ? `0${kpiData.tasks.upcoming}` : kpiData.tasks.upcoming
+                                            )}
+                                        </span>
                                         <span className="text-xs font-medium opacity-80">Upcoming Tasks</span>
                                     </div>
                                     <div className="bg-[#ccfbf1] text-[#0f766e] px-3 py-2 rounded-xl flex items-center gap-2">
                                         <div className="bg-[#14b8a6] text-white p-1 rounded-md"><ClipboardList size={12} /></div>
-                                        <span className="font-bold text-lg leading-none">{kpiData.tasks.assigned < 10 ? `0${kpiData.tasks.assigned}` : kpiData.tasks.assigned}</span>
+                                        <span className="font-bold text-lg leading-none">
+                                            {restLoading ? (
+                                                <span className="inline-block h-4 w-6 bg-teal-900/20 rounded animate-pulse" />
+                                            ) : (
+                                                kpiData.tasks.assigned < 10 ? `0${kpiData.tasks.assigned}` : kpiData.tasks.assigned
+                                            )}
+                                        </span>
                                         <span className="text-xs font-medium opacity-80">Assigned Tasks</span>
                                     </div>
                                 </div>
                             </div>
 
                         </div>
+
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -481,7 +593,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-[#148F85] transition-colors">Finance Analytics</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {financeTotals.some(t => t.amount > 0) ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : financeTotals.some(t => t.amount > 0) ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={financeTotals} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
@@ -511,7 +627,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-blue-500 transition-colors">Fleet Payables (Rent Trend)</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {rentTrendData.length > 0 ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : rentTrendData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={rentTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
@@ -539,7 +659,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim">Driving Apptitude</h2>
                             </div>
                             <div className="h-[220px] w-full">
-                                {driverData.length > 0 ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : driverData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={driverData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
@@ -564,7 +688,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim">Vehicle Asset Distribution</h2>
                             </div>
                             <div className="h-[220px] w-full">
-                                {vehicleData.length > 0 ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : vehicleData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={vehicleData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
@@ -594,7 +722,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-yellow-500 transition-colors">PO Tracking (Trend)</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {poTrendData.length > 0 ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : poTrendData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={poTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
@@ -627,7 +759,11 @@ const ExecutiveDashboard = () => {
                                 <h2 className="text-sm font-black uppercase tracking-wider text-dim group-hover:text-orange-500 transition-colors">Staff Operations</h2>
                             </div>
                             <div className="h-[220px] w-full relative z-10">
-                                {staffData.length > 0 ? (
+                                {restLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <RefreshCw className="animate-spin text-lime" size={24} />
+                                    </div>
+                                ) : staffData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={staffData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />

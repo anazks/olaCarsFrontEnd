@@ -33,10 +33,14 @@ const FinancialAdminDashboard = () => {
         tooltipBorder: isDark ? '#2A2A2A' : '#E5E7EB',
         tooltipText: isDark ? '#FFFFFF' : '#0A0A0A',
     };
-    const [loading, setLoading] = useState(true);
+    const [kpiLoading, setKpiLoading] = useState(true);
+    const [restLoading, setRestLoading] = useState(true);
+    const [kpiData, setKpiData] = useState<any>(null);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [allBranches, setAllBranches] = useState<any[]>([]);
     const [pendingPOs, setPendingPOs] = useState<any[]>([]);
+
+    const loading = kpiLoading;
 
     // New Tabs State
     const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections' | 'pos'>('overview');
@@ -93,24 +97,33 @@ const FinancialAdminDashboard = () => {
 
     // 3. Primary Data Fetch
     const fetchData = async () => {
-        setLoading(true);
+        setKpiLoading(true);
+        setRestLoading(true);
         try {
-            const [data, poRes] = await Promise.all([
+            // 1. Fetch only KPIs first (extremely fast)
+            const kpiRes = await getFinancialDashboardSummary({ ...filters, onlyKpi: true });
+            setKpiData(kpiRes);
+            setKpiLoading(false);
+
+            // 2. Fetch the rest of the dashboard data in the background
+            Promise.all([
                 getFinancialDashboardSummary(filters),
                 getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
                     console.error("FinancialAdminDashboard: Fetch POs failed:", err);
                     return { data: [] };
                 })
-            ]);
-            console.log("FinancialAdminDashboard: PENDING_FINANCE_APPROVAL POs response:", poRes);
-            setDashboardData(data);
-            setPendingPOs(poRes.data || []);
+            ]).then(([data, poRes]) => {
+                setDashboardData(data);
+                setPendingPOs(poRes.data || []);
+                setRestLoading(false);
+            }).catch((err) => {
+                console.error("FinancialAdminDashboard: Fetch rest failed:", err);
+                setRestLoading(false);
+            });
         } catch (error) {
             console.error('Error loading dashboard metrics', error);
-        } finally {
-            setTimeout(() => {
-                setLoading(false);
-            }, 900);
+            setKpiLoading(false);
+            setRestLoading(false);
         }
     };
 
@@ -143,7 +156,7 @@ const FinancialAdminDashboard = () => {
         setFilters(prev => ({ ...prev, [key]: val }));
     };
 
-    if (loading && !dashboardData) {
+    if (kpiLoading && !kpiData) {
         return <FinancialAdminDashboardSkeleton />;
     }
 
@@ -253,14 +266,16 @@ const FinancialAdminDashboard = () => {
                         trendUp={true}
                         icon={<Car className="text-[#C8E600]" />}
                         iconBg="bg-[#C8E600]/10"
+                        loading={restLoading}
                     />
                     <DashboardStatCard
                         title="Monthly Revenue"
-                        value={`$${(stats?.monthlyRevenue || 0).toLocaleString()}`}
+                        value={`$${(kpiData?.stats?.monthlyRevenue || 0).toLocaleString()}`}
                         trend="+12.3%"
                         trendUp={true}
                         icon={<DollarSign className="text-emerald-500" />}
                         iconBg="bg-emerald-500/10"
+                        loading={kpiLoading}
                     />
                     <DashboardStatCard
                         title="Pending Collections"
@@ -269,6 +284,7 @@ const FinancialAdminDashboard = () => {
                         trendUp={false}
                         icon={<Briefcase className="text-orange-500" />}
                         iconBg="bg-orange-500/10"
+                        loading={restLoading}
                     />
                     <DashboardStatCard
                         title="Active Drivers"
@@ -277,6 +293,7 @@ const FinancialAdminDashboard = () => {
                         trendUp={true}
                         icon={<Users className="text-blue-500" />}
                         iconBg="bg-blue-500/10"
+                        loading={restLoading}
                     />
                 </div>
 
@@ -336,33 +353,39 @@ const FinancialAdminDashboard = () => {
                     </div>
 
                     <div className="h-[280px]">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                            <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
-                                <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis 
-                                    stroke={chartColors.text} 
-                                    fontSize={10} 
-                                    tickLine={false} 
-                                    axisLine={false} 
-                                    tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} 
-                                    width={55}
-                                />
-                                <RechartsTooltip
-                                    contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
-                                    itemStyle={{ color: '#C8E600' }}
-                                    labelStyle={{ color: chartColors.text }}
-                                />
-                                <Area type="monotone" dataKey="previousYear" stroke={isDark ? "#64748B" : "#94A3B8"} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
-                                <Area type="monotone" dataKey="currentYear" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#brandGrad)" dot={{ fill: '#C8E600', r: 4 }} />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {restLoading ? (
+                            <div className="h-full flex items-center justify-center">
+                                <RefreshCw className="animate-spin text-[#C8E600]" size={36} />
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <AreaChart data={revenueOverview} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={chartColors.grid} />
+                                    <XAxis dataKey="name" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                                    <YAxis 
+                                        stroke={chartColors.text} 
+                                        fontSize={10} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} 
+                                        width={55}
+                                    />
+                                    <RechartsTooltip
+                                        contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, borderRadius: '12px', color: chartColors.tooltipText }}
+                                        itemStyle={{ color: '#C8E600' }}
+                                        labelStyle={{ color: chartColors.text }}
+                                    />
+                                    <Area type="monotone" dataKey="previousYear" stroke={isDark ? "#64748B" : "#94A3B8"} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
+                                    <Area type="monotone" dataKey="currentYear" stroke="#C8E600" strokeWidth={4} fillOpacity={1} fill="url(#brandGrad)" dot={{ fill: '#C8E600', r: 4 }} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
@@ -375,26 +398,34 @@ const FinancialAdminDashboard = () => {
                     <p className="text-xs font-medium mb-6" style={{ color: 'var(--text-dim)' }}>Distribution snapshot</p>
 
                     <div className="h-[220px] relative flex items-center justify-center flex-1">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                            <PieChart>
-                                <Pie data={donutData} innerRadius={65} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none" cornerRadius={6}>
-                                    {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
+                        {restLoading ? (
+                            <div className="h-full flex items-center justify-center">
+                                <RefreshCw className="animate-spin text-[#C8E600]" size={36} />
+                            </div>
+                        ) : (
+                            <>
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <PieChart>
+                                        <Pie data={donutData} innerRadius={65} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none" cornerRadius={6}>
+                                            {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
 
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</span>
-                            <span className="text-xs font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>TOTAL</span>
-                        </div>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-3xl font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</span>
+                                    <span className="text-xs font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>TOTAL</span>
+                                </div>
 
-                        <div
-                            className="absolute right-0 top-2 rounded-xl p-2 text-center shadow-lg border transition-colors"
-                            style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}
-                        >
-                            <div className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-dim)' }}>In Use</div>
-                            <div className="text-lg font-black text-[#C8E600]">{utilizationRate}%</div>
-                        </div>
+                                <div
+                                    className="absolute right-0 top-2 rounded-xl p-2 text-center shadow-lg border transition-colors"
+                                    style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}
+                                >
+                                    <div className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-dim)' }}>In Use</div>
+                                    <div className="text-lg font-black text-[#C8E600]">{utilizationRate}%</div>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t transition-colors" style={{ borderColor: 'var(--border-main)' }}>
@@ -458,130 +489,136 @@ const FinancialAdminDashboard = () => {
                     </div>
 
                     <div className="p-6 flex-1 flex flex-col justify-center transition-all duration-300">
-
-                        {activeTab === 'overview' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pb-6 md:pb-0 md:pr-6">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={20} /></div>
-                                        <div className="min-w-0">
-                                            <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
-                                            <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
+                        {restLoading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <RefreshCw className="animate-spin text-[#C8E600]" size={36} />
+                            </div>
+                        ) : (
+                            <>
+                                {activeTab === 'overview' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="pb-6 md:pb-0 md:pr-6">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0"><TrendingUp size={20} /></div>
+                                                <div className="min-w-0">
+                                                    <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                                    <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Collected Revenue</div>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
+                                        </div>
+                                        <div className="py-6 md:py-0 md:px-6 text-center flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="text-2xl font-black text-[#C8E600] mb-1">{stats?.collectionCompliance || 94}%</div>
+                                            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
+                                            <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
+                                                <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-6 md:pt-0 md:pl-6" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="text-[17px] sm:text-[19px] font-black mb-1" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.outstandingBalance || 0).toLocaleString()}</div>
+                                            <div className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Awaiting Settlement</div>
+                                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Accumulated ledger deficit currently flagged for recovery pipeline tracking.</p>
                                         </div>
                                     </div>
-                                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>Summary generated based on actual payment settlements deposited in specified date window.</p>
-                                </div>
-                                <div className="py-6 md:py-0 md:px-6 text-center flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-2xl font-black text-[#C8E600] mb-1">{stats?.collectionCompliance || 94}%</div>
-                                    <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Realization</div>
-                                    <div className="w-full h-1.5 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--bg-input)' }}>
-                                        <div className="h-full bg-[#C8E600]" style={{ width: `${stats?.collectionCompliance || 94}%` }}></div>
-                                    </div>
-                                </div>
-                                <div className="pt-6 md:pt-0 md:pl-6" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="text-[17px] sm:text-[19px] font-black mb-1" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.outstandingBalance || 0).toLocaleString()}</div>
-                                    <div className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Awaiting Settlement</div>
-                                    <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Accumulated ledger deficit currently flagged for recovery pipeline tracking.</p>
-                                </div>
-                            </div>
-                        )}
+                                )}
 
-                        {activeTab === 'vehicles' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pb-6 md:pb-0 md:pr-6">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0"><Car size={20} /></div>
-                                        <div className="min-w-0">
-                                            <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
-                                            <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Total Global Fleet</div>
+                                {activeTab === 'vehicles' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="pb-6 md:pb-0 md:pr-6">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0"><Car size={20} /></div>
+                                                <div className="min-w-0">
+                                                    <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>{totalVehicles}</div>
+                                                    <div className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>Total Global Fleet</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="py-6 md:py-0 md:px-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
+                                            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
+                                        </div>
+                                        <div className="pt-6 md:pt-0 md:pl-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
+                                            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Decommissioned</span> <span className="text-lg font-bold" style={{ color: 'var(--text-dim)' }}>{fleetStatus?.retired || 0}</span></div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="py-6 md:py-0 md:px-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Rented Out</span> <span className="text-lg font-bold text-blue-500">{fleetStatus?.rented || 0}</span></div>
-                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Standby Yard</span> <span className="text-lg font-bold text-[#C8E600]">{fleetStatus?.available || 0}</span></div>
-                                </div>
-                                <div className="pt-6 md:pt-0 md:pl-6 flex flex-col justify-center gap-3" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Workshops</span> <span className="text-lg font-bold text-orange-500">{fleetStatus?.maintenance || 0}</span></div>
-                                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Decommissioned</span> <span className="text-lg font-bold" style={{ color: 'var(--text-dim)' }}>{fleetStatus?.retired || 0}</span></div>
-                                </div>
-                            </div>
-                        )}
+                                )}
 
-                        {activeTab === 'collections' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="pb-6 md:pb-0 md:pr-6 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0"><Wallet size={24} /></div>
-                                    <div className="min-w-0">
-                                        <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
-                                        <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                {activeTab === 'collections' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x w-full items-center animate-fadeIn gap-6 md:gap-0" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="pb-6 md:pb-0 md:pr-6 flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0"><Wallet size={24} /></div>
+                                            <div className="min-w-0">
+                                                <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Recovered Funds</div>
+                                                <div className="text-[17px] sm:text-[19px] font-black" style={{ color: 'var(--text-main)' }}>${Math.round(stats?.monthlyRevenue || 0).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-6 md:pt-0 md:pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0"><ShieldAlert size={24} /></div>
+                                            <div className="min-w-0">
+                                                <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
+                                                <div className="text-[17px] sm:text-[19px] font-black text-red-500">${Math.round(stats?.outstandingCollections || 0).toLocaleString()}</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="pt-6 md:pt-0 md:pl-6 flex items-center gap-4" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0"><ShieldAlert size={24} /></div>
-                                    <div className="min-w-0">
-                                        <div className="text-xs uppercase font-bold mb-1" style={{ color: 'var(--text-dim)' }}>Overdue Arrears</div>
-                                        <div className="text-[17px] sm:text-[19px] font-black text-red-500">${Math.round(stats?.outstandingCollections || 0).toLocaleString()}</div>
+                                )}
+
+                                {activeTab === 'pos' && (
+                                    <div className="overflow-x-auto w-full animate-fadeIn max-h-[220px] custom-scrollbar">
+                                        <table className="w-full text-left border-collapse text-xs">
+                                            <thead>
+                                                <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                                    <th className="pb-3">PO Number</th>
+                                                    <th className="pb-3">Supplier</th>
+                                                    <th className="pb-3 text-right">Amount</th>
+                                                    <th className="pb-3 text-center">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                                {pendingPOs.map((po) => (
+                                                    <tr key={po._id} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                                        <td className="py-3 font-black text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`purchase-orders/${po._id}`)}>
+                                                            {po.purchaseOrderNumber}
+                                                        </td>
+                                                        <td className="py-3 text-dim font-medium truncate max-w-[120px]">
+                                                            {typeof po.supplier === 'object' ? po.supplier.name : 'Unknown'}
+                                                        </td>
+                                                        <td className="py-3 text-right font-black">
+                                                            ${po.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-3 text-center">
+                                                            <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+                                                                <button
+                                                                    onClick={() => navigate(`purchase-orders/${po._id}`)}
+                                                                    className="p-1 bg-white/5 border border-white/10 text-dim hover:text-brand-lime rounded transition-all"
+                                                                    title="View Details"
+                                                                >
+                                                                    <Eye size={10} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleQuickApprovePO(po._id)}
+                                                                    className="p-1 bg-white/5 border border-white/10 text-dim hover:text-emerald-400 rounded transition-all"
+                                                                    title="Quick Approve"
+                                                                >
+                                                                    <CheckCircle size={10} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {pendingPOs.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={4} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>
+                                                            No purchase orders awaiting finance approval.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                </div>
-                            </div>
+                                )}
+                            </>
                         )}
-
-                        {activeTab === 'pos' && (
-                            <div className="overflow-x-auto w-full animate-fadeIn max-h-[220px] custom-scrollbar">
-                                <table className="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                            <th className="pb-3">PO Number</th>
-                                            <th className="pb-3">Supplier</th>
-                                            <th className="pb-3 text-right">Amount</th>
-                                            <th className="pb-3 text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        {pendingPOs.map((po) => (
-                                            <tr key={po._id} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
-                                                <td className="py-3 font-black text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`purchase-orders/${po._id}`)}>
-                                                    {po.purchaseOrderNumber}
-                                                </td>
-                                                <td className="py-3 text-dim font-medium truncate max-w-[120px]">
-                                                    {typeof po.supplier === 'object' ? po.supplier.name : 'Unknown'}
-                                                </td>
-                                                <td className="py-3 text-right font-black">
-                                                    ${po.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-3 text-center">
-                                                    <div className="flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={() => navigate(`purchase-orders/${po._id}`)}
-                                                            className="p-1 bg-white/5 border border-white/10 text-dim hover:text-brand-lime rounded transition-all"
-                                                            title="View Details"
-                                                        >
-                                                            <Eye size={10} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleQuickApprovePO(po._id)}
-                                                            className="p-1 bg-white/5 border border-white/10 text-dim hover:text-emerald-400 rounded transition-all"
-                                                            title="Quick Approve"
-                                                        >
-                                                            <CheckCircle size={10} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {pendingPOs.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>
-                                                    No purchase orders awaiting finance approval.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
                     </div>
                 </div>
 
@@ -595,31 +632,37 @@ const FinancialAdminDashboard = () => {
                         {overduePayments?.length > 0 && <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs">{overduePayments.length} Accounts</span>}
                     </h3>
                     <div className="overflow-x-auto max-h-[220px] custom-scrollbar">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                    <th className="pb-3">Driver / Asset</th>
-                                    <th className="pb-3 text-right">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-xs divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                {overduePayments?.map((pay: any, i: number) => (
-                                    <tr key={i} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
-                                        <td className="py-3 font-bold truncate max-w-[150px]">
-                                            {pay.customerName}
-                                            <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.vehicleNumber}</div>
-                                        </td>
-                                        <td className="py-3 text-right font-black text-red-500 text-sm">
-                                            ${pay.amount?.toLocaleString()}
-                                            <div className="text-[9px] font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.daysOverdue}d due</div>
-                                        </td>
+                        {restLoading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <RefreshCw className="animate-spin text-[#C8E600]" size={24} />
+                            </div>
+                        ) : (
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="text-[10px] font-bold uppercase border-b transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                        <th className="pb-3">Driver / Asset</th>
+                                        <th className="pb-3 text-right">Balance</th>
                                     </tr>
-                                ))}
-                                {(!overduePayments || overduePayments.length === 0) && (
-                                    <tr><td colSpan={2} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>Clean sheet. No active accounts in arrears.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="text-xs divide-y transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                    {overduePayments?.map((pay: any, i: number) => (
+                                        <tr key={i} className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                            <td className="py-3 font-bold truncate max-w-[150px]">
+                                                {pay.customerName}
+                                                <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.vehicleNumber}</div>
+                                            </td>
+                                            <td className="py-3 text-right font-black text-red-500 text-sm">
+                                                ${pay.amount?.toLocaleString()}
+                                                <div className="text-[9px] font-bold mt-0.5" style={{ color: 'var(--text-dim)' }}>{pay.daysOverdue}d due</div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!overduePayments || overduePayments.length === 0) && (
+                                        <tr><td colSpan={2} className="text-center py-10 font-medium italic" style={{ color: 'var(--text-dim)' }}>Clean sheet. No active accounts in arrears.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
             </div>
@@ -631,7 +674,11 @@ const FinancialAdminDashboard = () => {
             >
                 <h3 className="text-lg font-black tracking-wide uppercase mb-6" style={{ color: 'var(--text-main)' }}>Vehicle Movement Flow</h3>
                 <div className="h-[350px] w-full">
-                    {vehicleMovement && vehicleMovement.length > 0 ? (
+                    {restLoading ? (
+                        <div className="h-full flex items-center justify-center">
+                            <RefreshCw className="animate-spin text-[#C8E600]" size={36} />
+                        </div>
+                    ) : vehicleMovement && vehicleMovement.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <LineChart data={vehicleMovement} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
@@ -681,7 +728,7 @@ const FinancialAdminDashboard = () => {
 
 // ── HELPER COMPONENTS TIED TO APP DARK THEME VARS ──
 
-const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) => (
+const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg, loading }: any) => (
     <div
         className="rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between border transition-all hover:-translate-y-1 duration-300"
         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -690,12 +737,18 @@ const DashboardStatCard = ({ title, value, trend, trendUp, icon, iconBg }: any) 
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
                 {icon}
             </div>
-            <div className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                {trendUp ? <ArrowUpRight size={10} /> : <div className="rotate-90"><ArrowUpRight size={10} /></div>} {trend}
-            </div>
+            {!loading && (
+                <div className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                    {trendUp ? <ArrowUpRight size={10} /> : <div className="rotate-90"><ArrowUpRight size={10} /></div>} {trend}
+                </div>
+            )}
         </div>
         <div className="mt-5">
-            <div className="text-2xl font-extrabold leading-none tracking-tight" style={{ color: 'var(--text-main)' }}>{value}</div>
+            {loading ? (
+                <div className="h-6 w-24 bg-white/10 rounded animate-pulse" />
+            ) : (
+                <div className="text-2xl font-extrabold leading-none tracking-tight" style={{ color: 'var(--text-main)' }}>{value}</div>
+            )}
             <div className="text-[10px] font-bold mt-1.5 uppercase tracking-wider opacity-85" style={{ color: 'var(--text-dim)' }}>{title}</div>
         </div>
     </div>

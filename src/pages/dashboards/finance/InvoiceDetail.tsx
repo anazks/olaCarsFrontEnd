@@ -486,7 +486,7 @@ const InvoiceDetail = () => {
                                     {ledgerEntries.map((entry, idx) => {
                                         const entryDateStr = entry.entryDate || entry.date;
                                         const dateObj = new Date(entryDateStr);
-                                        const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
+                                        const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
 
                                         return (
                                             <tr

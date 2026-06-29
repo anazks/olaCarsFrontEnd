@@ -136,10 +136,10 @@ const BulkLedgerUploadPage = () => {
             reader.onload = (e) => {
                 try {
                     const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
                     const filteredRows = rawRows.filter((row: any) =>
                         Object.values(row).some(val => val !== undefined && val !== null && String(val).trim() !== "")
                     );
@@ -268,17 +268,9 @@ const BulkLedgerUploadPage = () => {
         if (!dateVal) {
             errorsList.push("Entry Date is required.");
         } else {
-            // Basic date check
-            let parsedDate: Date | null = null;
-            if (dateVal instanceof Date) {
-                parsedDate = isNaN(dateVal.getTime()) ? null : dateVal;
-            } else if (typeof dateVal === 'number') {
-                // Excel format serial
-                parsedDate = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
-            } else {
-                parsedDate = new Date(String(dateVal).trim());
-            }
-            if (!parsedDate || isNaN(parsedDate.getTime())) {
+            // Basic date check — just verify dateStr can produce a non-empty result
+            const parsed = dateStr(dateVal);
+            if (!parsed) {
                 errorsList.push(`Invalid Entry Date: "${dateVal}".`);
             }
         }
@@ -306,14 +298,30 @@ const BulkLedgerUploadPage = () => {
         };
     };
 
-    const dateStr = (val: any) => {
+    const dateStr = (val: any): string => {
         if (!val) return "";
-        if (val instanceof Date) return val.toISOString().split("T")[0];
-        if (typeof val === 'number') {
-            const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-            return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
-        }
+        // With raw:false + dateNF:'yyyy-mm-dd', dates arrive as strings like "2023-09-01"
+        // Just clean and return the string directly — no JS Date object needed
         const str = String(val).trim();
+        if (!str) return "";
+        // Already in yyyy-mm-dd format from xlsx dateNF
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.split("T")[0].split(" ")[0];
+        // Handle dd/mm/yyyy or mm/dd/yyyy or dd-mm-yyyy formats
+        const parts = str.split(/[\/\-.]/);
+        if (parts.length >= 3) {
+            const p0 = parseInt(parts[0], 10);
+            const p1 = parseInt(parts[1], 10);
+            const p2 = parseInt(parts[2], 10);
+            if (parts[0].length === 4) {
+                // yyyy-mm-dd already
+                return `${parts[0]}-${String(p1).padStart(2,'0')}-${String(p2).padStart(2,'0')}`;
+            }
+            // dd/mm/yyyy or mm/dd/yyyy — assume dd/mm/yyyy, swap if month > 12
+            let day = p0, month = p1;
+            const year = p2 < 100 ? 2000 + p2 : p2;
+            if (month > 12 && day <= 12) { day = p1; month = p0; }
+            return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
         return str.split(" ")[0] || str;
     };
 
@@ -323,6 +331,8 @@ const BulkLedgerUploadPage = () => {
 
         setIsValidating(true);
         setValidationProgress(0);
+        setErrorScrollTop(0);
+        setValidScrollTop(0);
 
         const rows = validationResult.rows;
         const total = rows.length;
@@ -444,6 +454,7 @@ const BulkLedgerUploadPage = () => {
                 setActiveTab(hasErrors ? 'errors' : 'valid');
                 setIsValidating(false);
                 toast.success(`Validation complete: ${validRowsCount} valid, ${collectedErrors.length} invalid.`);
+
             }
         };
 
@@ -451,12 +462,11 @@ const BulkLedgerUploadPage = () => {
         setTimeout(processValidationBatch, 0);
     };
 
-    // Client-side CSV generator for invalid rows
-    const handleDownloadErrorsCSV = () => {
-        if (!validationResult || validationResult.errors.length === 0) return;
+    const downloadErrorsCSV = (errors: LocalError[], nameOfFile: string) => {
+        if (!errors || errors.length === 0) return;
 
         const csvHeaders = ["Row Number", "Validation Error Message"];
-        const csvRows = validationResult.errors.map(e => [
+        const csvRows = errors.map(e => [
             String(e.row),
             `"${e.error.replace(/"/g, '""')}"`
         ]);
@@ -466,11 +476,40 @@ const BulkLedgerUploadPage = () => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `import_errors_${fileName.split('.')[0]}.csv`);
+        const name = nameOfFile ? nameOfFile.split('.')[0] : 'ledger';
+        link.setAttribute('download', `validation_errors_${name}.csv`);
         document.body.appendChild(link);
         link.click();
         link.remove();
-        toast.success("Error report downloaded.");
+        toast.success("Validation error report downloaded.");
+    };
+
+    const downloadImportErrorsCSV = (errors: any[], nameOfFile: string) => {
+        if (!errors || errors.length === 0) return;
+
+        const csvHeaders = ["Row Number", "Import Error Message"];
+        const csvRows = errors.map(e => [
+            String(e.row || 'System'),
+            `"${(e.error || e.reason || "").replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = [csvHeaders.join(","), ...csvRows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const name = nameOfFile ? nameOfFile.split('.')[0] : 'ledger';
+        link.setAttribute('download', `import_errors_${name}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Import error report downloaded.");
+    };
+
+    // Client-side CSV generator for invalid rows
+    const handleDownloadErrorsCSV = () => {
+        if (!validationResult || validationResult.errors.length === 0) return;
+        downloadErrorsCSV(validationResult.errors, fileName);
     };
 
     // Upload & Import triggers
@@ -516,11 +555,17 @@ const BulkLedgerUploadPage = () => {
                     if (data.status === "COMPLETED") {
                         if (data.failedRows > 0) {
                             toast(`Import complete with ${data.failedRows} error(s).`, { icon: '⚠️' });
+                            if (data.errors && data.errors.length > 0) {
+                                downloadImportErrorsCSV(data.errors, fileName);
+                            }
                         } else {
                             toast.success("All records imported successfully!");
                         }
                     } else {
                         toast.error("Database import failed.");
+                        if (data.errors && data.errors.length > 0) {
+                            downloadImportErrorsCSV(data.errors, fileName);
+                        }
                     }
 
                     // Reload histories
@@ -541,6 +586,8 @@ const BulkLedgerUploadPage = () => {
         setIsProcessing(false);
         setIsValidating(false);
         setIsImporting(false);
+        setErrorScrollTop(0);
+        setValidScrollTop(0);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -606,8 +653,8 @@ const BulkLedgerUploadPage = () => {
                             onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
                             className={`border-2 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ${dragOver
-                                    ? 'bg-lime/5 border-brand-lime scale-[0.99]'
-                                    : 'border-[var(--border-main)] hover:border-brand-lime bg-[var(--bg-card)]'
+                                ? 'bg-lime/5 border-brand-lime scale-[0.99]'
+                                : 'border-[var(--border-main)] hover:border-brand-lime bg-[var(--bg-card)]'
                                 }`}
                             style={{ minHeight: '260px' }}
                         >
@@ -735,11 +782,10 @@ const BulkLedgerUploadPage = () => {
                                         {validationResult.errors.length > 0 && (
                                             <button
                                                 onClick={() => setActiveTab('errors')}
-                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
-                                                    activeTab === 'errors'
+                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${activeTab === 'errors'
                                                         ? 'border-red-500 text-red-500'
                                                         : 'border-transparent text-dim hover:text-white'
-                                                }`}
+                                                    }`}
                                             >
                                                 Validation Errors ({validationResult.errors.length})
                                             </button>
@@ -747,11 +793,10 @@ const BulkLedgerUploadPage = () => {
                                         {validationResult.validRows > 0 && (
                                             <button
                                                 onClick={() => setActiveTab('valid')}
-                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
-                                                    activeTab === 'valid'
+                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${activeTab === 'valid'
                                                         ? 'border-brand-lime text-brand-lime'
                                                         : 'border-transparent text-dim hover:text-white'
-                                                }`}
+                                                    }`}
                                             >
                                                 Parsed Valid Rows ({validationResult.validRows})
                                             </button>
@@ -785,6 +830,7 @@ const BulkLedgerUploadPage = () => {
                                                 </div>
 
                                                 <div
+                                                    key={`error-scroll-${validationResult.errors.length}`}
                                                     style={{ height: `${errorContainerHeight}px`, overflowY: 'auto', position: 'relative' }}
                                                     onScroll={(e) => setErrorScrollTop(e.currentTarget.scrollTop)}
                                                 >
@@ -832,6 +878,7 @@ const BulkLedgerUploadPage = () => {
                                                 </div>
 
                                                 <div
+                                                    key={`valid-scroll-${validationResult.validEntries?.length || 0}`}
                                                     style={{ height: `350px`, overflowY: 'auto', position: 'relative' }}
                                                     onScroll={(e) => setValidScrollTop(e.currentTarget.scrollTop)}
                                                 >
@@ -873,7 +920,7 @@ const BulkLedgerUploadPage = () => {
                             )}
 
                             {/* Database Import triggers */}
-                            {validationResult && validationResult.validRows > 0 && validationResult.errors.length === 0 && !isValidating && !isImporting && !showSummary && (
+                            {validationResult && validationResult.validRows > 0 && !isValidating && !isImporting && !showSummary && (
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={handleImport}
@@ -920,16 +967,15 @@ const BulkLedgerUploadPage = () => {
 
                             {/* Final success/failure Import Report summary */}
                             {showSummary && importProgress && (
-                                <div 
-                                    className={`p-5 rounded-xl border space-y-4 ${
-                                        importProgress.status === "FAILED"
+                                <div
+                                    className={`p-5 rounded-xl border space-y-4 ${importProgress.status === "FAILED"
                                             ? 'border-red-500/20 bg-red-500/5'
                                             : 'border-brand-lime/20 bg-brand-lime/5'
-                                    }`}
-                                    style={{ 
-                                        background: importProgress.status === "FAILED" 
-                                            ? 'rgba(239,68,68,0.03)' 
-                                            : 'rgba(200,230,0,0.03)' 
+                                        }`}
+                                    style={{
+                                        background: importProgress.status === "FAILED"
+                                            ? 'rgba(239,68,68,0.03)'
+                                            : 'rgba(200,230,0,0.03)'
                                     }}
                                 >
                                     <div className="flex items-center gap-2.5">
@@ -967,10 +1013,18 @@ const BulkLedgerUploadPage = () => {
                                     {/* Backend Execution Errors list */}
                                     {importProgress.errors && importProgress.errors.length > 0 && (
                                         <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
-                                            <div className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                                                Database Import Error Reasons:
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-xs font-bold text-red-400 uppercase tracking-wider">
+                                                    Database Import Error Reasons:
+                                                </div>
+                                                <button
+                                                    onClick={() => downloadImportErrorsCSV(importProgress.errors, fileName)}
+                                                    className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"
+                                                >
+                                                    <Download size={11} /> Download Import Error Report (CSV)
+                                                </button>
                                             </div>
-                                            <div 
+                                            <div
                                                 className="max-h-[250px] overflow-y-auto rounded-xl border border-red-500/10 p-3 space-y-2 font-mono text-[11px] bg-black/20"
                                             >
                                                 {importProgress.errors.map((err: any, idx: number) => (
@@ -1041,8 +1095,8 @@ const BulkLedgerUploadPage = () => {
                                             </div>
                                             <span
                                                 className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${h.status === 'COMPLETED'
-                                                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                        : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                    : 'bg-red-500/10 text-red-400 border-red-500/20'
                                                     }`}
                                             >
                                                 {h.status}

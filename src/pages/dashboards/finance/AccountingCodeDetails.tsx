@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-    BookMarked, 
-    ArrowLeft, 
+import {
+    BookMarked,
+    ArrowLeft,
     List,
     AlertTriangle,
     FileText,
@@ -30,13 +30,13 @@ const AccountingCodeDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [code, setCode] = useState<AccountingCode | null>(null);
     const [entries, setEntries] = useState<LedgerEntry[]>([]);
-    
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
@@ -54,7 +54,7 @@ const AccountingCodeDetails = () => {
             // 1. Fetch the accounting code details
             const allCodes = await getAllAccountingCodes() as AccountingCode[];
             const foundCode = allCodes.find(c => c._id === id || (c as any).id === id);
-            
+
             if (!foundCode) {
                 setError("Accounting code not found.");
                 setLoading(false);
@@ -217,20 +217,20 @@ const AccountingCodeDetails = () => {
 
     return (
         <div className="container-responsive space-y-6 pb-20 animate-fade-in">
-            <Breadcrumbs 
+            <Breadcrumbs
                 items={[
                     { label: 'Finance', path: '../../finance-dashboard' },
                     window.location.pathname.includes('/bank-accounts/')
                         ? { label: 'Bank Accounts', path: '../bank-accounts' }
                         : { label: 'Chart of Accounts', path: '../chart-of-accounts' },
                     { label: code.code, active: true }
-                ]} 
+                ]}
             />
 
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
                 <div>
-                    <button 
+                    <button
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
                         style={{ color: 'var(--brand-lime)' }}
@@ -248,7 +248,7 @@ const AccountingCodeDetails = () => {
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>
-                
+
                 {/* Stats */}
                 <div className="flex items-center gap-6 mt-4 sm:mt-0">
                     <div className="text-right">
@@ -307,22 +307,22 @@ const AccountingCodeDetails = () => {
                                 {entries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime()) 
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                                    const formattedDate = !isNaN(dateObj.getTime())
+                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                                         : entryDateStr;
 
-                                    const debitVal = entry.amount !== undefined 
-                                        ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                                    const debitVal = entry.amount !== undefined
+                                        ? (entry.type === 'DEBIT' ? entry.amount : 0)
                                         : (entry.debit || 0);
-                                        
-                                    const creditVal = entry.amount !== undefined 
-                                        ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+
+                                    const creditVal = entry.amount !== undefined
+                                        ? (entry.type === 'CREDIT' ? entry.amount : 0)
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr 
+                                        <tr
                                             key={entry._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/chart-of-accounts/')[0];
@@ -333,10 +333,10 @@ const AccountingCodeDetails = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                 {renderDescriptionWithLinks(entry.description)}
-                                                 {entry.referenceId && (
-                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
-                                                 )}
+                                                {renderDescriptionWithLinks(entry.description)}
+                                                {entry.referenceId && (
+                                                    <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2 text-xs opacity-70" style={{ color: 'var(--text-dim)' }}>
@@ -372,9 +372,9 @@ const AccountingCodeDetails = () => {
                         <div className="text-sm" style={{ color: 'var(--text-dim)' }}>
                             Showing <span className="font-bold" style={{ color: 'var(--text-main)' }}>{((page - 1) * limit) + 1}</span> to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{Math.min(page * limit, pagination.total)}</span> of <span className="font-bold" style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
-                            <select 
+                            <select
                                 value={limit}
                                 onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
                                 className="px-2 py-1 rounded border text-xs outline-none bg-transparent"
@@ -391,15 +391,15 @@ const AccountingCodeDetails = () => {
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
                                 >
                                     Previous
                                 </button>
-                                
+
                                 <div className="flex items-center px-4">
                                     <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
                                         Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
@@ -410,8 +410,8 @@ const AccountingCodeDetails = () => {
                                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                     disabled={page === pagination.pages}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
@@ -438,8 +438,8 @@ const AccountingCodeDetails = () => {
                         <form onSubmit={handleImportSubmit} className="p-8 space-y-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Account</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={`${code.name} (${code.code})`}
                                     disabled
                                     className="w-full border rounded-2xl px-4 py-3 text-sm font-bold opacity-60"
@@ -459,8 +459,8 @@ const AccountingCodeDetails = () => {
                                             <p className="text-[10px] text-dim">Maximum file size: 5MB</p>
                                         </div>
                                     )}
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         accept=".csv,.ofx,.qif"
                                         onChange={e => setImportFile(e.target.files?.[0] || null)}
                                         className="absolute inset-0 opacity-0 cursor-pointer"
@@ -475,7 +475,7 @@ const AccountingCodeDetails = () => {
                             </div>
 
                             <div className="pt-4 flex gap-3">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setIsImportModalOpen(false)}
                                     className="flex-1 py-4 bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/10 transition-all border"
@@ -483,7 +483,7 @@ const AccountingCodeDetails = () => {
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={importing}
                                     className="flex-[2] py-4 bg-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md"

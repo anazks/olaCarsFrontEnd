@@ -99,7 +99,7 @@ const GeneralLedger = () => {
             if (endDate) filters.endDate = endDate;
             if (selectedCode !== 'ALL') filters.accountingCode = selectedCode;
             if (debouncedSearch) filters.search = debouncedSearch;
-            
+
             // Add pagination
             filters.page = page;
             filters.limit = limit;
@@ -227,13 +227,13 @@ const GeneralLedger = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            <Breadcrumbs 
+            <Breadcrumbs
                 items={[
                     { label: 'Finance', path: '#' },
                     { label: 'General Ledger', active: true }
-                ]} 
+                ]}
             />
-            
+
             {/* Compact Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
@@ -280,13 +280,13 @@ const GeneralLedger = () => {
             {/* Filters Bar */}
             <div className="p-4 rounded-2xl border transition-colors duration-300 flex flex-col sm:flex-row gap-4 flex-wrap" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="flex items-center gap-2 flex-grow max-w-xs">
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         placeholder="Search description, code..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
-                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
+                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
 
@@ -297,15 +297,15 @@ const GeneralLedger = () => {
                     <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Date:</span>
                 </div>
                 <div className="flex items-center gap-2 flex-grow max-w-xs">
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
-                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
+                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }}
                     />
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={endDate}
                         min={startDate}
                         onChange={(e) => {
@@ -317,21 +317,21 @@ const GeneralLedger = () => {
                             }
                         }}
                         className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
-                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }} 
+                        style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: 'dark' }}
                     />
                 </div>
-                
+
                 <div className="hidden sm:block w-px h-8 mx-1" style={{ background: 'var(--border-main)' }}></div>
-                
+
                 <div className="flex items-center gap-2">
                     <Filter size={18} style={{ color: 'var(--text-dim)' }} />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Account:</span>
                 </div>
-                <select 
+                <select
                     value={selectedCode}
                     onChange={(e) => setSelectedCode(e.target.value)}
                     className="flex-grow sm:max-w-[200px] px-3 py-2 rounded-lg text-sm outline-none transition-colors border"
-                    style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
+                    style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 >
                     <option value="ALL">All Accounts</option>
                     {accountingCodes.map(c => (
@@ -341,11 +341,11 @@ const GeneralLedger = () => {
 
                 {/* Clear Filters */}
                 {(startDate !== getThisMonthStart() || endDate !== getThisMonthEnd() || selectedCode !== 'ALL' || searchQuery !== '') && (
-                    <button 
-                        onClick={() => { 
-                            setStartDate(getThisMonthStart()); 
-                            setEndDate(getThisMonthEnd()); 
-                            setSelectedCode('ALL'); 
+                    <button
+                        onClick={() => {
+                            setStartDate(getThisMonthStart());
+                            setEndDate(getThisMonthEnd());
+                            setSelectedCode('ALL');
                             setSearchQuery('');
                         }}
                         className="text-sm font-medium hover:underline ml-auto"
@@ -355,10 +355,10 @@ const GeneralLedger = () => {
                     </button>
                 )}
             </div>
-            
+
             {/* Navigation Shortcuts */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div 
+                <div
                     onClick={() => navigate('../taxes')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -370,7 +370,7 @@ const GeneralLedger = () => {
                     <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Configure tax settings</p>
                 </div>
 
-                <div 
+                <div
                     onClick={() => navigate('../chart-of-accounts')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -382,7 +382,7 @@ const GeneralLedger = () => {
                     <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Manage accounting codes</p>
                 </div>
 
-                <div 
+                <div
                     onClick={() => navigate('../bills')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -394,7 +394,7 @@ const GeneralLedger = () => {
                     <p className="text-[10px] mt-1 opacity-60" style={{ color: 'var(--text-dim)' }}>Track vendor bills</p>
                 </div>
 
-                <div 
+                <div
                     onClick={() => navigate('../invoices')}
                     className="p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all group"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -459,24 +459,24 @@ const GeneralLedger = () => {
                                     // Formatting the date
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime()) 
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                                    const formattedDate = !isNaN(dateObj.getTime())
+                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                                         : entryDateStr;
 
                                     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
 
-                                    const debitVal = entry.amount !== undefined 
-                                        ? (entry.type === 'DEBIT' ? entry.amount : 0) 
+                                    const debitVal = entry.amount !== undefined
+                                        ? (entry.type === 'DEBIT' ? entry.amount : 0)
                                         : (entry.debit || 0);
-                                        
-                                    const creditVal = entry.amount !== undefined 
-                                        ? (entry.type === 'CREDIT' ? entry.amount : 0) 
+
+                                    const creditVal = entry.amount !== undefined
+                                        ? (entry.type === 'CREDIT' ? entry.amount : 0)
                                         : (entry.credit || 0);
 
                                     return (
-                                        <tr 
-                                            key={entry._id} 
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer" 
+                                        <tr
+                                            key={entry._id}
+                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => navigate(`./${entry._id}`)}
                                         >
@@ -484,12 +484,12 @@ const GeneralLedger = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                 {renderDescriptionWithLinks(entry.description)}
-                                                 {entry.referenceId && (
-                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
-                                                 )}
+                                                {renderDescriptionWithLinks(entry.description)}
+                                                {entry.referenceId && (
+                                                    <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
+                                                )}
                                             </td>
-                                            <td 
+                                            <td
                                                 className="px-6 py-4"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -530,7 +530,7 @@ const GeneralLedger = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button 
+                                                    <button
                                                         onClick={() => navigate(`./${entry._id}`)}
                                                         className="inline-flex items-center justify-center p-1.5 rounded-lg transition-all hover:bg-brand-lime/10 text-[var(--brand-lime)] border border-transparent hover:border-brand-lime/20 cursor-pointer"
                                                         style={{ color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.06)' }}
@@ -564,9 +564,9 @@ const GeneralLedger = () => {
                         <div className="text-sm" style={{ color: 'var(--text-dim)' }}>
                             Showing <span className="font-bold" style={{ color: 'var(--text-main)' }}>{((page - 1) * limit) + 1}</span> to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{Math.min(page * limit, pagination.total)}</span> of <span className="font-bold" style={{ color: 'var(--text-main)' }}>{pagination.total}</span> entries
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
-                            <select 
+                            <select
                                 value={limit}
                                 onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
                                 className="px-2 py-1 rounded border text-xs outline-none bg-transparent"
@@ -583,15 +583,15 @@ const GeneralLedger = () => {
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === 1 ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === 1 ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
                                 >
                                     Previous
                                 </button>
-                                
+
                                 <div className="flex items-center px-4">
                                     <span className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
                                         Page <span className="font-bold" style={{ color: 'rgb(200,230,0)' }}>{page}</span> of {pagination.pages}
@@ -602,8 +602,8 @@ const GeneralLedger = () => {
                                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                     disabled={page === pagination.pages}
                                     className="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_10px_rgba(200,230,0,0.2)]"
-                                    style={{ 
-                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)', 
+                                    style={{
+                                        borderColor: page === pagination.pages ? 'var(--border-main)' : 'rgba(200,230,0,0.5)',
                                         color: page === pagination.pages ? 'var(--text-dim)' : 'rgb(200,230,0)',
                                         background: 'transparent'
                                     }}
@@ -619,11 +619,11 @@ const GeneralLedger = () => {
             {/* Create Journal Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                    <CreateJournalEntry 
-                        onClose={() => setShowCreateModal(false)} 
+                    <CreateJournalEntry
+                        onClose={() => setShowCreateModal(false)}
                         onSuccess={() => {
                             fetchData();
-                        }} 
+                        }}
                     />
                 </div>
             )}

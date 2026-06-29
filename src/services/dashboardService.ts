@@ -5,6 +5,7 @@ export interface DashboardFilters {
     branch?: string;
     startDate?: string;
     endDate?: string;
+    onlyKpi?: boolean;
 }
 
 export const getFinancialDashboardSummary = async (params: DashboardFilters = {}) => {
