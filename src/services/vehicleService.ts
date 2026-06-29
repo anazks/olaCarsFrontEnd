@@ -176,6 +176,8 @@ export interface MaintenanceDetails {
     type?: MaintenanceType;
     estimatedCompletionDate?: string;
     assignedTo?: string;
+    maintenanceThresholdKm?: number;
+    lastMaintenanceOdometer?: number;
 }
 
 export interface SuspensionDetails {

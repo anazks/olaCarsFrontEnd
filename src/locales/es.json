@@ -221,6 +221,22 @@
     }
   },
   "dashboards": {
+    "fleetPerformance": {
+      "brandChartTitle": "MARCA",
+      "modelChartTitle": "MODELO",
+      "ourBrands": "Nuestras Marcas",
+      "qtyPerBrand": "Cantidad por Marca",
+      "qtyPerModel": "Cantidad por Modelo",
+      "brand": "Marca",
+      "model": "Modelo",
+      "count": "Cantidad",
+      "maintenanceByDay": "MANTENIMIENTO POR DIA",
+      "maintenanceOverdue": "MANTENIMIENTO VENCIDO",
+      "maintenanceDate": "FECHA DE MANTENIMIENTO",
+      "overdue": "OVERDUE",
+      "above7500": "ABOVE 7500KM",
+      "bw4000_5000": "B.W 4000KM - 5000KM"
+    },
     "common": {
       "welcomeBack": "Bienvenido de nuevo.",
       "systemOverview": "Aquí está el resumen de su sistema.",

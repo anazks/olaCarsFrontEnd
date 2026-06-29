@@ -79,3 +79,11 @@ export const getWorkOrdersForVehicle = async (vehicleId: string): Promise<WorkOr
     // The backend returns { success: true, data: [...] }
     return response.data.data;
 };
+
+export const getAllWorkOrders = async (filters: any = {}): Promise<{ success: boolean; data: WorkOrder[] }> => {
+    const response = await api.get('/api/work-orders', {
+        params: filters
+    });
+    return response.data;
+};
+
