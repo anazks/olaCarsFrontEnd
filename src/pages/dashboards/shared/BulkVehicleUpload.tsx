@@ -16,6 +16,7 @@ interface ParsedVehicle {
     vin: string;
     registrationNumber: string;
     fleetNumber?: string;
+    weeklyRent?: number;
     status?: string;
     _rowErrors: string[];
 }
@@ -29,7 +30,7 @@ interface BulkVehicleUploadProps {
 const AUTO_ASSIGN_ROLES = ['operationstaff', 'financestaff', 'branchmanager'];
 
 const CSV_COLUMNS = [
-    'Sl No', 'Vehicle No', 'FLEET NO', 'STATUS OF THE VEHICLES', 'VEHICLES MODELS', 'VIN NUMBER', 'YEAR OF ACTIVE'
+    'Sl No', 'Vehicle No', 'FLEET NO', 'STATUS OF THE VEHICLES', 'VEHICLES MODELS', 'WEEKLY RENT', 'VIN NUMBER', 'YEAR OF ACTIVE'
 ];
 
 const SAMPLE_DATA = [
@@ -39,6 +40,7 @@ const SAMPLE_DATA = [
         'FLEET NO': 'FL-001',
         'STATUS OF THE VEHICLES': 'Active',
         'VEHICLES MODELS': 'Toyota Corolla',
+        'WEEKLY RENT': 150,
         'VIN NUMBER': '1NXBR32E6NZ000001',
         'YEAR OF ACTIVE': 2022
     },
@@ -48,6 +50,7 @@ const SAMPLE_DATA = [
         'FLEET NO': 'FL-002',
         'STATUS OF THE VEHICLES': 'Maintenance',
         'VEHICLES MODELS': 'Nissan X-Trail',
+        'WEEKLY RENT': 180,
         'VIN NUMBER': 'JN1TA0CP8LX000002',
         'YEAR OF ACTIVE': 2021
     }
@@ -177,7 +180,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
 
     const parseYear = (val: any): number => {
         if (val === undefined || val === null || val === '') return NaN;
-
+        
         // Handle JS Date objects
         if (val instanceof Date) {
             return val.getFullYear();
@@ -217,7 +220,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         }
 
         const parts = str.split(/[\/\-\.\s,]+/);
-
+        
         for (const part of parts) {
             if (/^\d{4}$/.test(part)) {
                 return parseInt(part, 10);
@@ -257,7 +260,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const fleetNumber = (normalized["FLEET NO"] || normalized["FLEET_NO"] || "").toString().trim();
         const status = (normalized["STATUS OF THE VEHICLES"] || normalized["STATUS_OF_THE_VEHICLES"] || normalized["STATUS"] || "").toString().trim();
         const vehicleModelStr = (normalized["VEHICLES MODELS"] || normalized["VEHICLES_MODELS"] || normalized["VEHICLE MODEL"] || normalized["VEHICLE_MODEL"] || "").toString().trim();
-
+        
         let make = "";
         let model = "";
         if (vehicleModelStr) {
@@ -279,6 +282,9 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const yearVal = normalized["YEAR OF ACTIVE"] || normalized["YEAR_OF_ACTIVE"] || normalized["YEAR"] || "";
         const year = parseYear(yearVal);
 
+        const weeklyRentVal = normalized["WEEKLY RENT"] || normalized["WEEKLY_RENT"] || "";
+        const weeklyRent = weeklyRentVal !== "" && !isNaN(Number(weeklyRentVal)) ? Number(weeklyRentVal) : undefined;
+
         return {
             make,
             model,
@@ -286,16 +292,17 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             vin,
             registrationNumber,
             fleetNumber,
+            weeklyRent,
             status,
         };
     };
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-
+        
         if (!row.make?.trim()) errors.push('Missing make (extracted from VEHICLES MODELS)');
         if (!row.model?.trim()) errors.push('Missing model (extracted from VEHICLES MODELS)');
-
+        
         if (!row.year || isNaN(Number(row.year))) {
             errors.push('Missing or invalid YEAR OF ACTIVE');
         } else {
@@ -306,7 +313,9 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             }
         }
 
-
+        if (row.weeklyRent !== undefined && (isNaN(Number(row.weeklyRent)) || Number(row.weeklyRent) < 0)) {
+            errors.push('WEEKLY RENT must be a positive number');
+        }
 
         if (!row.registrationNumber?.trim()) {
             errors.push('Missing Vehicle No (Plate Number)');
@@ -330,7 +339,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
+                    
                     const rows: ParsedVehicle[] = (jsonData as any[]).map(row => {
                         const norm = normalizeRow(row);
                         return {
@@ -444,24 +453,16 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const totalVehicles = validVehicles.length;
         const allCreated: any[] = [];
         const allErrors: any[] = [];
-        const allSkipped: any[] = [];
 
         try {
             for (let i = 0; i < totalVehicles; i += batchSize) {
                 const batch = validVehicles.slice(i, i + batchSize);
                 const payload = batch.map(({ _rowErrors, ...rest }) => rest);
-
+                
                 try {
                     const res = await bulkCreateVehicles(payload, branchToSend);
                     if (res.data?.created) {
                         allCreated.push(...res.data.created);
-                    }
-                    if (res.data?.skipped) {
-                        const adjustedSkipped = res.data.skipped.map((skip: any) => ({
-                            ...skip,
-                            row: i + skip.row
-                        }));
-                        allSkipped.push(...adjustedSkipped);
                     }
                     if (res.data?.errors) {
                         const adjustedErrors = res.data.errors.map((err: any) => ({
@@ -471,33 +472,35 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                         allErrors.push(...adjustedErrors);
                     }
                 } catch (batchErr: any) {
-                    const errMsg = batchErr?.response?.data?.message || batchErr.message || 'Batch creation failed';
-                    batch.forEach((_, batchIdx) => {
-                        allErrors.push({
-                            row: i + batchIdx + 1,
-                            message: errMsg
+                    const errorResponseData = batchErr?.response?.data;
+                    if (errorResponseData?.data?.errors && Array.isArray(errorResponseData.data.errors)) {
+                        const adjustedErrors = errorResponseData.data.errors.map((err: any) => ({
+                            ...err,
+                            row: i + err.row
+                        }));
+                        allErrors.push(...adjustedErrors);
+                    } else {
+                        const errMsg = errorResponseData?.message || batchErr.message || 'Batch creation failed';
+                        batch.forEach((_, batchIdx) => {
+                            allErrors.push({
+                                row: i + batchIdx + 1,
+                                message: errMsg
+                            });
                         });
-                    });
+                    }
                 }
-
+                
                 const currentProgress = Math.min(100, Math.round(((i + batch.length) / totalVehicles) * 100));
                 setUploadProgress(currentProgress);
             }
-
+            
             setResult({
                 created: allCreated,
-                errors: allErrors,
-                skipped: allSkipped
+                errors: allErrors
             });
-
-            if (allCreated.length > 0 || allSkipped.length > 0) {
-                if (allCreated.length > 0 && allSkipped.length > 0) {
-                    toast.success(`Successfully uploaded ${allCreated.length} vehicle(s). ${allSkipped.length} duplicate(s) skipped.`);
-                } else if (allCreated.length > 0) {
-                    toast.success(`Successfully uploaded ${allCreated.length} vehicle(s).`);
-                } else {
-                    toast.success(`All ${allSkipped.length} duplicate vehicles were skipped.`);
-                }
+            
+            if (allCreated.length > 0) {
+                toast.success(`Successfully uploaded ${allCreated.length} vehicle(s).`);
                 onSuccess();
             } else {
                 toast.error('Failed to upload vehicles.');
@@ -562,7 +565,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                         <div className="space-y-4 py-16 text-center flex flex-col items-center justify-center">
                             <Loader2 size={40} className="animate-spin mb-4" style={{ color: 'var(--brand-lime)' }} />
                             <div className="w-full max-w-md rounded-full h-3 border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                <div
+                                <div 
                                     className="h-full rounded-full transition-all duration-300"
                                     style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
                                 />
@@ -578,472 +581,458 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                         <>
                             {/* Branch Selector */}
                             {needsBranchSelection && (
-                                <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.03)' }}>
-                                    <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
-                                        Assign Vehicles to Branch *
-                                    </label>
+                        <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.03)' }}>
+                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
+                                Assign Vehicles to Branch *
+                            </label>
 
-                                    {branchesLoading && (
-                                        <div className="flex items-center gap-2 py-3">
-                                            <Loader2 size={16} className="animate-spin" style={{ color: 'var(--brand-lime)' }} />
-                                            <span className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading branches…</span>
-                                        </div>
-                                    )}
+                            {branchesLoading && (
+                                <div className="flex items-center gap-2 py-3">
+                                    <Loader2 size={16} className="animate-spin" style={{ color: 'var(--brand-lime)' }} />
+                                    <span className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading branches…</span>
+                                </div>
+                            )}
 
-                                    {!branchesLoading && branches.length === 0 && !showAddBranch && (
-                                        <div className="flex flex-col items-center gap-3 py-6">
-                                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.08)' }}>
-                                                <Building2 size={24} style={{ color: 'var(--brand-lime)' }} />
-                                            </div>
-                                            <p className="text-sm font-medium text-center" style={{ color: 'var(--text-dim)' }}>
-                                                No branches found. Create one first to assign vehicles.
+                            {!branchesLoading && branches.length === 0 && !showAddBranch && (
+                                <div className="flex flex-col items-center gap-3 py-6">
+                                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.08)' }}>
+                                        <Building2 size={24} style={{ color: 'var(--brand-lime)' }} />
+                                    </div>
+                                    <p className="text-sm font-medium text-center" style={{ color: 'var(--text-dim)' }}>
+                                        No branches found. Create one first to assign vehicles.
+                                    </p>
+                                    <button
+                                        onClick={() => setShowAddBranch(true)}
+                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
+                                        style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                    >
+                                        <Plus size={16} /> Add Branch
+                                    </button>
+                                </div>
+                            )}
+
+                            {!branchesLoading && branches.length > 0 && (
+                                <>
+                                    <div className="relative">
+                                        <select
+                                            value={selectedBranch}
+                                            onChange={(e) => setSelectedBranch(e.target.value)}
+                                            className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">— Select a branch —</option>
+                                            {branches.map(b => (
+                                                <option key={b._id} value={b._id}>{b.name}{b.city ? ` — ${b.city}` : ''}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                    </div>
+                                    <div className="flex items-center justify-between mt-2">
+                                        {selectedBranch ? (
+                                            <p className="text-xs font-medium" style={{ color: 'var(--brand-lime)' }}>
+                                                ✓ All uploaded vehicles will be assigned to <strong>{selectedBranchName}</strong>
                                             </p>
-                                            <button
-                                                onClick={() => setShowAddBranch(true)}
-                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg border-none"
-                                                style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
-                                            >
-                                                <Plus size={16} /> Add Branch
-                                            </button>
-                                        </div>
-                                    )}
+                                        ) : <span />}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAddBranch(!showAddBranch)}
+                                            className="flex items-center gap-1 text-xs font-bold transition-all hover:scale-105"
+                                            style={{ color: 'var(--brand-lime)' }}
+                                        >
+                                            <Plus size={12} /> {showAddBranch ? 'Cancel' : 'Add New Branch'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
 
-                                    {!branchesLoading && branches.length > 0 && (
-                                        <>
-                                            <div className="relative">
-                                                <select
-                                                    value={selectedBranch}
-                                                    onChange={(e) => setSelectedBranch(e.target.value)}
-                                                    className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
-                                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                >
-                                                    <option value="">— Select a branch —</option>
-                                                    {branches.map(b => (
-                                                        <option key={b._id} value={b._id}>{b.name}{b.city ? ` — ${b.city}` : ''}</option>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                            </div>
-                                            <div className="flex items-center justify-between mt-2">
-                                                {selectedBranch ? (
-                                                    <p className="text-xs font-medium" style={{ color: 'var(--brand-lime)' }}>
-                                                        ✓ All uploaded vehicles will be assigned to <strong>{selectedBranchName}</strong>
+                            {showAddBranch && (
+                                <div className="mt-3 p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                    <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Quick Add Branch</p>
+
+                                    {countryManagers.length === 0 ? (
+                                        <div className="space-y-3">
+                                            {!showAddCM ? (
+                                                <div className="flex flex-col items-center gap-3 py-5">
+                                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(234,179,8,0.1)' }}>
+                                                        <UserCircle size={22} style={{ color: '#eab308' }} />
+                                                    </div>
+                                                    <p className="text-sm font-medium text-center" style={{ color: 'var(--text-dim)' }}>
+                                                        No Country Managers found. Create one to continue.
                                                     </p>
-                                                ) : <span />}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowAddBranch(!showAddBranch)}
-                                                    className="flex items-center gap-1 text-xs font-bold transition-all hover:scale-105"
-                                                    style={{ color: 'var(--brand-lime)' }}
-                                                >
-                                                    <Plus size={12} /> {showAddBranch ? 'Cancel' : 'Add New Branch'}
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {showAddBranch && (
-                                        <div className="mt-3 p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                            <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Quick Add Branch</p>
-
-                                            {countryManagers.length === 0 ? (
-                                                <div className="space-y-3">
-                                                    {!showAddCM ? (
-                                                        <div className="flex flex-col items-center gap-3 py-5">
-                                                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(234,179,8,0.1)' }}>
-                                                                <UserCircle size={22} style={{ color: '#eab308' }} />
-                                                            </div>
-                                                            <p className="text-sm font-medium text-center" style={{ color: 'var(--text-dim)' }}>
-                                                                No Country Managers found. Create one to continue.
-                                                            </p>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowAddCM(true)}
-                                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105 border-none"
-                                                                style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
-                                                            >
-                                                                <Plus size={14} /> Create Country Manager
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="space-y-3 p-3 rounded-lg border" style={{ borderColor: 'rgba(234,179,8,0.3)', background: 'rgba(234,179,8,0.03)' }}>
-                                                            <div className="flex items-center gap-2">
-                                                                <UserCircle size={16} style={{ color: '#eab308' }} />
-                                                                <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#eab308' }}>Create Country Manager</span>
-                                                            </div>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                                <input
-                                                                    type="text" placeholder="Full Name *"
-                                                                    value={cmForm.fullName}
-                                                                    onChange={e => setCmForm({ ...cmForm, fullName: e.target.value })}
-                                                                    className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                                />
-                                                                <input
-                                                                    type="email" placeholder="Email *"
-                                                                    value={cmForm.email}
-                                                                    onChange={e => setCmForm({ ...cmForm, email: e.target.value })}
-                                                                    className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                                />
-                                                                <input
-                                                                    type="password" placeholder="Password *"
-                                                                    value={cmForm.password}
-                                                                    onChange={e => setCmForm({ ...cmForm, password: e.target.value })}
-                                                                    className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                                />
-                                                                <input
-                                                                    type="text" placeholder="Phone *"
-                                                                    value={cmForm.phone}
-                                                                    onChange={e => setCmForm({ ...cmForm, phone: e.target.value })}
-                                                                    className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                                />
-                                                            </div>
-                                                            <select
-                                                                value={cmForm.country}
-                                                                onChange={e => setCmForm({ ...cmForm, country: e.target.value })}
-                                                                className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                            >
-                                                                <option value="">Select Country *</option>
-                                                                {countries.map(c => (
-                                                                    <option key={c} value={c}>{c}</option>
-                                                                ))}
-                                                            </select>
-                                                            {cmFormError && (
-                                                                <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
-                                                                    {cmFormError}
-                                                                </div>
-                                                            )}
-                                                            <div className="flex justify-end gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => { setShowAddCM(false); setCmFormError(null); }}
-                                                                    className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
-                                                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
-                                                                >
-                                                                    Back
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleCreateCM}
-                                                                    disabled={addingCM}
-                                                                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50 border-none"
-                                                                    style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
-                                                                >
-                                                                    {addingCM ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                                                                    {addingCM ? 'Creating...' : 'Create & Continue'}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowAddCM(true)}
+                                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105 border-none"
+                                                        style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
+                                                    >
+                                                        <Plus size={14} /> Create Country Manager
+                                                    </button>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                <div className="space-y-3 p-3 rounded-lg border" style={{ borderColor: 'rgba(234,179,8,0.3)', background: 'rgba(234,179,8,0.03)' }}>
+                                                    <div className="flex items-center gap-2">
+                                                        <UserCircle size={16} style={{ color: '#eab308' }} />
+                                                        <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#eab308' }}>Create Country Manager</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         <input
-                                                            type="text" placeholder="Branch Name *"
-                                                            value={quickBranch.name}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, name: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                        />
-                                                        <input
-                                                            type="text" placeholder="Branch Code *"
-                                                            value={quickBranch.code}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, code: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                            type="text" placeholder="Full Name *"
+                                                            value={cmForm.fullName}
+                                                            onChange={e => setCmForm({ ...cmForm, fullName: e.target.value })}
+                                                            className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                         />
                                                         <input
                                                             type="email" placeholder="Email *"
-                                                            value={quickBranch.email}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, email: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                            value={cmForm.email}
+                                                            onChange={e => setCmForm({ ...cmForm, email: e.target.value })}
+                                                            className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                         />
                                                         <input
-                                                            type="text" placeholder="Phone"
-                                                            value={quickBranch.phone}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, phone: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                            type="password" placeholder="Password *"
+                                                            value={cmForm.password}
+                                                            onChange={e => setCmForm({ ...cmForm, password: e.target.value })}
+                                                            className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                         />
                                                         <input
-                                                            type="text" placeholder="City"
-                                                            value={quickBranch.city}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, city: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                            type="text" placeholder="Phone *"
+                                                            value={cmForm.phone}
+                                                            onChange={e => setCmForm({ ...cmForm, phone: e.target.value })}
+                                                            className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                                         />
-                                                        <input
-                                                            type="text" placeholder="State"
-                                                            value={quickBranch.state}
-                                                            onChange={e => setQuickBranch({ ...quickBranch, state: e.target.value })}
-                                                            className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                                                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                        />
-                                                        <div className="relative">
-                                                            <select
-                                                                value={quickBranch.countryManager}
-                                                                onChange={e => setQuickBranch({ ...quickBranch, countryManager: e.target.value })}
-                                                                className="w-full px-3 py-2.5 pr-8 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime appearance-none"
-                                                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                            >
-                                                                <option value="">Country Manager *</option>
-                                                                {countryManagers.map(cm => (
-                                                                    <option key={cm._id} value={cm._id}>{cm.fullName} ({cm.country})</option>
-                                                                ))}
-                                                            </select>
-                                                            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                                        </div>
                                                     </div>
-                                                    <input
-                                                        type="text" placeholder="Full Address"
-                                                        value={quickBranch.address}
-                                                        onChange={e => setQuickBranch({ ...quickBranch, address: e.target.value })}
-                                                        className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    <select
+                                                        value={cmForm.country}
+                                                        onChange={e => setCmForm({ ...cmForm, country: e.target.value })}
+                                                        className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
                                                         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                    />
+                                                    >
+                                                        <option value="">Select Country *</option>
+                                                        {countries.map(c => (
+                                                            <option key={c} value={c}>{c}</option>
+                                                        ))}
+                                                    </select>
+                                                    {cmFormError && (
+                                                        <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                                                            {cmFormError}
+                                                        </div>
+                                                    )}
                                                     <div className="flex justify-end gap-2">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setShowAddBranch(false)}
-                                                            className="px-4 py-2 rounded-lg text-xs font-bold border transition-all"
+                                                            onClick={() => { setShowAddCM(false); setCmFormError(null); }}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
                                                             style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
                                                         >
-                                                            Cancel
+                                                            Back
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={handleQuickAddBranch}
-                                                            disabled={addingBranch}
-                                                            className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50 border-none"
-                                                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                                            onClick={handleCreateCM}
+                                                            disabled={addingCM}
+                                                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50 border-none"
+                                                            style={{ backgroundColor: '#eab308', color: '#0A0A0A' }}
                                                         >
-                                                            {addingBranch ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                                                            {addingBranch ? 'Creating…' : 'Create Branch'}
+                                                            {addingCM ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                                            {addingCM ? 'Creating...' : 'Create & Continue'}
                                                         </button>
                                                     </div>
-                                                </>
+                                                </div>
                                             )}
                                         </div>
+                                    ) : (
+                                        <>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                <input
+                                                    type="text" placeholder="Branch Name *"
+                                                    value={quickBranch.name}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, name: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <input
+                                                    type="text" placeholder="Branch Code *"
+                                                    value={quickBranch.code}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, code: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <input
+                                                    type="email" placeholder="Email *"
+                                                    value={quickBranch.email}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, email: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <input
+                                                    type="text" placeholder="Phone"
+                                                    value={quickBranch.phone}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, phone: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <input
+                                                    type="text" placeholder="City"
+                                                    value={quickBranch.city}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, city: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <input
+                                                    type="text" placeholder="State"
+                                                    value={quickBranch.state}
+                                                    onChange={e => setQuickBranch({ ...quickBranch, state: e.target.value })}
+                                                    className="px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <div className="relative">
+                                                    <select
+                                                        value={quickBranch.countryManager}
+                                                        onChange={e => setQuickBranch({ ...quickBranch, countryManager: e.target.value })}
+                                                        className="w-full px-3 py-2.5 pr-8 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime appearance-none"
+                                                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                                    >
+                                                        <option value="">Country Manager *</option>
+                                                        {countryManagers.map(cm => (
+                                                            <option key={cm._id} value={cm._id}>{cm.fullName} ({cm.country})</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="text" placeholder="Full Address"
+                                                value={quickBranch.address}
+                                                onChange={e => setQuickBranch({ ...quickBranch, address: e.target.value })}
+                                                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAddBranch(false)}
+                                                    className="px-4 py-2 rounded-lg text-xs font-bold border transition-all"
+                                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleQuickAddBranch}
+                                                    disabled={addingBranch}
+                                                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50 border-none"
+                                                    style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                                >
+                                                    {addingBranch ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                                    {addingBranch ? 'Creating…' : 'Create Branch'}
+                                                </button>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
+                        </div>
+                    )}
 
-                            {isAutoAssign && (
-                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.03)' }}>
-                                    <CheckCircle size={16} style={{ color: 'var(--brand-lime)' }} />
-                                    <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                                        All uploaded vehicles will be automatically assigned to your branch.
+                    {isAutoAssign && (
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.03)' }}>
+                            <CheckCircle size={16} style={{ color: 'var(--brand-lime)' }} />
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                                All uploaded vehicles will be automatically assigned to your branch.
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Templates */}
+                    <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <Info size={16} style={{ color: 'var(--brand-lime)' }} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                            Download the sample template to see the expected file format:
+                        </span>
+                        <div className="ml-auto flex gap-2">
+                            <button
+                                onClick={() => downloadTemplate('xlsx')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                            >
+                                <Download size={14} /> Excel Template
+                            </button>
+                            <button
+                                onClick={() => downloadTemplate('csv')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                            >
+                                <Download size={14} /> CSV Template
+                            </button>
+                            <button
+                                onClick={() => downloadTemplate('txt')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                            >
+                                <Download size={14} /> TXT Template
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Drop Zone */}
+                    {parsedVehicles.length === 0 && !result && (
+                        <div
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`flex flex-col items-center justify-center gap-3 p-12 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${dragOver ? 'scale-[1.01]' : ''}`}
+                            style={{
+                                borderColor: dragOver ? 'var(--brand-lime)' : 'var(--border-main)',
+                                background: dragOver ? 'rgba(200,230,0,0.05)' : 'transparent'
+                            }}
+                        >
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.08)' }}>
+                                <FileText size={28} style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                    Drop your Excel, CSV or TXT file here
+                                </p>
+                                <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
+                                    or click to browse. Supports .xlsx, .xls, .csv and .txt
+                                </p>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".xlsx,.xls,.csv,.txt"
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                        </div>
+                    )}
+
+                    {/* Preview Table */}
+                    {parsedVehicles.length > 0 && !result && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                        <FileText size={14} className="inline mr-1" /> {fileName}
                                     </span>
+                                    <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>
+                                        {validCount} valid
+                                    </span>
+                                    {errorCount > 0 && (
+                                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                                            {errorCount} invalid
+                                        </span>
+                                    )}
                                 </div>
-                            )}
+                                <button
+                                    onClick={handleReset}
+                                    className="text-xs font-bold transition-all hover:scale-105"
+                                    style={{ color: 'var(--text-dim)' }}
+                                >
+                                    Clear File
+                                </button>
+                            </div>
 
-                            {/* Templates */}
-                            <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                <Info size={16} style={{ color: 'var(--brand-lime)' }} />
-                                <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                                    Download the sample template to see the expected file format:
-                                </span>
-                                <div className="ml-auto flex gap-2">
-                                    <button
-                                        onClick={() => downloadTemplate('xlsx')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
-                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
-                                    >
-                                        <Download size={14} /> Excel Template
-                                    </button>
-                                    <button
-                                        onClick={() => downloadTemplate('csv')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
-                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
-                                    >
-                                        <Download size={14} /> CSV Template
-                                    </button>
-                                    <button
-                                        onClick={() => downloadTemplate('txt')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border"
-                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
-                                    >
-                                        <Download size={14} /> TXT Template
-                                    </button>
+                            <div className="border rounded-xl overflow-hidden max-h-60 overflow-y-auto" style={{ borderColor: 'var(--border-main)' }}>
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
+                                            <th className="p-3 font-black text-dim uppercase">Row</th>
+                                            <th className="p-3 font-black text-dim uppercase">Vehicles Models</th>
+                                            <th className="p-3 font-black text-dim uppercase">Year of Active</th>
+                                            <th className="p-3 font-black text-dim uppercase">VIN Number</th>
+                                            <th className="p-3 font-black text-dim uppercase">Vehicle No</th>
+                                            <th className="p-3 font-black text-dim uppercase">Weekly Rent</th>
+                                            <th className="p-3 font-black text-dim uppercase">Status of the Vehicles</th>
+                                            <th className="p-3 font-black text-dim uppercase text-right">Errors / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {parsedVehicles.map((row, idx) => (
+                                            <tr key={idx} className="border-b last:border-0" style={{ borderColor: 'var(--border-main)' }}>
+                                                <td className="p-3 font-medium text-dim">{idx + 1}</td>
+                                                <td className="p-3 font-bold text-main">{(row.make && row.model) ? `${row.make} ${row.model}` : (row.make || row.model || '—')}</td>
+                                                <td className="p-3 text-main">{row.year || '—'}</td>
+                                                <td className="p-3 font-mono text-main">{row.vin || '—'}</td>
+                                                <td className="p-3 text-main">{row.registrationNumber || '—'}</td>
+                                                <td className="p-3 text-main">{row.weeklyRent !== undefined ? row.weeklyRent : '—'}</td>
+                                                <td className="p-3 text-main">{row.status || '—'}</td>
+                                                <td className="p-3 text-right">
+                                                    {row._rowErrors.length > 0 ? (
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            {row._rowErrors.map((err, errIdx) => (
+                                                                <span key={errIdx} className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-500 flex items-center gap-1 font-semibold">
+                                                                    <AlertTriangle size={10} /> {err}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-500 font-semibold">
+                                                            Ready
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Upload Results */}
+                    {result && (
+                        <div className="space-y-4 p-5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-500/10 text-green-500">
+                                    <CheckCircle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-main">Upload Completed</h3>
+                                    <p className="text-xs text-dim">
+                                        Successfully created {result.created.length} vehicle(s). {result.errors.length} error(s) occurred.
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Drop Zone */}
-                            {parsedVehicles.length === 0 && !result && (
-                                <div
-                                    onDrop={handleDrop}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className={`flex flex-col items-center justify-center gap-3 p-12 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${dragOver ? 'scale-[1.01]' : ''}`}
-                                    style={{
-                                        borderColor: dragOver ? 'var(--brand-lime)' : 'var(--border-main)',
-                                        background: dragOver ? 'rgba(200,230,0,0.05)' : 'transparent'
-                                    }}
-                                >
-                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.08)' }}>
-                                        <FileText size={28} style={{ color: 'var(--brand-lime)' }} />
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                            Drop your Excel, CSV or TXT file here
-                                        </p>
-                                        <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>
-                                            or click to browse. Supports .xlsx, .xls, .csv and .txt
-                                        </p>
-                                    </div>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".xlsx,.xls,.csv,.txt"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                    />
-                                </div>
-                            )}
-
-                            {/* Preview Table */}
-                            {parsedVehicles.length > 0 && !result && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-                                                <FileText size={14} className="inline mr-1" /> {fileName}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(0,200,80,0.1)', color: '#22c55e' }}>
-                                                {validCount} valid
-                                            </span>
-                                            {errorCount > 0 && (
-                                                <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
-                                                    {errorCount} invalid
-                                                </span>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={handleReset}
-                                            className="text-xs font-bold transition-all hover:scale-105"
-                                            style={{ color: 'var(--text-dim)' }}
-                                        >
-                                            Clear File
-                                        </button>
-                                    </div>
-
-                                    <div className="border rounded-xl overflow-hidden max-h-60 overflow-y-auto" style={{ borderColor: 'var(--border-main)' }}>
-                                        <table className="w-full text-left border-collapse text-xs">
-                                            <thead>
-                                                <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
-                                                    <th className="p-3 font-black text-dim uppercase">Row</th>
-                                                    <th className="p-3 font-black text-dim uppercase">Vehicles Models</th>
-                                                    <th className="p-3 font-black text-dim uppercase">Year of Active</th>
-                                                    <th className="p-3 font-black text-dim uppercase">VIN Number</th>
-                                                    <th className="p-3 font-black text-dim uppercase">Vehicle No</th>
-                                                    <th className="p-3 font-black text-dim uppercase">Status of the Vehicles</th>
-                                                    <th className="p-3 font-black text-dim uppercase text-right">Errors / Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {parsedVehicles.map((row, idx) => (
-                                                    <tr key={idx} className="border-b last:border-0" style={{ borderColor: 'var(--border-main)' }}>
-                                                        <td className="p-3 font-medium text-dim">{idx + 1}</td>
-                                                        <td className="p-3 font-bold text-main">{(row.make && row.model) ? `${row.make} ${row.model}` : (row.make || row.model || '—')}</td>
-                                                        <td className="p-3 text-main">{row.year || '—'}</td>
-                                                        <td className="p-3 font-mono text-main">{row.vin || '—'}</td>
-                                                        <td className="p-3 text-main">{row.registrationNumber || '—'}</td>
-                                                        <td className="p-3 text-main">{row.status || '—'}</td>
-                                                        <td className="p-3 text-right">
-                                                            {row._rowErrors.length > 0 ? (
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    {row._rowErrors.map((err, errIdx) => (
-                                                                        <span key={errIdx} className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-500 flex items-center gap-1 font-semibold">
-                                                                            <AlertTriangle size={10} /> {err}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-500 font-semibold">
-                                                                    Ready
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Upload Results */}
-                            {result && (
-                                <div className="space-y-4 p-5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-500/10 text-green-500">
-                                            <CheckCircle size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-main">Upload Completed</h3>
-                                            <p className="text-xs text-dim">
-                                                Successfully created {result.created.length} vehicle(s). {result.skipped?.length || 0} duplicate(s) skipped. {result.errors.length} error(s) occurred.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {result.skipped && result.skipped.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                                                <AlertTriangle size={14} /> Skipped Duplicates ({result.skipped.length})
-                                             </p>
-                                             <div className="max-h-40 overflow-y-auto border rounded-xl p-3 text-xs space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                 {result.skipped.map((skip, idx) => (
-                                                     <div key={idx} className="flex gap-2 text-amber-400 font-medium">
-                                                         <span className="font-bold text-dim">Row {skip.row}:</span>
-                                                         <span>{skip.message}</span>
-                                                     </div>
-                                                 ))}
-                                             </div>
-                                         </div>
-                                    )}
-
-                                    {result.errors.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-bold text-red-500 flex items-center gap-1">
-                                                <AlertTriangle size={14} /> Upload Failures ({result.errors.length})
-                                            </p>
-                                            <div className="max-h-40 overflow-y-auto border rounded-xl p-3 text-xs space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                {result.errors.map((err, idx) => (
-                                                    <div key={idx} className="flex gap-2 text-red-400 font-medium">
-                                                        <span className="font-bold text-dim">Row {err.row}:</span>
-                                                        <span>{err.message}</span>
-                                                    </div>
-                                                ))}
+                            {result.errors.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold text-red-500 flex items-center gap-1">
+                                        <AlertTriangle size={14} /> Upload Failures ({result.errors.length})
+                                    </p>
+                                    <div className="max-h-40 overflow-y-auto border rounded-xl p-3 text-xs space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                        {result.errors.map((err, idx) => (
+                                            <div key={idx} className="flex gap-2 text-red-400 font-medium">
+                                                <span className="font-bold text-dim">Row {err.row}:</span>
+                                                <span>{err.message}</span>
                                             </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-end gap-3 pt-2">
-                                        <button
-                                            onClick={handleReset}
-                                            className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105"
-                                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
-                                        >
-                                            Upload Another File
-                                        </button>
-                                        <button
-                                            onClick={handleClose}
-                                            className="px-5 py-2.5 rounded-xl text-sm font-bold border-none transition-all hover:scale-105 active:scale-95 shadow-lg"
-                                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
-                                        >
-                                            Done
-                                        </button>
+                                        ))}
                                     </div>
                                 </div>
                             )}
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={handleReset}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}
+                                >
+                                    Upload Another File
+                                </button>
+                                <button
+                                    onClick={handleClose}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold border-none transition-all hover:scale-105 active:scale-95 shadow-lg"
+                                    style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </div>
+                    )}
                         </>
                     )}
                 </div>

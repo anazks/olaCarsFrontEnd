@@ -46,25 +46,33 @@ const BillList = () => {
         });
     };
 
+    const getDefaultStartDate = () => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
     // Filters states
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
-    const [filterFromDate, setFilterFromDate] = useState<string>('');
-    const [filterToDate, setFilterToDate] = useState<string>('');
+    const [filterFromDate, setFilterFromDate] = useState<string>(getDefaultStartDate());
+    const [filterToDate, setFilterToDate] = useState<string>(getDefaultEndDate());
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [backendMetrics, setBackendMetrics] = useState({
-        totalBilled: 0,
-        totalBalanceDue: 0,
-        openCount: 0,
-        partialCount: 0,
-        paidCount: 0,
-        isFilteredPeriod: false
-    });
+
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     // Debounce search input
@@ -107,9 +115,7 @@ const BillList = () => {
             } else {
                 setTotalRecords(res.data?.length || 0);
             }
-            if (res.metrics) {
-                setBackendMetrics(res.metrics);
-            }
+
         } catch (err: any) {
             console.error('Failed to fetch bills:', err);
         } finally {
@@ -162,72 +168,10 @@ const BillList = () => {
         return pages;
     };
 
-    const metrics = backendMetrics;
-
     return (
         <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '/admin/financial-admin' }, { label: 'Bills', active: true }]} />
 
-            {/* Small Dashboard Cards */}
-            {!loading && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Card 1: Total Billed */}
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Receipt size={16} className="opacity-60 text-main animate-pulse" style={{ color: '#C8E600' }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                {metrics.isFilteredPeriod ? 'Total Billed (Filtered Period)' : 'Total Billed (Last 30 Days)'}
-                            </span>
-                        </div>
-                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
-                            ${metrics.totalBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h2>
-                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
-                            {metrics.isFilteredPeriod ? 'Filtered custom billing total' : 'Total amount of purchase bills generated'}
-                        </p>
-                    </div>
-
-                    {/* Card 2: Balance Due */}
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Clock size={16} className="opacity-60 text-main" style={{ color: '#f59e0b' }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                {metrics.isFilteredPeriod ? 'Balance Due (Filtered Period)' : 'Balance Due (Last 30 Days)'}
-                            </span>
-                        </div>
-                        <h2 className="text-2xl font-black mt-2 text-orange-400" style={{ color: '#f59e0b' }}>
-                            ${metrics.totalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h2>
-                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
-                            {metrics.isFilteredPeriod ? 'Pending vendor payables in period' : 'Pending vendor payables from last 30 days'}
-                        </p>
-                    </div>
-
-                    {/* Card 3: Status Breakdown */}
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle size={16} className="opacity-60 text-main" style={{ color: '#C8E600' }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                {metrics.isFilteredPeriod ? 'Statuses (Filtered Period)' : 'Statuses (Last 30 Days)'}
-                            </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-                            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                                <p className="text-[9px] font-black text-amber-500 uppercase">Open</p>
-                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.openCount}</p>
-                            </div>
-                            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                                <p className="text-[9px] font-black text-blue-400 uppercase">Partial</p>
-                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.partialCount}</p>
-                            </div>
-                            <div className="p-2 rounded-xl bg-green-500/10 border border-green-500/20">
-                                <p className="text-[9px] font-black text-green-400 uppercase">Paid</p>
-                                <p className="text-base font-black mt-0.5" style={{ color: 'var(--text-main)' }}>{metrics.paidCount}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Collapsible Filter Panel */}
             {isFilterPanelOpen && (
@@ -239,8 +183,8 @@ const BillList = () => {
                             onClick={() => {
                                 setFilterMonth('');
                                 setFilterYear('');
-                                setFilterFromDate('');
-                                setFilterToDate('');
+                                setFilterFromDate(getDefaultStartDate());
+                                setFilterToDate(getDefaultEndDate());
                             }}
                             className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                             style={{ color: '#C8E600' }}

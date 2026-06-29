@@ -26,8 +26,20 @@ const InvoiceList = () => {
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const getDefaultStartDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    };
+
+    const [startDate, setStartDate] = useState(getDefaultStartDate());
+    const [endDate, setEndDate] = useState(getDefaultEndDate());
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
@@ -339,8 +351,8 @@ const InvoiceList = () => {
                                 onClick={() => {
                                     setFilterMonth('');
                                     setFilterYear('');
-                                    setStartDate('');
-                                    setEndDate('');
+                                    setStartDate(getDefaultStartDate());
+                                    setEndDate(getDefaultEndDate());
                                     setStatusFilter('ALL');
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
