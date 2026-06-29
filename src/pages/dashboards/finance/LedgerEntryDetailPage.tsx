@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-    FileText, 
-    ArrowLeft, 
-    Clock, 
-    User, 
-    Tag, 
-    CreditCard, 
-    Info, 
-    Receipt, 
+import {
+    FileText,
+    ArrowLeft,
+    Clock,
+    User,
+    Tag,
+    CreditCard,
+    Info,
+    Receipt,
     Repeat,
     ArrowRight,
     AlertTriangle
@@ -29,7 +29,7 @@ const LedgerEntryDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [entry, setEntry] = useState<LedgerEntry | null>(null);
     const [relatedEntries, setRelatedEntries] = useState<LedgerEntry[]>([]);
     const [driverDetails, setDriverDetails] = useState<any | null>(null);
@@ -64,7 +64,7 @@ const LedgerEntryDetailPage = () => {
                     filters.search = fetchedEntry.referenceId;
                     refId = fetchedEntry.referenceId;
                 }
-                
+
                 // Fetch related double entry lines
                 if (Object.keys(filters).length > 0) {
                     const relatedRes = await getLedgerEntries(filters);
@@ -78,7 +78,7 @@ const LedgerEntryDetailPage = () => {
                 // 3. Check if it's related to rent/invoice to get driver details
                 const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
                 let foundInvoiceId = null;
-                
+
                 if (baseDocType === 'Invoice' && refId) {
                     // Try to search invoice by reference ID
                     foundInvoiceId = refId;
@@ -94,7 +94,7 @@ const LedgerEntryDetailPage = () => {
                         if (invRes.data && invRes.data.length > 0) {
                             const exactInvoice = invRes.data.find(i => i.invoiceNumber === foundInvoiceId) || invRes.data[0];
                             setInvoiceDetails(exactInvoice);
-                            
+
                             // If invoice has a driver, try to fetch driver profile
                             if (exactInvoice.driver) {
                                 const drvId = typeof exactInvoice.driver === 'string' ? exactInvoice.driver : exactInvoice.driver._id;
@@ -134,8 +134,8 @@ const LedgerEntryDetailPage = () => {
                 <AlertTriangle size={48} className="text-red-500" />
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Error Loading Entry</h2>
                 <p style={{ color: 'var(--text-muted)' }}>{error || 'Entry not found'}</p>
-                <button 
-                    onClick={() => navigate(-1)} 
+                <button
+                    onClick={() => navigate(-1)}
                     className="px-4 py-2 mt-4 rounded-xl transition-all font-semibold border"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 >
@@ -147,12 +147,12 @@ const LedgerEntryDetailPage = () => {
 
     const entryDateStr = entry.entryDate || entry.date;
     const dateObj = new Date(entryDateStr);
-    const formattedDate = !isNaN(dateObj.getTime()) 
-        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+    const formattedDate = !isNaN(dateObj.getTime())
+        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
         : entryDateStr;
 
     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
-    
+
     const debitVal = entry.amount !== undefined ? (entry.type === 'DEBIT' ? entry.amount : 0) : (entry.debit || 0);
     const creditVal = entry.amount !== undefined ? (entry.type === 'CREDIT' ? entry.amount : 0) : (entry.credit || 0);
     const displayAmount = Math.max(debitVal, creditVal);
@@ -161,18 +161,18 @@ const LedgerEntryDetailPage = () => {
 
     return (
         <div className="container-responsive space-y-6 animate-fade-in pb-20">
-            <Breadcrumbs 
+            <Breadcrumbs
                 items={[
                     { label: 'Finance', path: '/admin/financial-admin/finance-dashboard' },
                     { label: 'General Ledger', path: '../ledger' },
                     { label: 'Entry Details', active: true }
-                ]} 
+                ]}
             />
 
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <div>
-                    <button 
+                    <button
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
                         style={{ color: 'var(--brand-lime)' }}
@@ -197,10 +197,10 @@ const LedgerEntryDetailPage = () => {
 
             {/* Bento Grid layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                
+
                 {/* Main Details Card */}
                 <div className="col-span-1 md:col-span-2 xl:col-span-3 space-y-6">
-                    
+
                     {/* Primary Info */}
                     <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
@@ -212,11 +212,11 @@ const LedgerEntryDetailPage = () => {
                                 <p className="font-medium" style={{ color: 'var(--text-main)' }}>{entry.description}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Clock size={12}/> Time of Entry</p>
+                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Clock size={12} /> Time of Entry</p>
                                 <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Tag size={12}/> Accounting Code</p>
+                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Tag size={12} /> Accounting Code</p>
                                 <div className="flex flex-col">
                                     <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
                                     <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
@@ -291,7 +291,7 @@ const LedgerEntryDetailPage = () => {
 
                 {/* Sidebar Column */}
                 <div className="col-span-1 space-y-6">
-                    
+
                     {/* Source Document Details */}
                     <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
@@ -302,7 +302,7 @@ const LedgerEntryDetailPage = () => {
                                 <span style={{ color: 'var(--text-muted)' }}>Source Type</span>
                                 <span className="font-bold" style={{ color: 'var(--text-main)' }}>{sourceDocType}</span>
                             </div>
-                            
+
                             {(entry as any).transaction && typeof (entry as any).transaction === 'object' && (
                                 <>
                                     <div className="flex justify-between items-center pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -328,12 +328,12 @@ const LedgerEntryDetailPage = () => {
                             {(entry.referenceId || invoiceDetails?.invoiceNumber) && (
                                 <div className="pt-2">
                                     <span className="block mb-1" style={{ color: 'var(--text-muted)' }}>Reference Document</span>
-                                    <button 
+                                    <button
                                         onClick={() => invoiceDetails ? navigate(`../invoices/${invoiceDetails._id}`) : null}
                                         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${invoiceDetails ? 'hover:bg-brand-lime/10 cursor-pointer' : 'cursor-default opacity-80'}`}
                                         style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}
                                     >
-                                        <Receipt size={14} /> 
+                                        <Receipt size={14} />
                                         {invoiceDetails ? `View Invoice ${invoiceDetails.invoiceNumber}` : entry.referenceId}
                                     </button>
                                 </div>
@@ -348,7 +348,7 @@ const LedgerEntryDetailPage = () => {
                             <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--brand-lime)' }}>
                                 <User size={16} /> Driver Profile Link
                             </h3>
-                            
+
                             <div className="flex flex-col items-center text-center gap-3 relative z-10">
                                 <div className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2 border-brand-lime/30" style={{ background: 'var(--bg-card)' }}>
                                     {driverDetails.profilePicture ? (
@@ -361,16 +361,16 @@ const LedgerEntryDetailPage = () => {
                                     <h4 className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{driverDetails.name}</h4>
                                     <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-muted)' }}>{driverDetails.contactNumber}</p>
                                 </div>
-                                <button 
-                                     onClick={() => {
-                                         const basePath = location.pathname.split('/ledger/')[0];
-                                         navigate(`${basePath}/drivers/${driverDetails._id}`);
-                                     }}
-                                     className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
-                                     style={{ background: 'var(--brand-lime)', color: '#000000' }}
-                                 >
-                                     View Full Profile
-                                 </button>
+                                <button
+                                    onClick={() => {
+                                        const basePath = location.pathname.split('/ledger/')[0];
+                                        navigate(`${basePath}/drivers/${driverDetails._id}`);
+                                    }}
+                                    className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(200,230,0,0.3)]"
+                                    style={{ background: 'var(--brand-lime)', color: '#000000' }}
+                                >
+                                    View Full Profile
+                                </button>
                             </div>
                         </div>
                     )}

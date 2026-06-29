@@ -436,6 +436,7 @@ export const editVehicle = async (id: string, payload: Partial<Vehicle>): Promis
 export interface BulkVehicleUploadResult {
     created: Array<{ row: number; id: string; vin: string; make: string; model: string }>;
     errors: Array<{ row: number; message: string }>;
+    skipped: Array<{ row: number; registrationNumber: string; message: string }>;
 }
 
 // POST bulk create vehicles

@@ -170,16 +170,16 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                         getAllBankAccounts({ limit: 100 }),
                         getAllBranches({ limit: 100 })
                     ]);
-                    
+
                     const accountsList = accountsRes.data || accountsRes || [];
                     const branchesList = branchesRes.data || branchesRes || [];
-                    
+
                     setAccounts(accountsList.filter((a: BankAccount) => a.status === 'ACTIVE'));
                     setBranches(branchesList.filter((b: Branch) => b.status === 'ACTIVE'));
-                    
+
                     // Auto-select "Banco General AH 1601" or first account
-                    const bg1601 = accountsList.find((a: BankAccount) => 
-                        a.accountName?.toLowerCase().includes('banco general') && 
+                    const bg1601 = accountsList.find((a: BankAccount) =>
+                        a.accountName?.toLowerCase().includes('banco general') &&
                         a.accountName?.toLowerCase().includes('1601')
                     );
                     if (bg1601) {
@@ -205,14 +205,16 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const parseDateFlexible = (val: any): Date | null => {
         if (val === undefined || val === null) return null;
         if (typeof val === 'number') {
-            const date = new Date((val - 25569) * 86400 * 1000);
+            const totalDays = Math.round(val - 25569);
+            const date = new Date(Date.UTC(1970, 0, 1 + totalDays));
             return isNaN(date.getTime()) ? null : date;
         }
         const str = String(val).trim();
         if (!str) return null;
         if (/^\d{5}(\.\d+)?$/.test(str)) {
             const num = parseFloat(str);
-            const date = new Date((num - 25569) * 86400 * 1000);
+            const totalDays = Math.round(num - 25569);
+            const date = new Date(Date.UTC(1970, 0, 1 + totalDays));
             return isNaN(date.getTime()) ? null : date;
         }
         const parts = str.split(/[\/\-.]/);
@@ -238,8 +240,11 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 if (!isNaN(date.getTime())) return date;
             }
         }
-        const date = new Date(str);
-        return isNaN(date.getTime()) ? null : date;
+        const fallback = new Date(str);
+        if (isNaN(fallback.getTime())) return null;
+        // Re-construct in UTC to avoid local-timezone shift
+        const date = new Date(Date.UTC(fallback.getFullYear(), fallback.getMonth(), fallback.getDate()));
+        return date;
     };
 
     const cleanNumber = (val: any): number => {
@@ -249,9 +254,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         return isNaN(parsed) ? 0 : parsed;
     };
 
-        const validateRow = useCallback((row: any): string[] => {
+    const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        
+
         const dateVal = getRowVal(row, ['date', 'Date']);
         const descVal = getRowVal(row, ['description', 'Description']) || '';
         const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
@@ -297,6 +302,36 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         return errors;
     }, []);
 
+    const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
+        if (!failed || failed.length === 0) return;
+
+        const csvHeaders = ["Date", "Description", "Transaction Details", "Debit", "Credit", "Running Balance", "Transaction Type", "Amount", "Transaction ID", "Errors"];
+        const csvRows = failed.map(r => [
+            `"${(r.Date || "").replace(/"/g, '""')}"`,
+            `"${(r.Description || "").replace(/"/g, '""')}"`,
+            `"${(r["Transaction Details"] || "").replace(/"/g, '""')}"`,
+            String(r.Debit),
+            String(r.Credit),
+            String(r["Running Balance"]),
+            `"${(r["Transaction Type"] || "").replace(/"/g, '""')}"`,
+            String(r.Amount),
+            `"${(r.transactionId || "").replace(/"/g, '""')}"`,
+            `"${r._rowErrors.join("; ").replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = [csvHeaders.join(","), ...csvRows.map(row => row.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const name = nameOfFile ? nameOfFile.split('.')[0] : 'failed_transactions';
+        link.setAttribute('download', `failed_rows_${name}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Failed rows downloaded automatically.");
+    };
+
     const parseFile = (f: File) => {
         setResult(null);
         setFileName(f.name);
@@ -310,7 +345,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
 
             const parsed = jsonData.map(row => {
                 const rowErrors = validateRow(row);
-                
+
                 const dateVal = getRowVal(row, ['date', 'Date']);
                 const descVal = getRowVal(row, ['description', 'Description']) || '';
                 const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
@@ -327,7 +362,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
 
                 const typeStr = rawType.toUpperCase();
                 const parsedDate = parseDateFlexible(dateVal);
-                const isoDate = parsedDate ? parsedDate.toISOString().split('T')[0] : '';
+                const isoDate = parsedDate
+                    ? `${parsedDate.getUTCFullYear()}-${String(parsedDate.getUTCMonth() + 1).padStart(2, '0')}-${String(parsedDate.getUTCDate()).padStart(2, '0')}`
+                    : '';
 
                 // Resolve type to DEBIT or CREDIT based on priority
                 let resolvedType = '';
@@ -352,12 +389,12 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 // 3. Match from the user's specific transaction types
                 if (!resolvedType) {
                     const creditTypes = [
-                        'CREDIT', 
-                        'EXPENSE', 
-                        'VENDOR PAYMENT', 
-                        'TRANSFER FUND', 
-                        'PAYMENT REFUND', 
-                        'SALES RETURN', 
+                        'CREDIT',
+                        'EXPENSE',
+                        'VENDOR PAYMENT',
+                        'TRANSFER FUND',
+                        'PAYMENT REFUND',
+                        'SALES RETURN',
                         'WITHDRAWAL'
                     ];
                     if (creditTypes.includes(typeStr)) {
@@ -383,7 +420,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     _rowErrors: rowErrors
                 } as ParsedTransaction;
             });
-            
+
             setRows(parsed);
             toast.success(`Parsed ${parsed.length} row(s) from ${f.name}`);
         };
@@ -456,6 +493,11 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     setResult(res.data || res);
                     toast.success(res.message || 'Transactions uploaded successfully!');
                     onSuccess();
+
+                    const failedRows = rows.filter(r => r._rowErrors && r._rowErrors.length > 0);
+                    if (failedRows.length > 0) {
+                        downloadFailedRowsCSV(failedRows, fileName);
+                    }
                 }
             }
         } catch (err: any) {
@@ -523,14 +565,14 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                             <div className="text-center w-full max-w-md">
                                 <h4 className="text-md font-black uppercase tracking-wider text-main" style={{ color: 'var(--text-main)' }}>Uploading Ledger Entries</h4>
                                 <p className="text-xs mt-1.5 text-dim" style={{ color: 'var(--text-dim)' }}>Please wait while your statement records are parsed and saved...</p>
-                                
+
                                 <div className="mt-8 flex justify-between text-xs font-bold text-dim mb-2">
                                     <span className="uppercase tracking-widest text-[10px]">Processing Batches</span>
                                     <span className="text-lime font-black text-sm" style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
                                 </div>
                                 <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden border" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div 
-                                        className="bg-lime h-full rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(200,230,0,0.6)]" 
+                                    <div
+                                        className="bg-lime h-full rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(200,230,0,0.6)]"
                                         style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
                                     />
                                 </div>
@@ -561,15 +603,15 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                             style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                                         >
                                             <span className="truncate pr-2">
-                                                {selectedAccount 
-                                                    ? `${selectedAccount.accountName || selectedAccount.bankName} (${selectedAccount.accountNumber})` 
+                                                {selectedAccount
+                                                    ? `${selectedAccount.accountName || selectedAccount.bankName} (${selectedAccount.accountNumber})`
                                                     : '— Select Account —'}
                                             </span>
                                             <ChevronDown size={16} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
                                         </button>
 
                                         {isAccountDropdownOpen && (
-                                            <div 
+                                            <div
                                                 className="absolute left-0 right-0 mt-1.5 rounded-xl border shadow-2xl z-50 overflow-hidden flex flex-col max-h-[250px]"
                                                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                                             >
@@ -586,8 +628,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                         autoFocus
                                                     />
                                                     {accountSearchQuery && (
-                                                        <button 
-                                                            type="button" 
+                                                        <button
+                                                            type="button"
                                                             onClick={() => setAccountSearchQuery('')}
                                                             className="p-1 hover:bg-white/10 rounded-full border-none cursor-pointer"
                                                         >
@@ -612,7 +654,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                                     setIsAccountDropdownOpen(false);
                                                                 }}
                                                                 className={`w-full text-left px-4 py-2 text-xs font-bold transition-all flex flex-col gap-0.5 border-none cursor-pointer ${selectedAccountId === acc._id ? 'bg-lime/10' : 'hover:bg-white/5'}`}
-                                                                style={{ 
+                                                                style={{
                                                                     borderBottom: '1px solid rgba(255,255,255,0.02)',
                                                                     color: selectedAccountId === acc._id ? 'var(--brand-lime)' : 'var(--text-main)'
                                                                 }}
@@ -725,7 +767,14 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                         <p className="text-sm font-bold text-main">{fileName}</p>
                                         <div className="flex gap-4 mt-1 text-xs">
                                             <span className="text-emerald-500 font-bold">{validCount} valid transactions</span>
-                                            {errorCount > 0 && <span className="text-rose-500 font-bold">{errorCount} validation errors</span>}
+                                            {errorCount > 0 && (
+                                                <button
+                                                    onClick={() => downloadFailedRowsCSV(rows.filter(r => r._rowErrors.length > 0), fileName)}
+                                                    className="text-rose-500 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+                                                >
+                                                    {errorCount} validation errors (Download CSV)
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -832,3 +881,4 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
 };
 
 export default BulkLedgerUpload;
+

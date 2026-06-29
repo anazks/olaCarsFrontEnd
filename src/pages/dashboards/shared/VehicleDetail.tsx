@@ -533,7 +533,26 @@ const VehicleDetail = () => {
                     )}
                 </div>
 
-
+                {vehicle.status === 'RETIRED' && (
+                    <button
+                        onClick={() => handleProgress('ACTIVE — AVAILABLE')}
+                        disabled={actionLoading}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        style={{
+                            backgroundColor: '#50ee72ff',
+                            borderColor: '#a6ed7cff',
+                            color: '#d7ccc8',
+                        }}
+                    >
+                        {actionLoading ? (
+                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <>
+                               <span style={{ color: '#1b1d1cff', fontWeight: 'bold' }}>Switch to Active</span>
+                            </>
+                        )}
+                    </button>
+                )}
             </div>
 
             {/* Alert Banner */}
@@ -645,8 +664,8 @@ const VehicleDetail = () => {
                 );
             })()}
 
-            {/* Pipeline Progress - Only show if NOT active/rented */}
-            {!(vehicle.status === 'ACTIVE — RENTED') && (
+            {/* Pipeline Progress - Only show if NOT active/rented or retired */}
+            {!(vehicle.status === 'ACTIVE — RENTED' || vehicle.status === 'RETIRED') && (
                 <div className={cardClass} style={cardStyle}>
                     <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.onboardingPipeline')} />
                     <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">

@@ -54,10 +54,12 @@ const DashboardHub = () => {
     };
 
     const [summaryData, setSummaryData] = useState<any>(null);
+    const [kpiData, setKpiData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
     const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [kpiLoading, setKpiLoading] = useState(true);
+    const [restLoading, setRestLoading] = useState(true);
     const [startDate, setStartDate] = useState<string>(getOneMonthAgo());
     const [endDate, setEndDate] = useState<string>(getToday());
 
@@ -130,10 +132,24 @@ const DashboardHub = () => {
         : '/admin/admin';
 
     const fetchData = async () => {
-        setLoading(true);
+        setKpiLoading(true);
+        setRestLoading(true);
         setError(null);
+        let kpiResolved = false;
+
         try {
-            // Run requests in parallel using dynamic state dates
+            // Step 1: Fetch KPI stats quickly (onlyKpi: true)
+            const kpiRes = await getFinancialDashboardSummary({ startDate, endDate, onlyKpi: true });
+            setKpiData(kpiRes);
+            setKpiLoading(false);
+            kpiResolved = true;
+        } catch (err: any) {
+            console.error('DashboardHub: Failed to load KPI stats', err);
+            setKpiLoading(false);
+        }
+
+        try {
+            // Step 2: Fetch the remaining dashboard telemetry in parallel
             const [summaryRes, branchesRes, ledgerRes] = await Promise.all([
                 getFinancialDashboardSummary({ startDate, endDate }),
                 getAllBranches({ limit: 100 }),
@@ -143,9 +159,15 @@ const DashboardHub = () => {
             setSummaryData(summaryRes);
             setBranches(branchesRes.data || []);
             setLedgerEntries(ledgerRes.data || []);
+            
+            if (!kpiResolved) {
+                setKpiData(summaryRes);
+            }
         } catch (err: any) {
-            console.error('DashboardHub: Failed to load dashboard data', err);
+            console.error('DashboardHub: Failed to load remaining dashboard telemetry', err);
             setError('Could not load live dashboard telemetry.');
+        } finally {
+            setRestLoading(false);
         }
     };
 
@@ -251,9 +273,9 @@ const DashboardHub = () => {
         return data;
     }, [branches, ledgerEntries, activeBranchNames, startDate, endDate]);
 
-    const monthlyRevenue = summaryData?.stats?.monthlyRevenue || 0;
-    const totalPayables = summaryData?.stats?.totalPayables || 0;
-    const lastMonthBalanceDue = summaryData?.stats?.lastMonthBalanceDue || 0;
+    const monthlyRevenue = (kpiData || summaryData)?.stats?.monthlyRevenue || 0;
+    const totalPayables = (kpiData || summaryData)?.stats?.totalPayables || 0;
+    const lastMonthBalanceDue = (kpiData || summaryData)?.stats?.lastMonthBalanceDue || 0;
 
     // Define dashboard navigation items
     const dashboards = [
@@ -348,7 +370,7 @@ const DashboardHub = () => {
 
     return (
         <div
-            className={`transition-colors duration-300 space-y-5 flex flex-col ${loading ? 'opacity-65 pointer-events-none' : ''}`}
+            className={`transition-colors duration-300 space-y-5 flex flex-col ${kpiLoading ? 'opacity-65 pointer-events-none' : ''}`}
             style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}
         >
             {/* Header Section */}
@@ -357,7 +379,7 @@ const DashboardHub = () => {
                     <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
                         <LayoutGrid className="text-[#C8E600]" size={24} />
                         {t('sidebar.items.dashboard', 'Dashboard Hub')}
-                        {loading && <RefreshCw className="animate-spin text-[#C8E600] ml-2 flex-shrink-0" size={20} />}
+                        {restLoading && <RefreshCw className="animate-spin text-[#C8E600] ml-2 flex-shrink-0" size={20} />}
                     </h1>
                     <p className="font-medium text-[11px]" style={{ color: 'var(--text-dim)' }}>
                         Ecosystem control center and specialized dashboard navigator
@@ -472,7 +494,11 @@ const DashboardHub = () => {
                     </div>
                     <div className="mt-3 relative z-10">
                         <div className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monthlyRevenue)}
+                            {kpiLoading ? (
+                                <div className="h-7 w-32 bg-white/10 rounded animate-pulse my-0.5" />
+                            ) : (
+                                new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monthlyRevenue)
+                            )}
                         </div>
                         <div className="text-[10px] font-bold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
                             {t('dashboards.common.monthlyRevenue', 'Total Amount Received')}
@@ -496,7 +522,11 @@ const DashboardHub = () => {
                     </div>
                     <div className="mt-3 relative z-10">
                         <div className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalPayables)}
+                            {kpiLoading ? (
+                                <div className="h-7 w-32 bg-white/10 rounded animate-pulse my-0.5" />
+                            ) : (
+                                new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalPayables)
+                            )}
                         </div>
                         <div className="text-[10px] font-bold mt-1 uppercase tracking-wider flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
                             <span>{t('dashboards.common.totalPayables', 'Invoices Balance Due')}</span>
@@ -504,7 +534,11 @@ const DashboardHub = () => {
                         <div className="text-[10px] font-bold mt-2 pt-2 border-t border-[var(--border-main)]/50 flex justify-between items-center" style={{ color: 'var(--text-dim)' }}>
                             <span>{t('dashboards.common.lastMonthBalanceDue', 'Last Month Invoice Balance')}</span>
                             <span className="font-extrabold text-[var(--text-main)]">
-                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(lastMonthBalanceDue)}
+                                {kpiLoading ? (
+                                    <span className="inline-block h-3.5 w-16 bg-white/10 rounded animate-pulse" />
+                                ) : (
+                                    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(lastMonthBalanceDue)
+                                )}
                             </span>
                         </div>
                     </div>
@@ -612,52 +646,58 @@ const DashboardHub = () => {
                     className="rounded-2xl p-4 border shadow-sm relative overflow-hidden h-[200px] w-full"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                 >
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                                {activeBranchNames.map((_, idx) => {
+                    {restLoading ? (
+                        <div className="h-full flex items-center justify-center">
+                            <RefreshCw className="animate-spin text-[#C8E600]" size={36} />
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                    {activeBranchNames.map((_, idx) => {
+                                        const color = lineColors[idx % lineColors.length];
+                                        const gradId = `areaGrad-${idx}`;
+                                        return (
+                                            <linearGradient key={gradId} id={gradId} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                            </linearGradient>
+                                        );
+                                    })}
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" opacity={0.1} vertical={false} />
+                                <XAxis dataKey="date" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                                <RechartsTooltip
+                                    contentStyle={{
+                                        background: 'var(--bg-popover, #1C1C1C)',
+                                        border: '1px solid var(--border-main)',
+                                        borderRadius: '8px',
+                                        color: 'var(--text-main)',
+                                        fontSize: '11px'
+                                    }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '5px' }} />
+                                {activeBranchNames.map((name, idx) => {
                                     const color = lineColors[idx % lineColors.length];
                                     const gradId = `areaGrad-${idx}`;
                                     return (
-                                        <linearGradient key={gradId} id={gradId} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
-                                            <stop offset="95%" stopColor={color} stopOpacity={0} />
-                                        </linearGradient>
+                                        <Area
+                                            key={name}
+                                            type="monotone"
+                                            dataKey={name}
+                                            stroke={color}
+                                            strokeWidth={2.5}
+                                            fillOpacity={1}
+                                            fill={`url(#${gradId})`}
+                                            dot={false}
+                                            activeDot={{ r: 4 }}
+                                        />
                                     );
                                 })}
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" opacity={0.1} vertical={false} />
-                            <XAxis dataKey="date" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
-                            <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
-                            <RechartsTooltip
-                                contentStyle={{
-                                    background: 'var(--bg-popover, #1C1C1C)',
-                                    border: '1px solid var(--border-main)',
-                                    borderRadius: '8px',
-                                    color: 'var(--text-main)',
-                                    fontSize: '11px'
-                                }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '5px' }} />
-                            {activeBranchNames.map((name, idx) => {
-                                const color = lineColors[idx % lineColors.length];
-                                const gradId = `areaGrad-${idx}`;
-                                return (
-                                    <Area
-                                        key={name}
-                                        type="monotone"
-                                        dataKey={name}
-                                        stroke={color}
-                                        strokeWidth={2.5}
-                                        fillOpacity={1}
-                                        fill={`url(#${gradId})`}
-                                        dot={false}
-                                        activeDot={{ r: 4 }}
-                                    />
-                                );
-                            })}
-                        </AreaChart>
-                    </ResponsiveContainer>
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
 

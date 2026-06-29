@@ -1587,7 +1587,7 @@ const FinanceDashboard = () => {
                                         liveData.ledger.slice(0, 10).map((entry) => {
                                             const entryDateStr = entry.entryDate || entry.date;
                                             const dateObj = new Date(entryDateStr);
-                                            const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
+                                            const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
                                             const amount = (entry.amount !== undefined && entry.amount !== null) ? entry.amount : ((entry.credit || 0) > 0 ? (entry.credit || 0) : (entry.debit || 0));
                                             const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
