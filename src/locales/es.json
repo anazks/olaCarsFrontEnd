@@ -32,7 +32,9 @@
     "yes": "Sí",
     "no": "No",
     "notes": "Notas",
-    "unblock": "Desbloquear"
+    "unblock": "Desbloquear",
+    "history": "Historial",
+    "update": "Actualizar"
   },
   "roles": {
     "admin": "Administrador",
@@ -1013,6 +1015,7 @@
         "gpsTracking": "GPS y Seguimiento",
         "accountingValuation": "Contabilidad y Valoración",
         "lastInspection": "Última Inspección",
+        "maintenanceTracking": "Seguimiento de Mantenimiento",
         "onboardingMeta": "Meta de Incorporación",
         "step1": "Paso 1: Especificaciones del Vehículo",
         "step1Desc": "Ingrese los detalles básicos del vehículo para iniciar el proceso de incorporación.",
@@ -1045,7 +1048,7 @@
           "make": "Marca",
           "model": "Modelo",
           "year": "Año",
-          "vin": "Nº de Placa",
+          "vin": "Nº de VIN",
           "category": "Categoría",
           "fuel": "Combustible",
           "transmission": "Transmisión",
@@ -1100,7 +1103,16 @@
           "selectPlanPlaceholder": "Seleccionar un Plan de Seguro",
           "coverage": "Tipo de Cobertura",
           "sellingValue": "Valor de Venta Actual",
-          "condition": "Condición"
+          "condition": "Condición",
+          "handlingStaff": "Personal de Gestión",
+          "fleetNumber": "Nº de Flota",
+          "plateNumber": "Nº de Placa",
+          "noActivePolicy": "Sin póliza activa",
+          "addPolicyDesc": "Agregue una póliza para garantizar la cobertura",
+          "lastServiceOdometer": "Último Odómetro de Servicio",
+          "maintenanceThreshold": "Umbral de Mantenimiento",
+          "distanceSinceLastService": "Distancia Desde el Último Servicio",
+          "manageAlertThreshold": "Gestionar Umbral de Alerta (KM)"
         },
         "actions": {
           "backToList": "Volver a la Lista",
