@@ -237,6 +237,29 @@ export interface Vehicle {
         fleetNumbers?: string[];
     };
     statusHistory?: StatusHistoryEntry[];
+    currentDriver?: {
+        _id: string;
+        personalInfo?: {
+            fullName: string;
+            phone?: string;
+            email?: string;
+        };
+        driverId?: string;
+    } | null;
+    tempDriver?: any;
+    tempAssignment?: {
+        maintenanceVehicleId: string;
+        maintenanceVehiclePlate: string;
+        tempDriver?: {
+            _id: string;
+            personalInfo?: {
+                fullName: string;
+                phone?: string;
+                email?: string;
+            };
+            driverId?: string;
+        };
+    } | null;
     createdBy?: string;
     creatorRole?: string;
     createdAt: string;
