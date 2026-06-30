@@ -247,6 +247,7 @@ export interface Vehicle {
         driverId?: string;
     } | null;
     tempDriver?: any;
+    tempVehicle?: string | Vehicle | null;
     tempAssignment?: {
         maintenanceVehicleId: string;
         maintenanceVehiclePlate: string;
@@ -332,6 +333,7 @@ export interface VehicleFilters {
     fuelType?: FuelType;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    tempDriver?: string;
 }
 
 // GET all vehicles
