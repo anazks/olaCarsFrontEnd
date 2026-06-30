@@ -453,6 +453,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const totalVehicles = validVehicles.length;
         const allCreated: any[] = [];
         const allErrors: any[] = [];
+        const allSkipped: any[] = [];
 
         try {
             for (let i = 0; i < totalVehicles; i += batchSize) {
@@ -470,6 +471,13 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                             row: i + err.row
                         }));
                         allErrors.push(...adjustedErrors);
+                    }
+                    if (res.data?.skipped) {
+                        const adjustedSkipped = res.data.skipped.map((skip: any) => ({
+                            ...skip,
+                            row: i + skip.row
+                        }));
+                        allSkipped.push(...adjustedSkipped);
                     }
                 } catch (batchErr: any) {
                     const errorResponseData = batchErr?.response?.data;
@@ -496,7 +504,8 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             
             setResult({
                 created: allCreated,
-                errors: allErrors
+                errors: allErrors,
+                skipped: allSkipped
             });
             
             if (allCreated.length > 0) {

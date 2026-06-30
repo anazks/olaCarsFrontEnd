@@ -4,12 +4,15 @@ import { useTranslation } from 'react-i18next';
 import {
     Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
-    Zap, Wrench, Clock, Send, Edit2, Save, Download, Gauge, Battery, Navigation
+    Zap, Wrench, Clock, Send, Edit2, Save, Download, Gauge, Battery, Navigation,
+    X, Search
 } from 'lucide-react';
-import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle } from '../../../services/vehicleService';
+import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle, assignVehicleToDriver } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
+import { getAllBranches } from '../../../services/branchService';
+import type { Branch } from '../../../services/branchService';
 import { hasPermission as checkPermission, getUserRole } from '../../../utils/auth';
 import type { Vehicle, VehicleStatus, ChecklistItem, InspectionCondition, VehicleCategory, FuelType, Transmission, BodyType, BasicDetails } from '../../../services/vehicleService';
 import type { Insurance, VehiclePolicy } from '../../../services/insuranceService';
@@ -123,6 +126,60 @@ const VehicleDetail = () => {
     const [isEditingOverview, setIsEditingOverview] = useState(false);
     const [isEditingDocs, setIsEditingDocs] = useState(false);
     const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
+    const [targetStatus, setTargetStatus] = useState<VehicleStatus | null>(null);
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
+    const STATUS_OPTIONS = [
+        { value: 'ACTIVE — AVAILABLE', label: 'Active — Available' },
+        { value: 'ACTIVE — RENTED', label: 'Active — Rented' },
+        { value: 'ACTIVE — MAINTENANCE', label: 'Active — Maintenance' },
+        { value: 'SUSPENDED', label: 'Suspended' },
+        { value: 'TRANSFER PENDING', label: 'Transfer Pending' },
+        { value: 'TRANSFER COMPLETE', label: 'Transfer Complete' },
+        { value: 'RETIRED', label: 'Retired' },
+        { value: 'PRE-BOOKED', label: 'Pre-Booked' },
+        { value: 'W. GROUP ACTIVE', label: 'W. Group Active' },
+    ];
+
+    const isOptionDisabled = (statusOption: string) => {
+        if (statusOption === vehicle?.status) return false;
+
+        const hasDriver = !!assignedDriver || !!(vehicle as any)?.currentDriver;
+        if (hasDriver) {
+            const disabledWithDriver = [
+                'ACTIVE — AVAILABLE',
+                'SUSPENDED',
+                'TRANSFER PENDING',
+                'TRANSFER COMPLETE',
+                'RETIRED',
+                'PRE-BOOKED',
+                'W. GROUP ACTIVE'
+            ];
+            if (disabledWithDriver.includes(statusOption)) {
+                return true;
+            }
+        }
+
+        const rules: Record<string, string[]> = {
+            'ACTIVE — AVAILABLE': ["BRANCH MANAGER APPROVAL", "ACTIVE — RENTED", "ACTIVE — MAINTENANCE", "TRANSFER COMPLETE", "SUSPENDED", "W. GROUP ACTIVE", "RETIRED", "PRE-BOOKED"],
+            'ACTIVE — RENTED': ["ACTIVE — AVAILABLE"],
+            'ACTIVE — MAINTENANCE': ["ACTIVE — AVAILABLE", "ACTIVE — RENTED", "W. GROUP ACTIVE"],
+            'SUSPENDED': ["ACTIVE — AVAILABLE", "ACTIVE — RENTED", "ACTIVE — MAINTENANCE", "W. GROUP ACTIVE"],
+            'TRANSFER PENDING': ["ACTIVE — AVAILABLE"],
+            'TRANSFER COMPLETE': ["TRANSFER PENDING"],
+            'RETIRED': ["ACTIVE — AVAILABLE", "ACTIVE — MAINTENANCE", "SUSPENDED", "W. GROUP ACTIVE"],
+            'W. GROUP ACTIVE': ["BRANCH MANAGER APPROVAL", "ACTIVE — AVAILABLE", "ACTIVE — RENTED", "ACTIVE — MAINTENANCE", "TRANSFER COMPLETE", "SUSPENDED"],
+            'PRE-BOOKED': ["ACTIVE — AVAILABLE"],
+        };
+
+        const allowedFromList = rules[statusOption];
+        if (allowedFromList && vehicle?.status && !allowedFromList.includes(vehicle.status)) {
+            return true;
+        }
+
+        return false;
+    };
+
 
     // ── Live GPS Telemetry ──────────────────────────────────────────────────
     const [gpsDevice, setGpsDevice] = useState<GpsVehicle | null>(null);
@@ -533,26 +590,65 @@ const VehicleDetail = () => {
                     )}
                 </div>
 
-                {vehicle.status === 'RETIRED' && (
-                    <button
-                        onClick={() => handleProgress('ACTIVE — AVAILABLE')}
-                        disabled={actionLoading}
-                        className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                        style={{
-                            backgroundColor: '#50ee72ff',
-                            borderColor: '#a6ed7cff',
-                            color: '#d7ccc8',
-                        }}
-                    >
-                        {actionLoading ? (
-                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <>
-                               <span style={{ color: '#1b1d1cff', fontWeight: 'bold' }}>Switch to Active</span>
-                            </>
-                        )}
-                    </button>
-                )}
+                <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                    <HasPermission permission="VEHICLE_EDIT">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Status:</span>
+                            <select
+                                value={vehicle.status}
+                                onChange={(e) => {
+                                    const target = e.target.value as VehicleStatus;
+                                    if (target !== vehicle.status) {
+                                        setTargetStatus(target);
+                                        setIsStatusModalOpen(true);
+                                    }
+                                }}
+                                className="bg-transparent border-none outline-none text-xs font-black uppercase tracking-wider cursor-pointer font-mono"
+                                style={{ color: vehicle.status.includes('ACTIVE') ? '#C8E600' : 'var(--text-main)' }}
+                            >
+                                <option value={vehicle.status} disabled className="bg-[#1C1C1E]" style={{ color: '#555555' }}>
+                                    {getStatusTranslation(vehicle.status)}
+                                </option>
+                                {STATUS_OPTIONS.map(opt => {
+                                    if (opt.value === vehicle.status) return null;
+                                    const disabled = isOptionDisabled(opt.value);
+                                    return (
+                                        <option
+                                            key={opt.value}
+                                            value={opt.value}
+                                            disabled={disabled}
+                                            className="bg-[#1C1C1E]"
+                                            style={{ color: disabled ? '#555555' : '#ffffff' }}
+                                        >
+                                            {opt.label}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    </HasPermission>
+
+                    {vehicle.status === 'RETIRED' && (
+                        <button
+                            onClick={() => handleProgress('ACTIVE — AVAILABLE')}
+                            disabled={actionLoading}
+                            className="px-5 py-2.5 rounded-xl text-sm font-bold border transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                            style={{
+                                backgroundColor: '#50ee72ff',
+                                borderColor: '#a6ed7cff',
+                                color: '#d7ccc8',
+                            }}
+                        >
+                            {actionLoading ? (
+                                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <span style={{ color: '#1b1d1cff', fontWeight: 'bold' }}>Switch to Active</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Alert Banner */}
@@ -799,7 +895,7 @@ const VehicleDetail = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                            <InfoRow label="Vehicle Number" value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.plateNumber', 'Plate No')} value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />
@@ -831,8 +927,8 @@ const VehicleDetail = () => {
                         )}
                         <div className="pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="grid grid-cols-2 gap-4">
-                                <InfoRow label="Handling Staff" value={vehicle.handlingStaff?.fullName} />
-                                <InfoRow label="Fleet Number" value={vehicle.basicDetails?.fleetNumber} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.handlingStaff', 'Handling Staff')} value={vehicle.handlingStaff?.fullName} />
+                                <InfoRow label={t('management.vehicles.vehicleDetail.labels.fleetNumber', 'Fleet Number')} value={vehicle.basicDetails?.fleetNumber} />
                             </div>
                         </div>
                     </div>
@@ -923,8 +1019,8 @@ const VehicleDetail = () => {
                             ) : (
                                 <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
                                     <Shield size={32} className="opacity-20 mb-3" style={{ color: 'var(--text-dim)' }} />
-                                    <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>No active policy</p>
-                                    <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>Add a policy to ensure coverage</p>
+                                    <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.vehicles.vehicleDetail.labels.noActivePolicy', 'No active policy')}</p>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.addPolicyDesc', 'Add a policy to ensure coverage')}</p>
                                 </div>
                             )}
 
@@ -949,30 +1045,30 @@ const VehicleDetail = () => {
                     {/* Maintenance Tracking */}
                     <div className={`${cardClass} flex flex-col`} style={cardStyle}>
                         <div className="flex items-center justify-between mb-2">
-                            <SectionHeader icon={<Wrench size={16} />} title="Maintenance Tracking" />
+                            <SectionHeader icon={<Wrench size={16} />} title={t('management.vehicles.vehicleDetail.maintenanceTracking', 'Maintenance Tracking')} />
                             <button
                                 onClick={() => navigate(`workshop-history`)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] uppercase tracking-wider font-bold transition-all hover:bg-white/5 active:scale-95 cursor-pointer"
                                 style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-input)' }}
                             >
-                                <Clock size={12} /> History
+                                <Clock size={12} /> {t('common.history', 'History')}
                             </button>
                         </div>
                         <div className="space-y-4 flex-1">
                             <div className="grid grid-cols-2 gap-4">
                                 <InfoRow
-                                    label="Last Service Odometer"
+                                    label={t('management.vehicles.vehicleDetail.labels.lastServiceOdometer', 'Last Service Odometer')}
                                     value={((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0).toLocaleString() + ' KM'}
                                 />
                                 <InfoRow
-                                    label="Maintenance Threshold"
+                                    label={t('management.vehicles.vehicleDetail.labels.maintenanceThreshold', 'Maintenance Threshold')}
                                     value={((vehicle as any).maintenanceDetails?.maintenanceThresholdKm || 1000).toLocaleString() + ' KM'}
                                 />
                             </div>
 
                             <div className="pt-4 border-t border-white/5">
                                 <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Distance Since Last Service</p>
+                                    <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.distanceSinceLastService', 'Distance Since Last Service')}</p>
                                     <span className="text-[10px] font-bold text-lime">
                                         {Math.max(0, (vehicle.basicDetails?.odometer || 0) - ((vehicle as any).maintenanceDetails?.lastMaintenanceOdometer || 0)).toLocaleString()} KM
                                     </span>
@@ -991,7 +1087,7 @@ const VehicleDetail = () => {
                             <HasPermission permission="VEHICLE_EDIT">
                                 <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                                     <label className="text-[10px] uppercase font-bold tracking-wider block" style={{ color: 'var(--text-dim)' }}>
-                                        Manage Alert Threshold (KM)
+                                        {t('management.vehicles.vehicleDetail.labels.manageAlertThreshold', 'Manage Alert Threshold (KM)')}
                                     </label>
                                     <div className="flex gap-2">
                                         <div className="relative flex-1">
@@ -1008,7 +1104,7 @@ const VehicleDetail = () => {
                                             disabled={isUpdatingThreshold}
                                             className="px-4 py-2 rounded-xl bg-lime text-black font-bold text-xs disabled:opacity-50 transition-all active:scale-95"
                                         >
-                                            {isUpdatingThreshold ? '...' : 'Update'}
+                                            {isUpdatingThreshold ? '...' : t('common.update', 'Update')}
                                         </button>
                                     </div>
                                 </div>
@@ -1859,6 +1955,7 @@ const VehicleDetail = () => {
                 </div>
             )}
 
+
             {/* Status History */}
             {vehicle.statusHistory && vehicle.statusHistory.length > 0 && (
                 <div className={cardClass} style={cardStyle}>
@@ -1866,6 +1963,24 @@ const VehicleDetail = () => {
                     <VehicleStatusHistory history={vehicle.statusHistory} />
                 </div>
             )}
+
+            <StatusChangeModal
+                isOpen={isStatusModalOpen}
+                onClose={() => setIsStatusModalOpen(false)}
+                targetStatus={targetStatus}
+                vehicle={vehicle}
+                onSuccess={(updatedVehicle) => {
+                    setVehicle(updatedVehicle);
+                    // Also refresh driver assignment info if status became RENTED
+                    if (updatedVehicle.status === 'ACTIVE — RENTED') {
+                        getAllDrivers({ currentVehicle: updatedVehicle._id, limit: 1 })
+                            .then(res => setAssignedDriver(res.data?.[0] || null))
+                            .catch(err => console.error(err));
+                    } else {
+                        setAssignedDriver(null);
+                    }
+                }}
+            />
 
             <InsuranceSelectorModal
                 isOpen={isInsuranceModalOpen}
@@ -1894,6 +2009,420 @@ const VehicleDetail = () => {
         </div>
     );
 };
+
+interface StatusChangeModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    targetStatus: VehicleStatus | null;
+    vehicle: Vehicle;
+    onSuccess: (updatedVehicle: Vehicle) => void;
+}
+
+const StatusChangeModal = ({ isOpen, onClose, targetStatus, vehicle, onSuccess }: StatusChangeModalProps) => {
+    const [notes, setNotes] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Driver state
+    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [driversLoading, setDriversLoading] = useState(false);
+    const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [driverSearch, setDriverSearch] = useState('');
+
+    // Lease state
+    const [durationMonths, setDurationMonths] = useState<number>(12);
+    const [depositAmount, setDepositAmount] = useState<number>(0);
+    const [monthlyRent, setMonthlyRent] = useState<number>(0);
+    const [isRentOverridden, setIsRentOverridden] = useState(false);
+
+    // Branch state
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [branchesLoading, setBranchesLoading] = useState(false);
+    const [selectedBranchId, setSelectedBranchId] = useState('');
+
+    // Suspension details
+    const [suspensionReason, setSuspensionReason] = useState<'Accident' | 'Legal' | 'Police' | 'Dispute' | 'Other'>('Other');
+
+    // Retirement details
+    const [retirementReason, setRetirementReason] = useState<'Sold' | 'Written Off' | 'End of Life' | 'Beyond Repair'>('Sold');
+
+    // Load drivers when ACTIVE — RENTED is target
+    useEffect(() => {
+        if (isOpen && targetStatus === 'ACTIVE — RENTED') {
+            setDriversLoading(true);
+            getAllDrivers({ limit: 100 })
+                .then(res => {
+                    setDrivers(res.data || []);
+                })
+                .catch(err => {
+                    console.error('Failed to load drivers', err);
+                })
+                .finally(() => setDriversLoading(false));
+        }
+    }, [isOpen, targetStatus]);
+
+    // Load branches when TRANSFER PENDING is target
+    useEffect(() => {
+        if (isOpen && targetStatus === 'TRANSFER PENDING') {
+            setBranchesLoading(true);
+            getAllBranches({ limit: 100 })
+                .then(res => {
+                    setBranches(res.data || []);
+                })
+                .catch(err => {
+                    console.error('Failed to load branches', err);
+                })
+                .finally(() => setBranchesLoading(false));
+        }
+    }, [isOpen, targetStatus]);
+
+    // Auto-calculate rent
+    useEffect(() => {
+        if (targetStatus === 'ACTIVE — RENTED' && !isRentOverridden) {
+            const sellingValue = vehicle.basicDetails?.sellingValue || 0;
+            const effectiveCost = Math.max(0, sellingValue - depositAmount);
+            const calculatedRent = durationMonths > 0 ? Math.ceil(effectiveCost / durationMonths) : 0;
+            setMonthlyRent(calculatedRent);
+        }
+    }, [durationMonths, depositAmount, vehicle.basicDetails?.sellingValue, targetStatus, isRentOverridden]);
+
+    // Reset when modal state changes
+    useEffect(() => {
+        if (isOpen) {
+            setNotes('');
+            setError(null);
+            setSelectedDriver(null);
+            setDriverSearch('');
+            setDurationMonths(12);
+            setDepositAmount(0);
+            setMonthlyRent(0);
+            setIsRentOverridden(false);
+            setSelectedBranchId('');
+            setSuspensionReason('Other');
+            setRetirementReason('Sold');
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !targetStatus) return null;
+
+    const filteredDrivers = drivers.filter(d => {
+        const name = d.personalInfo?.fullName || '';
+        const email = d.personalInfo?.email || '';
+        const phone = d.personalInfo?.phone || '';
+        const id = d.driverId || '';
+        const query = driverSearch.toLowerCase();
+        return name.toLowerCase().includes(query) ||
+            email.toLowerCase().includes(query) ||
+            phone.toLowerCase().includes(query) ||
+            id.toLowerCase().includes(query);
+    });
+
+    const handleConfirm = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            if (targetStatus === 'ACTIVE — RENTED') {
+                if (!selectedDriver) throw new Error('Please select a driver.');
+                if (durationMonths <= 0) throw new Error('Please specify a lease duration in months.');
+                if (monthlyRent < 0) throw new Error('Monthly rent cannot be negative.');
+
+                await assignVehicleToDriver(vehicle._id, selectedDriver._id || selectedDriver.id || '', {
+                    durationMonths,
+                    monthlyRent,
+                    depositAmount,
+                    notes: notes || undefined
+                });
+            } else {
+                let updateData: Record<string, any> = {};
+                if (targetStatus === 'SUSPENDED') {
+                    updateData.suspensionDetails = { reason: suspensionReason };
+                } else if (targetStatus === 'TRANSFER PENDING') {
+                    if (!selectedBranchId) throw new Error('Please select a destination branch.');
+                    updateData.transferDetails = { toBranch: selectedBranchId };
+                } else if (targetStatus === 'RETIRED') {
+                    updateData.retirementDetails = { reason: retirementReason };
+                }
+
+                await progressVehicle(vehicle._id, {
+                    targetStatus,
+                    notes: notes || undefined,
+                    updateData
+                });
+            }
+
+            const updated = await getVehicleById(vehicle._id);
+            onSuccess(updated);
+            onClose();
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to update vehicle status.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-300">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+
+                {/* Header */}
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5 flex-shrink-0">
+                    <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                        <Zap style={{ color: '#C8E600' }} />
+                        Confirm Status Change
+                    </h2>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-all" style={{ color: 'var(--text-dim)' }}>
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+                    {error && (
+                        <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-red-500/10 border border-red-500/30 text-red-500">
+                            <AlertTriangle size={18} className="shrink-0" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    <div className="text-sm leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                        You are transitioning vehicle <span className="font-bold text-[#C8E600]">{vehicle.basicDetails?.make} {vehicle.basicDetails?.model}</span> from <span className="font-bold text-amber-500">{vehicle.status}</span> to <span className="font-bold text-[#C8E600]">{targetStatus}</span>.
+                    </div>
+
+                    {/* Conditional: ACTIVE - RENTED */}
+                    {targetStatus === 'ACTIVE — RENTED' && (
+                        <div className="space-y-4 pt-2">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-dim" style={{ color: 'var(--brand-lime)' }}>Driver Assignment & Lease Setup</h3>
+
+                            {/* Selected Driver Banner or Search */}
+                            {selectedDriver ? (
+                                <div className="p-4 rounded-2xl border flex items-center justify-between bg-[#C8E600]/5 border-[#C8E600]/30 animate-in fade-in duration-300">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center font-bold">
+                                            {selectedDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{selectedDriver.personalInfo?.fullName}</h4>
+                                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{selectedDriver.personalInfo?.phone} • {selectedDriver.personalInfo?.email}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDriver(null)}
+                                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                                        style={{ color: 'var(--text-main)' }}
+                                    >
+                                        Change Driver
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Search & Select Driver *</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Type driver name, email, or phone..."
+                                            className={inputClass}
+                                            style={inputStyle}
+                                            value={driverSearch}
+                                            onChange={(e) => setDriverSearch(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {driversLoading ? (
+                                        <div className="text-xs text-center py-4 text-dim">Loading drivers...</div>
+                                    ) : (
+                                        <div className="border border-white/5 rounded-2xl max-h-48 overflow-y-auto divide-y divide-white/5 bg-black/25">
+                                            {filteredDrivers.length === 0 ? (
+                                                <div className="text-xs text-center py-4 text-dim">No drivers found</div>
+                                            ) : (
+                                                filteredDrivers.map(d => (
+                                                    <div
+                                                        key={d._id}
+                                                        onClick={() => setSelectedDriver(d)}
+                                                        className="p-3 flex items-center justify-between hover:bg-white/5 cursor-pointer transition-all"
+                                                    >
+                                                        <div>
+                                                            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{d.personalInfo?.fullName}</p>
+                                                            <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{d.personalInfo?.phone} • {d.personalInfo?.email}</p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-lime/10 text-lime border border-lime/25"
+                                                        >
+                                                            Select
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Lease details */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Duration (Months) *</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="70"
+                                        className={inputClass}
+                                        style={inputStyle}
+                                        value={durationMonths}
+                                        onChange={(e) => setDurationMonths(Math.max(1, parseInt(e.target.value) || 0))}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Deposit Amount ($)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        className={inputClass}
+                                        style={inputStyle}
+                                        value={depositAmount}
+                                        onChange={(e) => setDepositAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Monthly Rent ($) *</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className={inputClass}
+                                            style={inputStyle}
+                                            value={monthlyRent}
+                                            onChange={(e) => {
+                                                setIsRentOverridden(true);
+                                                setMonthlyRent(Math.max(0, parseFloat(e.target.value) || 0));
+                                            }}
+                                        />
+                                        {isRentOverridden && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsRentOverridden(false)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] uppercase tracking-wider text-[#C8E600] font-black hover:underline"
+                                            >
+                                                Auto
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-[10px] italic leading-normal" style={{ color: 'var(--text-dim)' }}>
+                                * Monthly Rent is pre-calculated based on: (Selling Value - Deposit) / Duration. Current Selling Value is ${vehicle.basicDetails?.sellingValue || 0}.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Conditional: SUSPENDED */}
+                    {targetStatus === 'SUSPENDED' && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Suspension Reason *</label>
+                            <select
+                                className={inputClass}
+                                style={inputStyle}
+                                value={suspensionReason}
+                                onChange={(e) => setSuspensionReason(e.target.value as any)}
+                            >
+                                <option value="Accident">Accident</option>
+                                <option value="Legal">Legal</option>
+                                <option value="Police">Police</option>
+                                <option value="Dispute">Dispute</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Conditional: TRANSFER PENDING */}
+                    {targetStatus === 'TRANSFER PENDING' && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Destination Branch *</label>
+                            {branchesLoading ? (
+                                <div className="text-xs text-dim">Loading branches...</div>
+                            ) : (
+                                <select
+                                    className={inputClass}
+                                    style={inputStyle}
+                                    value={selectedBranchId}
+                                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                                >
+                                    <option value="">-- Select Destination Branch --</option>
+                                    {branches
+                                        .filter(b => b._id !== (typeof vehicle.purchaseDetails?.branch === 'object' ? vehicle.purchaseDetails.branch?._id : vehicle.purchaseDetails?.branch))
+                                        .map(b => (
+                                            <option key={b._id} value={b._id}>
+                                                {b.name} ({b.code}) - {b.city}
+                                            </option>
+                                        ))}
+                                </select>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Conditional: RETIRED */}
+                    {targetStatus === 'RETIRED' && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Retirement Reason *</label>
+                            <select
+                                className={inputClass}
+                                style={inputStyle}
+                                value={retirementReason}
+                                onChange={(e) => setRetirementReason(e.target.value as any)}
+                            >
+                                <option value="Sold">Sold</option>
+                                <option value="Written Off">Written Off</option>
+                                <option value="End of Life">End of Life</option>
+                                <option value="Beyond Repair">Beyond Repair</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Notes (always visible) */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider block" style={{ color: 'var(--text-dim)' }}>Notes / Comments</label>
+                        <textarea
+                            placeholder="Add any internal remarks or explanations for this status change..."
+                            className={inputClass}
+                            style={inputStyle}
+                            rows={3}
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-white/5 flex gap-3 justify-end bg-white/5">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                        style={{ color: 'var(--text-main)' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        disabled={loading || (targetStatus === 'ACTIVE — RENTED' && !selectedDriver) || (targetStatus === 'TRANSFER PENDING' && !selectedBranchId)}
+                        onClick={handleConfirm}
+                        className="px-6 py-2.5 rounded-xl text-sm font-bold text-black hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ background: '#C8E600' }}
+                    >
+                        {loading ? (
+                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            'Confirm Status Change'
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const VehicleStatusHistory = ({ history }: { history?: any[] }) => {
     const { t } = useTranslation();
