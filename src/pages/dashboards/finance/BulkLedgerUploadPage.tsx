@@ -465,13 +465,26 @@ const BulkLedgerUploadPage = () => {
     const downloadErrorsCSV = (errors: LocalError[], nameOfFile: string) => {
         if (!errors || errors.length === 0) return;
 
-        const csvHeaders = ["Row Number", "Validation Error Message"];
-        const csvRows = errors.map(e => [
-            String(e.row),
-            `"${e.error.replace(/"/g, '""')}"`
-        ]);
+        // Extract all original headers from the parsed rows (if any rows were loaded)
+        const originalKeys = validationResult?.rows?.length 
+            ? Object.keys(validationResult.rows[0]) 
+            : [];
 
-        const csvContent = [csvHeaders.join(","), ...csvRows.map(r => r.join(","))].join("\n");
+        const csvHeaders = ["Row Number", ...originalKeys, "Validation Error Message"];
+        const csvRows = errors.map(e => {
+            const originalRow = validationResult?.rows?.[e.row - 2] || {};
+            const rowValues = [
+                String(e.row),
+                ...originalKeys.map(key => {
+                    const val = originalRow[key] !== undefined && originalRow[key] !== null ? originalRow[key] : "";
+                    return `"${String(val).replace(/"/g, '""')}"`;
+                }),
+                `"${e.error.replace(/"/g, '""')}"`
+            ];
+            return rowValues.join(",");
+        });
+
+        const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -487,13 +500,28 @@ const BulkLedgerUploadPage = () => {
     const downloadImportErrorsCSV = (errors: any[], nameOfFile: string) => {
         if (!errors || errors.length === 0) return;
 
-        const csvHeaders = ["Row Number", "Import Error Message"];
-        const csvRows = errors.map(e => [
-            String(e.row || 'System'),
-            `"${(e.error || e.reason || "").replace(/"/g, '""')}"`
-        ]);
+        // Extract all original headers from the parsed rows (if any rows were loaded)
+        const originalKeys = validationResult?.rows?.length 
+            ? Object.keys(validationResult.rows[0]) 
+            : [];
 
-        const csvContent = [csvHeaders.join(","), ...csvRows.map(r => r.join(","))].join("\n");
+        const csvHeaders = ["Row Number", ...originalKeys, "Import Error Message"];
+        const csvRows = errors.map(e => {
+            const originalRow = (typeof e.row === 'number' && validationResult?.rows)
+                ? (validationResult.rows[e.row - 2] || {})
+                : {};
+            const rowValues = [
+                String(e.row || 'System'),
+                ...originalKeys.map(key => {
+                    const val = originalRow[key] !== undefined && originalRow[key] !== null ? originalRow[key] : "";
+                    return `"${String(val).replace(/"/g, '""')}"`;
+                }),
+                `"${(e.error || e.reason || "").replace(/"/g, '""')}"`
+            ];
+            return rowValues.join(",");
+        });
+
+        const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
