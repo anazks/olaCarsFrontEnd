@@ -453,6 +453,7 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
         const totalVehicles = validVehicles.length;
         const allCreated: any[] = [];
         const allErrors: any[] = [];
+        const allSkipped: any[] = [];
 
         try {
             for (let i = 0; i < totalVehicles; i += batchSize) {
@@ -470,6 +471,13 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                             row: i + err.row
                         }));
                         allErrors.push(...adjustedErrors);
+                    }
+                    if (res.data?.skipped) {
+                        const adjustedSkipped = res.data.skipped.map((skip: any) => ({
+                            ...skip,
+                            row: i + skip.row
+                        }));
+                        allSkipped.push(...adjustedSkipped);
                     }
                 } catch (batchErr: any) {
                     const errorResponseData = batchErr?.response?.data;
@@ -496,11 +504,15 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
             
             setResult({
                 created: allCreated,
-                errors: allErrors
+                errors: allErrors,
+                skipped: allSkipped
             });
             
             if (allCreated.length > 0) {
                 toast.success(`Successfully uploaded ${allCreated.length} vehicle(s).`);
+                onSuccess();
+            } else if (allSkipped.length > 0) {
+                toast.success(`Upload completed. ${allSkipped.length} vehicle(s) skipped/updated.`);
                 onSuccess();
             } else {
                 toast.error('Failed to upload vehicles.');
@@ -994,10 +1006,26 @@ const BulkVehicleUpload = ({ isOpen, onClose, onSuccess }: BulkVehicleUploadProp
                                 <div>
                                     <h3 className="font-bold text-main">Upload Completed</h3>
                                     <p className="text-xs text-dim">
-                                        Successfully created {result.created.length} vehicle(s). {result.errors.length} error(s) occurred.
+                                        Successfully created {result.created.length} vehicle(s), skipped/updated {result.skipped?.length || 0} vehicle(s). {result.errors.length} error(s) occurred.
                                     </p>
                                 </div>
                             </div>
+
+                            {result.skipped && result.skipped.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold text-yellow-500 flex items-center gap-1">
+                                        <Info size={14} className="text-yellow-500" /> Skipped / Updated Vehicles ({result.skipped.length})
+                                    </p>
+                                    <div className="max-h-40 overflow-y-auto border rounded-xl p-3 text-xs space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                        {result.skipped.map((skip, idx) => (
+                                            <div key={idx} className="flex gap-2 text-yellow-500 font-medium">
+                                                <span className="font-bold text-dim">Row {skip.row}:</span>
+                                                <span>{skip.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {result.errors.length > 0 && (
                                 <div className="space-y-2">
