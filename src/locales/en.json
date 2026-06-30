@@ -32,7 +32,9 @@
     "all": "All",
     "yes": "Yes",
     "no": "No",
-    "notes": "Notes"
+    "notes": "Notes",
+    "history": "History",
+    "update": "Update"
   },
   "roles": {
     "admin": "Admin",
@@ -1013,6 +1015,7 @@
         "gpsTracking": "GPS & Tracking",
         "accountingValuation": "Accounting & Valuation",
         "lastInspection": "Last Inspection",
+        "maintenanceTracking": "Maintenance Tracking",
         "onboardingMeta": "Onboarding Meta",
         "step1": "Step 1: Vehicle Specifications",
         "step1Desc": "Enter the vehicle's basic details to start the onboarding process.",
@@ -1045,7 +1048,7 @@
           "make": "Make",
           "model": "Model",
           "year": "Year",
-          "vin": "Plate No",
+          "vin": "Vin no",
           "category": "Category",
           "fuel": "Fuel",
           "transmission": "Transmission",
@@ -1100,7 +1103,16 @@
           "selectPlan": "Select Plan *",
           "selectPlanPlaceholder": "Select an Insurance Plan",
           "coverage": "Coverage Type",
-          "sellingValue": "Current Selling Value"
+          "sellingValue": "Current Selling Value",
+          "handlingStaff": "Handling Staff",
+          "fleetNumber": "Fleet Number",
+          "plateNumber": "Plate No",
+          "noActivePolicy": "No active policy",
+          "addPolicyDesc": "Add a policy to ensure coverage",
+          "lastServiceOdometer": "Last Service Odometer",
+          "maintenanceThreshold": "Maintenance Threshold",
+          "distanceSinceLastService": "Distance Since Last Service",
+          "manageAlertThreshold": "Manage Alert Threshold (KM)"
         },
         "actions": {
           "backToList": "Back to List",

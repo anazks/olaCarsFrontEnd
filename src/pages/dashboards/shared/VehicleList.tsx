@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown, Upload } from 'lucide-react';
+import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle, VehicleStatus, VehicleCategory, FuelType } from '../../../services/vehicleService';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -287,15 +287,25 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                         </button>
                     </HasPermission>
                     
+                    <HasPermission permission="VEHICLE_EDIT">
+                        <button
+                            onClick={() => navigate(mode === 'active' ? 'temp-assignments' : '../vehicles/temp-assignments')}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <Car size={14} className="opacity-70" style={{ color: '#f97316' }} /> Temp Assignments
+                        </button>
+                    </HasPermission>
+                    
                     <HasPermission permission="VEHICLE_CREATE">
                         <div className="flex gap-2">
-                            <button
+                            {/* <button
                                 onClick={() => setIsBulkUploadOpen(true)}
                                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 border"
                                 style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                             >
                                 <Upload size={14} /> Bulk Upload
-                            </button>
+                            </button> */}
                             <button
                                 onClick={() => navigate(mode === 'active' ? 'create' : '../vehicles/create')}
                                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"

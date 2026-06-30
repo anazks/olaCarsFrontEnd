@@ -104,6 +104,7 @@ import AssignVehiclesToFleet from "./pages/dashboards/shared/AssignVehiclesToFle
 import CreateVehicle from "./pages/dashboards/shared/CreateVehicle";
 import VehicleDetail from "./pages/dashboards/shared/VehicleDetail";
 import VehicleWorkshopHistory from "./pages/dashboards/shared/VehicleWorkshopHistory";
+import TempVehicleAssignment from "./pages/dashboards/shared/TempVehicleAssignment";
 
 // Driver Pages
 import DriverList from "./pages/dashboards/shared/DriverList";
@@ -376,6 +377,7 @@ function App() {
                   element={<VehicleList mode="pending" />}
                 />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -659,6 +661,7 @@ function App() {
                   path="pending-vehicles"
                   element={<VehicleList mode="pending" />}
                 />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -908,6 +911,7 @@ function App() {
                   element={<VehicleList mode="pending" />}
                 />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -1167,6 +1171,7 @@ function App() {
                   element={<VehicleList mode="pending" />}
                 />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -1363,6 +1368,7 @@ function App() {
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="fleet" element={<FleetManagement />} />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -1483,6 +1489,7 @@ function App() {
                   element={<VehicleList mode="pending" />}
                 />
                 <Route path="vehicles/create" element={<CreateVehicle />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
@@ -1584,6 +1591,7 @@ function App() {
               >
                 <Route path="vehicles" element={<VehicleList />} />
                 <Route path="fleet" element={<FleetManagement />} />
+                <Route path="vehicles/temp-assignments" element={<TempVehicleAssignment />} />
                 <Route path="vehicles/:id" element={<VehicleDetail />} />
                 <Route
                   path="vehicles/:id/workshop-history"
