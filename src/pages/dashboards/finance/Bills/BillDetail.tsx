@@ -232,7 +232,6 @@ const BillDetail = () => {
                     <div className="rounded-3xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Summary</h3>
                         <div className="space-y-4">
-                            {console.log("Bill Data:", bill)}
                             {bill.isInclusiveTax && bill.taxAmount !== undefined && bill.taxAmount > 0 ? (
                                 <>
                                     <div className="flex justify-between items-center text-sm">
