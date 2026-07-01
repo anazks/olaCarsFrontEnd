@@ -93,7 +93,7 @@ export const useDashboardPrefetcher = () => {
                     try {
                         const todayStr = new Date().toISOString().split('T')[0];
                         const oneMonthAgoDate = new Date();
-                        oneMonthAgoDate.setMonth(oneMonthAgoDate.getMonth() - 1);
+                        oneMonthAgoDate.setDate(oneMonthAgoDate.getDate() - 30); // Exactly 30 days ago
                         const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
 
                         const startD = new Date(oneMonthAgoStr + 'T00:00:00.000Z');
@@ -121,7 +121,7 @@ export const useDashboardPrefetcher = () => {
                             getStaffPerformance({ type: 'all', ...baseFilters }),
                             alertService.getActiveAlerts(),
                             getTasks({ limit: 1000, ...baseFilters }),
-                            getInvoices({ limit: 10000, branch: baseFilters.branch })
+                            getInvoices({ limit: 10000, ...baseFilters })
                         ]);
 
                         const aggregated = aggregateExecutiveData(
@@ -215,11 +215,19 @@ export const useDashboardPrefetcher = () => {
             if (shouldPrefetchColl) {
                 tasks.push((async () => {
                     try {
+                        const get30DaysAgoStr = () => {
+                            const d = new Date();
+                            d.setDate(d.getDate() - 30);
+                            return d.toISOString().split('T')[0];
+                        };
+                        const getTodayStr = () => {
+                            return new Date().toISOString().split('T')[0];
+                        };
                         const defaultFilters = {
                             country: '',
                             branch: '',
-                            startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-                            endDate: format(new Date(), 'yyyy-MM-dd')
+                            startDate: get30DaysAgoStr(),
+                            endDate: getTodayStr()
                         };
 
                         const listPayload = {

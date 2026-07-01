@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   ShoppingBag,
   Wrench,
+  FileText,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -51,10 +52,10 @@ const FinancialAdminSidebar = ({
   const location = useLocation();
   const { t } = useTranslation();
   // Track only one open section for accordion behavior, default to accounting
-  const [openSection, setOpenSection] = useState<string | null>("accounting");
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
   const currentUser = getUser();
-  const userName = currentUser?.name || "Admin";
+  const userName = currentUser?.name || "Finance Admin";
   const userRole = "Financial Admin";
 
   useEffect(() => {
@@ -139,39 +140,20 @@ const FinancialAdminSidebar = ({
         {
           label: t("sidebar.items.manageVehicles"),
           path: "/admin/financial-admin/vehicles",
-          permission: "VEHICLE_VIEW",
         },
         {
-          label: t("sidebar.items.pendingEntryVehicles"),
-          path: "/admin/financial-admin/pending-vehicles",
-          permission: "VEHICLE_VIEW",
-        },
-        {
-          label: t("sidebar.items.vehicleLeaseSettings"),
-          path: "/admin/financial-admin/vehicle-lease-settings",
-          permission: "LEASE_VIEW",
-        },
-        {
-          label: t("sidebar.items.fleetPerformance"),
-          path: "/admin/financial-admin/driver-performance",
-          permission: "STAFF_PERFORMANCE_VIEW",
-        },
-      ],
-    },
-    {
-      id: "drivers",
-      label: t("sidebar.sections.drivers"),
-      icon: <Users size={22} />,
-      subItems: [
-        {
-          label: t("sidebar.items.driverList"),
+          label: t("sidebar.items.manageDrivers"),
           path: "/admin/financial-admin/drivers",
-          permission: "DRIVER_VIEW",
         },
         {
-          label: t("sidebar.items.driverPerformance"),
-          path: "/admin/financial-admin/driver-performance",
-          permission: "STAFF_PERFORMANCE_VIEW",
+          label: t("sidebar.items.legalAgreements"),
+          path: "/admin/financial-admin/agreements",
+          permission: "AGREEMENT_VIEW",
+        },
+        {
+          label: t("sidebar.items.accidentReports"),
+          path: "/admin/financial-admin/accident-reports",
+          permission: "STAFF_VIEW",
         },
       ],
     },
@@ -203,26 +185,16 @@ const FinancialAdminSidebar = ({
       label: t("sidebar.sections.sales"),
       icon: <ShoppingCart size={22} />,
       subItems: [
-        {
-          label: t("sidebar.items.customers"),
-          path: "/admin/financial-admin/customers",
-        },
-        {
-          label: t("sidebar.items.invoices"),
-          path: "/admin/financial-admin/invoices",
-        },
+        { label: t("sidebar.items.customers"), path: "/admin/financial-admin/customers" },
+        { label: t("sidebar.items.invoices"), path: "/admin/financial-admin/invoices" },
         {
           label: t("sidebar.items.paymentsReceived"),
           path: "/admin/financial-admin/payments-received",
         },
-        ...(currentUser?.role !== "admin"
-          ? [
-              {
-                label: t("sidebar.items.creditNotes"),
-                path: "/admin/financial-admin/credit-notes",
-              },
-            ]
-          : []),
+        {
+          label: t("sidebar.items.creditNotes"),
+          path: "/admin/financial-admin/credit-notes",
+        },
       ],
     },
     {
@@ -235,10 +207,7 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/manage-suppliers",
           permission: "SUPPLIER_VIEW",
         },
-        {
-          label: t("sidebar.items.expenses"),
-          path: "/admin/financial-admin/expenses",
-        },
+        { label: t("sidebar.items.expenses"), path: "/admin/financial-admin/expenses" },
         {
           label: t("sidebar.items.purchaseOrders"),
           path: "/admin/financial-admin/purchase-orders",
@@ -249,10 +218,7 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/workshop-purchase-requests",
           permission: "PURCHASE_ORDER_VIEW",
         },
-        {
-          label: t("sidebar.items.bills"),
-          path: "/admin/financial-admin/bills",
-        },
+        { label: t("sidebar.items.bills"), path: "/admin/financial-admin/bills" },
         {
           label: t("sidebar.items.paymentsMade"),
           path: "/admin/financial-admin/vendor-payment",
@@ -260,17 +226,13 @@ const FinancialAdminSidebar = ({
       ],
     },
     {
-      id: "accounting",
-      label: t("sidebar.sections.accounting"),
+      id: "finance",
+      label: t("sidebar.sections.accounts"),
       icon: <Calculator size={22} />,
       subItems: [
         {
           label: t("sidebar.items.financeDashboard"),
           path: "/admin/financial-admin/finance-dashboard",
-        },
-        {
-          label: t("sidebar.items.paymentRequests"),
-          path: "/admin/financial-admin/payment-requests",
         },
         {
           label: t("sidebar.items.generalLedger"),
@@ -279,39 +241,6 @@ const FinancialAdminSidebar = ({
         {
           label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
           path: "/admin/financial-admin/bulk-ledger-upload",
-        },
-        {
-          label: t("sidebar.items.financialStatements"),
-          path: "/admin/financial-admin/financial-statements",
-        },
-        {
-          label: t("sidebar.items.manualJournals"),
-          path: "/admin/financial-admin/manual-journals",
-        },
-        {
-          label: t("sidebar.items.fixedAssets", {
-            defaultValue: "Fixed Assets",
-          }),
-          path: "/admin/financial-admin/fixed-assets",
-        },
-      ],
-    },
-    {
-      id: "accounting-settings",
-      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
-      icon: <Settings size={22} />,
-      subItems: [
-        {
-          label: t("sidebar.items.chartOfAccounts"),
-          path: "/admin/financial-admin/chart-of-accounts",
-        },
-        {
-          label: t("sidebar.items.taxManagement"),
-          path: "/admin/financial-admin/taxes",
-        },
-        {
-          label: t("sidebar.items.bankAccounts"),
-          path: "/admin/financial-admin/bank-accounts",
         },
       ],
     },
@@ -327,7 +256,6 @@ const FinancialAdminSidebar = ({
         {
           label: t("sidebar.items.claims"),
           path: "/admin/financial-admin/insurance-claims",
-          permission: "INSURANCE_CLAIM_VIEW",
         },
         {
           label: t("sidebar.items.providers"),
@@ -337,7 +265,7 @@ const FinancialAdminSidebar = ({
     },
     {
       id: "staff",
-      label: t("sidebar.sections.staffHumanResources"),
+      label: t("sidebar.sections.staffHr", "Staff & HR"),
       icon: <Users size={22} />,
       subItems: [
         {
@@ -415,6 +343,12 @@ const FinancialAdminSidebar = ({
       label: t("sidebar.sections.alerts"),
       icon: <Bell size={22} />,
       path: "/admin/financial-admin/alerts",
+    },
+    {
+      id: "reports-hub",
+      label: "Reports",
+      icon: <FileText size={22} />,
+      path: "/admin/financial-admin/reports",
     },
     {
       id: "settings",

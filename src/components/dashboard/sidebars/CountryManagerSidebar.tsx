@@ -11,6 +11,7 @@ import {
   Settings,
   User,
   X,
+  FileText,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -243,6 +244,12 @@ const CountryManagerSidebar = ({
           permission: "TAX_VIEW",
         },
       ],
+    },
+    {
+      id: "reports-hub",
+      label: "Reports",
+      icon: <FileText size={22} />,
+      path: "/admin/country-manager/reports",
     },
     {
       id: "settings",

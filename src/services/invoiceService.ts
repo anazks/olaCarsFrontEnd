@@ -105,6 +105,9 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
     if (filters.search) params.append('search', filters.search);
     if (filters.startDate) params.append('startDate', filters.startDate);
     if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
     
     const response = await api.get(`/api/invoices?${params.toString()}`);
     return { 

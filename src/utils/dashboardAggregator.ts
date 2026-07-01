@@ -252,8 +252,9 @@ export const aggregateExecutiveData = (
 
             // Rent trend logic
             rt.forEach((week: any) => {
-                const wd = new Date(week.dueDate || week.startDate || new Date());
-                if (wd < startD || wd > endD) return;
+                const wd = new Date(week.dueDate || week.startDate || week.paidAt || new Date());
+                // Ignore date filters for rent trend to display historical records
+                // if (wd < startD || wd > endD) return;
                 
                 const pKey = groupByDay 
                     ? wd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -303,15 +304,12 @@ export const aggregateExecutiveData = (
         const vDisplayCounts = { Active: 0, Maintenance: 0, Available: 0, Suspended: 0, Other: 0 };
 
         vecs.forEach((v: any) => {
-            const cd = new Date(v.createdAt);
-            if (cd >= startD && cd <= endD) {
-                const status = v.status;
-                if (status === 'ACTIVE — RENTED' || status === 'W. GROUP ACTIVE') vDisplayCounts.Active++;
-                else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts.Maintenance++;
-                else if (status === 'ACTIVE — AVAILABLE') vDisplayCounts.Available++;
-                else if (status === 'SUSPENDED' || status === 'RETIRED') vDisplayCounts.Suspended++;
-                else vDisplayCounts.Other++;
-            }
+            const status = v.status;
+            if (status === 'ACTIVE — RENTED' || status === 'W. GROUP ACTIVE') vDisplayCounts.Active++;
+            else if (status === 'ACTIVE — MAINTENANCE' || status === 'REPAIR IN PROGRESS') vDisplayCounts.Maintenance++;
+            else if (status === 'ACTIVE — AVAILABLE') vDisplayCounts.Available++;
+            else if (status === 'SUSPENDED' || status === 'RETIRED') vDisplayCounts.Suspended++;
+            else vDisplayCounts.Other++;
         });
 
         finalVehicleData = [
@@ -368,7 +366,7 @@ export const aggregateExecutiveData = (
             { name: 'Operation Staff', count: sd.operationStaff?.length || 0, fill: COLORS.teal },
             { name: 'Country Mgrs', count: sd.countryManagers?.length || 0, fill: COLORS.yellow },
             { name: 'Global Admins', count: sd.globalAdmins?.length || 0, fill: COLORS.green }
-        ].filter(x => x.count > 0);
+        ];
     }
 
     return {

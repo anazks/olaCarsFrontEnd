@@ -1626,28 +1626,7 @@ const DriverPerformanceDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Safety Summary */}
-                    <div className="p-6 rounded-3xl border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="p-2 rounded-xl bg-red-500/10 text-red-500">
-                                <Gauge size={18} />
-                            </div>
-                            <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Safety Alerts</h3>
-                        </div>
 
-                        <div className="space-y-3">
-                            <SafetyStat label="Harsh Braking" count={kpis.totalBraking} color="red" />
-                            <SafetyStat label="Speeding" count={kpis.totalSpeeding} color="orange" />
-                            <SafetyStat label="Rapid Accel." count={kpis.totalAcceleration} color="yellow" />
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase text-dim">Total Incidents</span>
-                            <span className={`text-lg font-black ${kpis.totalSafetyEvents > 10 ? 'text-red-500' : kpis.totalSafetyEvents > 0 ? 'text-yellow-400' : 'text-brand-lime'}`}>
-                                {kpis.totalSafetyEvents}
-                            </span>
-                        </div>
-                    </div>
 
                     {/* Top Overdue Drivers */}
                     {kpis.overdueDrivers > 0 && (
