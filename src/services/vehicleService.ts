@@ -261,7 +261,6 @@ export interface Vehicle {
             driverId?: string;
         };
     } | null;
-    tempVehicle?: Partial<Vehicle> | null;
     createdBy?: string;
     creatorRole?: string;
     createdAt: string;
