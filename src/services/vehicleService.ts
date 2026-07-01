@@ -260,6 +260,7 @@ export interface Vehicle {
             driverId?: string;
         };
     } | null;
+    tempVehicle?: Partial<Vehicle> | null;
     createdBy?: string;
     creatorRole?: string;
     createdAt: string;
@@ -332,6 +333,7 @@ export interface VehicleFilters {
     fuelType?: FuelType;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    tempDriver?: 'exists' | string;
 }
 
 // GET all vehicles

@@ -148,11 +148,10 @@ const VehicleDetail = () => {
         { value: 'W. GROUP ACTIVE', label: 'W. Group Active' },
     ];
 
-    const isOptionDisabled = (statusOption: string) => {
+    const isOptionDisabled = (_statusOption: string) => {
         return false;
     };
-
-
+    
     // ── Live GPS Telemetry ──────────────────────────────────────────────────
     const [gpsDevice, setGpsDevice] = useState<GpsVehicle | null>(null);
     const [gpsLocation, setGpsLocation] = useState<GpsLocation | null>(null);
