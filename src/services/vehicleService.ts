@@ -247,6 +247,7 @@ export interface Vehicle {
         driverId?: string;
     } | null;
     tempDriver?: any;
+    tempVehicle?: string | Vehicle | null;
     tempAssignment?: {
         maintenanceVehicleId: string;
         maintenanceVehiclePlate: string;
