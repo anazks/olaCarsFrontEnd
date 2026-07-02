@@ -64,9 +64,10 @@ const PaymentsReceived = () => {
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
     const getDefaultStartDate = () => {
-        const now = new Date();
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
         const pad = (n: number) => String(n).padStart(2, '0');
-        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     };
 
     const getDefaultEndDate = () => {

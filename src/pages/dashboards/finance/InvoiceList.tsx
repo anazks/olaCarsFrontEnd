@@ -5,7 +5,7 @@ import {
     Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
-import { getInvoicesRegistry, deleteAllInvoices } from '../../../services/invoiceService';
+import { getInvoicesRegistry, deleteAllInvoices, getInvoicesTotalCount, getInvoicesDateWise } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -23,27 +23,60 @@ const InvoiceList = () => {
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showBulkUpload, setShowBulkUpload] = useState(false);
 
-    // Filters
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const getDefaultStartDate = () => {
-        const now = new Date();
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().substring(0, 10);
     };
 
     const getDefaultEndDate = () => {
-        const now = new Date();
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        return new Date().toISOString().substring(0, 10);
     };
+
+    // Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
     const [startDate, setStartDate] = useState(getDefaultStartDate());
     const [endDate, setEndDate] = useState(getDefaultEndDate());
+
+    const [tempStartDate, setTempStartDate] = useState(getDefaultStartDate());
+    const [tempEndDate, setTempEndDate] = useState(getDefaultEndDate());
+
+    const handleApplyFilters = () => {
+        setStartDate(tempStartDate);
+        setEndDate(tempEndDate);
+        setPage(1);
+    };
+
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [showFullCount, setShowFullCount] = useState(false);
+    const [realTotalCount, setRealTotalCount] = useState<number | null>(null);
+    const [loadingCount, setLoadingCount] = useState(false);
+
+    const handleViewTotalCount = async () => {
+        setLoadingCount(true);
+        try {
+            const count = await getInvoicesTotalCount();
+            setRealTotalCount(count);
+            setShowFullCount(true);
+        } catch (e) {
+            toast.error('Failed to retrieve database count');
+        } finally {
+            setLoadingCount(false);
+        }
+    };
+
+    // Reset realTotalCount and showFullCount if any filter gets updated
+    useEffect(() => {
+        setShowFullCount(false);
+        setRealTotalCount(null);
+    }, [debouncedSearch, startDate, endDate, statusFilter, filterMonth, filterYear]);
+
+
 
     const [metrics, setMetrics] = useState<{
         totalGrossBilled: number;
@@ -156,10 +189,11 @@ const InvoiceList = () => {
             if (filterMonth) filters.month = filterMonth;
             if (filterYear) filters.year = filterYear;
 
-            const res = await getInvoicesRegistry(filters);
+            const res = (startDate || endDate)
+                ? await getInvoicesDateWise(filters)
+                : await getInvoicesRegistry(filters);
             console.log('[InvoiceList] API Response:', res);
             if (res) {
-                // Direct extraction from Invoice model response
                 const data = res.data || res;
                 const dataArray = Array.isArray(data) ? data : [];
                 setInvoices(dataArray);
@@ -205,13 +239,22 @@ const InvoiceList = () => {
 
 
     return (
-        <div className="container-responsive space-y-6 pb-12">
+        <div className="container-responsive relative space-y-6 pb-12">
             <Breadcrumbs
                 items={[
                     { label: 'Sales', path: '#' },
                     { label: 'Invoices', active: true }
                 ]}
             />
+
+            {/* Simple Loading Circle Overlay */}
+            {loading && (
+                <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center rounded-3xl pointer-events-none">
+                    <div className="bg-neutral-950/95 border border-white/5 rounded-full p-4 flex items-center justify-center shadow-2xl pointer-events-auto animate-in fade-in duration-200">
+                        <RefreshCw className="animate-spin text-[#D4F12E]" size={28} />
+                    </div>
+                </div>
+            )}
 
             {/* Small Dashboard Cards */}
             {!loading && (
@@ -351,6 +394,8 @@ const InvoiceList = () => {
                                 onClick={() => {
                                     setFilterMonth('');
                                     setFilterYear('');
+                                    setTempStartDate(getDefaultStartDate());
+                                    setTempEndDate(getDefaultEndDate());
                                     setStartDate(getDefaultStartDate());
                                     setEndDate(getDefaultEndDate());
                                     setStatusFilter('ALL');
@@ -362,7 +407,7 @@ const InvoiceList = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
                             {/* Month Selector */}
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
@@ -409,8 +454,8 @@ const InvoiceList = () => {
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
                                 <input
                                     type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
+                                    value={tempStartDate}
+                                    onChange={(e) => setTempStartDate(e.target.value)}
                                     className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
@@ -421,8 +466,8 @@ const InvoiceList = () => {
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
                                 <input
                                     type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
+                                    value={tempEndDate}
+                                    onChange={(e) => setTempEndDate(e.target.value)}
                                     className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
@@ -443,6 +488,18 @@ const InvoiceList = () => {
                                     <option value="PAID">PAID</option>
                                     <option value="OVERDUE">OVERDUE</option>
                                 </select>
+                            </div>
+
+                            {/* Filter Action Button */}
+                            <div className="space-y-1.5 flex items-end">
+                                <button
+                                    onClick={handleApplyFilters}
+                                    disabled={loading}
+                                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#D4F12E] hover:bg-lime-400 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg shadow-brand-lime/10"
+                                >
+                                    <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                                    <span>Filter</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -595,7 +652,7 @@ const InvoiceList = () => {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
-                                                {invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : 'N/A'}
+                                                {invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : (invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A')}
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
@@ -610,9 +667,25 @@ const InvoiceList = () => {
                     {/* Modern Numbered Pagination */}
                     {!loading && invoices.length > 0 && pagination && pagination.pages >= 1 && (
                         <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                                Showing {invoices.length} of {pagination.total} statements
-                            </p>
+                            {showFullCount && realTotalCount !== null ? (
+                                <p className="text-xs font-bold animate-in fade-in duration-300" style={{ color: 'var(--text-dim)' }}>
+                                    Showing {invoices.length} of {realTotalCount} statements in database
+                                </p>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                        Showing {invoices.length} statements
+                                    </span>
+                                    <button
+                                        onClick={handleViewTotalCount}
+                                        disabled={loadingCount}
+                                        className="flex items-center gap-1.5 px-2 py-0.5 border border-brand-lime/30 hover:border-brand-lime text-[9px] font-black uppercase text-brand-lime rounded bg-brand-lime/5 transition-all cursor-pointer hover:bg-brand-lime/10 disabled:opacity-50"
+                                    >
+                                        {loadingCount && <RefreshCw size={8} className="animate-spin text-brand-lime" />}
+                                        <span>View Total Count</span>
+                                    </button>
+                                </div>
+                            )}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => handlePageChange(page - 1)}

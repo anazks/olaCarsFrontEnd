@@ -10,6 +10,7 @@ import {
   X,
   Calculator,
   Library,
+  FileText,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -187,6 +188,12 @@ const BranchFinStaffSidebar = ({
           path: "/admin/branch-fin-staff/driver-performance",
         },
       ],
+    },
+    {
+      id: "reports-hub",
+      label: "Reports",
+      icon: <FileText size={22} />,
+      path: "/admin/branch-fin-staff/reports",
     },
     {
       id: "settings",

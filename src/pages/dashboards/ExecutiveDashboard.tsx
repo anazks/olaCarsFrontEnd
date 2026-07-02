@@ -8,7 +8,7 @@ import { aggregateExecutiveData } from '../../utils/dashboardAggregator';
 import {
     ResponsiveContainer,
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
-    LineChart, Line
+    LineChart, Line, BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import {
     Car, Users, DollarSign, RefreshCw, Activity, ShoppingCart,
@@ -51,14 +51,25 @@ const ExecutiveDashboard = () => {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const oneMonthAgoDate = new Date();
-    oneMonthAgoDate.setMonth(oneMonthAgoDate.getMonth() - 1);
+    oneMonthAgoDate.setDate(oneMonthAgoDate.getDate() - 30); // Exactly 30 days ago
     const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
 
-    // Global Filters
+    // Global Filters (Applied)
     const [globalBranch, setGlobalBranch] = useState<string>('all');
     const [globalSort] = useState<'asc' | 'desc'>('desc');
     const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
+
+    // Form Temporary States
+    const [tempBranch, setTempBranch] = useState<string>('all');
+    const [tempStartDate, setTempStartDate] = useState<string>(oneMonthAgoStr);
+    const [tempEndDate, setTempEndDate] = useState<string>(todayStr);
+
+    const handleApplyFilters = () => {
+        setGlobalBranch(tempBranch);
+        setGlobalStartDate(tempStartDate);
+        setGlobalEndDate(tempEndDate);
+    };
 
     const getDynamicRevenueLabel = () => {
         if (!globalStartDate || !globalEndDate) return "Last 12 Months Revenue";
@@ -103,14 +114,14 @@ const ExecutiveDashboard = () => {
 
             // Stage 1: Load KPI-related data first (Drivers, Vehicles, Alerts, Invoices)
             const [driverRes, vehicleRes, alertRes, invoiceRes] = await Promise.allSettled([
-                getAllDrivers({ limit: 1, status: 'ACTIVE', branch: baseFilters.branch }),
-                getAllVehicles({ limit: 1, status: 'ACTIVE — RENTED,ACTIVE — AVAILABLE,W. GROUP ACTIVE' as any, branch: baseFilters.branch }),
+                getAllDrivers({ limit: 1000, status: 'ACTIVE', branch: baseFilters.branch }),
+                getAllVehicles({ limit: 1000, branch: baseFilters.branch }),
                 alertService.getActiveAlerts(),
                 getInvoicesRegistry({
                     limit: 10000,
                     branch: baseFilters.branch,
-                    startDate: oneMonthAgoStr,
-                    endDate: todayStr
+                    startDate: baseFilters.startDate,
+                    endDate: baseFilters.endDate
                 })
             ]);
 
@@ -145,8 +156,8 @@ const ExecutiveDashboard = () => {
                 getAllPurchaseOrders({
                     limit: 500,
                     branch: baseFilters.branch,
-                    startDate: oneMonthAgoStr,
-                    endDate: todayStr,
+                    startDate: baseFilters.startDate,
+                    endDate: baseFilters.endDate,
                     sortOrder: globalSort,
                     sortBy: 'createdAt'
                 }),
@@ -184,10 +195,10 @@ const ExecutiveDashboard = () => {
 
     // Keep end date valid relative to start date
     useEffect(() => {
-        if (globalStartDate && globalEndDate && globalEndDate < globalStartDate) {
-            setGlobalEndDate(globalStartDate);
+        if (tempStartDate && tempEndDate && tempEndDate < tempStartDate) {
+            setTempEndDate(tempStartDate);
         }
-    }, [globalStartDate, globalEndDate]);
+    }, [tempStartDate, tempEndDate]);
 
     useEffect(() => {
         const cacheAge = Date.now() - (executiveState.lastFetched || 0);
@@ -223,13 +234,21 @@ const ExecutiveDashboard = () => {
     }
 
     return (
-        <div className={`container-responsive space-y-6 transition-all duration-300 ${kpiLoading ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className="container-responsive relative min-h-[600px] space-y-6 transition-all duration-300">
+
+            {/* Simple Loading Circle Overlay */}
+            {(kpiLoading || restLoading) && (
+                <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center rounded-3xl pointer-events-none">
+                    <div className="bg-neutral-950/95 border border-white/5 rounded-full p-4 flex items-center justify-center shadow-2xl pointer-events-auto animate-in fade-in duration-200">
+                        <RefreshCw className="animate-spin text-[#D4F12E]" size={28} />
+                    </div>
+                </div>
+            )}
 
             {/* Header & Master Filters */}
             <div className="flex flex-row justify-between items-center gap-2 lg:gap-6 border-b pb-4 lg:pb-6 w-full" style={{ borderColor: 'var(--border-main)' }}>
                 <div className="min-w-0 flex-1 mr-2">
                     <h1 className="flex items-center gap-2 lg:gap-3 text-lg lg:text-2xl font-black uppercase tracking-tighter min-w-0" style={{ color: 'var(--text-main)' }}>
-                        {/* <Activity className="inline mr-2 lg:mr-3 mb-1 min-w-[20px]" style={{ color: '#148F85' }} />  */}
                         <div className="w-7 h-7 lg:w-9 lg:h-9 bg-white rounded-full flex items-center justify-center border-2 border-[#D4F12E] overflow-hidden flex-shrink-0">
                             <div className="bg-black w-[18px] h-[18px] lg:w-[22px] lg:h-[22px] rounded-full flex items-center justify-center">
                                 <div className="bg-[#D4F12E] w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full"></div>
@@ -237,19 +256,23 @@ const ExecutiveDashboard = () => {
                         </div>
                         <span className="hidden sm:inline truncate">Executive Control Center</span>
                         <span className="sm:hidden truncate">Executive</span>
-                        {restLoading && <RefreshCw className="animate-spin text-[#D4F12E] ml-2 flex-shrink-0" size={20} />}
                     </h1>
-                    <p className="text-[10px] lg:text-xs font-medium mt-0.5 lg:mt-1 truncate hidden md:block" style={{ color: 'var(--text-dim)' }}>
-                        Real-time master aggregation across all operating domains
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 lg:mt-1">
+                        <p className="text-[10px] lg:text-xs font-medium truncate" style={{ color: 'var(--text-dim)' }}>
+                            Real-time master aggregation across all operating domains
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[9px] lg:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <Clock size={10} /> Scope: {globalStartDate} to {globalEndDate}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex flex-row items-center gap-1.5 lg:gap-3 flex-shrink-0">
                     {/* Branch Filter */}
                     {branches.length > 0 && (
                         <select
-                            value={globalBranch}
-                            onChange={(e) => setGlobalBranch(e.target.value)}
+                            value={tempBranch}
+                            onChange={(e) => setTempBranch(e.target.value)}
                             className="px-2 py-1.5 lg:px-4 lg:py-2 border rounded-xl text-xs lg:text-sm outline-none transition-all cursor-pointer font-bold w-[70px] lg:w-[120px] truncate"
                             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
@@ -264,14 +287,14 @@ const ExecutiveDashboard = () => {
                     <div className="flex items-center gap-1 lg:gap-2">
                         <input
                             type="date"
-                            value={globalStartDate}
-                            max={globalEndDate || todayStr}
+                            value={tempStartDate}
+                            max={tempEndDate || todayStr}
                             onChange={(e) => {
                                 const val = e.target.value;
-                                if (val && val <= todayStr && (!globalEndDate || val <= globalEndDate)) {
-                                    setGlobalStartDate(val);
+                                if (val && val <= todayStr && (!tempEndDate || val <= tempEndDate)) {
+                                    setTempStartDate(val);
                                 } else if (!val) {
-                                    setGlobalStartDate('');
+                                    setTempStartDate('');
                                 }
                             }}
                             className="px-2 py-1.5 lg:px-4 lg:py-2 border rounded-xl text-xs lg:text-sm outline-none transition-all font-bold w-[100px] lg:w-auto"
@@ -280,19 +303,19 @@ const ExecutiveDashboard = () => {
                         <span className="text-[10px] lg:text-xs font-black uppercase tracking-widest opacity-40">to</span>
                         <input
                             type="date"
-                            value={globalEndDate}
-                            min={globalStartDate}
+                            value={tempEndDate}
+                            min={tempStartDate}
                             max={todayStr}
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (val && val <= todayStr) {
-                                    if (globalStartDate && val < globalStartDate) {
-                                        setGlobalEndDate(globalStartDate);
+                                    if (tempStartDate && val < tempStartDate) {
+                                        setTempEndDate(tempStartDate);
                                     } else {
-                                        setGlobalEndDate(val);
+                                        setTempEndDate(val);
                                     }
                                 } else if (!val) {
-                                    setGlobalEndDate('');
+                                    setTempEndDate('');
                                 }
                             }}
                             className="px-2 py-1.5 lg:px-4 lg:py-2 border rounded-xl text-xs lg:text-sm outline-none transition-all font-bold w-[100px] lg:w-auto"
@@ -300,14 +323,13 @@ const ExecutiveDashboard = () => {
                         />
                     </div>
 
-
                     <button
-                        onClick={() => fetchData(true)}
-                        disabled={restLoading}
-                        className="flex items-center gap-1 lg:gap-2 px-2 py-1.5 lg:px-4 lg:py-2 bg-lime text-black rounded-lg text-xs lg:text-sm font-bold transition-all hover:bg-lime/90 disabled:opacity-50 cursor-pointer"
+                        onClick={handleApplyFilters}
+                        disabled={kpiLoading || restLoading}
+                        className="flex items-center gap-1.5 lg:gap-2 px-3 py-2 bg-[#D4F12E] hover:bg-lime-400 text-black rounded-xl text-xs lg:text-sm font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg shadow-brand-lime/10"
                     >
-                        <RefreshCw size={14} className={restLoading ? 'animate-spin' : ''} />
-                        <span className="hidden xl:inline">{t('dashboards.common.refreshData')}</span>
+                        <RefreshCw size={14} className={kpiLoading || restLoading ? 'animate-spin' : ''} />
+                        <span>Filter</span>
                     </button>
                 </div>
             </div>
@@ -650,36 +672,7 @@ const ExecutiveDashboard = () => {
                             </div>
                         </div>
 
-                        {/* 3. Driver Analytics */}
-                        <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500">
-                                    <Activity size={20} />
-                                </div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Driving Apptitude</h2>
-                            </div>
-                            <div className="h-[220px] w-full">
-                                {restLoading ? (
-                                    <div className="h-full flex items-center justify-center">
-                                        <RefreshCw className="animate-spin text-lime" size={24} />
-                                    </div>
-                                ) : driverData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={driverData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                            <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
-                                            <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                            <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Line type="monotone" dataKey="Drivers" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Drive Score Data</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 4. Vehicle Analytics */}
+                        {/* 3. Vehicle Analytics */}
                         <div className="rounded-3xl border p-6 flex flex-col shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
@@ -694,13 +687,17 @@ const ExecutiveDashboard = () => {
                                     </div>
                                 ) : vehicleData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={vehicleData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                        <BarChart data={vehicleData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
                                             <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                                             <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Line type="monotone" dataKey="count" name="Vehicles" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                        </LineChart>
+                                            <Bar dataKey="count" name="Vehicles" radius={[4, 4, 0, 0]}>
+                                                {vehicleData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill || '#8b5cf6'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Vehicle Data</div>
@@ -708,7 +705,7 @@ const ExecutiveDashboard = () => {
                             </div>
                         </div>
 
-                        {/* 5. Purchase Order Analytics (Clickable) */}
+                        {/* 4. Purchase Order Analytics (Clickable) */}
                         <div
                             onClick={() => navigate('purchase-orders')}
                             className="rounded-3xl border p-6 flex flex-col shadow-sm cursor-pointer hover:border-yellow-500 hover:shadow-yellow-500/10 group transition-all duration-300 relative overflow-hidden"
@@ -745,7 +742,7 @@ const ExecutiveDashboard = () => {
                             </div>
                         </div>
 
-                        {/* 6. Staff Analytics (Clickable) */}
+                        {/* 5. Staff Analytics (Clickable) */}
                         <div
                             onClick={() => navigate('staff-performance')}
                             className="rounded-3xl border p-6 flex flex-col shadow-sm cursor-pointer hover:border-orange-500 hover:shadow-orange-500/10 group transition-all duration-300 relative overflow-hidden"
@@ -765,16 +762,76 @@ const ExecutiveDashboard = () => {
                                     </div>
                                 ) : staffData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={staffData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                        <BarChart data={staffData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} />
-                                            <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                                            <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                                             <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
-                                            <Line type="monotone" dataKey="count" name="Staff" stroke="#f97316" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
-                                        </LineChart>
+                                            <Bar dataKey="count" name="Staff" radius={[4, 4, 0, 0]}>
+                                                {staffData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill || '#f97316'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Staff Data</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 6. Task Operations Overview */}
+                        <div
+                            className="rounded-3xl border p-6 flex flex-col shadow-sm relative overflow-hidden"
+                            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                        >
+                            <div className="flex items-center gap-3 mb-4 relative z-10">
+                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+                                    <ClipboardList size={20} />
+                                </div>
+                                <h2 className="text-sm font-black uppercase tracking-wider text-dim">Task Operations</h2>
+                            </div>
+                            <div className="h-[220px] w-full relative z-10 flex items-center justify-center">
+                                {restLoading ? (
+                                    <RefreshCw className="animate-spin text-lime" size={24} />
+                                ) : (kpiData.tasks?.overdue || kpiData.tasks?.upcoming || kpiData.tasks?.assigned) > 0 ? (
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: 'Overdue', value: kpiData.tasks?.overdue || 0, fill: COLORS.red },
+                                                        { name: 'Upcoming', value: kpiData.tasks?.upcoming || 0, fill: COLORS.blue },
+                                                        { name: 'Assigned', value: kpiData.tasks?.assigned || 0, fill: COLORS.yellow }
+                                                    ].filter(x => x.value > 0)}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={50}
+                                                    outerRadius={70}
+                                                    paddingAngle={4}
+                                                    dataKey="value"
+                                                >
+                                                    {[
+                                                        { name: 'Overdue', value: kpiData.tasks?.overdue || 0, fill: COLORS.red },
+                                                        { name: 'Upcoming', value: kpiData.tasks?.upcoming || 0, fill: COLORS.blue },
+                                                        { name: 'Assigned', value: kpiData.tasks?.assigned || 0, fill: COLORS.yellow }
+                                                    ].filter(x => x.value > 0).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ background: 'var(--bg-popover)', border: '1px solid var(--border-main)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px' }} />
+                                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 600 }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                        <div className="absolute flex flex-col items-center justify-center mb-6">
+                                            <span className="text-xl font-black text-main">
+                                                {(kpiData.tasks?.overdue || 0) + (kpiData.tasks?.upcoming || 0) + (kpiData.tasks?.assigned || 0)}
+                                            </span>
+                                            <span className="text-[9px] uppercase font-black tracking-wider text-dim">Tasks</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-xs text-dim font-bold uppercase">No Tasks Data</div>
                                 )}
                             </div>
                         </div>
