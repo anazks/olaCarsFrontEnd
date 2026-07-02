@@ -43,6 +43,13 @@ export const ReportsPage = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [reportData, setReportData] = useState<any>(null);
 
+    const getReportList = (data: any): any[] => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (data.data && Array.isArray(data.data)) return data.data;
+        return [];
+    };
+
     const getOneMonthAgo = () => {
         const d = new Date();
         d.setMonth(d.getMonth() - 1);
@@ -155,7 +162,7 @@ export const ReportsPage = () => {
             supportsPdf: true,
             supportsExcel: true 
         },
-        { 
+        /* { 
             id: 'staff-performance', 
             name: 'Staff Onboarding', 
             category: 'operations', 
@@ -163,7 +170,7 @@ export const ReportsPage = () => {
             description: 'Metrics on driver/vehicle onboarding times and task completions.',
             supportsPdf: true,
             supportsExcel: true 
-        },
+        }, */
         { 
             id: 'vehicle-report', 
             name: 'Vehicle Inventory', 
@@ -325,7 +332,7 @@ export const ReportsPage = () => {
             });
 
         } else if (selectedReport === 'daily-finance') {
-            rows = reportData.map((d: any) => ({
+            rows = getReportList(reportData).map((d: any) => ({
                 "Date": d.date,
                 "Inflows (Income)": d.income || 0,
                 "Outflows (Expenses)": d.expenses || 0,
@@ -333,18 +340,18 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'ledger-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
-                "Date": row.date ? new Date(row.date).toISOString().split('T')[0] : "",
-                "Entry No": row.entryNumber || "",
-                "Account Code": row.accountCode || "",
-                "Account Name": row.accountName || "",
-                "Debit": row.debit || 0,
-                "Credit": row.credit || 0,
-                "Narration": row.narration || ""
+            rows = getReportList(reportData).map((row: any) => ({
+                "Date": row.entryDate ? new Date(row.entryDate).toISOString().split('T')[0] : "",
+                "Entry No": row.transactionId || (row.manualJournal ? "MJ" : (row.voucher ? "VCH" : "")),
+                "Account Code": row.accountingCode?.code || "",
+                "Account Name": row.accountingCode?.name || "",
+                "Debit": row.type === 'DEBIT' ? row.amount : 0,
+                "Credit": row.type === 'CREDIT' ? row.amount : 0,
+                "Narration": row.description || ""
             }));
 
         } else if (selectedReport === 'bills-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Bill Number": row.billNumber || "",
                 "Supplier": row.supplier?.name || "",
                 "Bill Date": row.billDate ? new Date(row.billDate).toISOString().split('T')[0] : "",
@@ -355,7 +362,7 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'invoices-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Invoice Number": row.invoiceNumber || "",
                 "Customer Name": row.customer?.name || row.driverId?.personalInfo?.fullName || "",
                 "Invoice Date": row.invoiceDate ? new Date(row.invoiceDate).toISOString().split('T')[0] : "",
@@ -367,18 +374,18 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'payments-received-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Payment ID": row.paymentNumber || "",
                 "Transaction Date": row.paymentDate ? new Date(row.paymentDate).toISOString().split('T')[0] : "",
                 "Driver / Customer": row.driverId?.personalInfo?.fullName || row.customerId?.name || "",
-                "Amount Collected": row.amount || 0,
+                "Amount Collected": row.amountReceived || 0,
                 "Method": row.paymentMethod || "",
                 "Reference No": row.referenceNumber || ""
             }));
 
         } else if (selectedReport === 'customer-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
-                "Customer ID": row.customerId || "",
+            rows = getReportList(reportData).map((row: any) => ({
+                "Customer ID": typeof row.customerId === 'object' && row.customerId !== null ? row.customerId.customerId || row.customerId._id : row.customerId || "",
                 "Name": row.name || "",
                 "Contact Person": row.contactPerson || "",
                 "Email Address": row.email || "",
@@ -387,7 +394,7 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'credit-notes-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Credit Note Number": row.creditNoteNumber || "",
                 "Party Name": row.customerId?.name || row.driverId?.personalInfo?.fullName || "",
                 "Issue Date": row.creditNoteDate ? new Date(row.creditNoteDate).toISOString().split('T')[0] : "",
@@ -397,7 +404,7 @@ export const ReportsPage = () => {
                 }));
 
         } else if (selectedReport === 'driver-performance') {
-            rows = reportData.map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Driver Name": row.name || "",
                 "Driving Score": row.drivingScore || 0,
                 "Average Speed (km/h)": row.avgSpeed || 0,
@@ -408,7 +415,7 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'staff-performance') {
-            rows = reportData.map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Staff Member": row.name || "",
                 "System Role": row.role || "",
                 "Tasks Completed": row.tasksCompleted || 0,
@@ -418,7 +425,7 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'vehicle-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Fleet Number": row.basicDetails?.fleetNumber || "",
                 "Plate Number": row.basicDetails?.plateNumber || "",
                 "Make & Model": `${row.basicDetails?.make || ""} ${row.basicDetails?.model || ""}`,
@@ -429,7 +436,7 @@ export const ReportsPage = () => {
             }));
 
         } else if (selectedReport === 'vendor-report') {
-            rows = ((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any) => ({
+            rows = getReportList(reportData).map((row: any) => ({
                 "Vendor Number": row.vendorNumber || "",
                 "Company Name": row.companyName || row.name || "",
                 "Display Name": row.displayName || "",
@@ -683,14 +690,14 @@ export const ReportsPage = () => {
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Reports Command Center', active: true }]} />
 
             {/* Premium Header - Glassmorphic Block */}
-            <div className="relative overflow-hidden rounded-3xl border border-white/5 p-6 md:p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6" 
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.02) 100%)', backdropFilter: 'blur(20px)' }}>
+            <div className="relative overflow-hidden rounded-3xl border border-[var(--border-main)] p-6 md:p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[var(--bg-card)]" 
+                 style={{ backdropFilter: 'blur(20px)' }}>
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-brand-lime animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Live Connected Database</span>
                     </div>
-                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider bg-gradient-to-r from-white via-white/90 to-brand-lime bg-clip-text text-transparent">
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider bg-gradient-to-r from-[var(--text-main)] via-[var(--text-main)]/90 to-brand-lime bg-clip-text text-transparent">
                         Reports & Intelligence
                     </h1>
                     <p className="text-xs font-semibold text-dim">
@@ -702,8 +709,7 @@ export const ReportsPage = () => {
                     <button 
                         onClick={loadReportData}
                         disabled={loading}
-                        className="p-3 rounded-2xl border border-white/5 hover:bg-white/5 transition-all text-dim hover:text-white cursor-pointer active:scale-95 flex items-center justify-center shadow-lg"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}
+                        className="p-3 rounded-2xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all text-dim hover:text-main cursor-pointer active:scale-95 flex items-center justify-center shadow-lg bg-[var(--bg-input)]"
                         title="Sync Live Data"
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin text-brand-lime' : ''} />
@@ -719,8 +725,8 @@ export const ReportsPage = () => {
                 {/* Left Sidebar - Reports Selector & Filters */}
                 <div className="xl:col-span-1 space-y-6">
                     {/* Filters Deck */}
-                    <div className="rounded-3xl border border-white/5 p-6 space-y-5 shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
-                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="rounded-3xl border border-[var(--border-main)] p-6 space-y-5 shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+                        <div className="flex items-center justify-between border-b border-[var(--border-main)] pb-3">
                             <h2 className="text-xs font-black uppercase tracking-widest text-main flex items-center gap-2">
                                 <Building size={14} className="text-brand-lime" /> Data Scoping
                             </h2>
@@ -732,7 +738,7 @@ export const ReportsPage = () => {
                             <select
                                 value={filters.branch}
                                 onChange={(e) => setFilters(prev => ({ ...prev, branch: e.target.value }))}
-                                className="w-full px-4 py-2.5 rounded-xl border border-white/5 text-xs bg-white/[0.01] hover:bg-white/[0.03] outline-none cursor-pointer transition-all"
+                                className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-main)] text-xs bg-[var(--bg-input)] hover:bg-[var(--sidebar-hover)] outline-none cursor-pointer transition-all"
                                 style={{ color: 'var(--text-main)' }}
                             >
                                 <option value="" className="bg-[var(--bg-card)]">Consolidated (All Branches)</option>
@@ -750,7 +756,7 @@ export const ReportsPage = () => {
                                     type="date"
                                     value={filters.startDate}
                                     onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/5 text-xs bg-white/[0.01] outline-none hover:bg-white/[0.03] focus:border-brand-lime/30 transition-all"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-main)] text-xs bg-[var(--bg-input)] outline-none hover:bg-[var(--sidebar-hover)] focus:border-brand-lime/30 transition-all"
                                     style={{ color: 'var(--text-main)' }}
                                 />
                                 <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" />
@@ -764,7 +770,7 @@ export const ReportsPage = () => {
                                     type="date"
                                     value={filters.endDate}
                                     onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/5 text-xs bg-white/[0.01] outline-none hover:bg-white/[0.03] focus:border-brand-lime/30 transition-all"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-main)] text-xs bg-[var(--bg-input)] outline-none hover:bg-[var(--sidebar-hover)] focus:border-brand-lime/30 transition-all"
                                     style={{ color: 'var(--text-main)' }}
                                 />
                                 <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" />
@@ -773,7 +779,7 @@ export const ReportsPage = () => {
                     </div>
 
                     {/* Report Type List */}
-                    <div className="rounded-3xl border border-white/5 p-5 space-y-6 shadow-xl relative overflow-y-auto max-h-[580px] custom-scrollbar" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <div className="rounded-3xl border border-[var(--border-main)] p-5 space-y-6 shadow-xl relative overflow-y-auto max-h-[580px] custom-scrollbar" style={{ backgroundColor: 'var(--bg-card)' }}>
                         
                         {/* Financial Statements */}
                         <div className="space-y-3">
@@ -786,11 +792,11 @@ export const ReportsPage = () => {
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
                                             ${selectedReport === r.id 
                                                 ? 'bg-brand-lime/10 border-brand-lime/30 text-brand-lime font-black shadow-lg shadow-brand-lime/[0.02]' 
-                                                : 'border-transparent text-dim hover:text-white hover:bg-white/[0.02]'
+                                                : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
                                     >
-                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-brand-lime/20 text-brand-lime' : 'bg-white/5 text-dim'}`}>
+                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-brand-lime/20 text-brand-lime' : 'bg-[var(--bg-input)] text-dim'}`}>
                                             {r.icon}
                                         </div>
                                         <span className="text-[11px] font-bold tracking-wide uppercase truncate">{r.name}</span>
@@ -810,11 +816,11 @@ export const ReportsPage = () => {
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
                                             ${selectedReport === r.id 
                                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' 
-                                                : 'border-transparent text-dim hover:text-white hover:bg-white/[0.02]'
+                                                : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
                                     >
-                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-dim'}`}>
+                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--bg-input)] text-dim'}`}>
                                             {r.icon}
                                         </div>
                                         <span className="text-[11px] font-bold tracking-wide uppercase truncate">{r.name}</span>
@@ -834,11 +840,11 @@ export const ReportsPage = () => {
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
                                             ${selectedReport === r.id 
                                                 ? 'bg-[#0EA5E9]/10 border-[#0EA5E9]/30 text-[#0EA5E9] font-black' 
-                                                : 'border-transparent text-dim hover:text-white hover:bg-white/[0.02]'
+                                                : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
                                     >
-                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-[#0EA5E9]/20 text-[#0EA5E9]' : 'bg-white/5 text-dim'}`}>
+                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-[#0EA5E9]/20 text-[#0EA5E9]' : 'bg-[var(--bg-input)] text-dim'}`}>
                                             {r.icon}
                                         </div>
                                         <span className="text-[11px] font-bold tracking-wide uppercase truncate">{r.name}</span>
@@ -858,11 +864,11 @@ export const ReportsPage = () => {
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
                                             ${selectedReport === r.id 
                                                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' 
-                                                : 'border-transparent text-dim hover:text-white hover:bg-white/[0.02]'
+                                                : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
                                     >
-                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-dim'}`}>
+                                        <div className={`p-2 rounded-xl transition-all ${selectedReport === r.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[var(--bg-input)] text-dim'}`}>
                                             {r.icon}
                                         </div>
                                         <span className="text-[11px] font-bold tracking-wide uppercase truncate">{r.name}</span>
@@ -877,14 +883,14 @@ export const ReportsPage = () => {
                 {/* Right Panel - Report Preview & Actions */}
                 <div className="xl:col-span-3 flex flex-col gap-6">
                     {/* Glassmorphic Container for Preview */}
-                    <div className="rounded-3xl border border-white/5 p-6 flex flex-col h-[670px] shadow-2xl relative overflow-hidden" 
+                    <div className="rounded-3xl border border-[var(--border-main)] p-6 flex flex-col h-[670px] shadow-2xl relative overflow-hidden" 
                          style={{ backgroundColor: 'var(--bg-card)' }}>
                         
                         {/* Decorative Background Blur */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/[0.01] rounded-full blur-[80px] pointer-events-none" />
 
                         {/* Preview Header */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-5 mb-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[var(--border-main)] pb-5 mb-6">
                             <div>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-brand-lime" /> Data Preview Screen
@@ -898,7 +904,7 @@ export const ReportsPage = () => {
                                     <button
                                         onClick={handleExportPdf}
                                         disabled={loading || exporting}
-                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-wider hover:bg-white/5 disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
+                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-wider hover:bg-[var(--sidebar-hover)] disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
                                     >
                                         <Download size={12} className="text-rose-500" /> PDF
                                     </button>
@@ -907,7 +913,7 @@ export const ReportsPage = () => {
                                     <button
                                         onClick={handleExportExcel}
                                         disabled={loading || exporting}
-                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-wider hover:bg-white/5 disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
+                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-wider hover:bg-[var(--sidebar-hover)] disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
                                     >
                                         <Download size={12} className="text-emerald-500" /> Excel
                                     </button>
@@ -916,7 +922,7 @@ export const ReportsPage = () => {
                                     <button
                                         onClick={handleExportCsv}
                                         disabled={loading || exporting}
-                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-wider hover:bg-white/5 disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
+                                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--border-main)] text-[10px] font-black uppercase tracking-wider hover:bg-[var(--sidebar-hover)] disabled:opacity-50 cursor-pointer active:scale-95 transition-all text-main"
                                     >
                                         <Download size={12} className="text-sky-500" /> CSV
                                     </button>
@@ -958,15 +964,15 @@ export const ReportsPage = () => {
                                     {selectedReport === 'pl' && (
                                         <div className="space-y-6">
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Revenue</span>
                                                     <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatCurrency(reportData.revenueTotal || reportData.grossRevenue || 0)}</h3>
                                                 </div>
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(244,63,94,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(244,63,94,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Operating Expenses</span>
                                                     <h3 className="text-2xl font-black text-rose-400 mt-1">{formatCurrency(reportData.expensesTotal || reportData.totalExpenses || 0)}</h3>
                                                 </div>
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(212,241,46,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(212,241,46,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Net Profit Margin</span>
                                                     {(() => {
                                                         const rev = reportData.revenueTotal || reportData.grossRevenue || 0;
@@ -983,14 +989,14 @@ export const ReportsPage = () => {
                                             </div>
 
                                             {/* Detailed P&L Statements Table */}
-                                            <div className="border border-white/5 rounded-2xl overflow-hidden shadow-inner" style={{ background: 'rgba(255,255,255,0.005)' }}>
-                                                <div className="p-4 border-b border-white/5 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                            <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-inner" style={{ background: 'var(--bg-card)' }}>
+                                                <div className="p-4 border-b border-[var(--border-main)] flex items-center justify-between" style={{ background: 'var(--bg-input)' }}>
                                                     <h3 className="text-xs font-black uppercase tracking-widest text-main flex items-center gap-2">
                                                         <TrendingUp size={14} className="text-brand-lime" /> Accounts Summary
                                                     </h3>
                                                 </div>
                                                 <div className="p-5 space-y-4">
-                                                    <div className="flex justify-between border-b border-white/5 pb-2 text-[10px] font-black uppercase tracking-widest text-dim">
+                                                    <div className="flex justify-between border-b border-[var(--border-main)] pb-2 text-[10px] font-black uppercase tracking-widest text-dim">
                                                         <span>Account Classification</span>
                                                         <span>Aggregated Balance</span>
                                                     </div>
@@ -1010,7 +1016,7 @@ export const ReportsPage = () => {
                                                     </div>
 
                                                     {/* Expenses */}
-                                                    <div className="space-y-2 pt-2 border-t border-white/5">
+                                                    <div className="space-y-2 pt-2 border-t border-[var(--border-main)]">
                                                         <div className="flex justify-between text-xs font-black text-rose-400">
                                                             <span className="uppercase tracking-wide">Operating Expenses (Outflows)</span>
                                                             <span>{formatCurrency(reportData.expensesTotal || reportData.totalExpenses || 0)}</span>
@@ -1024,7 +1030,7 @@ export const ReportsPage = () => {
                                                     </div>
 
                                                     {/* Net Profit Summary Row */}
-                                                    <div className="flex justify-between border-t border-white/5 pt-4 text-xs font-black uppercase tracking-widest" style={{ background: 'rgba(255,255,255,0.005)' }}>
+                                                    <div className="flex justify-between border-t border-[var(--border-main)] pt-4 text-xs font-black uppercase tracking-widest" style={{ background: 'var(--bg-card)' }}>
                                                         <span>Net Surplus / Earnings</span>
                                                         <span className={`font-mono text-sm px-2.5 py-1 rounded-xl ${
                                                             (reportData.netProfit || 0) >= 0 ? 'text-emerald-400 bg-emerald-500/5' : 'text-rose-400 bg-rose-500/5'
@@ -1041,15 +1047,15 @@ export const ReportsPage = () => {
                                     {selectedReport === 'balance-sheet' && (
                                         <div className="space-y-6">
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Assets</span>
                                                     <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatCurrency(reportData.assetsTotal || 0)}</h3>
                                                 </div>
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(239,68,68,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(239,68,68,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Liabilities</span>
                                                     <h3 className="text-2xl font-black text-rose-400 mt-1">{formatCurrency(reportData.liabilitiesTotal || 0)}</h3>
                                                 </div>
-                                                <div className="border border-white/5 rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(56,189,248,0.03), rgba(0,0,0,0))' }}>
+                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(56,189,248,0.03), rgba(0,0,0,0))' }}>
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Equity</span>
                                                     <h3 className="text-2xl font-black text-sky-400 mt-1">{formatCurrency(reportData.equityTotal || 0)}</h3>
                                                 </div>
@@ -1067,7 +1073,7 @@ export const ReportsPage = () => {
                                             )}
 
                                             {/* Details Sheet */}
-                                            <div className="border border-white/5 rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.005)' }}>
+                                            <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)' }}>
                                                 <div className="p-5 space-y-4">
                                                     
                                                     {/* Assets */}
@@ -1085,7 +1091,7 @@ export const ReportsPage = () => {
                                                     </div>
 
                                                     {/* Liabilities */}
-                                                    <div className="space-y-2 pt-2 border-t border-white/5">
+                                                    <div className="space-y-2 pt-2 border-t border-[var(--border-main)]">
                                                         <div className="flex justify-between text-xs font-black text-rose-400 uppercase tracking-wider">
                                                             <span>Liabilities</span>
                                                             <span>{formatCurrency(reportData.liabilitiesTotal || 0)}</span>
@@ -1099,7 +1105,7 @@ export const ReportsPage = () => {
                                                     </div>
 
                                                     {/* Equity */}
-                                                    <div className="space-y-2 pt-2 border-t border-white/5">
+                                                    <div className="space-y-2 pt-2 border-t border-[var(--border-main)]">
                                                         <div className="flex justify-between text-xs font-black text-sky-400 uppercase tracking-wider">
                                                             <span>Equity</span>
                                                             <span>{formatCurrency(reportData.equityTotal || 0)}</span>
@@ -1120,7 +1126,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'daily-finance' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Transaction Date</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-right">Income / Inflows</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-right">Expense / Outflows</th>
@@ -1131,7 +1137,7 @@ export const ReportsPage = () => {
                                                 {(reportData || []).map((row: any, idx: number) => {
                                                     const net = (row.income || 0) - (row.expenses || 0);
                                                     return (
-                                                        <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                        <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                             <td className="p-4 font-semibold">{row.date}</td>
                                                             <td className="p-4 text-emerald-400 font-bold text-right font-mono">{formatCurrency(row.income)}</td>
                                                             <td className="p-4 text-rose-400 font-bold text-right font-mono">{formatCurrency(row.expenses)}</td>
@@ -1152,7 +1158,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'ledger-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Date</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Entry Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Account</th>
@@ -1162,17 +1168,17 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
-                                                        <td className="p-4">{row.date ? new Date(row.date).toISOString().split('T')[0] : "N/A"}</td>
-                                                        <td className="p-4 font-bold">{row.entryNumber || "N/A"}</td>
-                                                        <td className="p-4">{row.accountName} <span className="text-[10px] text-dim/50">({row.accountCode})</span></td>
-                                                        <td className="p-4 text-right text-emerald-400 font-bold font-mono">{row.debit > 0 ? formatCurrency(row.debit) : "-"}</td>
-                                                        <td className="p-4 text-right text-rose-400 font-bold font-mono">{row.credit > 0 ? formatCurrency(row.credit) : "-"}</td>
-                                                        <td className="p-4 opacity-75 max-w-[200px] truncate">{row.narration || "-"}</td>
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
+                                                        <td className="p-4">{row.entryDate ? new Date(row.entryDate).toISOString().split('T')[0] : "N/A"}</td>
+                                                        <td className="p-4 font-bold">{row.transactionId || (row.manualJournal ? "Manual Journal" : (row.voucher ? "Voucher" : "N/A"))}</td>
+                                                        <td className="p-4">{row.accountingCode?.name || "N/A"} <span className="text-[10px] text-dim/50">({row.accountingCode?.code || ""})</span></td>
+                                                        <td className="p-4 text-right text-emerald-400 font-bold font-mono">{row.type === 'DEBIT' ? formatCurrency(row.amount) : "-"}</td>
+                                                        <td className="p-4 text-right text-rose-400 font-bold font-mono">{row.type === 'CREDIT' ? formatCurrency(row.amount) : "-"}</td>
+                                                        <td className="p-4 opacity-75 max-w-[200px] truncate">{row.description || "-"}</td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Ledger Entries Found.</td>
                                                     </tr>
@@ -1185,7 +1191,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'bills-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Bill Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Vendor / Supplier</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Bill Date</th>
@@ -1195,8 +1201,8 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-bold">{row.billNumber}</td>
                                                         <td className="p-4 font-semibold">{row.supplier?.name || "N/A"}</td>
                                                         <td className="p-4">{row.billDate ? new Date(row.billDate).toISOString().split('T')[0] : "N/A"}</td>
@@ -1210,7 +1216,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Purchase Bills Found.</td>
                                                     </tr>
@@ -1223,7 +1229,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'invoices-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Invoice Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Customer / Driver</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Issue Date</th>
@@ -1234,8 +1240,8 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-bold">{row.invoiceNumber}</td>
                                                         <td className="p-4 font-semibold">{row.customer?.name || row.driverId?.personalInfo?.fullName || "Unresolved Party"}</td>
                                                         <td className="p-4">{row.invoiceDate ? new Date(row.invoiceDate).toISOString().split('T')[0] : "N/A"}</td>
@@ -1250,7 +1256,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={7} className="p-8 text-center text-xs text-dim font-bold">No Invoices Found.</td>
                                                     </tr>
@@ -1263,7 +1269,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'payments-received-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Payment ID</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Date Received</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Payer Detail</th>
@@ -1273,17 +1279,17 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-bold">{row.paymentNumber || "N/A"}</td>
                                                         <td className="p-4">{row.paymentDate ? new Date(row.paymentDate).toISOString().split('T')[0] : "N/A"}</td>
                                                         <td className="p-4 font-semibold">{row.driverId?.personalInfo?.fullName || row.customerId?.name || "N/A"}</td>
-                                                        <td className="p-4 text-right text-emerald-400 font-bold font-mono">{formatCurrency(row.amount)}</td>
+                                                        <td className="p-4 text-right text-emerald-400 font-bold font-mono">{formatCurrency(row.amountReceived)}</td>
                                                         <td className="p-4 font-semibold uppercase text-[10px] text-dim">{row.paymentMethod}</td>
                                                         <td className="p-4 font-mono text-dim">{row.referenceNumber || "-"}</td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Inflow Payments Logged.</td>
                                                     </tr>
@@ -1296,7 +1302,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'customer-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Customer ID</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Customer Name</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Contact Person</th>
@@ -1306,9 +1312,9 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
-                                                        <td className="p-4 font-mono">{row.customerId || "N/A"}</td>
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
+                                                        <td className="p-4 font-mono">{typeof row.customerId === 'object' && row.customerId !== null ? row.customerId.customerId || row.customerId._id : row.customerId || "N/A"}</td>
                                                         <td className="p-4 font-bold">{row.name}</td>
                                                         <td className="p-4">{row.contactPerson || "-"}</td>
                                                         <td className="p-4">{row.email || "-"}</td>
@@ -1320,7 +1326,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Customers Registered.</td>
                                                     </tr>
@@ -1333,7 +1339,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'credit-notes-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Credit Note Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Credited Party</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Date Issued</th>
@@ -1343,8 +1349,8 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-bold">{row.creditNoteNumber}</td>
                                                         <td className="p-4 font-semibold">{row.customerId?.name || row.driverId?.personalInfo?.fullName || "N/A"}</td>
                                                         <td className="p-4">{row.creditNoteDate ? new Date(row.creditNoteDate).toISOString().split('T')[0] : "N/A"}</td>
@@ -1357,7 +1363,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Credit Notes Issued.</td>
                                                     </tr>
@@ -1370,7 +1376,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'driver-performance' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Driver Name</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-center">Driving Score</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-center">Avg Speed</th>
@@ -1381,7 +1387,7 @@ export const ReportsPage = () => {
                                             </thead>
                                             <tbody>
                                                 {(reportData || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-semibold">{row.name}</td>
                                                         <td className="p-4 text-center font-bold">
                                                             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold ${
@@ -1410,7 +1416,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'staff-performance' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Staff Member</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Role / Title</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-center">Tasks Done</th>
@@ -1421,7 +1427,7 @@ export const ReportsPage = () => {
                                             </thead>
                                             <tbody>
                                                 {(reportData || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-semibold">{row.name}</td>
                                                         <td className="p-4 font-bold uppercase tracking-wider text-[9px] text-dim">{row.role}</td>
                                                         <td className="p-4 text-center">{row.tasksCompleted}</td>
@@ -1447,7 +1453,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'vehicle-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Fleet No.</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Plate Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Make & Model</th>
@@ -1458,8 +1464,8 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-bold">{row.basicDetails?.fleetNumber || "N/A"}</td>
                                                         <td className="p-4 font-mono font-bold text-brand-lime">{row.basicDetails?.plateNumber}</td>
                                                         <td className="p-4 font-semibold">{row.basicDetails?.make} {row.basicDetails?.model}</td>
@@ -1473,7 +1479,7 @@ export const ReportsPage = () => {
                                                         <td className="p-4 font-semibold">{row.driverId?.personalInfo?.fullName || "Unassigned"}</td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={7} className="p-8 text-center text-xs text-dim font-bold">No Vehicles Found in Fleet.</td>
                                                     </tr>
@@ -1486,7 +1492,7 @@ export const ReportsPage = () => {
                                     {selectedReport === 'vendor-report' && (
                                         <table className="w-full text-left border-collapse" id="report-preview-table">
                                             <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-                                                <tr className="border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                                                <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Vendor Number</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Vendor Name</th>
                                                     <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Email</th>
@@ -1496,8 +1502,8 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).map((row: any, idx: number) => (
-                                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.01] text-xs text-main transition-colors">
+                                                {getReportList(reportData).map((row: any, idx: number) => (
+                                                    <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-mono font-bold">{row.vendorNumber || "N/A"}</td>
                                                         <td className="p-4 font-bold">{row.companyName || row.name}</td>
                                                         <td className="p-4">{row.email || "-"}</td>
@@ -1510,7 +1516,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {((reportData && 'data' in reportData ? reportData.data : reportData) || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Suppliers / Vendors Registered.</td>
                                                     </tr>

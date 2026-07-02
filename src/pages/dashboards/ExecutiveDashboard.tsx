@@ -257,9 +257,14 @@ const ExecutiveDashboard = () => {
                         <span className="hidden sm:inline truncate">Executive Control Center</span>
                         <span className="sm:hidden truncate">Executive</span>
                     </h1>
-                    <p className="text-[10px] lg:text-xs font-medium mt-0.5 lg:mt-1 truncate hidden md:block" style={{ color: 'var(--text-dim)' }}>
-                        Real-time master aggregation across all operating domains
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 lg:mt-1">
+                        <p className="text-[10px] lg:text-xs font-medium truncate" style={{ color: 'var(--text-dim)' }}>
+                            Real-time master aggregation across all operating domains
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[9px] lg:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <Clock size={10} /> Scope: {globalStartDate} to {globalEndDate}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex flex-row items-center gap-1.5 lg:gap-3 flex-shrink-0">
