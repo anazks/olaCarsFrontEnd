@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { format, startOfMonth } from 'date-fns';
 
 // Store & Actions
 import type { RootState } from '../store';

@@ -12,7 +12,7 @@ import {
     TrendingUp, Wallet, FileText, Clock, FilterX,
     RefreshCw
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setCollectionsDashboardData } from '../../../store/dashboardSlice';

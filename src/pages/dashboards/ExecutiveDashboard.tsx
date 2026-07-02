@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../store';
@@ -11,7 +10,7 @@ import {
     LineChart, Line, BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import {
-    Car, Users, DollarSign, RefreshCw, Activity, ShoppingCart,
+    Car, Users, DollarSign, RefreshCw, ShoppingCart,
     AlertTriangle, CreditCard, AlertCircle,
     BarChart3, ArrowUpRight, ArrowDownRight, Clock, FileText, ClipboardList, Briefcase
 } from 'lucide-react';
@@ -31,7 +30,6 @@ const COLORS = {
 };
 
 const ExecutiveDashboard = () => {
-    const { t } = useTranslation();
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const executiveState = useSelector((state: RootState) => state.dashboard.executive);
@@ -43,7 +41,6 @@ const ExecutiveDashboard = () => {
 
     const financeTotals = executiveState.financeTotals;
     const vehicleData = executiveState.vehicleData;
-    const driverData = executiveState.driverData;
     const staffData = executiveState.staffData;
     const rentTrendData = executiveState.rentTrendData;
     const poTrendData = executiveState.poTrendData;

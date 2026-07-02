@@ -57,7 +57,6 @@ import ManageWorkshops from "./pages/dashboards/shared/ManageWorkshops";
 import ManageMerchendisers from "./pages/dashboards/shared/ManageMerchendisers";
 import ManageSuppliers from "./pages/dashboards/shared/ManageSuppliers";
 import SupplierDetail from "./pages/dashboards/shared/SupplierDetail";
-import Reports from "./pages/dashboards/shared/Reports";
 import POThresholdPage from "./pages/dashboards/admin/POThresholdPage";
 import ManageInsurances from "./pages/dashboards/shared/ManageInsurances";
 import VehiclePolicyList from "./pages/dashboards/shared/VehiclePolicyList";

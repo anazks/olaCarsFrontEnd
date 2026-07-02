@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, Activity, Eye, Car } from 'lucide-react';
+import { Users, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -1701,23 +1701,5 @@ const KPICard = ({ label, value, icon, color, bgColor, borderColor, sub, trend, 
     </div>
 );
 */
-
-const SafetyStat = ({ label, count, color }: { label: string; count: number; color: 'red' | 'orange' | 'yellow' }) => {
-    const colors = {
-        red: { bg: 'bg-red-500/10', text: 'text-red-500', bar: 'bg-red-500' },
-        orange: { bg: 'bg-orange-500/10', text: 'text-orange-500', bar: 'bg-orange-500' },
-        yellow: { bg: 'bg-yellow-500/10', text: 'text-yellow-500', bar: 'bg-yellow-500' },
-    };
-    const c = colors[color];
-    return (
-        <div className={`flex items-center justify-between p-3 rounded-xl ${c.bg} border border-white/5`}>
-            <div className="flex items-center gap-2">
-                <div className={`w-1.5 h-6 rounded-full ${c.bar}`} />
-                <span className="text-[10px] font-black uppercase tracking-tight text-dim">{label}</span>
-            </div>
-            <span className={`text-sm font-black ${c.text}`}>{count}</span>
-        </div>
-    );
-};
 
 export default DriverPerformanceDashboard;
