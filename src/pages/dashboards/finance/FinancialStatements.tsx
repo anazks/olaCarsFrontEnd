@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Download, RefreshCw, ChevronRight, PieChart, Loader2 } from 'lucide-react';
+import { TrendingUp, Download, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 const FinancialStatements = () => {
     const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
@@ -24,9 +24,25 @@ const FinancialStatements = () => {
 
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: getOneMonthAgo(),
-        endDate: getToday()
+        startDate: '',
+        endDate: ''
     });
+
+    const [diagData, setDiagData] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchDiag = async () => {
+            try {
+                const res = await fetch('http://localhost:3000/diag-test');
+                const data = await res.json();
+                setDiagData(data.bgAccountDetails || data);
+            } catch (err) {
+                console.error("Failed to fetch public diag:", err);
+            }
+        };
+        fetchDiag();
+    }, []);
+
 
     // Keep end date valid relative to start date
     useEffect(() => {
@@ -44,6 +60,11 @@ const FinancialStatements = () => {
     }, []);
 
     const fetchReport = async () => {
+        if (!filters.startDate || !filters.endDate) {
+            setReportData(null);
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             if (activeTab === 'PL') {
@@ -67,8 +88,13 @@ const FinancialStatements = () => {
     };
 
     useEffect(() => {
-        fetchReport();
-    }, [activeTab, filters.branch, filters.startDate, filters.endDate]);
+        if (filters.startDate && filters.endDate) {
+            fetchReport();
+        } else {
+            setReportData(null);
+            setLoading(false);
+        }
+    }, [activeTab]);
 
     const handleExportPdf = async () => {
         setExporting(true);
@@ -78,25 +104,21 @@ const FinancialStatements = () => {
                 ...filters,
                 reportType: activeTab
             };
-            const res = await api.get('/api/reporting/export/pdf', { params: query, responseType: 'blob' });
-            const blob = new Blob([res.data], { type: 'application/pdf' });
-            const url = window.URL.createObjectURL(blob);
+            const response = await fetch(`http://localhost:3000/api/reporting/pdf?${new URLSearchParams(query).toString()}`);
+            if (!response.ok) throw new Error("Failed to export PDF");
             
-            // Download PDF file
-            const link = document.createElement('a');
-            link.href = url;
-            const dateStr = new Date().toISOString().split('T')[0];
-            const title = activeTab === 'PL' ? 'income_statement' : 'balance_sheet';
-            const filename = `${title}_report_${dateStr}.pdf`;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            toast.success("PDF report downloaded successfully!", { id: toastId });
-        } catch (err: any) {
-            console.error("PDF generation failed:", err);
-            toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${activeTab === 'PL' ? 'Profit_Loss_Statement' : 'Balance_Sheet'}_${filters.startDate || 'all'}_to_${filters.endDate || 'all'}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            toast.success("PDF exported successfully!", { id: toastId });
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            toast.error("Failed to generate PDF", { id: toastId });
         } finally {
             setExporting(false);
         }
@@ -104,30 +126,30 @@ const FinancialStatements = () => {
 
     return (
         <div className="container-responsive space-y-6">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Financial Statements', active: true }]} />
-
-            {/* Tab Selector */}
-            <div className="flex border-b border-white/5 gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                <button
-                    onClick={() => setActiveTab('PL')}
-                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                        activeTab === 'PL'
-                            ? 'border-brand-lime text-brand-lime font-black'
-                            : 'border-transparent text-dim hover:text-white'
-                    }`}
-                >
-                    Income Statement (P&L)
-                </button>
-                <button
-                    onClick={() => setActiveTab('BS')}
-                    className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                        activeTab === 'BS'
-                            ? 'border-brand-lime text-brand-lime font-black'
-                            : 'border-transparent text-dim hover:text-white'
-                    }`}
-                >
-                    Balance Sheet
-                </button>
+            {/* Header section with tab switcher */}
+            <div className="flex justify-between items-center border-b border-white/5">
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setActiveTab('PL')}
+                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'PL'
+                                ? 'border-brand-lime text-brand-lime font-black'
+                                : 'border-transparent text-dim hover:text-white'
+                        }`}
+                    >
+                        Income Statement (P&L)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('BS')}
+                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'BS'
+                                ? 'border-brand-lime text-brand-lime font-black'
+                                : 'border-transparent text-dim hover:text-white'
+                        }`}
+                    >
+                        Balance Sheet
+                    </button>
+                </div>
             </div>
 
             {/* Compact Header */}
@@ -155,13 +177,6 @@ const FinancialStatements = () => {
                                 <Download size={14} /> Export PDF
                             </>
                         )}
-                    </button>
-                    <button 
-                        onClick={fetchReport}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                        style={{ backgroundColor: 'var(--brand-lime)' }}
-                    >
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                 </div>
             </div>
@@ -202,6 +217,15 @@ const FinancialStatements = () => {
                         <option key={b._id} value={b._id} className="bg-[var(--bg-card)]">{b.name} ({b.country})</option>
                     ))}
                 </select>
+                <button 
+                    onClick={fetchReport}
+                    disabled={loading}
+                    className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--brand-lime)' }}
+                >
+                    {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                    Search
+                </button>
             </div>
 
 
@@ -224,12 +248,17 @@ const FinancialStatements = () => {
                                 <div className="flex items-center justify-center py-20">
                                     <div className="w-8 h-8 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
                                 </div>
+                            ) : !reportData ? (
+                                <div className="text-center py-20 text-xs font-semibold text-dim">
+                                    <FileText className="mx-auto text-dim/30 mb-3 animate-pulse" size={32} />
+                                    Please select a date range and click Search to load report data.
+                                </div>
                             ) : (
                                 <div className="space-y-8">
                                     {activeTab === 'PL' ? (
                                         <PLView data={reportData} />
                                     ) : (
-                                        <BSView data={reportData} />
+                                        <BSView data={reportData} diagData={diagData} />
                                     )}
                                 </div>
                             )}
@@ -336,85 +365,350 @@ const PLView = ({ data }: { data: any }) => (
     </div>
 );
 
-const BSView = ({ data }: { data: any }) => (
-    <div className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Assets */}
-            <section>
-                <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <ChevronRight size={14} /> Assets
-                </h4>
-                <div className="space-y-3">
-                    {data?.assets?.map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center">
-                            <span className="text-sm text-dim">{item.name}</span>
-                            <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
+    const formatValue = (val: number | undefined) => {
+        if (val === undefined) return '$0.00';
+        return val < 0 
+            ? `-$${Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+            : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const classifyAsset = (a: any) => {
+        const cat = (a.category || "").toLowerCase();
+        const type = (a.accountType || "").toLowerCase();
+        const name = (a.name || "").toLowerCase();
+        if (type === 'cash' || cat === 'cash' || name.includes('cash') || name.includes('caja') || name.includes('petty')) {
+            return 'cash';
+        }
+        if (type === 'bank') {
+            return 'bank';
+        }
+        if (type === 'accounts receivable') {
+            return 'ar';
+        }
+        if (type.includes('fixed') || cat.includes('fixed') || name.includes('fixed') || name.includes('depreci') || name.includes('equipment') || name.includes('fleet') || name.includes('workshop')) {
+            return 'fixed';
+        }
+        if (cat === 'asset') {
+            return 'other';
+        }
+        return 'other';
+    };
+
+    const classifyLiability = (l: any) => {
+        const cat = (l.category || "").toLowerCase();
+        const name = (l.name || "").toLowerCase();
+        if (cat.includes('payable') || name.includes('payable') || name.includes('por pagar')) {
+            return 'ap';
+        }
+        if (cat.includes('non current') || cat.includes('long term') || name.includes('loan')) {
+            return 'noncurrent';
+        }
+        return 'other';
+    };
+
+    // Grouping
+    const assets = data?.assets || [];
+    const cashAccounts = assets.filter((a: any) => classifyAsset(a) === 'cash');
+    const bankAccounts = assets.filter((a: any) => classifyAsset(a) === 'bank');
+    
+    const cashTotal = cashAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const bankTotal = bankAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const cashAndEquivalentsTotal = cashTotal + bankTotal;
+
+    const arAccounts = assets.filter((a: any) => classifyAsset(a) === 'ar');
+    const arTotal = arAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+
+    const otherCurrentAssets = assets.filter((a: any) => classifyAsset(a) === 'other');
+    const otherCurrentAssetsTotal = otherCurrentAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+
+    const currentAssetsTotal = cashAndEquivalentsTotal + arTotal + otherCurrentAssetsTotal;
+
+    const fixedAssets = assets.filter((a: any) => classifyAsset(a) === 'fixed');
+    const fixedAssetsTotal = fixedAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const nonCurrentAssetsTotal = fixedAssetsTotal;
+
+    const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
+
+    const liabilities = data?.liabilities || [];
+    const apAccounts = liabilities.filter((l: any) => classifyLiability(l) === 'ap');
+    const apTotal = apAccounts.reduce((sum: number, l: any) => sum + l.amount, 0);
+
+    const otherCurrentLiabilities = liabilities.filter((l: any) => classifyLiability(l) === 'other');
+    const otherCurrentLiabilitiesTotal = otherCurrentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+
+    const currentLiabilitiesTotal = apTotal + otherCurrentLiabilitiesTotal;
+
+    const nonCurrentLiabilities = liabilities.filter((l: any) => classifyLiability(l) === 'noncurrent');
+    const nonCurrentLiabilitiesTotal = nonCurrentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+
+    const totalLiabilities = currentLiabilitiesTotal + nonCurrentLiabilitiesTotal;
+
+    const equity = data?.equity || [];
+    const equityTotal = equity.reduce((sum: number, e: any) => sum + e.amount, 0);
+
+    return (
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                {/* Assets Column */}
+                <section className="space-y-6">
+                    <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
+                        <ChevronRight size={14} /> Assets
+                    </h4>
+                    
+                    <div className="space-y-4">
+                        {/* Current Assets */}
+                        <div className="space-y-3">
+                            <div className="font-bold text-sm text-[var(--text-main)]">Current Assets</div>
+                            
+                            {/* Cash and Cash Equivalents */}
+                            <div className="pl-4 space-y-2">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Cash and Cash Equivalents</div>
+                                
+                                {/* Cash accounts list */}
+                                <div className="pl-4 space-y-1">
+                                    <div className="text-xs font-semibold text-dim italic">Cash</div>
+                                    {cashAccounts.map((item: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-2">
+                                            <span className="text-dim">{item.name}</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                        </div>
+                                    ))}
+                                    {cashAccounts.length > 0 && (
+                                        <div className="flex justify-between text-xs font-bold pt-1 border-t border-[var(--border-main)]/30">
+                                            <span className="text-dim italic">Total for Cash</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(cashTotal)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Bank accounts list */}
+                                <div className="pl-4 space-y-1 mt-2">
+                                    <div className="text-xs font-semibold text-dim italic">Bank</div>
+                                    {bankAccounts.map((item: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-2">
+                                            <span className="text-dim">{item.name}</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                        </div>
+                                    ))}
+                                    {bankAccounts.length > 0 && (
+                                        <div className="flex justify-between text-xs font-bold pt-1 border-t border-[var(--border-main)]/30">
+                                            <span className="text-dim italic">Total for Bank</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(bankTotal)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Total Cash and Cash Equivalents */}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)] mt-2" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Cash and Cash Equivalents</span>
+                                    <span className="font-mono">{formatValue(cashAndEquivalentsTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Accounts Receivable */}
+                            <div className="pl-4 space-y-2 mt-3">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Accounts Receivable</div>
+                                {arAccounts.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                        <span className="text-dim">{item.name}</span>
+                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Accounts Receivable</span>
+                                    <span className="font-mono">{formatValue(arTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Other Current Assets */}
+                            <div className="pl-4 space-y-2 mt-3">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other current asset</div>
+                                {otherCurrentAssets.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                        <span className="text-dim">{item.name}</span>
+                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Other current assets</span>
+                                    <span className="font-mono">{formatValue(otherCurrentAssetsTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Current Assets */}
+                            <div className="flex justify-between text-sm font-black uppercase pt-3 border-t-2" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                <span>Total for Current Assets</span>
+                                <span className="font-mono text-[#C8E600]">{formatValue(currentAssetsTotal)}</span>
+                            </div>
                         </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
-                        <span className="text-sm font-bold text-[var(--text-main)]">Total Assets</span>
-                        <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.assetsTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+
+                        {/* Non Current Assets */}
+                        <div className="space-y-3 pt-4 border-t border-[var(--border-main)]/50">
+                            <div className="font-bold text-sm text-[var(--text-main)]">Non Current Assets</div>
+                            
+                            <div className="pl-4 space-y-2">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Fixed Assets</div>
+                                {fixedAssets.map((item: any, i: number) => {
+                                    const isDepreciation = item.name.toLowerCase().includes('deprec');
+                                    return (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                            <span className="text-dim">{item.name}</span>
+                                            <span className={`font-mono ${isDepreciation ? 'text-rose-500 font-semibold' : 'text-[var(--text-main)]'}`}>{formatValue(item.amount)}</span>
+                                        </div>
+                                    );
+                                })}
+
+                                {fixedAssets.filter((a: any) => a.name.toLowerCase().includes('deprec')).length > 0 && (
+                                    <div className="flex justify-between text-xs font-bold pl-4 text-rose-500 italic pt-1">
+                                        <span>Total for Accumulated Depreciation of Vehicles / Depreciación Acumulada de Vehículos</span>
+                                        <span className="font-mono">{formatValue(fixedAssets.filter((a: any) => a.name.toLowerCase().includes('deprec')).reduce((sum: number, a: any) => sum + a.amount, 0))}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Fixed Assets</span>
+                                    <span className="font-mono">{formatValue(fixedAssetsTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Non Current Assets */}
+                            <div className="flex justify-between text-sm font-black uppercase pt-3 border-t-2" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                <span>Total for Non Current Assets</span>
+                                <span className="font-mono text-[#C8E600]">{formatValue(nonCurrentAssetsTotal)}</span>
+                            </div>
+                        </div>
+
+                        {/* Grand Total Assets */}
+                        <div className="pt-4 flex justify-between items-center border-t-4" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total Assets</span>
+                            <span className="text-lg font-mono font-black text-[#C8E600] underline decoration-double underline-offset-4">
+                                {formatValue(totalAssets)}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Liabilities & Equity Column */}
+                <div className="space-y-8">
+                    {/* Liabilities Section */}
+                    <section className="space-y-6">
+                        <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
+                            <ChevronRight size={14} /> Liabilities
+                        </h4>
+                        
+                        <div className="space-y-4">
+                            {/* Accounts Payable */}
+                            <div className="pl-4 space-y-2">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Accounts Payable</div>
+                                {apAccounts.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                        <span className="text-dim">{item.name}</span>
+                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Accounts Payable</span>
+                                    <span className="font-mono">{formatValue(apTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Other Current Liabilities */}
+                            <div className="pl-4 space-y-2 mt-3">
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other Current Liabilities</div>
+                                {otherCurrentLiabilities.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                        <span className="text-dim">{item.name}</span>
+                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Other Current Liabilities</span>
+                                    <span className="font-mono">{formatValue(otherCurrentLiabilitiesTotal)}</span>
+                                </div>
+                            </div>
+
+                            {/* Non Current Liabilities */}
+                            {nonCurrentLiabilities.length > 0 && (
+                                <div className="pl-4 space-y-2 mt-3">
+                                    <div className="font-semibold text-xs text-dim uppercase tracking-wider">Non Current Liabilities</div>
+                                    {nonCurrentLiabilities.map((item: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                            <span className="text-dim">{item.name}</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                        <span>Total for Non Current Liabilities</span>
+                                        <span className="font-mono">{formatValue(nonCurrentLiabilitiesTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Total Liabilities */}
+                            <div className="pt-4 flex justify-between items-center border-t-2" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total Liabilities</span>
+                                <span className="text-base font-mono font-bold text-rose-500">
+                                    {formatValue(totalLiabilities)}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Equity Section */}
+                    <section className="space-y-6">
+                        <h4 className="text-xs font-bold text-blue-500 uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
+                            <ChevronRight size={14} /> Equity
+                        </h4>
+                        
+                        <div className="space-y-4">
+                            <div className="pl-2 space-y-2">
+                                {equity.map((item: any, i: number) => {
+                                    const isCurrentPeriod = item.name.includes('Current Period');
+                                    return (
+                                        <div key={i} className={`flex justify-between items-center py-2 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/[0.03] group transition-all border border-transparent ${isCurrentPeriod ? 'bg-blue-50/40 dark:bg-blue-500/5 italic font-semibold border-blue-500/10' : ''}`}>
+                                            <span className="text-sm font-medium transition-colors flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+                                                <span className={`w-1.5 h-1.5 rounded-full transition-all ${isCurrentPeriod ? 'bg-emerald-500' : 'bg-blue-500/40 group-hover:bg-blue-500'}`}></span>
+                                                {item.name}
+                                            </span>
+                                            <span className={`text-sm font-mono font-bold ${isCurrentPeriod ? 'text-emerald-500' : ''}`} style={!isCurrentPeriod ? { color: 'var(--text-main)' } : {}}>
+                                                {formatValue(item.amount)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Total Equity */}
+                            <div className="pt-4 flex justify-between items-center border-t-2" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total Equity</span>
+                                <span className="text-base font-mono font-bold text-blue-500">
+                                    {formatValue(equityTotal)}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            {/* Accounting Equation Check */}
+            <section className="pt-6 border-t-4 border-[var(--border-main)] flex justify-center">
+                <div className="bg-[var(--bg-input)] px-8 py-4 rounded-2xl border border-[var(--border-main)] flex items-center gap-6">
+                    <div className="text-center">
+                        <p className="text-[10px] text-dim uppercase">Assets</p>
+                        <p className="text-lg font-mono font-bold text-[var(--text-main)]">{formatValue(totalAssets)}</p>
+                    </div>
+                    <div className="text-xl opacity-20">=</div>
+                    <div className="text-center">
+                        <p className="text-[10px] text-dim uppercase">Liabilities + Equity</p>
+                        <p className="text-lg font-mono font-bold text-[var(--text-main)]">{formatValue(totalLiabilities + equityTotal)}</p>
                     </div>
                 </div>
             </section>
 
-            <div className="space-y-8">
-                {/* Liabilities */}
-                <section>
-                    <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <ChevronRight size={14} /> Liabilities
-                    </h4>
-                    <div className="space-y-3">
-                        {data?.liabilities?.map((item: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center">
-                                <span className="text-sm text-dim">{item.name}</span>
-                                <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            </div>
-                        ))}
-                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
-                            <span className="text-sm font-bold text-[var(--text-main)]">Total Liabilities</span>
-                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.liabilitiesTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Equity */}
-                <section>
-                    <h4 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <ChevronRight size={14} /> Equity
-                    </h4>
-                    <div className="space-y-3">
-                        {data?.equity?.map((item: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center">
-                                <span className="text-sm text-dim">{item.name}</span>
-                                <span className="text-sm font-mono text-[var(--text-main)]">${(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            </div>
-                        ))}
-                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
-                            <span className="text-sm font-bold text-[var(--text-main)]">Total Equity</span>
-                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${(data?.equityTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                        </div>
-                    </div>
-                </section>
-            </div>
         </div>
-
-        {/* Accounting Equation Check */}
-        <section className="pt-6 border-t-4 border-[var(--border-main)] flex justify-center">
-            <div className="bg-[var(--bg-input)] px-8 py-4 rounded-2xl border border-[var(--border-main)] flex items-center gap-6">
-                <div className="text-center">
-                    <p className="text-[10px] text-dim uppercase">Assets</p>
-                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${(data?.assetsTotal || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                </div>
-                <div className="text-xl opacity-20">=</div>
-                <div className="text-center">
-                    <p className="text-[10px] text-dim uppercase">Liabilities + Equity</p>
-                    <p className="text-lg font-mono font-bold text-[var(--text-main)]">${((data?.liabilitiesTotal || 0) + (data?.equityTotal || 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                </div>
-            </div>
-        </section>
-    </div>
-);
+    );
+};
 
 const getMockData = (type: 'PL' | 'BS') => {
     if (type === 'PL') return {
