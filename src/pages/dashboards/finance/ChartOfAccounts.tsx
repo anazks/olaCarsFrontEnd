@@ -16,10 +16,10 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
     'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
 };
 
-const CATEGORIES: AccountingCategory[] = ['ASSET', 'LIABILITY', 'EQUITY'];
+const CATEGORIES: AccountingCategory[] = ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
 
 const ACCOUNT_TYPES = [
-    'Cash', 'Bank', 'Accounts Receivable', 'Fixed Asset',
+    'Income', 'Expense', 'Other Expense', 'Cash', 'Bank', 'Accounts Receivable', 'Fixed Asset',
     'Other Current Asset', 'Other Asset',
     'Accounts Payable', 'Other Current Liability', 'Other Liability',
     'Non Current Liability', 'Output Tax', 'Input Tax',
@@ -29,7 +29,7 @@ const ACCOUNT_TYPES = [
 const mapAccountTypeToCategory = (type: string): AccountingCategory => {
     const t = type.toLowerCase().trim();
     if (['income', 'other income', 'ncome'].includes(t)) return 'INCOME';
-    if (['expense', 'other expense', 'cost of goods sold'].includes(t)) return 'EXPENSE';
+    if (['expense', 'other expense', 'cost of goods sold', 'expence'].includes(t)) return 'EXPENSE';
     if (['equity', 'stock'].includes(t)) return 'EQUITY';
     if (['liability', 'other liability', 'other current liability', 'non current liability', 'non current liab', 'accounts payable', 'output tax'].includes(t)) return 'LIABILITY';
     return 'ASSET';
