@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     FileText, Download, RefreshCw, Loader2, Calendar, Building, 
     TrendingUp, Shield, BarChart3, Users, DollarSign, Activity, 
-    CheckCircle2, AlertCircle, FileSpreadsheet, ClipboardList, Briefcase, Car
+    CheckCircle2, AlertCircle, FileSpreadsheet, ClipboardList, Briefcase, Car, Landmark
 } from 'lucide-react';
 import { 
     getDailyFinanceReport, 
@@ -10,6 +10,7 @@ import {
     getStaffPerformanceReport, 
     getPLReport, 
     getBalanceSheetReport, 
+    getBankBalanceSheetReport,
     downloadExcelReport 
 } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
@@ -63,7 +64,8 @@ export const ReportsPage = () => {
     const [filters, setFilters] = useState({
         branch: '',
         startDate: getOneMonthAgo(),
-        endDate: getToday()
+        endDate: getToday(),
+        bankAccount: ''
     });
 
     const reportTypes: ReportType[] = [
@@ -84,6 +86,15 @@ export const ReportsPage = () => {
             icon: <Shield size={15} />, 
             description: 'Financial snapshot of assets, liabilities, and equity.',
             supportsPdf: true,
+            supportsExcel: true 
+        },
+        { 
+            id: 'bank-balance-sheet', 
+            name: 'Bank Balance Sheet', 
+            category: 'financial', 
+            icon: <Landmark size={15} />, 
+            description: 'Liquid positions showing Cash/Bank transactions and running balances.',
+            supportsPdf: false,
             supportsExcel: true 
         },
         { 
@@ -242,6 +253,22 @@ export const ReportsPage = () => {
         loadBranches();
     }, []);
 
+    const [bankAccountsList, setBankAccountsList] = useState<any[]>([]);
+
+    // Load bank accounts
+    useEffect(() => {
+        const loadBankAccounts = async () => {
+            try {
+                const { getAllBankAccounts } = await import('../../../services/bankAccountService');
+                const res = await getAllBankAccounts({ limit: 100 });
+                setBankAccountsList(res.data || []);
+            } catch (err) {
+                console.error("Failed to load bank accounts for reports:", err);
+            }
+        };
+        loadBankAccounts();
+    }, []);
+
     // Load report details
     const loadReportData = async () => {
         const currentReport = reportTypes.find(r => r.id === selectedReport);
@@ -263,6 +290,8 @@ export const ReportsPage = () => {
                 res = await getPLReport(filters);
             } else if (selectedReport === 'balance-sheet') {
                 res = await getBalanceSheetReport(filters);
+            } else if (selectedReport === 'bank-balance-sheet') {
+                res = await getBankBalanceSheetReport(filters);
             } else if (selectedReport === 'daily-finance') {
                 res = await getDailyFinanceReport(filters);
             } else if (selectedReport === 'driver-performance') {
@@ -296,8 +325,19 @@ export const ReportsPage = () => {
     };
 
     useEffect(() => {
+        const runDiag = async () => {
+            try {
+                await api.get('/api/reporting/diag');
+            } catch (e) {
+                console.error("Diag check failed:", e);
+            }
+        };
+        runDiag();
+    }, []);
+
+    useEffect(() => {
         loadReportData();
-    }, [selectedReport, filters.branch, filters.startDate, filters.endDate]);
+    }, [selectedReport, filters.branch, filters.startDate, filters.endDate, filters.bankAccount]);
 
     // Build standard export dataset dynamically
     const buildExportRows = () => {
@@ -330,6 +370,46 @@ export const ReportsPage = () => {
             reportData.equity?.forEach((eq: any) => {
                 rows.push({ "Classification": "EQUITY DETAIL", "Account Name": `${eq.name} (${eq.code})`, "Balance": eq.amount });
             });
+
+        } else if (selectedReport === 'bank-balance-sheet') {
+            if (reportData.reportType === 'single-account') {
+                rows.push({
+                    "Date": "Starting Balance",
+                    "Reference": "",
+                    "Description": "Beginning Balance",
+                    "Type": "",
+                    "Amount": "",
+                    "Running Balance": reportData.startingBalance || 0
+                });
+                reportData.transactions?.forEach((tx: any) => {
+                    rows.push({
+                        "Date": tx.date ? new Date(tx.date).toISOString().split('T')[0] : "",
+                        "Reference": tx.reference || "",
+                        "Description": tx.description || "",
+                        "Type": tx.type || "",
+                        "Amount": tx.amount || 0,
+                        "Running Balance": tx.runningBalance || 0
+                    });
+                });
+                rows.push({
+                    "Date": "Ending Balance",
+                    "Reference": "",
+                    "Description": "Closing Balance",
+                    "Type": "",
+                    "Amount": "",
+                    "Running Balance": reportData.endingBalance || 0
+                });
+            } else {
+                rows.push({ "Type": "CASH ACCOUNTS TOTAL", "Account": "Total Cash Inflows/Outflows", "Code/Number": "", "Balance": reportData.cashTotal || 0 });
+                reportData.cashAccounts?.forEach((a: any) => {
+                    rows.push({ "Type": "CASH ACCOUNT", "Account": a.name, "Code/Number": `${a.code} / ${a.number}`, "Balance": a.balance });
+                });
+                rows.push({ "Type": "BANK ACCOUNTS TOTAL", "Account": "Total Bank Inflows/Outflows", "Code/Number": "", "Balance": reportData.bankTotal || 0 });
+                reportData.bankAccounts?.forEach((b: any) => {
+                    rows.push({ "Type": "BANK ACCOUNT", "Account": b.name, "Code/Number": `${b.code} / ${b.number}`, "Balance": b.balance });
+                });
+                rows.push({ "Type": "GRAND TOTAL", "Account": "Total Liquidity", "Code/Number": "", "Balance": reportData.grandTotal || 0 });
+            }
 
         } else if (selectedReport === 'daily-finance') {
             rows = getReportList(reportData).map((d: any) => ({
@@ -563,8 +643,33 @@ export const ReportsPage = () => {
                         .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
                         /* Print layout adaptations */
                         @media print {
-                            body { padding: 0; }
-                            @page { margin: 1cm; }
+                            html, body {
+                                height: auto !important;
+                                overflow: visible !important;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                            body { 
+                                padding: 0; 
+                                margin: 0;
+                            }
+                            @page { 
+                                margin: 1.5cm; 
+                            }
+                            table {
+                                page-break-inside: auto;
+                            }
+                            tr {
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                            }
+                            thead {
+                                display: table-header-group !important;
+                            }
+                            h1, h2, h3, h4, h5, h6 {
+                                page-break-after: avoid !important;
+                                break-after: avoid !important;
+                            }
                         }
                     </style>
                 </head>
@@ -671,7 +776,7 @@ export const ReportsPage = () => {
     };
 
     const formatCurrency = (val: number) => {
-        return '₹' + (Number(val) || 0).toLocaleString('en-IN', {
+        return '$' + (Number(val) || 0).toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
@@ -776,6 +881,25 @@ export const ReportsPage = () => {
                                 <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" />
                             </div>
                         </div>
+
+                        {selectedReport === 'bank-balance-sheet' && (
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-dim">Bank Account</label>
+                                <select
+                                    value={filters.bankAccount}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, bankAccount: e.target.value }))}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-main)] text-xs bg-[var(--bg-input)] hover:bg-[var(--sidebar-hover)] outline-none cursor-pointer transition-all"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <option value="" className="bg-[var(--bg-card)]">All Accounts (Grouped)</option>
+                                    {bankAccountsList.map((acc) => (
+                                        <option key={acc._id} value={acc._id} className="bg-[var(--bg-card)]">
+                                            {acc.accountName || acc.bankName} ({acc.accountNumber})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* Report Type List */}
@@ -1077,17 +1201,186 @@ export const ReportsPage = () => {
                                                 <div className="p-5 space-y-4">
                                                     
                                                     {/* Assets */}
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-xs font-black text-emerald-400 uppercase tracking-wider">
+                                                    <div className="space-y-3">
+                                                        <div className="flex justify-between text-xs font-black text-emerald-400 uppercase tracking-wider border-b border-[var(--border-main)] pb-2">
                                                             <span>Assets</span>
                                                             <span>{formatCurrency(reportData.assetsTotal || 0)}</span>
                                                         </div>
-                                                        {reportData.assets?.map((item: any, idx: number) => (
-                                                            <div key={idx} className="flex justify-between text-xs text-dim pl-4 hover:text-white transition-colors">
-                                                                <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
-                                                                <span className="font-mono">{formatCurrency(item.amount)}</span>
-                                                            </div>
-                                                        ))}
+                                                        
+                                                        {(() => {
+                                                            const classifyAsset = (a: any) => {
+                                                                const cat = (a.category || "").toLowerCase();
+                                                                const type = (a.accountType || "").toLowerCase();
+                                                                const name = (a.name || "").toLowerCase();
+                                                                if (type === 'cash' || name.includes('cash') || name.includes('caja') || name.includes('petty')) {
+                                                                    return 'cash';
+                                                                }
+                                                                if (type === 'bank' || name.includes('bank') || name.includes('banco') || name.includes('bct')) {
+                                                                    return 'bank';
+                                                                }
+                                                                if (type.includes('receivable') || cat.includes('receivable') || name.includes('receivable') || name.includes('por cobrar')) {
+                                                                    return 'ar';
+                                                                }
+                                                                if (type === 'other asset' || cat === 'other asset') {
+                                                                    return 'other_asset';
+                                                                }
+                                                                if (type === 'fixed asset' || cat === 'fixed asset') {
+                                                                    return 'fixed';
+                                                                }
+                                                                return 'other';
+                                                            };
+
+                                                            const assets = reportData.assets || [];
+                                                            const cashAccounts = assets.filter((a: any) => classifyAsset(a) === 'cash');
+                                                            const bankAccounts = assets.filter((a: any) => classifyAsset(a) === 'bank');
+                                                            const arAccounts = assets.filter((a: any) => classifyAsset(a) === 'ar');
+                                                            const fixedAccounts = assets.filter((a: any) => classifyAsset(a) === 'fixed');
+                                                            const otherAccounts = assets.filter((a: any) => classifyAsset(a) === 'other');
+                                                            const otherAssetAccounts = assets.filter((a: any) => classifyAsset(a) === 'other_asset');
+
+                                                            const cashTotal = cashAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                                            const bankTotal = bankAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                                            const cashAndEquivalentsTotal = cashTotal + bankTotal;
+                                                            const arTotal = arAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                                            const otherTotal = otherAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                                            const currentAssetsTotal = cashAndEquivalentsTotal + arTotal + otherTotal;
+                                                            const fixedTotal = fixedAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                                            const otherAssetTotal = otherAssetAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+
+                                                            return (
+                                                                <div className="space-y-4 pl-2">
+                                                                    <div className="space-y-2">
+                                                                        <div className="text-xs font-bold text-main uppercase tracking-wide">Current Assets</div>
+                                                                        
+                                                                        {/* Cash and Cash Equivalents */}
+                                                                        <div className="pl-3 space-y-2">
+                                                                            <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Cash and Cash Equivalents</div>
+                                                                            
+                                                                            {/* Cash Subcategory */}
+                                                                            <div className="pl-3 space-y-1">
+                                                                                <div className="text-[10px] font-bold text-dim/60 uppercase tracking-wider italic">Cash</div>
+                                                                                {cashAccounts.map((item: any, idx: number) => (
+                                                                                    <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                        <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                        <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                                {cashAccounts.length > 0 && (
+                                                                                    <div className="flex justify-between text-xs font-bold pt-1 border-t border-[var(--border-main)]/30 pl-2 pr-2">
+                                                                                        <span className="text-dim/80 italic">Total for Cash</span>
+                                                                                        <span className="font-mono text-dim">{formatCurrency(cashTotal)}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Bank Subcategory */}
+                                                                            <div className="pl-3 space-y-1 mt-2">
+                                                                                <div className="text-[10px] font-bold text-dim/60 uppercase tracking-wider italic">Bank</div>
+                                                                                {bankAccounts.map((item: any, idx: number) => (
+                                                                                    <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                        <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                        <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                                {bankAccounts.length > 0 && (
+                                                                                    <div className="flex justify-between text-xs font-bold pt-1 border-t border-[var(--border-main)]/30 pl-2 pr-2">
+                                                                                        <span className="text-dim/80 italic">Total for Bank</span>
+                                                                                        <span className="font-mono text-dim">{formatCurrency(bankTotal)}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Total Cash and Cash Equivalents */}
+                                                                            <div className="flex justify-between text-xs font-black uppercase pt-1.5 border-t border-[var(--border-main)]/50 mt-2 pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                                <span>Total for Cash and Cash Equivalents</span>
+                                                                                <span className="font-mono">{formatCurrency(cashAndEquivalentsTotal)}</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Accounts Receivable */}
+                                                                        <div className="pl-3 space-y-1 mt-3">
+                                                                            <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Accounts Receivable</div>
+                                                                            {arAccounts.map((item: any, idx: number) => (
+                                                                                <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                    <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                    <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            {arAccounts.length > 0 && (
+                                                                                <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-[var(--border-main)]/50 pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                                    <span>Total for Accounts Receivable</span>
+                                                                                    <span className="font-mono">{formatCurrency(arTotal)}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Other Current Assets */}
+                                                                        <div className="pl-3 space-y-1 mt-3">
+                                                                            <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Other current asset</div>
+                                                                            {otherAccounts.map((item: any, idx: number) => (
+                                                                                <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                    <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                    <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            {otherAccounts.length > 0 && (
+                                                                                <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-[var(--border-main)]/50 pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                                    <span>Total for Other current assets</span>
+                                                                                    <span className="font-mono">{formatCurrency(otherTotal)}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Total Current Assets */}
+                                                                        <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)] pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                            <span>Total for Current Assets</span>
+                                                                            <span className="font-mono">{formatCurrency(currentAssetsTotal)}</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Non-Current Assets / Fixed Assets */}
+                                                                    <div className="space-y-2 mt-4 pt-3 border-t border-[var(--border-main)]/30">
+                                                                        <div className="text-xs font-bold text-main uppercase tracking-wide">Non Current Assets</div>
+                                                                        <div className="pl-3 space-y-1">
+                                                                            <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Fixed Assets</div>
+                                                                            {fixedAccounts.map((item: any, idx: number) => (
+                                                                                <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                    <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                    <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            {fixedAccounts.length > 0 && (
+                                                                                <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-[var(--border-main)]/50 pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                                    <span>Total for Fixed Assets</span>
+                                                                                    <span className="font-mono">{formatCurrency(fixedTotal)}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {otherAssetAccounts.length > 0 && (
+                                                                            <div className="pl-3 space-y-1 mt-2">
+                                                                                <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Other Assets</div>
+                                                                                {otherAssetAccounts.map((item: any, idx: number) => (
+                                                                                    <div key={idx} className="flex justify-between text-xs text-dim pl-2 hover:text-white transition-colors">
+                                                                                        <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
+                                                                                        <span className="font-mono">{formatCurrency(item.amount)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                                <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-[var(--border-main)]/50 pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                                    <span>Total for Other Assets</span>
+                                                                                    <span className="font-mono">{formatCurrency(otherAssetTotal)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)] pl-2" style={{ color: 'var(--text-main)' }}>
+                                                                            <span>Total for Non Current Assets</span>
+                                                                            <span className="font-mono">{formatCurrency(fixedTotal + otherAssetTotal)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
 
                                                     {/* Liabilities */}
@@ -1119,6 +1412,128 @@ export const ReportsPage = () => {
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* 2b. Preview Bank Balance Sheet */}
+                                    {selectedReport === 'bank-balance-sheet' && reportData && (
+                                        <div className="space-y-6">
+                                            {reportData.reportType === 'single-account' ? (
+                                                <div className="space-y-6">
+                                                    {/* Single Account Summary Cards */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Starting Balance</span>
+                                                            <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatCurrency(reportData.startingBalance)}</h3>
+                                                        </div>
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(212,241,46,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Ending Balance</span>
+                                                            <h3 className="text-2xl font-black text-brand-lime mt-1">{formatCurrency(reportData.endingBalance)}</h3>
+                                                        </div>
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(56,189,248,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Transactions Count</span>
+                                                            <h3 className="text-2xl font-black text-sky-400 mt-1">{reportData.transactions?.length || 0}</h3>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Transaction Details Table */}
+                                                    <table className="w-full text-left border-collapse" id="report-preview-table">
+                                                        <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
+                                                            <tr className="border-b border-[var(--border-main)]" style={{ background: 'var(--bg-input)' }}>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Date</th>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Reference ID</th>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider">Description</th>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-center">Type</th>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-right">Amount</th>
+                                                                <th className="p-4 text-[10px] font-black uppercase text-dim tracking-wider text-right">Running Balance</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr className="border-b border-[var(--border-main)] italic text-xs text-dim">
+                                                                <td className="p-4" colSpan={5}>Beginning/Starting Balance</td>
+                                                                <td className="p-4 text-right font-mono font-bold">{formatCurrency(reportData.startingBalance)}</td>
+                                                            </tr>
+                                                            {reportData.transactions?.map((tx: any, idx: number) => (
+                                                                <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
+                                                                    <td className="p-4">{tx.date ? new Date(tx.date).toISOString().split('T')[0] : "N/A"}</td>
+                                                                    <td className="p-4 font-mono font-bold">{tx.reference || "—"}</td>
+                                                                    <td className="p-4">{tx.description || "—"}</td>
+                                                                    <td className="p-4 text-center">
+                                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${
+                                                                            tx.type === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                                                                        }`}>{tx.type}</span>
+                                                                    </td>
+                                                                    <td className={`p-4 text-right font-mono font-bold ${tx.type === 'DEBIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                        {tx.type === 'DEBIT' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                                                    </td>
+                                                                    <td className="p-4 text-right font-mono font-bold text-main">{formatCurrency(tx.runningBalance)}</td>
+                                                                </tr>
+                                                            ))}
+                                                            {reportData.transactions?.length === 0 && (
+                                                                <tr>
+                                                                    <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Transactions Found for the selected period.</td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-6">
+                                                    {/* All Accounts Summary Cards */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Cash Balance</span>
+                                                            <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatCurrency(reportData.cashTotal || 0)}</h3>
+                                                        </div>
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(56,189,248,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Bank Balance</span>
+                                                            <h3 className="text-2xl font-black text-sky-400 mt-1">{formatCurrency(reportData.bankTotal || 0)}</h3>
+                                                        </div>
+                                                        <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(212,241,46,0.03), rgba(0,0,0,0))' }}>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-dim">Grand Total Liquidity</span>
+                                                            <h3 className="text-2xl font-black text-brand-lime mt-1">{formatCurrency(reportData.grandTotal || 0)}</h3>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Cash Accounts List */}
+                                                    <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-inner">
+                                                        <div className="p-4 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
+                                                            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">Cash Accounts</span>
+                                                            <span className="text-xs font-black text-emerald-400 font-mono">{formatCurrency(reportData.cashTotal || 0)}</span>
+                                                        </div>
+                                                        <div className="p-4 space-y-2">
+                                                            {reportData.cashAccounts?.map((item: any, idx: number) => (
+                                                                <div key={idx} className="flex justify-between items-center text-xs text-dim py-1 pl-2 hover:text-white transition-colors">
+                                                                    <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code} ({item.number})</span></span>
+                                                                    <span className="font-mono font-bold text-main">{formatCurrency(item.balance)}</span>
+                                                                </div>
+                                                            ))}
+                                                            {(!reportData.cashAccounts || reportData.cashAccounts.length === 0) && (
+                                                                <div className="text-center py-4 text-xs text-dim">No cash accounts found.</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Bank Accounts List */}
+                                                    <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-inner">
+                                                        <div className="p-4 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
+                                                            <span className="text-xs font-black uppercase tracking-wider text-sky-400">Bank Accounts</span>
+                                                            <span className="text-xs font-black text-sky-400 font-mono">{formatCurrency(reportData.bankTotal || 0)}</span>
+                                                        </div>
+                                                        <div className="p-4 space-y-2">
+                                                            {reportData.bankAccounts?.map((item: any, idx: number) => (
+                                                                <div key={idx} className="flex justify-between items-center text-xs text-dim py-1 pl-2 hover:text-white transition-colors">
+                                                                    <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code} ({item.number})</span></span>
+                                                                    <span className="font-mono font-bold text-main">{formatCurrency(item.balance)}</span>
+                                                                </div>
+                                                            ))}
+                                                            {(!reportData.bankAccounts || reportData.bankAccounts.length === 0) && (
+                                                                <div className="text-center py-4 text-xs text-dim">No bank accounts found.</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 

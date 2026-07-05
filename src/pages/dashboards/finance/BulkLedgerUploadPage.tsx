@@ -49,6 +49,45 @@ const BulkLedgerUploadPage = () => {
     // Metadata validation cache
     const [accounts, setAccounts] = useState<any[]>([]);
 
+    const findAccount = useCallback((nameVal: any, codeVal: any) => {
+        const nameStr = nameVal ? String(nameVal).trim() : "";
+        const codeStr = codeVal ? String(codeVal).trim() : "";
+
+        // 1. Try matching nameVal first if provided
+        if (nameStr) {
+            const searchKey = nameStr.toLowerCase();
+            const searchKeyNorm = searchKey.replace(/[^a-z0-9]/g, "");
+            // Try exact
+            let found = accounts.find(a => a.name && a.name.toLowerCase().trim() === searchKey);
+            if (found) return found;
+            // Try normalized
+            found = accounts.find(a => {
+                const norm = (a.name || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+                return norm && norm === searchKeyNorm;
+            });
+            if (found) return found;
+            // Try substring
+            found = accounts.find(a => {
+                const nameLower = (a.name || "").toLowerCase().trim();
+                const nameNorm = nameLower.replace(/[^a-z0-9]/g, "");
+                return nameNorm.includes(searchKeyNorm) || searchKeyNorm.includes(nameNorm);
+            });
+            if (found) return found;
+        }
+
+        // 2. Try matching codeVal if name check failed/not provided and codeVal is provided
+        if (codeStr) {
+            const searchKey = codeStr.toLowerCase();
+            const searchKeyNorm = searchKey.replace(/[^a-z0-9]/g, "");
+            return accounts.find(a => 
+                (a.code && a.code.toLowerCase().trim() === searchKey) ||
+                (a.code && a.code.toLowerCase().trim().replace(/[^a-z0-9]/g, "") === searchKeyNorm)
+            ) || null;
+        }
+
+        return null;
+    }, [accounts]);
+
     // Operation states
     const [isProcessing, setIsProcessing] = useState(false); // file reading
     const [isValidating, setIsValidating] = useState(false);
@@ -79,7 +118,7 @@ const BulkLedgerUploadPage = () => {
         setLoadingHistory(true);
         try {
             const [codes, historyList] = await Promise.allSettled([
-                getAllAccountingCodes(),
+                getAllAccountingCodes({ limit: 100000 }),
                 getImportHistory()
             ]);
 
@@ -258,10 +297,12 @@ const BulkLedgerUploadPage = () => {
         }
 
         // Validate account
-        if (!accName) {
-            errorsList.push("Account Name is required.");
-        } else if (!accountMap[String(accName).toLowerCase().trim()]) {
-            errorsList.push(`Account "${accName}" not found.`);
+        const accCode = getVal(["accountingCode", "Account Code", "account_code", "Accounting Code", "accounting_code", "Account ID", "account_id"]);
+        const foundAcc = findAccount(accName, accCode);
+        if (!accName && !accCode) {
+            errorsList.push("Account Name or Code is required.");
+        } else if (!foundAcc) {
+            errorsList.push(`Account "${accName || accCode}" not found.`);
         }
 
         // Validate Entry Date
@@ -347,7 +388,18 @@ const BulkLedgerUploadPage = () => {
         // Build account map for instant local check
         const accountMap: Record<string, boolean> = {};
         accounts.forEach(a => {
-            if (a.name) accountMap[a.name.toLowerCase().trim()] = true;
+            if (a.name) {
+                const nameLower = a.name.toLowerCase().trim();
+                accountMap[nameLower] = true;
+                const nameNorm = nameLower.replace(/[^a-z0-9]/g, "");
+                if (nameNorm) accountMap[nameNorm] = true;
+            }
+            if (a.code) {
+                const codeLower = a.code.toLowerCase().trim();
+                accountMap[codeLower] = true;
+                const codeNorm = codeLower.replace(/[^a-z0-9]/g, "");
+                if (codeNorm) accountMap[codeNorm] = true;
+            }
         });
 
         const localDups: Record<string, boolean> = {};
@@ -382,6 +434,10 @@ const BulkLedgerUploadPage = () => {
                     };
 
                     const accName = getVal(["Account Name", "account_name", "Account"]) || "";
+                    const accCode = getVal(["accountingCode", "Account Code", "account_code", "Accounting Code", "accounting_code", "Account ID", "account_id"]) || "";
+                    const foundAcc = findAccount(accName, accCode);
+                    const finalAccountName = foundAcc ? foundAcc.name : (accName || accCode || "");
+
                     const dateVal = getVal(["Entry Date", "entry_date", "date"]);
                     const desc = getVal(["Description", "description", "transaction_details"]) || "";
                     const txnType = getVal(["Transaction Type", "transaction_type"]) || "";
@@ -420,7 +476,7 @@ const BulkLedgerUploadPage = () => {
                     collectedValid.push({
                         rowNum: i + 2,
                         date: dateStr(dateVal),
-                        accountName: String(accName),
+                        accountName: String(finalAccountName),
                         type,
                         amount,
                         description: String(desc),

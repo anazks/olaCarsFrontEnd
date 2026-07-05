@@ -374,36 +374,81 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
     };
 
     const classifyAsset = (a: any) => {
-        const cat = (a.category || "").toLowerCase();
-        const type = (a.accountType || "").toLowerCase();
+        // Backend now resolves accountType cleanly — use it as primary key
+        const type = (a.accountType || "").toLowerCase().trim();
+        const cat = (a.category || "").toLowerCase().trim();
         const name = (a.name || "").toLowerCase();
-        if (type === 'cash' || cat === 'cash' || name.includes('cash') || name.includes('caja') || name.includes('petty')) {
+
+        // Cash — by accountType, category, or name keywords
+        if (
+            type === 'cash' ||
+            cat === 'cash' ||
+            name.includes('cash') ||
+            name.includes('caja') ||
+            name.includes('petty')
+        ) {
             return 'cash';
         }
-        if (type === 'bank') {
+
+        // Bank — by accountType OR category
+        if (type === 'bank' || cat === 'bank') {
             return 'bank';
         }
-        if (type === 'accounts receivable') {
+
+        // Accounts Receivable — by accountType OR category
+        if (
+            type === 'accounts receivable' ||
+            cat === 'accounts receivable'
+        ) {
             return 'ar';
         }
-        if (type.includes('fixed') || cat.includes('fixed') || name.includes('fixed') || name.includes('depreci') || name.includes('equipment') || name.includes('fleet') || name.includes('workshop')) {
+
+        // Other Asset - handled under Non-Current Assets but separate from Fixed Assets
+        if (type === 'other asset' || cat === 'other asset') {
+            return 'other_asset';
+        }
+
+        // Fixed Assets — strictly by accountType or category Fixed Asset
+        if (type === 'fixed asset' || cat === 'fixed asset') {
             return 'fixed';
         }
-        if (cat === 'asset') {
-            return 'other';
-        }
+
+        // Everything else — "Other Current Asset", "Input Tax", "ASSET", etc.
         return 'other';
     };
 
     const classifyLiability = (l: any) => {
-        const cat = (l.category || "").toLowerCase();
+        const cat = (l.category || "").toLowerCase().trim();
+        const type = (l.accountType || "").toLowerCase().trim();
         const name = (l.name || "").toLowerCase();
-        if (cat.includes('payable') || name.includes('payable') || name.includes('por pagar')) {
+
+        // Accounts Payable — check category, accountType, or name
+        if (
+            cat === 'accounts payable' ||
+            type === 'accounts payable' ||
+            cat.includes('payable') ||
+            name.includes('payable') ||
+            name.includes('por pagar')
+        ) {
             return 'ap';
         }
-        if (cat.includes('non current') || cat.includes('long term') || name.includes('loan')) {
+
+        // Non-current / long-term liabilities
+        if (
+            cat === 'non current liability' ||
+            cat.includes('non current') ||
+            cat.includes('long term') ||
+            type.includes('non current') ||
+            name.includes('loan')
+        ) {
             return 'noncurrent';
         }
+
+        // Output Tax is a current liability
+        if (cat === 'output tax' || cat === 'output_tax') {
+            return 'other';
+        }
+
         return 'other';
     };
 
@@ -419,30 +464,59 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
     const arAccounts = assets.filter((a: any) => classifyAsset(a) === 'ar');
     const arTotal = arAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
 
-    const otherCurrentAssets = assets.filter((a: any) => classifyAsset(a) === 'other');
+    // Account types to exclude from the Balance Sheet entirely
+    const EXCLUDE_FROM_BALANCE_SHEET = new Set([
+        'income', 'expense', 'other income', 'other expense', 'cost of goods sold',
+        'revenue', 'sales',
+        'input tax',              // excluded per user requirement
+        'non current liability',  // excluded per user requirement
+        'other current liability' // excluded per user requirement
+    ]);
+    const isExcluded = (a: any) => {
+        const t = (a.accountType || '').toLowerCase().trim();
+        const c = (a.category || '').toLowerCase().trim();
+        return EXCLUDE_FROM_BALANCE_SHEET.has(t) || EXCLUDE_FROM_BALANCE_SHEET.has(c);
+    };
+
+    // Liabilities - categorized by Current, Long-Term, and Other
+    const liabilities = data?.liabilities || [];
+    const isLongTermLiability = (l: any) => {
+        const t = (l.accountType || '').toLowerCase().trim();
+        const c = (l.category || '').toLowerCase().trim();
+        return t === 'non current liability' || c === 'non current liability';
+    };
+
+    const isOtherLiability = (l: any) => {
+        const t = (l.accountType || '').toLowerCase().trim();
+        const c = (l.category || '').toLowerCase().trim();
+        return t === 'other liability' || c === 'other liability';
+    };
+
+    const currentLiabilities = liabilities.filter(l => !isLongTermLiability(l) && !isOtherLiability(l));
+    const longTermLiabilities = liabilities.filter(l => isLongTermLiability(l));
+    const otherLiabilities = liabilities.filter(l => isOtherLiability(l));
+
+    const currentLiabilitiesTotal = currentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const longTermLiabilitiesTotal = longTermLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const otherLiabilitiesTotal = otherLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const totalLiabilities = currentLiabilitiesTotal + longTermLiabilitiesTotal + otherLiabilitiesTotal;
+
+    const otherCurrentAssets = assets
+        .filter((a: any) => classifyAsset(a) === 'other')
+        .filter((a: any) => !isExcluded(a));
     const otherCurrentAssetsTotal = otherCurrentAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
 
     const currentAssetsTotal = cashAndEquivalentsTotal + arTotal + otherCurrentAssetsTotal;
 
     const fixedAssets = assets.filter((a: any) => classifyAsset(a) === 'fixed');
     const fixedAssetsTotal = fixedAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
-    const nonCurrentAssetsTotal = fixedAssetsTotal;
+
+    const otherAssets = assets.filter((a: any) => classifyAsset(a) === 'other_asset');
+    const otherAssetsTotal = otherAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+
+    const nonCurrentAssetsTotal = fixedAssetsTotal + otherAssetsTotal;
 
     const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
-
-    const liabilities = data?.liabilities || [];
-    const apAccounts = liabilities.filter((l: any) => classifyLiability(l) === 'ap');
-    const apTotal = apAccounts.reduce((sum: number, l: any) => sum + l.amount, 0);
-
-    const otherCurrentLiabilities = liabilities.filter((l: any) => classifyLiability(l) === 'other');
-    const otherCurrentLiabilitiesTotal = otherCurrentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
-
-    const currentLiabilitiesTotal = apTotal + otherCurrentLiabilitiesTotal;
-
-    const nonCurrentLiabilities = liabilities.filter((l: any) => classifyLiability(l) === 'noncurrent');
-    const nonCurrentLiabilitiesTotal = nonCurrentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
-
-    const totalLiabilities = currentLiabilitiesTotal + nonCurrentLiabilitiesTotal;
 
     const equity = data?.equity || [];
     const equityTotal = equity.reduce((sum: number, e: any) => sum + e.amount, 0);
@@ -523,23 +597,64 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
 
                             {/* Other Current Assets */}
                             <div className="pl-4 space-y-2 mt-3">
-                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other current asset</div>
-                                {otherCurrentAssets.map((item: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                        <span className="text-dim">{item.name}</span>
-                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
-                                    </div>
-                                ))}
-                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
-                                    <span>Total for Other current assets</span>
-                                    <span className="font-mono">{formatValue(otherCurrentAssetsTotal)}</span>
-                                </div>
+                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other Current Assets</div>
+                                {otherCurrentAssets.length === 0 ? (
+                                    <div className="text-xs text-dim italic pl-4">None</div>
+                                ) : (() => {
+                                    // Group by accountType (resolved by backend: "Other Current Asset", "Input Tax", etc.)
+                                    const grouped: Record<string, any[]> = {};
+                                    otherCurrentAssets.forEach((item: any) => {
+                                        const subCat = item.accountType || 'Other Current Asset';
+                                        if (!grouped[subCat]) grouped[subCat] = [];
+                                        grouped[subCat].push(item);
+                                    });
+                                    return Object.entries(grouped).map(([subCat, items]) => {
+                                        const subTotal = (items as any[]).reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+                                        return (
+                                            <div key={subCat} className="pl-2 space-y-1 mt-2">
+                                                <div className="text-xs font-semibold text-dim italic">{subCat}</div>
+                                                {(items as any[]).map((item: any, i: number) => (
+                                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                                        <span className="text-dim">{item.name}</span>
+                                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between text-xs font-semibold pt-1 pl-4 border-t border-dashed border-[var(--border-main)]/50 text-dim">
+                                                    <span>Total for {subCat}</span>
+                                                    <span className="font-mono">{formatValue(subTotal)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
 
-                            {/* Total Current Assets */}
-                            <div className="flex justify-between text-sm font-black uppercase pt-3 border-t-2" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                <span>Total for Current Assets</span>
-                                <span className="font-mono text-[#C8E600]">{formatValue(currentAssetsTotal)}</span>
+                            {/* Total for Other Current Assets */}
+                            <div className="flex justify-between text-xs font-black uppercase pt-2 mt-1 border-t-2 border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                <span>Total for Other Current Assets</span>
+                                <span className="font-mono">{formatValue(otherCurrentAssetsTotal)}</span>
+                            </div>
+
+                            {/* Total for Current Assets — sum of Cash + AR + Other Current Assets ONLY */}
+                            <div className="mt-4 rounded-xl overflow-hidden border border-[var(--border-main)]">
+                                {/* Component rows */}
+                                <div className="flex justify-between items-center px-4 py-2 border-b border-[var(--border-main)]/40" style={{ background: 'var(--bg-input)' }}>
+                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Total for Cash and Cash Equivalents</span>
+                                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>{formatValue(cashAndEquivalentsTotal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-2 border-b border-[var(--border-main)]/40" style={{ background: 'var(--bg-input)' }}>
+                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Total for Accounts Receivable</span>
+                                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>{formatValue(arTotal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-2 border-b border-[var(--border-main)]/40" style={{ background: 'var(--bg-input)' }}>
+                                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Total for Other Current Assets</span>
+                                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>{formatValue(otherCurrentAssetsTotal)}</span>
+                                </div>
+                                {/* Grand total */}
+                                <div className="flex justify-between items-center px-4 py-3" style={{ background: 'rgba(200,230,0,0.08)' }}>
+                                    <span className="text-sm font-black uppercase tracking-wide" style={{ color: 'var(--text-main)' }}>Total for Current Assets</span>
+                                    <span className="text-sm font-mono font-black text-[#C8E600]">{formatValue(cashAndEquivalentsTotal + arTotal + otherCurrentAssetsTotal)}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -572,6 +687,23 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                 </div>
                             </div>
 
+                            {/* Other Assets */}
+                            {otherAssets.length > 0 && (
+                                <div className="pl-4 space-y-2 mt-3">
+                                    <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other Assets</div>
+                                    {otherAssets.map((item: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                            <span className="text-dim">{item.name}</span>
+                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                        <span>Total for Other Assets</span>
+                                        <span className="font-mono">{formatValue(otherAssetsTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Total Non Current Assets */}
                             <div className="flex justify-between text-sm font-black uppercase pt-3 border-t-2" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                 <span>Total for Non Current Assets</span>
@@ -598,49 +730,120 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                         </h4>
                         
                         <div className="space-y-4">
-                            {/* Accounts Payable */}
-                            <div className="pl-4 space-y-2">
-                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Accounts Payable</div>
-                                {apAccounts.map((item: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                        <span className="text-dim">{item.name}</span>
-                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
-                                    </div>
-                                ))}
-                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
-                                    <span>Total for Accounts Payable</span>
-                                    <span className="font-mono">{formatValue(apTotal)}</span>
+                            {/* Current Liabilities Group */}
+                            <div className="space-y-3">
+                                <div className="font-bold text-sm text-[var(--text-main)]">Current Liabilities</div>
+                                {(() => {
+                                    const grouped: Record<string, any[]> = {};
+                                    currentLiabilities.forEach((item: any) => {
+                                        const type = item.accountType || 'Other Current Liability';
+                                        if (!grouped[type]) grouped[type] = [];
+                                        grouped[type].push(item);
+                                    });
+
+                                    return Object.entries(grouped).map(([subCat, items]) => {
+                                        const subTotal = (items as any[]).reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+                                        return (
+                                            <div key={subCat} className="pl-4 space-y-2">
+                                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
+                                                {(items as any[]).map((item: any, i: number) => (
+                                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                                        <span className="text-dim">{item.name}</span>
+                                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                                    <span>Total for {subCat}</span>
+                                                    <span className="font-mono">{formatValue(subTotal)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+
+                                {/* Total for Current Liabilities */}
+                                <div className="flex justify-between text-xs font-black uppercase pt-2.5 mt-1 border-t-2 border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                    <span>Total for Current Liabilities</span>
+                                    <span className="font-mono">{formatValue(currentLiabilitiesTotal)}</span>
                                 </div>
                             </div>
 
-                            {/* Other Current Liabilities */}
-                            <div className="pl-4 space-y-2 mt-3">
-                                <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other Current Liabilities</div>
-                                {otherCurrentLiabilities.map((item: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                        <span className="text-dim">{item.name}</span>
-                                        <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
-                                    </div>
-                                ))}
-                                <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
-                                    <span>Total for Other Current Liabilities</span>
-                                    <span className="font-mono">{formatValue(otherCurrentLiabilitiesTotal)}</span>
-                                </div>
-                            </div>
+                            {/* Long-Term Liabilities Group */}
+                            {longTermLiabilities.length > 0 && (
+                                <div className="space-y-3 pt-4 border-t border-[var(--border-main)]/50">
+                                    <div className="font-bold text-sm text-[var(--text-main)]">Long-Term Liabilities</div>
+                                    {(() => {
+                                        const grouped: Record<string, any[]> = {};
+                                        longTermLiabilities.forEach((item: any) => {
+                                            const type = item.accountType || 'Non Current Liability';
+                                            if (!grouped[type]) grouped[type] = [];
+                                            grouped[type].push(item);
+                                        });
 
-                            {/* Non Current Liabilities */}
-                            {nonCurrentLiabilities.length > 0 && (
-                                <div className="pl-4 space-y-2 mt-3">
-                                    <div className="font-semibold text-xs text-dim uppercase tracking-wider">Non Current Liabilities</div>
-                                    {nonCurrentLiabilities.map((item: any, i: number) => (
-                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                            <span className="text-dim">{item.name}</span>
-                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
-                                        </div>
-                                    ))}
-                                    <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
-                                        <span>Total for Non Current Liabilities</span>
-                                        <span className="font-mono">{formatValue(nonCurrentLiabilitiesTotal)}</span>
+                                        return Object.entries(grouped).map(([subCat, items]) => {
+                                            const subTotal = (items as any[]).reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+                                            return (
+                                                <div key={subCat} className="pl-4 space-y-2">
+                                                    <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
+                                                    {(items as any[]).map((item: any, i: number) => (
+                                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                                            <span className="text-dim">{item.name}</span>
+                                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                                        <span>Total for {subCat}</span>
+                                                        <span className="font-mono">{formatValue(subTotal)}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+
+                                    {/* Total for Long-Term Liabilities */}
+                                    <div className="flex justify-between text-xs font-black uppercase pt-2.5 mt-1 border-t-2 border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                        <span>Total for Long-Term Liabilities</span>
+                                        <span className="font-mono">{formatValue(longTermLiabilitiesTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Other Liabilities Group */}
+                            {otherLiabilities.length > 0 && (
+                                <div className="space-y-3 pt-4 border-t border-[var(--border-main)]/50">
+                                    <div className="font-bold text-sm text-[var(--text-main)]">Other Liabilities</div>
+                                    {(() => {
+                                        const grouped: Record<string, any[]> = {};
+                                        otherLiabilities.forEach((item: any) => {
+                                            const type = item.accountType || 'Other Liability';
+                                            if (!grouped[type]) grouped[type] = [];
+                                            grouped[type].push(item);
+                                        });
+
+                                        return Object.entries(grouped).map(([subCat, items]) => {
+                                            const subTotal = (items as any[]).reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+                                            return (
+                                                <div key={subCat} className="pl-4 space-y-2">
+                                                    <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
+                                                    {(items as any[]).map((item: any, i: number) => (
+                                                        <div key={i} className="flex justify-between items-center text-sm pl-4">
+                                                            <span className="text-dim">{item.name}</span>
+                                                            <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex justify-between text-xs font-black uppercase pt-2 border-t border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                                        <span>Total for {subCat}</span>
+                                                        <span className="font-mono">{formatValue(subTotal)}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+
+                                    {/* Total for Other Liabilities */}
+                                    <div className="flex justify-between text-xs font-black uppercase pt-2.5 mt-1 border-t-2 border-[var(--border-main)]" style={{ color: 'var(--text-main)' }}>
+                                        <span>Total for Other Liabilities</span>
+                                        <span className="font-mono">{formatValue(otherLiabilitiesTotal)}</span>
                                     </div>
                                 </div>
                             )}
