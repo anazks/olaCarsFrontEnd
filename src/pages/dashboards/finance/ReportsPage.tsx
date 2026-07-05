@@ -38,7 +38,7 @@ interface ReportType {
 }
 
 export const ReportsPage = () => {
-    const [selectedReport, setSelectedReport] = useState<string>('pl');
+    const [selectedReport, setSelectedReport] = useState<string>('balance-sheet');
     const [loading, setLoading] = useState<boolean>(false);
     const [exporting, setExporting] = useState<boolean>(false);
     const [branches, setBranches] = useState<any[]>([]);
@@ -70,15 +70,6 @@ export const ReportsPage = () => {
 
     const reportTypes: ReportType[] = [
         // 1. Financial Intelligence
-        { 
-            id: 'pl', 
-            name: 'Profit & Loss (P&L)', 
-            category: 'financial', 
-            icon: <TrendingUp size={15} />, 
-            description: 'Income statement summarizing revenues, costs, and expenses.',
-            supportsPdf: true,
-            supportsExcel: true 
-        },
         { 
             id: 'balance-sheet', 
             name: 'Balance Sheet', 
@@ -532,14 +523,14 @@ export const ReportsPage = () => {
 
     // Advanced Print PDF engine for all tables
     const handleExportPdf = async () => {
-        // If P&L or Balance Sheet, use high-fidelity backend PDF generator
-        if (selectedReport === 'pl' || selectedReport === 'balance-sheet') {
+        // If Balance Sheet, use high-fidelity backend PDF generator
+        if (selectedReport === 'balance-sheet') {
             setExporting(true);
             const toastId = toast.loading("Generating PDF Report...");
             try {
                 const query = {
                     ...filters,
-                    reportType: selectedReport === 'pl' ? 'PL' : 'BS'
+                    reportType: 'BS'
                 };
                 const res = await api.get('/api/reporting/export/pdf', { params: query, responseType: 'blob' });
                 const blob = new Blob([res.data], { type: 'application/pdf' });
@@ -1084,89 +1075,6 @@ export const ReportsPage = () => {
                                 /* Converted Wrapper with Fixed max height and dedicated scrollbar */
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4" id="report-preview-table-container">
                                     
-                                    {/* 1. Preview Profit & Loss */}
-                                    {selectedReport === 'pl' && (
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(16,185,129,0.03), rgba(0,0,0,0))' }}>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-dim">Total Revenue</span>
-                                                    <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatCurrency(reportData.revenueTotal || reportData.grossRevenue || 0)}</h3>
-                                                </div>
-                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(244,63,94,0.03), rgba(0,0,0,0))' }}>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-dim">Operating Expenses</span>
-                                                    <h3 className="text-2xl font-black text-rose-400 mt-1">{formatCurrency(reportData.expensesTotal || reportData.totalExpenses || 0)}</h3>
-                                                </div>
-                                                <div className="border border-[var(--border-main)] rounded-2xl p-5" style={{ background: 'linear-gradient(to bottom right, rgba(212,241,46,0.03), rgba(0,0,0,0))' }}>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-dim">Net Profit Margin</span>
-                                                    {(() => {
-                                                        const rev = reportData.revenueTotal || reportData.grossRevenue || 0;
-                                                        const net = reportData.netProfit || 0;
-                                                        const margin = rev > 0 ? (net / rev) * 100 : 0;
-                                                        return (
-                                                            <div className="flex items-baseline gap-2 mt-1">
-                                                                <h3 className="text-2xl font-black text-brand-lime">{margin.toFixed(1)}%</h3>
-                                                                <span className="text-[9px] font-bold text-dim uppercase">Surplus Ratio</span>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-
-                                            {/* Detailed P&L Statements Table */}
-                                            <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-inner" style={{ background: 'var(--bg-card)' }}>
-                                                <div className="p-4 border-b border-[var(--border-main)] flex items-center justify-between" style={{ background: 'var(--bg-input)' }}>
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-main flex items-center gap-2">
-                                                        <TrendingUp size={14} className="text-brand-lime" /> Accounts Summary
-                                                    </h3>
-                                                </div>
-                                                <div className="p-5 space-y-4">
-                                                    <div className="flex justify-between border-b border-[var(--border-main)] pb-2 text-[10px] font-black uppercase tracking-widest text-dim">
-                                                        <span>Account Classification</span>
-                                                        <span>Aggregated Balance</span>
-                                                    </div>
-                                                    
-                                                    {/* Revenues */}
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-xs font-black text-emerald-400">
-                                                            <span className="uppercase tracking-wide">Revenue (Inflows)</span>
-                                                            <span>{formatCurrency(reportData.revenueTotal || reportData.grossRevenue || 0)}</span>
-                                                        </div>
-                                                        {reportData.revenues?.map((item: any, idx: number) => (
-                                                            <div key={idx} className="flex justify-between text-xs text-dim pl-4 hover:text-white transition-colors">
-                                                                <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
-                                                                <span className="font-mono">{formatCurrency(item.amount)}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* Expenses */}
-                                                    <div className="space-y-2 pt-2 border-t border-[var(--border-main)]">
-                                                        <div className="flex justify-between text-xs font-black text-rose-400">
-                                                            <span className="uppercase tracking-wide">Operating Expenses (Outflows)</span>
-                                                            <span>{formatCurrency(reportData.expensesTotal || reportData.totalExpenses || 0)}</span>
-                                                        </div>
-                                                        {reportData.expenses?.map((item: any, idx: number) => (
-                                                            <div key={idx} className="flex justify-between text-xs text-dim pl-4 hover:text-white transition-colors">
-                                                                <span>{item.name} <span className="text-[10px] text-dim/50 ml-1">#{item.code}</span></span>
-                                                                <span className="font-mono">{formatCurrency(item.amount)}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* Net Profit Summary Row */}
-                                                    <div className="flex justify-between border-t border-[var(--border-main)] pt-4 text-xs font-black uppercase tracking-widest" style={{ background: 'var(--bg-card)' }}>
-                                                        <span>Net Surplus / Earnings</span>
-                                                        <span className={`font-mono text-sm px-2.5 py-1 rounded-xl ${
-                                                            (reportData.netProfit || 0) >= 0 ? 'text-emerald-400 bg-emerald-500/5' : 'text-rose-400 bg-rose-500/5'
-                                                        }`}>
-                                                            {formatCurrency(reportData.netProfit || 0)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* 2. Preview Balance Sheet */}
                                     {selectedReport === 'balance-sheet' && (
                                         <div className="space-y-6">

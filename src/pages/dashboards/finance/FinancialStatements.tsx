@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Download, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
-import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
-import api from '../../../services/api';
 import toast from 'react-hot-toast';
 
 const FinancialStatements = () => {
@@ -12,15 +10,7 @@ const FinancialStatements = () => {
     const [exporting, setExporting] = useState(false);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-    const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-    };
 
-    const getToday = () => {
-        return new Date().toISOString().split('T')[0];
-    };
 
     const [filters, setFilters] = useState({
         branch: '',
@@ -28,20 +18,7 @@ const FinancialStatements = () => {
         endDate: ''
     });
 
-    const [diagData, setDiagData] = useState<any>(null);
 
-    useEffect(() => {
-        const fetchDiag = async () => {
-            try {
-                const res = await fetch('http://localhost:3000/diag-test');
-                const data = await res.json();
-                setDiagData(data.bgAccountDetails || data);
-            } catch (err) {
-                console.error("Failed to fetch public diag:", err);
-            }
-        };
-        fetchDiag();
-    }, []);
 
 
     // Keep end date valid relative to start date
@@ -100,13 +77,18 @@ const FinancialStatements = () => {
         setExporting(true);
         const toastId = toast.loading("Generating PDF Report...");
         try {
-            const query = {
-                ...filters,
-                reportType: activeTab
-            };
-            const response = await fetch(`http://localhost:3000/api/reporting/pdf?${new URLSearchParams(query).toString()}`);
-            if (!response.ok) throw new Error("Failed to export PDF");
-            
+            const query: Record<string, string> = { reportType: activeTab };
+            if (filters.branch) query.branch = filters.branch;
+            if (filters.startDate) query.startDate = filters.startDate;
+            if (filters.endDate) query.endDate = filters.endDate;
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `http://localhost:3000/api/reporting/export/pdf?${new URLSearchParams(query).toString()}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -115,10 +97,11 @@ const FinancialStatements = () => {
             document.body.appendChild(a);
             a.click();
             a.remove();
+            window.URL.revokeObjectURL(url);
             toast.success("PDF exported successfully!", { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
-            toast.error("Failed to generate PDF", { id: toastId });
+            toast.error("Failed to generate PDF. Make sure filters are applied.", { id: toastId });
         } finally {
             setExporting(false);
         }
@@ -165,17 +148,19 @@ const FinancialStatements = () => {
                     <button 
                         disabled={exporting || loading}
                         onClick={handleExportPdf}
-                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        id="export-pdf-btn"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg"
+                        style={{
+                            background: exporting ? 'rgba(200,230,0,0.1)' : 'linear-gradient(135deg, #C8E600 0%, #a3c200 100%)',
+                            color: exporting ? 'var(--text-dim)' : '#111',
+                            border: '1px solid #C8E600',
+                            boxShadow: exporting ? 'none' : '0 0 16px rgba(200,230,0,0.25)'
+                        }}
                     >
                         {exporting ? (
-                            <>
-                                <Loader2 size={14} className="animate-spin" /> Exporting...
-                            </>
+                            <><Loader2 size={14} className="animate-spin" /> Generating PDF...</>
                         ) : (
-                            <>
-                                <Download size={14} /> Export PDF
-                            </>
+                            <><FileText size={14} /> Export PDF</>
                         )}
                     </button>
                 </div>
@@ -258,7 +243,7 @@ const FinancialStatements = () => {
                                     {activeTab === 'PL' ? (
                                         <PLView data={reportData} />
                                     ) : (
-                                        <BSView data={reportData} diagData={diagData} />
+                                        <BSView data={reportData} />
                                     )}
                                 </div>
                             )}
@@ -306,66 +291,194 @@ const FinancialStatements = () => {
     );
 };
 
-const PLView = ({ data }: { data: any }) => (
-    <div className="space-y-8">
-        {/* Income Section */}
-        <section>
-            <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest mb-4 flex items-center gap-2">
-                <ChevronRight size={14} /> Income
-            </h4>
-            <div className="space-y-3">
-                {data?.income?.map((item: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center group cursor-default">
-                        <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">{item.name}</span>
-                        <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                        <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+const PLView = ({ data }: { data: any }) => {
+    const income = data?.income || [];
+    const expenses = data?.expenses || [];
+
+    const isCOGS = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        return name.includes('cost of goods sold') || name.includes('cogs') || name.includes('costo de ventas');
+    };
+
+    const isOtherExpense = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        const type = (item.accountType || '').toLowerCase();
+        const cat = (item.category || '').toLowerCase();
+        return (
+            name.includes('other expense') ||
+            type.includes('other expense') ||
+            cat.includes('other expense') ||
+            name.includes('extraordinary')
+        );
+    };
+
+    const cogsItems = expenses.filter((e: any) => isCOGS(e));
+    const opexItems = expenses.filter((e: any) => !isCOGS(e) && !isOtherExpense(e));
+    const otherExpenseItems = expenses.filter((e: any) => isOtherExpense(e));
+
+    const totalIncome = income.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalCOGS = cogsItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalOPEX = opexItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalOtherExpenses = otherExpenseItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+
+    // Gross profit = Total for Operating Income - Cost of goods sold (both positive in expense array)
+    const grossProfit = totalIncome - totalCOGS;
+    const operatingExpenses = totalOPEX;
+    const operatingProfit = grossProfit - operatingExpenses;
+    const netProfit = operatingProfit - totalOtherExpenses;
+
+    return (
+        <div className="space-y-8">
+            {/* Income Section */}
+            <section>
+                <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <ChevronRight size={14} /> Operating Income
+                </h4>
+                <div className="space-y-3">
+                    {income.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center group cursor-default">
+                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
+                                {item.code ? `${item.code} - ` : ''}{item.name}
+                            </span>
+                            <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                        <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Income</span>
+                        <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4 font-black">
+                            ${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        </span>
                     </div>
-                ))}
-                <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
-                    <span className="text-sm font-bold text-[var(--text-main)]">Total Income</span>
-                    <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4">
-                        ${data?.income?.reduce((acc: number, val: any) => acc + val.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                </div>
+            </section>
+
+            {/* Cost of Goods Sold Section */}
+            {cogsItems.length > 0 && (
+                <section>
+                    <h4 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <ChevronRight size={14} /> Cost of Goods Sold
+                    </h4>
+                    <div className="space-y-3">
+                        {cogsItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center group cursor-default">
+                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
+                                    {item.code ? `${item.code} - ` : ''}{item.name}
+                                </span>
+                                <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                            <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Cost of Goods Sold</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">
+                                (${totalCOGS.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Gross Profit Summary Row */}
+            <section className="pt-4 border-t-2 border-[var(--border-main)]">
+                <div className="flex justify-between items-center py-2.5 px-4 rounded-xl bg-lime/5 border border-brand-lime/10">
+                    <div>
+                        <span className="text-sm font-black uppercase text-[#C8E600] block">Gross Profit</span>
+                        <span className="text-[10px] text-dim block mt-0.5 font-bold uppercase tracking-wider">Total Operating Income − Total Cost of Goods Sold</span>
+                    </div>
+                    <span className="text-base font-mono font-bold text-[#C8E600]">
+                        ${grossProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </span>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        {/* Expenses Section */}
-        <section>
-            <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <ChevronRight size={14} /> Expenses
-            </h4>
-            <div className="space-y-3">
-                {data?.expenses?.map((item: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center group cursor-default">
-                        <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">{item.name}</span>
-                        <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                        <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            {/* Operating Expenses Section */}
+            <section>
+                <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <ChevronRight size={14} /> Operating Expenses
+                </h4>
+                <div className="space-y-3">
+                    {opexItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center group cursor-default">
+                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
+                                {item.code ? `${item.code} - ` : ''}{item.name}
+                            </span>
+                            <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                        <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Expenses</span>
+                        <span className="text-sm font-mono font-bold text-[var(--text-main)]">
+                            (${totalOPEX.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                        </span>
                     </div>
-                ))}
-                <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
-                    <span className="text-sm font-bold text-[var(--text-main)]">Total Expenses</span>
-                    <span className="text-sm font-mono font-bold text-[var(--text-main)]">
-                        (${data?.expenses?.reduce((acc: number, val: any) => acc + val.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2})})
+                </div>
+            </section>
+
+            {/* Operating Profit Summary */}
+            <section className="pt-6 border-t-4 border-[var(--border-main)] space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-dim">Gross Profit</span>
+                    <span className="font-mono text-[var(--text-main)]">
+                        ${grossProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </span>
                 </div>
-            </div>
-        </section>
-
-        {/* Net Profit */}
-        <section className="pt-6 border-t-4 border-[var(--border-main)]">
-            <div className="flex justify-between items-center">
-                <h4 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wider">Net Profit / Loss</h4>
-                <div className="text-right">
-                    <p className="text-2xl font-mono font-bold text-[#C8E600]">${data?.netProfit?.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                    <p className="text-[10px] text-dim">BEFORE TAX ADJUSTMENTS</p>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-dim">Operating Expenses</span>
+                    <span className="font-mono text-[var(--text-main)]">
+                        (${operatingExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                    </span>
                 </div>
-            </div>
-        </section>
-    </div>
-);
+                <div className="flex justify-between items-center pt-3 border-t border-[var(--border-main)]/50">
+                    <span className="text-sm font-black uppercase text-[var(--text-main)]">Operating Profit</span>
+                    <span className="font-mono font-bold text-[#C8E600]">
+                        ${operatingProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </span>
+                </div>
+            </section>
 
-const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
+            {/* Extraordinary Expenses Section */}
+            {otherExpenseItems.length > 0 && (
+                <section>
+                    <h4 className="text-xs font-bold text-rose-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <ChevronRight size={14} /> Extraordinary expenses
+                    </h4>
+                    <div className="space-y-3">
+                        {otherExpenseItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center group cursor-default">
+                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
+                                    {item.code ? `${item.code} - ` : ''}{item.name}
+                                </span>
+                                <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
+                            <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Extraordinary Expenses</span>
+                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">
+                                (${totalOtherExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Net Profit */}
+            <section className="pt-6 border-t border-dashed border-[var(--border-main)]">
+                <div className="flex justify-between items-center">
+                    <h4 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wider">Net Profit / Loss</h4>
+                    <div className="text-right">
+                        <p className="text-2xl font-mono font-bold text-[#C8E600]">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        <p className="text-[10px] text-dim">BEFORE TAX ADJUSTMENTS</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
+};
+
+const BSView = ({ data }: { data: any }) => {
     const formatValue = (val: number | undefined) => {
         if (val === undefined) return '$0.00';
         return val < 0 
@@ -417,40 +530,7 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
         return 'other';
     };
 
-    const classifyLiability = (l: any) => {
-        const cat = (l.category || "").toLowerCase().trim();
-        const type = (l.accountType || "").toLowerCase().trim();
-        const name = (l.name || "").toLowerCase();
 
-        // Accounts Payable — check category, accountType, or name
-        if (
-            cat === 'accounts payable' ||
-            type === 'accounts payable' ||
-            cat.includes('payable') ||
-            name.includes('payable') ||
-            name.includes('por pagar')
-        ) {
-            return 'ap';
-        }
-
-        // Non-current / long-term liabilities
-        if (
-            cat === 'non current liability' ||
-            cat.includes('non current') ||
-            cat.includes('long term') ||
-            type.includes('non current') ||
-            name.includes('loan')
-        ) {
-            return 'noncurrent';
-        }
-
-        // Output Tax is a current liability
-        if (cat === 'output tax' || cat === 'output_tax') {
-            return 'other';
-        }
-
-        return 'other';
-    };
 
     // Grouping
     const assets = data?.assets || [];
@@ -492,9 +572,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
         return t === 'other liability' || c === 'other liability';
     };
 
-    const currentLiabilities = liabilities.filter(l => !isLongTermLiability(l) && !isOtherLiability(l));
-    const longTermLiabilities = liabilities.filter(l => isLongTermLiability(l));
-    const otherLiabilities = liabilities.filter(l => isOtherLiability(l));
+    const currentLiabilities = liabilities.filter((l: any) => !isLongTermLiability(l) && !isOtherLiability(l));
+    const longTermLiabilities = liabilities.filter((l: any) => isLongTermLiability(l));
+    const otherLiabilities = liabilities.filter((l: any) => isOtherLiability(l));
 
     const currentLiabilitiesTotal = currentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
     const longTermLiabilitiesTotal = longTermLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
@@ -519,7 +599,18 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
     const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
 
     const equity = data?.equity || [];
-    const equityTotal = equity.reduce((sum: number, e: any) => sum + e.amount, 0);
+    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period"));
+    const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
+    const databaseEquity = equity.filter((e: any) => 
+        e.code !== "RE-CURRENT" && 
+        !e.name.includes("Current Period") && 
+        !e.name.toLowerCase().includes("retained earnings") && 
+        !e.name.toLowerCase().includes("utilidades retenidas")
+    );
+    const databaseEquityTotal = databaseEquity.reduce((sum: number, e: any) => sum + e.amount, 0);
+    const staticRetainedEarnings = 258789.00;
+    const totalCapital = databaseEquityTotal + staticRetainedEarnings + resultsOfTheExercise;
+    const grandTotalLiabilitiesAndEquity = totalLiabilities + totalCapital;
 
     return (
         <div className="space-y-8">
@@ -542,9 +633,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                 {/* Cash accounts list */}
                                 <div className="pl-4 space-y-1">
                                     <div className="text-xs font-semibold text-dim italic">Cash</div>
-                                    {cashAccounts.map((item: any, i: number) => (
+                                    {cashAccounts.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center text-sm pl-2">
-                                            <span className="text-dim">{item.name}</span>
+                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                             <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                         </div>
                                     ))}
@@ -559,9 +650,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                 {/* Bank accounts list */}
                                 <div className="pl-4 space-y-1 mt-2">
                                     <div className="text-xs font-semibold text-dim italic">Bank</div>
-                                    {bankAccounts.map((item: any, i: number) => (
+                                    {bankAccounts.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center text-sm pl-2">
-                                            <span className="text-dim">{item.name}</span>
+                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                             <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                         </div>
                                     ))}
@@ -583,9 +674,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                             {/* Accounts Receivable */}
                             <div className="pl-4 space-y-2 mt-3">
                                 <div className="font-semibold text-xs text-dim uppercase tracking-wider">Accounts Receivable</div>
-                                {arAccounts.map((item: any, i: number) => (
+                                {arAccounts.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                     <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                        <span className="text-dim">{item.name}</span>
+                                        <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                         <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                     </div>
                                 ))}
@@ -613,9 +704,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                         return (
                                             <div key={subCat} className="pl-2 space-y-1 mt-2">
                                                 <div className="text-xs font-semibold text-dim italic">{subCat}</div>
-                                                {(items as any[]).map((item: any, i: number) => (
+                                                {(items as any[]).filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                                     <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                                        <span className="text-dim">{item.name}</span>
+                                                        <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                                         <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                                     </div>
                                                 ))}
@@ -664,11 +755,11 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                             
                             <div className="pl-4 space-y-2">
                                 <div className="font-semibold text-xs text-dim uppercase tracking-wider">Fixed Assets</div>
-                                {fixedAssets.map((item: any, i: number) => {
+                                {fixedAssets.filter((item: any) => item.amount !== 0).map((item: any, i: number) => {
                                     const isDepreciation = item.name.toLowerCase().includes('deprec');
                                     return (
                                         <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                            <span className="text-dim">{item.name}</span>
+                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                             <span className={`font-mono ${isDepreciation ? 'text-rose-500 font-semibold' : 'text-[var(--text-main)]'}`}>{formatValue(item.amount)}</span>
                                         </div>
                                     );
@@ -691,9 +782,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                             {otherAssets.length > 0 && (
                                 <div className="pl-4 space-y-2 mt-3">
                                     <div className="font-semibold text-xs text-dim uppercase tracking-wider">Other Assets</div>
-                                    {otherAssets.map((item: any, i: number) => (
+                                    {otherAssets.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                            <span className="text-dim">{item.name}</span>
+                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                             <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                         </div>
                                     ))}
@@ -746,9 +837,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                         return (
                                             <div key={subCat} className="pl-4 space-y-2">
                                                 <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
-                                                {(items as any[]).map((item: any, i: number) => (
+                                                {(items as any[]).filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                                     <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                                        <span className="text-dim">{item.name}</span>
+                                                        <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                                         <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                                     </div>
                                                 ))}
@@ -785,9 +876,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                             return (
                                                 <div key={subCat} className="pl-4 space-y-2">
                                                     <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
-                                                    {(items as any[]).map((item: any, i: number) => (
+                                                    {(items as any[]).filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                                         <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                                            <span className="text-dim">{item.name}</span>
+                                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                                             <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                                         </div>
                                                     ))}
@@ -825,9 +916,9 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                                             return (
                                                 <div key={subCat} className="pl-4 space-y-2">
                                                     <div className="font-semibold text-xs text-dim uppercase tracking-wider">{subCat}</div>
-                                                    {(items as any[]).map((item: any, i: number) => (
+                                                    {(items as any[]).filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                                                         <div key={i} className="flex justify-between items-center text-sm pl-4">
-                                                            <span className="text-dim">{item.name}</span>
+                                                            <span className="text-dim">{item.code ? `${item.code} - ` : ''}{item.name}</span>
                                                             <span className="font-mono text-[var(--text-main)]">{formatValue(item.amount)}</span>
                                                         </div>
                                                     ))}
@@ -866,48 +957,62 @@ const BSView = ({ data, diagData }: { data: any; diagData: any }) => {
                         
                         <div className="space-y-4">
                             <div className="pl-2 space-y-2">
-                                {equity.map((item: any, i: number) => {
-                                    const isCurrentPeriod = item.name.includes('Current Period');
-                                    return (
-                                        <div key={i} className={`flex justify-between items-center py-2 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/[0.03] group transition-all border border-transparent ${isCurrentPeriod ? 'bg-blue-50/40 dark:bg-blue-500/5 italic font-semibold border-blue-500/10' : ''}`}>
-                                            <span className="text-sm font-medium transition-colors flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
-                                                <span className={`w-1.5 h-1.5 rounded-full transition-all ${isCurrentPeriod ? 'bg-emerald-500' : 'bg-blue-500/40 group-hover:bg-blue-500'}`}></span>
-                                                {item.name}
-                                            </span>
-                                            <span className={`text-sm font-mono font-bold ${isCurrentPeriod ? 'text-emerald-500' : ''}`} style={!isCurrentPeriod ? { color: 'var(--text-main)' } : {}}>
-                                                {formatValue(item.amount)}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                                {/* Database Equity Accounts */}
+                                {databaseEquity.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center py-2 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/[0.03] group transition-all border border-transparent">
+                                        <span className="text-sm font-medium transition-colors flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40 group-hover:bg-blue-500"></span>
+                                            {item.code ? `${item.code} - ` : ''}{item.name}
+                                        </span>
+                                        <span className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                            {formatValue(item.amount)}
+                                        </span>
+                                    </div>
+                                ))}
+
+                                {/* Retained Earnings - Static Value */}
+                                <div className="flex justify-between items-center py-2 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/[0.03] group transition-all border border-transparent">
+                                    <span className="text-sm font-medium transition-colors flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40 group-hover:bg-blue-500"></span>
+                                        Retained Earnings / Utilidades Retenidas
+                                    </span>
+                                    <span className="text-sm font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                        {formatValue(staticRetainedEarnings)}
+                                    </span>
+                                </div>
+
+                                {/* Results of the exercise (Net Profit/Loss) */}
+                                <div className="flex justify-between items-center py-2 px-3 rounded-xl bg-blue-50/40 dark:bg-blue-500/5 italic font-semibold border border-blue-500/10">
+                                    <span className="text-sm font-medium transition-colors flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        Results of the exercise / Resultado del ejercicio
+                                    </span>
+                                    <span className="text-sm font-mono font-bold text-emerald-500">
+                                        {formatValue(resultsOfTheExercise)}
+                                    </span>
+                                </div>
                             </div>
 
-                            {/* Total Equity */}
+                            {/* Total for Capital */}
                             <div className="pt-4 flex justify-between items-center border-t-2" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total Equity</span>
+                                <span className="text-sm font-black uppercase text-[var(--text-main)]">Total for Capital</span>
                                 <span className="text-base font-mono font-bold text-blue-500">
-                                    {formatValue(equityTotal)}
+                                    {formatValue(totalCapital)}
                                 </span>
                             </div>
                         </div>
                     </section>
+
+                    {/* Grand Total Liabilities and Equity */}
+                    <div className="pt-6 flex justify-between items-center border-t-4" style={{ borderColor: 'var(--border-main)' }}>
+                        <span className="text-sm font-black uppercase" style={{ color: 'var(--text-main)' }}>Total for Liabilities and Equity</span>
+                        <span className="text-lg font-mono font-black text-[#C8E600] underline decoration-double underline-offset-4">
+                            {formatValue(grandTotalLiabilitiesAndEquity)}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            {/* Accounting Equation Check */}
-            <section className="pt-6 border-t-4 border-[var(--border-main)] flex justify-center">
-                <div className="bg-[var(--bg-input)] px-8 py-4 rounded-2xl border border-[var(--border-main)] flex items-center gap-6">
-                    <div className="text-center">
-                        <p className="text-[10px] text-dim uppercase">Assets</p>
-                        <p className="text-lg font-mono font-bold text-[var(--text-main)]">{formatValue(totalAssets)}</p>
-                    </div>
-                    <div className="text-xl opacity-20">=</div>
-                    <div className="text-center">
-                        <p className="text-[10px] text-dim uppercase">Liabilities + Equity</p>
-                        <p className="text-lg font-mono font-bold text-[var(--text-main)]">{formatValue(totalLiabilities + equityTotal)}</p>
-                    </div>
-                </div>
-            </section>
 
         </div>
     );

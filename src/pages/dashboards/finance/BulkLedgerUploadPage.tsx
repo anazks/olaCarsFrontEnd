@@ -9,8 +9,18 @@ import Papa from 'papaparse';
 import {
     importLedger, getImportProgress, getImportHistory, getSampleExcelBlob, getAllAccountingCodes
 } from '../../../services/accountingService';
+import { getLedgerEntries, clearLedgerEntriesByCode } from '../../../services/ledgerService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+
+interface AccountSummaryItem {
+    id: string;
+    code: string;
+    name: string;
+    excelCount: number;
+    systemCount: number | null;
+    clearing: boolean;
+}
 
 interface LocalError {
     row: number;
@@ -93,7 +103,8 @@ const BulkLedgerUploadPage = () => {
     const [isValidating, setIsValidating] = useState(false);
     const [validationProgress, setValidationProgress] = useState(0);
     const [validationResult, setValidationResult] = useState<LocalValidationResult | null>(null);
-    const [activeTab, setActiveTab] = useState<'errors' | 'valid'>('errors');
+    const [activeTab, setActiveTab] = useState<'errors' | 'valid' | 'accounts_summary'>('errors');
+    const [excelAccountsSummary, setExcelAccountsSummary] = useState<AccountSummaryItem[]>([]);
 
     // Import states
     const [isImporting, setIsImporting] = useState(false);
@@ -247,7 +258,7 @@ const BulkLedgerUploadPage = () => {
     };
 
     // Client-side row validator wrapper
-    const validateRowData = (row: any, accountMap: Record<string, boolean>, localDups: Record<string, boolean>) => {
+    const validateRowData = (row: any, localDups: Record<string, boolean>) => {
         const errorsList: string[] = [];
 
         // Fetch flex values matching standard names
@@ -385,30 +396,13 @@ const BulkLedgerUploadPage = () => {
         let validRowsCount = 0;
         let duplicateRowsCount = 0;
 
-        // Build account map for instant local check
-        const accountMap: Record<string, boolean> = {};
-        accounts.forEach(a => {
-            if (a.name) {
-                const nameLower = a.name.toLowerCase().trim();
-                accountMap[nameLower] = true;
-                const nameNorm = nameLower.replace(/[^a-z0-9]/g, "");
-                if (nameNorm) accountMap[nameNorm] = true;
-            }
-            if (a.code) {
-                const codeLower = a.code.toLowerCase().trim();
-                accountMap[codeLower] = true;
-                const codeNorm = codeLower.replace(/[^a-z0-9]/g, "");
-                if (codeNorm) accountMap[codeNorm] = true;
-            }
-        });
-
         const localDups: Record<string, boolean> = {};
 
         const processValidationBatch = () => {
             const limit = Math.min(index + batchSize, total);
             for (let i = index; i < limit; i++) {
                 const row = rows[i];
-                const res = validateRowData(row, accountMap, localDups);
+                const res = validateRowData(row, localDups);
                 if (!res.isValid) {
                     collectedErrors.push({ row: i + 2, error: res.errors });
                 } else {
@@ -507,10 +501,56 @@ const BulkLedgerUploadPage = () => {
                     validEntries: collectedValid,
                     rows: prev?.rows || []
                 }));
+
+                // Calculate Excel Accounts Summary
+                const countsMap: Record<string, { acc: any; excelCount: number }> = {};
+                const getValHelper = (row: any, possibleKeys: string[]) => {
+                    for (const key of possibleKeys) {
+                        if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+                            return row[key];
+                        }
+                        const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        for (const k of Object.keys(row)) {
+                            const normK = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+                            if (normK === normKey) {
+                                if (row[k] !== undefined && row[k] !== null && row[k] !== "") {
+                                    return row[k];
+                                }
+                            }
+                        }
+                    }
+                    return undefined;
+                };
+
+                for (let i = 0; i < total; i++) {
+                    const row = rows[i];
+                    const accName = getValHelper(row, ["Account Name", "account_name", "Account"]) || "";
+                    const accCode = getValHelper(row, ["accountingCode", "Account Code", "account_code", "Accounting Code", "accounting_code", "Account ID", "account_id"]) || "";
+                    const foundAcc = findAccount(accName, accCode);
+                    if (foundAcc) {
+                        const accId = foundAcc._id;
+                        if (!countsMap[accId]) {
+                            countsMap[accId] = { acc: foundAcc, excelCount: 0 };
+                        }
+                        countsMap[accId].excelCount++;
+                    }
+                }
+                const summaryItems: AccountSummaryItem[] = Object.values(countsMap).map(item => ({
+                    id: item.acc._id,
+                    code: item.acc.code,
+                    name: item.acc.name,
+                    excelCount: item.excelCount,
+                    systemCount: null,
+                    clearing: false
+                }));
+
+                setExcelAccountsSummary(summaryItems);
                 setActiveTab(hasErrors ? 'errors' : 'valid');
                 setIsValidating(false);
                 toast.success(`Validation complete: ${validRowsCount} valid, ${collectedErrors.length} invalid.`);
 
+                // Async fetch of system counts
+                fetchSystemCounts(summaryItems);
             }
         };
 
@@ -661,6 +701,51 @@ const BulkLedgerUploadPage = () => {
         }, 800);
     };
 
+    const fetchSystemCounts = async (items: AccountSummaryItem[]) => {
+        const updated = [...items];
+        for (let i = 0; i < updated.length; i++) {
+            try {
+                const res = await getLedgerEntries({ accountingCode: updated[i].id, limit: 1 });
+                updated[i].systemCount = res.pagination?.total || 0;
+            } catch (err) {
+                console.error(`Failed to fetch count for account ${updated[i].name}`, err);
+                updated[i].systemCount = 0;
+            }
+        }
+        setExcelAccountsSummary([...updated]);
+    };
+
+    const handleClearAccountData = async (item: AccountSummaryItem) => {
+        const confirmClear = window.confirm(
+            `Are you sure you want to delete ALL ledger transactions for "${item.name} (${item.code})" in the system?\n\nThis will permanently delete all records for this specific account code and cannot be undone.`
+        );
+        if (!confirmClear) return;
+
+        setExcelAccountsSummary(prev =>
+            prev.map(x => x.id === item.id ? { ...x, clearing: true } : x)
+        );
+
+        try {
+            const res = await clearLedgerEntriesByCode(item.id);
+            if (res.success) {
+                toast.success(res.message || `Successfully cleared database entries for ${item.name}.`);
+                setExcelAccountsSummary(prev =>
+                    prev.map(x => x.id === item.id ? { ...x, systemCount: 0, clearing: false } : x)
+                );
+            } else {
+                toast.error(res.message || 'Failed to clear entries.');
+                setExcelAccountsSummary(prev =>
+                    prev.map(x => x.id === item.id ? { ...x, clearing: false } : x)
+                );
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Error clearing entries');
+            setExcelAccountsSummary(prev =>
+                prev.map(x => x.id === item.id ? { ...x, clearing: false } : x)
+            );
+        }
+    };
+
     const resetState = () => {
         setFile(null);
         setFileName('');
@@ -672,6 +757,7 @@ const BulkLedgerUploadPage = () => {
         setIsImporting(false);
         setErrorScrollTop(0);
         setValidScrollTop(0);
+        setExcelAccountsSummary([]);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -885,6 +971,17 @@ const BulkLedgerUploadPage = () => {
                                                 Parsed Valid Rows ({validationResult.validRows})
                                             </button>
                                         )}
+                                        {excelAccountsSummary.length > 0 && (
+                                            <button
+                                                onClick={() => setActiveTab('accounts_summary')}
+                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${activeTab === 'accounts_summary'
+                                                        ? 'border-[#C8E600] text-[#C8E600]'
+                                                        : 'border-transparent text-dim hover:text-white'
+                                                    }`}
+                                            >
+                                                Accounts Summary ({excelAccountsSummary.length})
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Errors Tab Content */}
@@ -996,6 +1093,59 @@ const BulkLedgerUploadPage = () => {
                                                             </div>
                                                         );
                                                     })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Accounts Summary Tab Content */}
+                                    {activeTab === 'accounts_summary' && excelAccountsSummary.length > 0 && (
+                                        <div className="space-y-3">
+                                            <div className="text-xs font-bold text-[#C8E600] flex items-center gap-2">
+                                                <CheckCircle size={14} />
+                                                <span>Accounts found in spreadsheet. Compare database transactions and clear existing system data if necessary.</span>
+                                            </div>
+
+                                            <div
+                                                className="rounded-xl border overflow-hidden"
+                                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}
+                                            >
+                                                <div className="flex border-b text-xs font-bold uppercase tracking-wider p-3" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                                    <div className="w-[15%] pl-2" style={{ color: 'var(--text-dim)' }}>Code</div>
+                                                    <div className="w-[35%]" style={{ color: 'var(--text-dim)' }}>Account Name</div>
+                                                    <div className="w-[20%] text-center" style={{ color: 'var(--text-dim)' }}>Excel Row Count</div>
+                                                    <div className="w-[20%] text-center" style={{ color: 'var(--text-dim)' }}>Current DB Count</div>
+                                                    <div className="w-[10%] text-center" style={{ color: 'var(--text-dim)' }}>Actions</div>
+                                                </div>
+
+                                                <div className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                    {excelAccountsSummary.map((item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            className="flex items-center text-xs p-3 hover:bg-white/5"
+                                                            style={{ height: '52px' }}
+                                                        >
+                                                            <div className="w-[15%] font-black text-white pl-2">{item.code}</div>
+                                                            <div className="w-[35%] text-white truncate" title={item.name}>{item.name}</div>
+                                                            <div className="w-[20%] text-center font-bold text-[#C8E600] font-mono">{item.excelCount}</div>
+                                                            <div className="w-[20%] text-center font-mono text-white">
+                                                                {item.systemCount === null ? (
+                                                                    <Loader2 className="animate-spin inline-block text-dim" size={12} />
+                                                                ) : (
+                                                                    item.systemCount
+                                                                )}
+                                                            </div>
+                                                            <div className="w-[10%] text-center">
+                                                                <button
+                                                                    onClick={() => handleClearAccountData(item)}
+                                                                    disabled={item.clearing || item.systemCount === 0 || item.systemCount === null}
+                                                                    className="px-2.5 py-1 rounded text-[10px] font-bold bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all uppercase tracking-wider cursor-pointer"
+                                                                >
+                                                                    {item.clearing ? 'Clearing...' : 'Clear'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>

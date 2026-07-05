@@ -66,6 +66,8 @@ export interface LedgerEntriesResponse {
         totalDebit: number;
         totalCredit: number;
         netMovement: number;
+        openingBalance?: number;
+        closingBalance?: number;
     };
     pagination?: any;
 }

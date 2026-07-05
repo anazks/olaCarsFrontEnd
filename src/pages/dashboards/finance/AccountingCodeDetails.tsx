@@ -233,7 +233,13 @@ const AccountingCodeDetails = () => {
                 });
             }
             if (ledgerRes.summary) {
-                setSummary(ledgerRes.summary);
+                setSummary({
+                    totalDebit: ledgerRes.summary.totalDebit || 0,
+                    totalCredit: ledgerRes.summary.totalCredit || 0,
+                    netMovement: ledgerRes.summary.netMovement || 0,
+                    openingBalance: ledgerRes.summary.openingBalance || 0,
+                    closingBalance: ledgerRes.summary.closingBalance || 0
+                });
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch details');
@@ -366,16 +372,7 @@ const AccountingCodeDetails = () => {
 
     const style = CATEGORY_STYLES[code.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
 
-    // Derived statistics (calculated locally for this page's view)
-    const totalDebit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'DEBIT') return sum + entry.amount;
-        return sum + (entry.debit || 0);
-    }, 0);
 
-    const totalCredit = entries.reduce((sum, entry) => {
-        if (entry.amount !== undefined && entry.type === 'CREDIT') return sum + entry.amount;
-        return sum + (entry.credit || 0);
-    }, 0);
 
     return (
         <div className="container-responsive space-y-6 pb-20 animate-fade-in">

@@ -22,20 +22,7 @@ const BalanceSheet = () => {
         endDate: ''
     });
 
-    const [diagData, setDiagData] = useState<any>(null);
 
-    useEffect(() => {
-        const fetchDiag = async () => {
-            try {
-                const res = await fetch('http://localhost:3000/diag-test');
-                const data = await res.json();
-                setDiagData(data.bgAccountDetails || data);
-            } catch (err) {
-                console.error("Failed to fetch public diag:", err);
-            }
-        };
-        fetchDiag();
-    }, []);
 
 
     useEffect(() => {
