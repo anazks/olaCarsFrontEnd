@@ -43,6 +43,7 @@ export interface ReportFilters {
     endDate?: string;
     branch?: string;
     country?: string;
+    bankAccount?: string;
 }
 
 export const getDailyFinanceReport = async (filters: ReportFilters) => {
@@ -67,6 +68,11 @@ export const getPLReport = async (filters: ReportFilters) => {
 
 export const getBalanceSheetReport = async (filters: ReportFilters) => {
     const response = await api.get('/api/reporting/balance-sheet', { params: filters });
+    return response.data;
+};
+
+export const getBankBalanceSheetReport = async (filters: ReportFilters) => {
+    const response = await api.get('/api/reporting/bank-balance-sheet', { params: filters });
     return response.data;
 };
 

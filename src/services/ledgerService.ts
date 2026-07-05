@@ -71,7 +71,13 @@ export interface LedgerEntriesResponse {
 }
 
 export const getLedgerEntries = async (filters: Record<string, any> = {}): Promise<LedgerEntriesResponse> => {
-    const params = new URLSearchParams(filters).toString();
+    const cleanFilters: Record<string, string> = {};
+    Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+            cleanFilters[key] = String(filters[key]);
+        }
+    });
+    const params = new URLSearchParams(cleanFilters).toString();
     const url = `/api/ledger${params ? `?${params}` : ''}`;
     const response = await api.get(url);
     return {
@@ -84,6 +90,19 @@ export const getLedgerEntries = async (filters: Record<string, any> = {}): Promi
 export const getLedgerEntryById = async (id: string): Promise<LedgerEntry> => {
     const response = await api.get(`/api/ledger/${id}`);
     return response.data.data;
+};
+
+export const clearLedgerEntriesByCode = async (
+    accountingCode: string, 
+    startDate?: string, 
+    endDate?: string
+): Promise<{ success: boolean; message: string; deletedCount: number }> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const paramStr = params.toString();
+    const response = await api.delete(`/api/ledger/clear/${accountingCode}${paramStr ? `?${paramStr}` : ''}`);
+    return response.data;
 };
 
 export const createManualJournal = async (payload: CreateJournalPayload): Promise<any> => {

@@ -16,13 +16,14 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
     'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
 };
 
-const CATEGORIES: AccountingCategory[] = ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
+const CATEGORIES: AccountingCategory[] = ['ASSET', 'LIABILITY', 'EQUITY'];
 
 const ACCOUNT_TYPES = [
-    'Income', 'Expense', 'Cash', 'Accounts Receivable', 'Fixed Asset',
-    'Other Current Asset', 'Accounts Payable', 'Other Current Liability', 'Equity',
-    'Other Expense', 'Other Liability', 'Stock', 'Cost Of Goods Sold', 'Output Tax',
-    'Input Tax', 'Bank', 'Non Current Liability', 'Other Income', 'Other Asset'
+    'Cash', 'Bank', 'Accounts Receivable', 'Fixed Asset',
+    'Other Current Asset', 'Other Asset',
+    'Accounts Payable', 'Other Current Liability', 'Other Liability',
+    'Non Current Liability', 'Output Tax', 'Input Tax',
+    'Stock', 'Equity'
 ];
 
 const mapAccountTypeToCategory = (type: string): AccountingCategory => {
@@ -45,6 +46,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     
     // Filters
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
+    const [activeAccountTypeFilter, setActiveAccountTypeFilter] = useState<string>('');
 
     // Pagination, Sorting & Search States
     const [searchQuery, setSearchQuery] = useState('');
@@ -119,6 +121,9 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 if (activeCategoryFilter !== 'ALL') {
                     params.category = activeCategoryFilter;
                 }
+                if (activeAccountTypeFilter) {
+                    params.accountType = activeAccountTypeFilter;
+                }
                 const response = await getAllAccountingCodes(params);
                 setCodes(Array.isArray(response.data) ? response.data : []);
                 setPagination(response.pagination || null);
@@ -128,7 +133,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         } finally {
             setLoading(false);
         }
-    }, [isEmbedded, currentPage, limit, sortBy, sortOrder, searchQuery, activeCategoryFilter]);
+    }, [isEmbedded, currentPage, limit, sortBy, sortOrder, searchQuery, activeCategoryFilter, activeAccountTypeFilter]);
 
     useEffect(() => {
         if (isEmbedded) {
@@ -317,7 +322,11 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     };
 
     const hierarchicalCodes = getHierarchicalCodes(codes);
-    const filteredCodes = hierarchicalCodes.filter(c => activeCategoryFilter === 'ALL' || c.category === activeCategoryFilter);
+    const filteredCodes = hierarchicalCodes.filter(c => {
+        if (activeCategoryFilter !== 'ALL' && c.category !== activeCategoryFilter) return false;
+        if (activeAccountTypeFilter && (c.accountType || '').toLowerCase() !== activeAccountTypeFilter.toLowerCase()) return false;
+        return true;
+    });
 
     return (
         <div className={isEmbedded ? "space-y-6" : "container-responsive space-y-6"}>
@@ -760,19 +769,54 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
             {/* Search and Filters */}
             {!isEmbedded && (
-                <div className="relative w-full">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                        type="text"
-                        placeholder="Search by code, name, or account type..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                        className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-medium"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                    />
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Search input */}
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder="Search by code, name, or account type..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full pl-12 pr-4 py-4 rounded-xl outline-none text-sm transition-all focus:ring-2 focus:ring-lime font-medium"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        />
+                    </div>
+
+                    {/* Account Type dropdown filter */}
+                    <div className="relative sm:w-64">
+                        <select
+                            id="accountTypeFilter"
+                            value={activeAccountTypeFilter}
+                            onChange={(e) => {
+                                setActiveAccountTypeFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full pl-4 pr-10 py-4 rounded-xl outline-none text-sm font-medium appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-lime"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: activeAccountTypeFilter ? 'var(--brand-lime)' : 'var(--text-dim)' }}
+                        >
+                            <option value="">All Account Types</option>
+                            {ACCOUNT_TYPES.map(type => (
+                                <option key={type} value={type} style={{ color: 'var(--text-main)', background: 'var(--bg-card)' }}>
+                                    {type}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: activeAccountTypeFilter ? 'var(--brand-lime)' : 'var(--text-dim)' }} />
+                        {activeAccountTypeFilter && (
+                            <button
+                                onClick={() => { setActiveAccountTypeFilter(''); setCurrentPage(1); }}
+                                className="absolute right-8 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                                title="Clear filter"
+                                style={{ color: 'var(--brand-lime)' }}
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 

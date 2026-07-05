@@ -9,12 +9,14 @@ import {
     Receipt,
     User,
     FileSpreadsheet,
-    Info
+    Info,
+    Trash2,
+    Download
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
-import { getLedgerEntries } from '../../../services/ledgerService';
+import { getLedgerEntries, clearLedgerEntriesByCode } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -37,15 +39,165 @@ const AccountingCodeDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Date initialization for last 30 days
+    const getInitialDates = () => {
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const formatISO = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const formatVisual = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${month}/${day}/${year}`;
+        };
+        return { 
+            startISO: formatISO(thirtyDaysAgo), 
+            endISO: formatISO(today),
+            startVisual: formatVisual(thirtyDaysAgo),
+            endVisual: formatVisual(today)
+        };
+    };
+    const initialDates = getInitialDates();
+
     // Pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
+    const [startDate, setStartDate] = useState(initialDates.startISO);
+    const [endDate, setEndDate] = useState(initialDates.endISO);
+    const [tempStartDate, setTempStartDate] = useState(initialDates.startISO);
+    const [tempEndDate, setTempEndDate] = useState(initialDates.endISO);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [summary, setSummary] = useState({
+        totalDebit: 0,
+        totalCredit: 0,
+        netMovement: 0,
+        openingBalance: 0,
+        closingBalance: 0
+    });
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
+    const [clearing, setClearing] = useState(false);
+
+    const handleClearLedger = async () => {
+        if (!id) return;
+
+        const isBankAccount = window.location.pathname.includes('/bank-accounts/');
+        let confirmMsg = isBankAccount
+            ? `Are you sure you want to delete ALL ledger transactions for this bank account (${code?.name || 'this bank account'})?\n\nThis will permanently delete all records for this specific bank account and cannot be undone.`
+            : `Are you sure you want to delete ALL ledger transactions for this account (${code?.name || 'this account'})?\n\nThis will permanently delete all records for this specific account code and cannot be undone.`;
+
+        if (startDate || endDate) {
+            confirmMsg = isBankAccount
+                ? `Are you sure you want to delete ledger transactions for this bank account (${code?.name || 'this bank account'}) within the selected date range:\nFrom: ${startDate || 'inception'} To: ${endDate || 'present'}?\n\nThis will permanently delete only the bank entries within this period.`
+                : `Are you sure you want to delete ledger transactions for this account (${code?.name || 'this account'}) within the selected date range:\nFrom: ${startDate || 'inception'} To: ${endDate || 'present'}?\n\nThis will permanently delete only the transactions within this period.`;
+        }
+
+        const confirmDelete = window.confirm(confirmMsg);
+        if (!confirmDelete) return;
+
+        setClearing(true);
+        try {
+            const res = await clearLedgerEntriesByCode(id, startDate || undefined, endDate || undefined);
+            if (res.success) {
+                toast.success(res.message || `Successfully cleared ${res.deletedCount} entries.`);
+                setPage(1);
+                fetchData();
+            } else {
+                toast.error(res.message || 'Failed to clear ledger entries.');
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Error clearing ledger entries');
+        } finally {
+            setClearing(false);
+        }
+    };
+
+    const handleDownloadFilteredData = async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+            // Fetch all entries for this accounting code with active date filters (high limit)
+            const filters = {
+                accountingCode: id,
+                page: 1,
+                limit: 50000,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                sort: sortDirection
+            };
+            const res = await getLedgerEntries(filters);
+            const allEntries = Array.isArray(res.data) ? res.data : [];
+            
+            if (allEntries.length === 0) {
+                toast.error('No transactions available to download');
+                return;
+            }
+
+            const headers = ["Date", "Description", "Audit Trace", "Debit", "Credit", "Amount"];
+            const rows = allEntries.map((entry: any) => {
+                const entryDateStr = entry.entryDate || entry.date;
+                const dateObj = new Date(entryDateStr);
+                let formattedDate = entryDateStr;
+                if (!dateObj || isNaN(dateObj.getTime())) {
+                    formattedDate = String(entryDateStr || "");
+                } else {
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const year = dateObj.getFullYear();
+                    formattedDate = `${month}/${day}/${year}`;
+                }
+
+                const debitVal = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
+                    : (entry.debit || 0);
+
+                const creditVal = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
+                    : (entry.credit || 0);
+
+                const netAmount = debitVal - creditVal;
+
+                return [
+                    `"${formattedDate}"`,
+                    `"${(entry.description || '').replace(/"/g, '""')}"`,
+                    `"${(entry.auditTrace || entry.transactionId || '').replace(/"/g, '""')}"`,
+                    debitVal,
+                    creditVal,
+                    netAmount
+                ];
+            });
+
+            // Prepend BOM to ensure Excel opens CSV as UTF-8
+            const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+
+            const cleanCodeName = (code?.name || 'ledger').toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const rangeStr = (tempStartDate && tempEndDate) ? `${tempStartDate.replace(/[\/\\?%*:|"<>]/g, '-')}_to_${tempEndDate.replace(/[\/\\?%*:|"<>]/g, '-')}` : 'all';
+            link.setAttribute("download", `${cleanCodeName}_${rangeStr}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success(`Downloaded all ${allEntries.length} filtered transactions successfully!`);
+        } catch (err: any) {
+            toast.error('Failed to download ledger data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -66,19 +218,29 @@ const AccountingCodeDetails = () => {
             const filters = {
                 accountingCode: id,
                 page,
-                limit
+                limit,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                sort: sortDirection
             };
             const ledgerRes = await getLedgerEntries(filters);
             setEntries(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
             if (ledgerRes.pagination) {
-                setPagination(ledgerRes.pagination);
+                setPagination({
+                    total: ledgerRes.pagination.total || 0,
+                    pages: ledgerRes.pagination.totalPages || ledgerRes.pagination.pages || 1,
+                    limit: ledgerRes.pagination.limit || 25
+                });
+            }
+            if (ledgerRes.summary) {
+                setSummary(ledgerRes.summary);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch details');
         } finally {
             setLoading(false);
         }
-    }, [id, page, limit]);
+    }, [id, page, limit, startDate, endDate, sortDirection]);
 
     useEffect(() => {
         fetchData();
@@ -249,29 +411,143 @@ const AccountingCodeDetails = () => {
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>
 
-                {/* Stats */}
-                <div className="flex items-center gap-6 mt-4 sm:mt-0">
-                    <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Debit</div>
-                        <div className="text-xl font-mono font-bold text-red-400">
-                            {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Period Credit</div>
-                        <div className="text-xl font-mono font-bold text-green-400">
-                            {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </div>
-                    </div>
-                    <div className="text-right pl-6 border-l border-white/10">
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-brand-lime mb-1" style={{ color: 'var(--brand-lime)' }}>Net Movement</div>
-                        <div className="text-xl font-mono font-black" style={{ color: 'var(--text-main)' }}>
-                            {Math.abs(totalCredit - totalDebit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            <span className="text-xs font-normal ml-1 text-white/40">
-                                {totalCredit > totalDebit ? '(Cr)' : totalCredit < totalDebit ? '(Dr)' : ''}
-                            </span>
-                        </div>
-                    </div>
+                <button
+                    onClick={handleClearLedger}
+                    disabled={clearing}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-red-500/10 cursor-pointer"
+                >
+                    <Trash2 size={14} />
+                    {clearing 
+                        ? 'Clearing...' 
+                        : window.location.pathname.includes('/bank-accounts/')
+                            ? (startDate || endDate)
+                                ? `Delete Filtered Bank Entries (${pagination.total} entries)`
+                                : `Delete Bank Entries (${pagination.total} entries)`
+                            : (startDate || endDate)
+                                ? `Clear Filtered Ledger (${pagination.total} entries)`
+                                : `Clear All Ledger (${pagination.total} entries)`}
+                </button>
+            </div>
+
+            {/* Summary Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Opening Balance Card */}
+                <div className="p-5 rounded-2xl border bg-card flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold text-dim uppercase tracking-wider">Opening Balance</span>
+                    <span className="text-xl font-mono font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                        ${(summary.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+                {/* Total Debits Card */}
+                <div className="p-5 rounded-2xl border bg-card flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Total Debits</span>
+                    <span className="text-xl font-mono font-black text-rose-500 mt-2">
+                        ${(summary.totalDebit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+                {/* Total Credits Card */}
+                <div className="p-5 rounded-2xl border bg-card flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Total Credits</span>
+                    <span className="text-xl font-mono font-black text-green-500 mt-2">
+                        ${(summary.totalCredit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+                {/* Closing Balance Card */}
+                <div className="p-5 rounded-2xl border bg-card flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-lime)' }}>Closing Balance</span>
+                    <span className="text-xl font-mono font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                        ${(summary.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+            </div>
+
+            {/* Date and Sort Filters */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 justify-between items-center transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Filter By Date:</span>
+                    <input 
+                        type="date" 
+                        value={tempStartDate}
+                        onChange={e => setTempStartDate(e.target.value)}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    <span className="opacity-45 text-xs" style={{ color: 'var(--text-dim)' }}>to</span>
+                    <input 
+                        type="date" 
+                        value={tempEndDate}
+                        onChange={e => setTempEndDate(e.target.value)}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    <button
+                        onClick={() => {
+                            const parseInputDateToISO = (str: string) => {
+                                if (!str || !str.trim()) return '';
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(str.trim())) return str.trim();
+                                const match = str.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                                if (match) {
+                                    const month = match[1].padStart(2, '0');
+                                    const day = match[2].padStart(2, '0');
+                                    const year = match[3];
+                                    return `${year}-${month}-${day}`;
+                                }
+                                return '';
+                            };
+                            
+                            const startISO = parseInputDateToISO(tempStartDate);
+                            const endISO = parseInputDateToISO(tempEndDate);
+                            
+                            if (tempStartDate && !startISO) {
+                                toast.error('Invalid Start Date.');
+                                return;
+                            }
+                            if (tempEndDate && !endISO) {
+                                toast.error('Invalid End Date.');
+                                return;
+                            }
+                            
+                            setStartDate(startISO);
+                            setEndDate(endISO);
+                            setPage(1);
+                        }}
+                        className="px-4 py-1.5 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 text-[#C8E600] hover:bg-[#C8E600]/20 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer"
+                    >
+                        Filter
+                    </button>
+                    {(startDate || endDate || tempStartDate || tempEndDate) && (
+                        <button
+                            onClick={() => {
+                                setTempStartDate('');
+                                setTempEndDate('');
+                                setStartDate('');
+                                setEndDate('');
+                                setPage(1);
+                            }}
+                            className="text-xs font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 cursor-pointer"
+                        >
+                            Clear dates
+                        </button>
+                    )}
+                    <button
+                        onClick={handleDownloadFilteredData}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white transition-all text-xs font-bold uppercase tracking-wider cursor-pointer"
+                    >
+                        <Download size={12} />
+                        Download
+                    </button>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Sort:</span>
+                    <select
+                        value={sortDirection}
+                        onChange={e => { setSortDirection(e.target.value as 'asc' | 'desc'); setPage(1); }}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all cursor-pointer"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <option value="desc" className="bg-[var(--bg-card)]">Newest First</option>
+                        <option value="asc" className="bg-[var(--bg-card)]">Oldest First</option>
+                    </select>
                 </div>
             </div>
 
@@ -307,9 +583,14 @@ const AccountingCodeDetails = () => {
                                 {entries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime())
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                                        : entryDateStr;
+                                    let formattedDate = entryDateStr;
+                                    if (!isNaN(dateObj.getTime())) {
+                                        const day = String(dateObj.getDate()).padStart(2, '0');
+                                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                        const year = dateObj.getFullYear();
+                                        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        formattedDate = `${month}/${day}/${year} ${timeStr}`;
+                                    }
 
                                     const debitVal = entry.amount !== undefined
                                         ? (entry.type === 'DEBIT' ? entry.amount : 0)
