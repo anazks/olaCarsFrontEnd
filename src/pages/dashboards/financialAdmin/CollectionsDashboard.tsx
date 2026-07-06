@@ -12,7 +12,7 @@ import {
     TrendingUp, Wallet, FileText, Clock, FilterX,
     RefreshCw
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setCollectionsDashboardData } from '../../../store/dashboardSlice';
@@ -93,13 +93,39 @@ const CollectionsDashboard = () => {
     // Lookup collections
     const [allBranches, setAllBranches] = useState<any[]>(collectionsState.branches);
 
-    // Filter presets
+    const get30DaysAgoStr = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    };
+    const getTodayStr = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
+    // Filter presets (Applied)
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-        endDate: format(new Date(), 'yyyy-MM-dd')
+        startDate: get30DaysAgoStr(),
+        endDate: getTodayStr()
     });
+
+    // Form/Filter States (Temporary)
+    const [tempFilters, setTempFilters] = useState({
+        country: '',
+        branch: '',
+        startDate: get30DaysAgoStr(),
+        endDate: getTodayStr()
+    });
+
+    const handleApplyFilters = () => {
+        setFilters({
+            country: tempFilters.country,
+            branch: tempFilters.branch,
+            startDate: tempFilters.startDate,
+            endDate: tempFilters.endDate
+        });
+    };
 
     const efficiencyIndex = useMemo(() => {
         if (!metrics || !metrics.totalInvoiced) return 0;
@@ -150,17 +176,17 @@ const CollectionsDashboard = () => {
     }, [allBranches]);
 
     const filteredBranches = useMemo(() => {
-        if (!filters.country) return allBranches;
-        return allBranches.filter(b => b.country === filters.country);
-    }, [filters.country, allBranches]);
+        if (!tempFilters.country) return allBranches;
+        return allBranches.filter(b => b.country === tempFilters.country);
+    }, [tempFilters.country, allBranches]);
 
     // Auto clear selected branch if country removes it from bounds
     useEffect(() => {
-        if (filters.branch) {
-            const exists = filteredBranches.some(b => b._id === filters.branch);
-            if (!exists) setFilters(p => ({ ...p, branch: '' }));
+        if (tempFilters.branch) {
+            const exists = filteredBranches.some(b => b._id === tempFilters.branch);
+            if (!exists) setTempFilters(p => ({ ...p, branch: '' }));
         }
-    }, [filters.country, filteredBranches]);
+    }, [tempFilters.country, filteredBranches]);
 
     // Debounce search string input
     useEffect(() => {
@@ -254,11 +280,11 @@ const CollectionsDashboard = () => {
     }, [filters.country, filters.branch, filters.startDate, filters.endDate, debouncedSearch, statusFilter]);
 
     const updateFilter = (key: string, val: string) => {
-        setFilters(p => ({ ...p, [key]: val }));
+        setTempFilters(p => ({ ...p, [key]: val }));
     };
 
     const clearDates = () => {
-        setFilters(p => ({ ...p, startDate: '', endDate: '' }));
+        setTempFilters(p => ({ ...p, startDate: '', endDate: '' }));
     };
 
     const getPageNumbers = () => {
@@ -312,9 +338,17 @@ const CollectionsDashboard = () => {
     }
 
     return (
-        <div className={`p-6 md:p-8 min-h-screen transition-all duration-300 ${loading ? 'opacity-60 pointer-events-none' : ''}`} style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
+        <div className="p-6 md:p-8 min-h-screen relative transition-all duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Dashboard', active: true }]} />
 
+            {/* Simple Loading Circle Overlay */}
+            {loading && (
+                <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center rounded-3xl pointer-events-none">
+                    <div className="bg-neutral-950/95 border border-white/5 rounded-full p-4 flex items-center justify-center shadow-2xl pointer-events-auto animate-in fade-in duration-200">
+                        <RefreshCw className="animate-spin text-[#D4F12E]" size={28} />
+                    </div>
+                </div>
+            )}
             
             {/* Compact Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-6">
@@ -322,7 +356,6 @@ const CollectionsDashboard = () => {
                     <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Library size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                         Collections Central
-                        {loading && <RefreshCw className="animate-spin text-brand-lime ml-1" size={16} />}
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5 flex items-center gap-2">
                         <span>Aggregate recovery analysis and forecasts</span>
@@ -335,58 +368,67 @@ const CollectionsDashboard = () => {
                 </div>
             </div>
 
-                {/* CONTROL BOARD: FILTERS */}
-                <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors"
-                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    
-                    {/* Country Dropdown */}
-                    <div className="relative">
-                        <select value={filters.country} 
-                                onChange={(e) => updateFilter('country', e.target.value)}
-                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
-                                style={{ color: 'var(--text-main)' }}>
-                            <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
-                            {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
-                        </select>
-                        <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                    </div>
-
-                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
-
-                    {/* Branch Select */}
-                    <div className="relative">
-                        <select value={filters.branch} 
-                                onChange={(e) => updateFilter('branch', e.target.value)}
-                                className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
-                                style={{ color: 'var(--text-main)' }}>
-                            <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
-                            {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
-                        </select>
-                        <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                    </div>
-
-                    <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
-
-                    {/* Date Constraints */}
-                    <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
-                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                        <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
-                        <input type="date" value={filters.startDate} 
-                               onChange={(e) => updateFilter('startDate', e.target.value)}
-                               className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
-                               style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
-                        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
-                        <input type="date" value={filters.endDate} 
-                               onChange={(e) => updateFilter('endDate', e.target.value)}
-                               className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
-                               style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
-                        {(filters.startDate || filters.endDate) && (
-                            <button onClick={clearDates} className="ml-1 text-red-500 hover:text-red-600" title="Clear dates">
-                                <FilterX size={14} />
-                            </button>
-                        )}
-                    </div>
+            {/* CONTROL BOARD: FILTERS */}
+            <div className="shadow-sm border p-2.5 rounded-2xl flex flex-wrap items-center gap-3 w-full xl:w-auto transition-colors mb-6"
+                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                
+                {/* Country Dropdown */}
+                <div className="relative">
+                    <select value={tempFilters.country} 
+                            onChange={(e) => updateFilter('country', e.target.value)}
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer transition-colors"
+                            style={{ color: 'var(--text-main)' }}>
+                        <option value="" style={{ background: 'var(--bg-card)' }}>All Countries</option>
+                        {availableCountries.map(c => <option key={c} value={c} style={{ background: 'var(--bg-card)' }}>{c}</option>)}
+                    </select>
+                    <MapPin size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
                 </div>
+
+                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                {/* Branch Select */}
+                <div className="relative">
+                    <select value={tempFilters.branch} 
+                            onChange={(e) => updateFilter('branch', e.target.value)}
+                            className="pl-8 pr-6 py-2 text-sm font-semibold border-none outline-none bg-transparent appearance-none cursor-pointer max-w-[160px] transition-colors"
+                            style={{ color: 'var(--text-main)' }}>
+                        <option value="" style={{ background: 'var(--bg-card)' }}>All Branches</option>
+                        {filteredBranches.map(b => <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)' }}>{b.name}</option>)}
+                    </select>
+                    <Building size={15} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
+                </div>
+
+                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }} />
+
+                {/* Date Constraints */}
+                <div className="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-colors" 
+                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                    <Calendar size={15} style={{ color: 'var(--text-dim)' }} />
+                    <input type="date" value={tempFilters.startDate} 
+                           onChange={(e) => updateFilter('startDate', e.target.value)}
+                           className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                           style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>-</span>
+                    <input type="date" value={tempFilters.endDate} 
+                           onChange={(e) => updateFilter('endDate', e.target.value)}
+                           className="bg-transparent text-xs font-bold border-none outline-none cursor-pointer"
+                           style={{ colorScheme: isDark ? 'dark' : 'light', color: 'var(--text-main)' }} />
+                    {(tempFilters.startDate || tempFilters.endDate) && (
+                        <button onClick={clearDates} className="ml-1 text-red-500 hover:text-red-600" title="Clear dates">
+                            <FilterX size={14} />
+                        </button>
+                    )}
+                </div>
+
+                <button
+                    onClick={handleApplyFilters}
+                    disabled={loading || listLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#D4F12E] hover:bg-lime-400 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg shadow-brand-lime/10"
+                >
+                    <RefreshCw size={12} className={loading || listLoading ? 'animate-spin' : ''} />
+                    <span>Filter</span>
+                </button>
+            </div>
 
 
             {/* STAT CARDS COMPACT GRID */}

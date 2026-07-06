@@ -13,10 +13,12 @@ import {
     Coins,
     Building2,
     Plus,
-    ArrowUpDown
+    ArrowUpDown,
+    Search,
+    Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, deleteAllTransactions } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -41,12 +43,17 @@ const BankAccountLedger = () => {
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [search, setSearch] = useState('');
+    const [balance, setBalance] = useState('');
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
 
     // Dynamic bank statement import preview & branch selection
     const [branches, setBranches] = useState<any[]>([]);
@@ -181,23 +188,56 @@ const BankAccountLedger = () => {
             // 2. Fetch the transactions for this bank account
             const filters = {
                 page,
-                limit
+                limit,
+                sort: sortDirection,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                search: search || undefined,
+                balance: balance || undefined
             };
             const txRes = await getBankAccountTransactions(id, filters);
             setEntries(Array.isArray(txRes.data) ? txRes.data : []);
             if (txRes.pagination) {
-                setPagination(txRes.pagination);
+                setPagination({
+                    total: txRes.pagination.total || 0,
+                    pages: txRes.pagination.totalPages || txRes.pagination.pages || 1,
+                    limit: txRes.pagination.limit || 25
+                });
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch details');
         } finally {
             setLoading(false);
         }
-    }, [id, page, limit]);
+    }, [id, page, limit, sortDirection, startDate, endDate, search, balance]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const handleDeleteAllTransactions = async () => {
+        if (!id) return;
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete ALL statement transactions for this bank account (${account?.accountName || account?.bankName || 'this bank account'})?\n\nThis will permanently delete all records and cannot be undone.`
+        );
+        if (!confirmDelete) return;
+
+        setDeletingAll(true);
+        try {
+            const res = await deleteAllTransactions(id);
+            if (res.success) {
+                toast.success(res.message || 'Successfully cleared all transactions.');
+                setPage(1);
+                fetchData();
+            } else {
+                toast.error(res.message || 'Failed to clear transactions.');
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Error clearing transactions');
+        } finally {
+            setDeletingAll(false);
+        }
+    };
 
     const normalizeHeader = (header: string): string => {
         return header.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -619,14 +659,14 @@ const BankAccountLedger = () => {
                     <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    {/* <button 
+                    <button 
                         onClick={handleDeleteAllTransactions}
                         disabled={deletingAll}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Trash2 size={14} strokeWidth={3} />
-                        {deletingAll ? 'Deleting...' : 'Clear All Transactions'}
-                    </button> */}
+                        {deletingAll ? 'Deleting...' : 'Delete Bank Entries'}
+                    </button>
                     <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
@@ -646,6 +686,94 @@ const BankAccountLedger = () => {
                     >
                         <Upload size={14} strokeWidth={3} /> Import Statement
                     </button>
+                </div>
+            </div>
+
+            {/* Search, Date, and Sort Filters */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col lg:flex-row gap-4 justify-between items-center transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                {/* Search Box */}
+                <div className="relative w-full lg:max-w-xs">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 opacity-40" style={{ color: 'var(--text-main)' }} />
+                    <input 
+                        type="text"
+                        placeholder="Search description or Tx ID..."
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setPage(1); }}
+                        className="w-full bg-transparent border rounded-xl pl-9 pr-8 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    {search && (
+                        <button
+                            onClick={() => { setSearch(''); setPage(1); }}
+                            className="absolute right-2.5 top-2 text-[10px] uppercase font-bold text-rose-500 hover:text-rose-400 cursor-pointer"
+                        >
+                            clear
+                        </button>
+                    )}
+                </div>
+
+                {/* Find by Running Balance Box */}
+                <div className="relative w-full lg:max-w-xs">
+                    <Coins className="absolute left-3 top-2.5 h-3.5 w-3.5 opacity-40" style={{ color: 'var(--text-main)' }} />
+                    <input 
+                        type="text"
+                        placeholder="Find running balance..."
+                        value={balance}
+                        onChange={e => { setBalance(e.target.value); setPage(1); }}
+                        className="w-full bg-transparent border rounded-xl pl-9 pr-8 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    {balance && (
+                        <button
+                            onClick={() => { setBalance(''); setPage(1); }}
+                            className="absolute right-2.5 top-2 text-[10px] uppercase font-bold text-rose-500 hover:text-rose-400 cursor-pointer"
+                        >
+                            clear
+                        </button>
+                    )}
+                </div>
+
+                {/* Date range pickers */}
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Filter By Date:</span>
+                    <input 
+                        type="date" 
+                        value={startDate}
+                        onChange={e => { setStartDate(e.target.value); setPage(1); }}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    <span className="opacity-45 text-xs" style={{ color: 'var(--text-dim)' }}>to</span>
+                    <input 
+                        type="date" 
+                        value={endDate}
+                        min={startDate}
+                        onChange={e => { setEndDate(e.target.value); setPage(1); }}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    />
+                    {(startDate || endDate) && (
+                        <button
+                            onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
+                            className="text-xs font-black uppercase tracking-wider text-rose-500 hover:text-rose-400 cursor-pointer"
+                        >
+                            Clear dates
+                        </button>
+                    )}
+                </div>
+
+                {/* Sorting drop-down */}
+                <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Sort:</span>
+                    <select
+                        value={sortDirection}
+                        onChange={e => { setSortDirection(e.target.value as 'asc' | 'desc'); setPage(1); }}
+                        className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all cursor-pointer"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <option value="desc" className="bg-[var(--bg-card)]">Newest First</option>
+                        <option value="asc" className="bg-[var(--bg-card)]">Oldest First</option>
+                    </select>
                 </div>
             </div>
 
@@ -690,9 +818,14 @@ const BankAccountLedger = () => {
                                 {sortedEntries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime())
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                                        : entryDateStr;
+                                    let formattedDate = entryDateStr;
+                                    if (!isNaN(dateObj.getTime())) {
+                                        const day = String(dateObj.getDate()).padStart(2, '0');
+                                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                        const year = dateObj.getFullYear();
+                                        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        formattedDate = `${day}/${month}/${year} ${timeStr}`;
+                                    }
 
                                     const debitVal = entry.amount !== undefined
                                         ? (entry.type === 'DEBIT' ? entry.amount : 0)
@@ -743,9 +876,11 @@ const BankAccountLedger = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className="font-mono text-sm font-bold text-blue-400">
-                                                    {(runningBalancesMap[entry._id] !== undefined)
-                                                        ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
-                                                        : '-'}
+                                                    {(entry.runningBalance !== undefined && entry.runningBalance !== null)
+                                                        ? entry.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                                        : (runningBalancesMap[entry._id] !== undefined)
+                                                            ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                                            : '-'}
                                                 </span>
                                             </td>
                                         </tr>

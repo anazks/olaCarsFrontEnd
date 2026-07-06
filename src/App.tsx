@@ -57,7 +57,6 @@ import ManageWorkshops from "./pages/dashboards/shared/ManageWorkshops";
 import ManageMerchendisers from "./pages/dashboards/shared/ManageMerchendisers";
 import ManageSuppliers from "./pages/dashboards/shared/ManageSuppliers";
 import SupplierDetail from "./pages/dashboards/shared/SupplierDetail";
-import Reports from "./pages/dashboards/shared/Reports";
 import POThresholdPage from "./pages/dashboards/admin/POThresholdPage";
 import ManageInsurances from "./pages/dashboards/shared/ManageInsurances";
 import VehiclePolicyList from "./pages/dashboards/shared/VehiclePolicyList";
@@ -133,6 +132,7 @@ import LedgerEntryDetailPage from "./pages/dashboards/finance/LedgerEntryDetailP
 import BankTransactionDetailPage from "./pages/dashboards/finance/BankTransactionDetailPage";
 import FinanceDashboard from "./pages/dashboards/finance/FinanceDashboard";
 import FinancialStatements from "./pages/dashboards/finance/FinancialStatements";
+import ReportsPage from "./pages/dashboards/finance/ReportsPage";
 import BalanceSheet from "./pages/dashboards/finance/BalanceSheet";
 import StaffSalaries from "./pages/dashboards/finance/StaffSalaries.tsx";
 import VoucherDashboard from "./pages/dashboards/finance/VoucherDashboard";
@@ -447,7 +447,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route
@@ -713,7 +713,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />
               <Route path="directives/targets" element={<TargetManagement />} />
@@ -992,7 +992,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="taxes" element={<TaxManagement />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route
@@ -1212,7 +1212,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="agreements" element={<ManageAgreements />} />
               <Route path="agreements/new" element={<EditAgreement />} />
               <Route path="agreements/edit/:id" element={<EditAgreement />} />
@@ -1415,7 +1415,7 @@ function App() {
                 element={<Navigate to="dashboard-settings" replace />}
               />
               <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="directives" element={<DirectivesHub />} />
               <Route path="directives/tasks" element={<TaskManagement />} />
               <Route path="directives/targets" element={<TargetManagement />} />
@@ -1653,6 +1653,7 @@ function App() {
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route
                 path="financial-statements"
                 element={<FinancialStatements />}

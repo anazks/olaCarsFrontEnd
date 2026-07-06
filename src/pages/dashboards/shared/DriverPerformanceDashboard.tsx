@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Gauge, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, Activity, Eye, Car } from 'lucide-react';
+import { Users, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, Activity, Eye, Car } from 'lucide-react';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
@@ -1626,28 +1626,7 @@ const DriverPerformanceDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Safety Summary */}
-                    <div className="p-6 rounded-3xl border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="p-2 rounded-xl bg-red-500/10 text-red-500">
-                                <Gauge size={18} />
-                            </div>
-                            <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Safety Alerts</h3>
-                        </div>
 
-                        <div className="space-y-3">
-                            <SafetyStat label="Harsh Braking" count={kpis.totalBraking} color="red" />
-                            <SafetyStat label="Speeding" count={kpis.totalSpeeding} color="orange" />
-                            <SafetyStat label="Rapid Accel." count={kpis.totalAcceleration} color="yellow" />
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase text-dim">Total Incidents</span>
-                            <span className={`text-lg font-black ${kpis.totalSafetyEvents > 10 ? 'text-red-500' : kpis.totalSafetyEvents > 0 ? 'text-yellow-400' : 'text-brand-lime'}`}>
-                                {kpis.totalSafetyEvents}
-                            </span>
-                        </div>
-                    </div>
 
                     {/* Top Overdue Drivers */}
                     {kpis.overdueDrivers > 0 && (
@@ -1722,23 +1701,5 @@ const KPICard = ({ label, value, icon, color, bgColor, borderColor, sub, trend, 
     </div>
 );
 */
-
-const SafetyStat = ({ label, count, color }: { label: string; count: number; color: 'red' | 'orange' | 'yellow' }) => {
-    const colors = {
-        red: { bg: 'bg-red-500/10', text: 'text-red-500', bar: 'bg-red-500' },
-        orange: { bg: 'bg-orange-500/10', text: 'text-orange-500', bar: 'bg-orange-500' },
-        yellow: { bg: 'bg-yellow-500/10', text: 'text-yellow-500', bar: 'bg-yellow-500' },
-    };
-    const c = colors[color];
-    return (
-        <div className={`flex items-center justify-between p-3 rounded-xl ${c.bg} border border-white/5`}>
-            <div className="flex items-center gap-2">
-                <div className={`w-1.5 h-6 rounded-full ${c.bar}`} />
-                <span className="text-[10px] font-black uppercase tracking-tight text-dim">{label}</span>
-            </div>
-            <span className={`text-sm font-black ${c.text}`}>{count}</span>
-        </div>
-    );
-};
 
 export default DriverPerformanceDashboard;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
 import OlaLoader from '../../../components/common/OlaLoader';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
@@ -51,37 +52,53 @@ const FinanceDashboard = () => {
     const [fiscalYearRange, setFiscalYearRange] = useState<string>('This Fiscal Year');
 
     // Custom Date Range Filters
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
+    const get30DaysAgoStr = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    };
+    const getTodayStr = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
+    const [startDate, setStartDate] = useState<string>(get30DaysAgoStr());
+    const [endDate, setEndDate] = useState<string>(getTodayStr());
+
+    const [tempStartDate, setTempStartDate] = useState<string>(get30DaysAgoStr());
+    const [tempEndDate, setTempEndDate] = useState<string>(getTodayStr());
+
+    const handleApplyFilters = () => {
+        setStartDate(tempStartDate);
+        setEndDate(tempEndDate);
+        fetchDashboardData(true, tempStartDate, tempEndDate);
+    };
 
     // Read from Redux store
     const rawLiveData = financeState.liveData;
     const pendingPOs = financeState.pendingPOs;
     const tasks = financeState.tasks;
 
-    // Filter liveData based on custom date range selection
+    // Filter liveData based on custom date range selection using fast string matching
     const liveData = useMemo(() => {
-        const start = startDate ? new Date(startDate) : null;
-        if (start) start.setHours(0, 0, 0, 0);
-        const end = endDate ? new Date(endDate) : null;
-        if (end) end.setHours(23, 59, 59, 999);
+        const startStr = startDate || null;
+        const endStr = endDate || null;
 
         return {
             invoices: (rawLiveData.invoices || []).filter(inv => {
-                const date = new Date(inv.generatedAt || inv.dueDate);
-                return (!start || date >= start) && (!end || date <= end);
+                const dateStr = (inv.generatedAt || inv.dueDate || '').substring(0, 10);
+                return (!startStr || dateStr >= startStr) && (!endStr || dateStr <= endStr);
             }),
             bills: (rawLiveData.bills || []).filter(b => {
-                const date = new Date(b.billDate || b.createdAt);
-                return (!start || date >= start) && (!end || date <= end);
+                const dateStr = (b.billDate || b.createdAt || '').substring(0, 10);
+                return (!startStr || dateStr >= startStr) && (!endStr || dateStr <= endStr);
             }),
             expenses: (rawLiveData.expenses || []).filter(e => {
-                const date = new Date(e.expenseDate || e.createdAt);
-                return (!start || date >= start) && (!end || date <= end);
+                const dateStr = (e.expenseDate || e.createdAt || '').substring(0, 10);
+                return (!startStr || dateStr >= startStr) && (!endStr || dateStr <= endStr);
             }),
             ledger: (rawLiveData.ledger || []).filter(entry => {
-                const date = new Date(entry.entryDate || entry.date);
-                return (!start || date >= start) && (!end || date <= end);
+                const dateStr = (entry.entryDate || entry.date || '').substring(0, 10);
+                return (!startStr || dateStr >= startStr) && (!endStr || dateStr <= endStr);
             })
         };
     }, [rawLiveData, startDate, endDate]);
@@ -95,25 +112,24 @@ const FinanceDashboard = () => {
         });
     };
 
-    const formatChartYAxis = (value: number) => {
-        return getCurrencySymbol() + '\u00A0' + value.toLocaleString('en-US', {
-            notation: 'compact',
-            compactDisplay: 'short',
-            maximumFractionDigits: 1
-        });
-    };
-
-    const fetchDashboardData = async (showLoadingSpinner = true) => {
+    const fetchDashboardData = async (showLoadingSpinner = true, customStart?: string, customEnd?: string) => {
         if (showLoadingSpinner) setLoading(true);
         setError(null);
         try {
+            const activeStart = customStart !== undefined ? customStart : startDate;
+            const activeEnd = customEnd !== undefined ? customEnd : endDate;
+
+            const filterPayload: any = {};
+            if (activeStart) filterPayload.startDate = activeStart;
+            if (activeEnd) filterPayload.endDate = activeEnd;
+
             // Safe aggregation: catch individual failures so the UI never crashes
             const [ledgerRes, taskRes, invoiceRes, billRes, expenseRes, poRes] = await Promise.all([
-                getLedgerEntries().catch(() => ({ data: [] as LedgerEntry[] })),
+                getLedgerEntries({ limit: 1000, ...filterPayload }).catch(() => ({ data: [] as LedgerEntry[] })),
                 getTasks({ assignedTo: user?.id || user?._id }).catch(() => [] as StaffTask[]),
-                getInvoices({ limit: 1000, sortBy: 'dueDate', sortOrder: 'desc' }).catch(() => ({ data: [] as Invoice[] })),
-                getAllBills({ limit: 1000 }).catch(() => ({ data: [] as Bill[] })),
-                getAllExpenses({ limit: 1000 }).catch(() => ({ data: [] as Expense[] })),
+                getInvoices({ limit: 1000, sortBy: 'dueDate', sortOrder: 'desc', ignoreDefaultDates: 'true', ...filterPayload }).catch(() => ({ data: [] as Invoice[] })),
+                getAllBills({ limit: 1000, ignoreDefaultDates: 'true', ...filterPayload }).catch(() => ({ data: [] as Bill[] })),
+                getAllExpenses({ limit: 1000, ...filterPayload }).catch(() => ({ data: [] as Expense[] })),
                 getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
                     console.error("FinanceDashboard: Fetch POs failed:", err);
                     return { data: [] as PurchaseOrder[] };
@@ -638,10 +654,11 @@ const FinanceDashboard = () => {
 
         return {
             receivables: {
-                totalUnpaid: recTotal,
+                totalUnpaid: recCurrent + recOverdue,
                 unpaidSum: recCurrent + recOverdue,
                 current: recCurrent,
                 overdue: recOverdue,
+                netSettled: recTotal,
             },
             payables: {
                 totalUnpaid: payTotal,
@@ -831,8 +848,17 @@ const FinanceDashboard = () => {
     const currentMonthlyData = accountingBasis === 'ACCRUAL' ? currentDataset.accrual.monthly : currentDataset.cash.monthly;
 
     return (
-        <div className="container-responsive space-y-6 pb-12 animate-in fade-in duration-700">
+        <div className="container-responsive relative space-y-6 pb-12 animate-in fade-in duration-700">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Finance Command Center', active: true }]} />
+
+            {/* Simple Loading Circle Overlay */}
+            {loading && (
+                <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center rounded-3xl pointer-events-none">
+                    <div className="bg-neutral-950/95 border border-white/5 rounded-full p-4 flex items-center justify-center shadow-2xl pointer-events-auto animate-in fade-in duration-200">
+                        <RefreshCw className="animate-spin text-[#D4F12E]" size={28} />
+                    </div>
+                </div>
+            )}
 
             {/* Premium Header Control Deck */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-white/5 pb-6">
@@ -843,7 +869,12 @@ const FinanceDashboard = () => {
                     </h1>
                     <p className="text-xs font-semibold text-dim mt-1.5 flex flex-wrap items-center gap-1.5">
                         <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 uppercase tracking-widest text-[9px]">OVERSIGHT</span>
-                        Real-time institutional liquidity, tax sheets, and double-entry accounting records.
+                        <span>Real-time institutional liquidity, tax sheets, and double-entry accounting records.</span>
+                        <span className="text-brand-lime font-black" style={{ color: 'var(--brand-lime)' }}>
+                            ({startDate || endDate 
+                                ? `Span: ${startDate ? format(new Date(startDate), 'MMM d, yyyy') : 'Start'} - ${endDate ? format(new Date(endDate), 'MMM d, yyyy') : 'Now'}`
+                                : 'All-Time Dataset'})
+                        </span>
                     </p>
                 </div>
 
@@ -858,22 +889,22 @@ const FinanceDashboard = () => {
                             <span className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From</span>
                             <input
                                 type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
+                                value={tempStartDate}
+                                onChange={(e) => setTempStartDate(e.target.value)}
                                 className="bg-transparent border-none outline-none text-[10px] font-bold cursor-pointer text-main"
                                 style={{ color: 'var(--text-main)' }}
                             />
                             <span className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To</span>
                             <input
                                 type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                value={tempEndDate}
+                                onChange={(e) => setTempEndDate(e.target.value)}
                                 className="bg-transparent border-none outline-none text-[10px] font-bold cursor-pointer text-main"
                                 style={{ color: 'var(--text-main)' }}
                             />
-                            {(startDate || endDate) && (
-                                <button
-                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                            {(tempStartDate || tempEndDate) && (
+                                <button 
+                                    onClick={() => { setTempStartDate(''); setTempEndDate(''); setStartDate(''); setEndDate(''); fetchDashboardData(true, '', ''); }}
                                     className="text-[8px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 ml-1.5 border border-red-500/20 px-2 py-0.5 rounded bg-red-500/5 transition-all cursor-pointer"
                                 >
                                     Clear
@@ -881,6 +912,15 @@ const FinanceDashboard = () => {
                             )}
                         </div>
                     </div>
+
+                    <button
+                        onClick={handleApplyFilters}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[#D4F12E] hover:bg-lime-400 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg shadow-brand-lime/10"
+                    >
+                        <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                        <span>Filter</span>
+                    </button>
 
                     {/* Refresh */}
                     <button
@@ -925,7 +965,7 @@ const FinanceDashboard = () => {
 
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="space-y-1 w-full md:w-1/2">
-                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Net Settled Invoices</p>
+                            <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Total Unpaid Invoices</p>
                             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-main)' }}>
                                 {formatCurrency(currentDataset.receivables.totalUnpaid)}
                             </h2>
@@ -1127,7 +1167,7 @@ const FinanceDashboard = () => {
                         </div>
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: 'rgba(212, 241, 46, 0.4)' }} />
+                                <span className="w-2.5 h-2.5 rounded inline-block" style={{ backgroundColor: '#f43f5e' }} />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-dim">Total Expenses</span>
                             </div>
                             <h2 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
@@ -1150,7 +1190,7 @@ const FinanceDashboard = () => {
                                 />
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                 <Bar name="Income" dataKey="income" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={20} />
-                                <Bar name="Expense" dataKey="expense" fill="rgba(212, 241, 46, 0.4)" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                <Bar name="Expense" dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -1181,17 +1221,17 @@ const FinanceDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Enhanced Bar Chart container (Reduced Size) */}
-                    <div className="py-4 flex-grow flex items-center justify-center" style={{ minHeight: 160, maxHeight: 160 }}>
+                    {/* Enhanced Bar Chart container (Optimized Height & Layout) */}
+                    <div className="py-4 flex-grow flex items-center justify-center" style={{ minHeight: 240, maxHeight: 240 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={[...currentDataset.topExpenses].sort((a, b) => b.value - a.value).slice(0, 5)} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                            <BarChart data={[...currentDataset.topExpenses].sort((a,b)=>b.value-a.value).slice(0, 5)} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
-                                <XAxis type="number" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} tickFormatter={(val) => formatCurrency(val)} />
-                                <YAxis type="category" dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} width={80} />
-                                <Tooltip
+                                <XAxis type="number" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => formatCurrency(val)} />
+                                <YAxis type="category" dataKey="name" stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} width={150} />
+                                <Tooltip 
                                     cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                    formatter={(value: any) => formatCurrency(Number(value))}
+                                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 12 }}
+                                    formatter={(value: any) => formatCurrency(Number(value))} 
                                 />
                                 <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[0, 4, 4, 0]} barSize={16} />
                             </BarChart>

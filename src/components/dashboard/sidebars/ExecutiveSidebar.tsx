@@ -17,6 +17,7 @@ import {
   Shield,
   Wrench,
   Crosshair,
+  FileText,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -361,6 +362,12 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/gps-vehicles",
         }
       ],
+    },
+    {
+      id: "reports-hub",
+      label: "Reports",
+      icon: <FileText size={22} />,
+      path: "/admin/admin/reports",
     },
     {
       id: "settings",

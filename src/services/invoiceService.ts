@@ -82,8 +82,9 @@ export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Inv
     if (filters.status) params.append('status', filters.status);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
+    if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
     
-    const response = await api.get(`/api/invoices?${params.toString()}`);
+    const response = await api.get(`/api/invoices/registry?${params.toString()}`);
     return { 
         data: response.data.data || [], 
         pagination: response.data.pagination,
@@ -105,6 +106,9 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
     if (filters.search) params.append('search', filters.search);
     if (filters.startDate) params.append('startDate', filters.startDate);
     if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
     
     const response = await api.get(`/api/invoices?${params.toString()}`);
     return { 
@@ -185,4 +189,39 @@ export interface ReconfigProgress {
 export const getReconfigProgress = async (): Promise<ReconfigProgress> => {
     const response = await api.get('/api/invoices/settings/reconfig-progress');
     return response.data.data;
+};
+
+export const getInvoicesTotalCount = async (filters: any = {}): Promise<number> => {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.month) params.append('month', filters.month);
+    if (filters.year) params.append('year', filters.year);
+
+    const response = await api.get(`/api/invoices/count?${params.toString()}`);
+    return response.data.count || 0;
+};
+
+export const getInvoicesDateWise = async (filters: any = {}): Promise<{data: Invoice[], pagination?: any, metrics?: any}> => {
+    const params = new URLSearchParams();
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.search) params.append('search', filters.search);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.month) params.append('month', filters.month);
+    if (filters.year) params.append('year', filters.year);
+    if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
+    
+    const response = await api.get(`/api/invoices/date-wise?${params.toString()}`);
+    return { 
+        data: response.data.data || [], 
+        pagination: response.data.pagination,
+        metrics: response.data.metrics
+    };
 };
