@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
     FileText, Download, RefreshCw, Loader2, Calendar, Building, 
-    TrendingUp, Shield, BarChart3, Users, DollarSign, Activity, 
+    Shield, BarChart3, Users, DollarSign, Activity, 
     CheckCircle2, AlertCircle, FileSpreadsheet, ClipboardList, Briefcase, Car, Landmark
 } from 'lucide-react';
 import { 
@@ -539,7 +539,7 @@ export const ReportsPage = () => {
                 const link = document.createElement('a');
                 link.href = url;
                 const dateStr = new Date().toISOString().split('T')[0];
-                const title = selectedReport === 'pl' ? 'income_statement' : 'balance_sheet';
+                const title = 'balance_sheet';
                 link.setAttribute('download', `${title}_report_${dateStr}.pdf`);
                 document.body.appendChild(link);
                 link.click();
