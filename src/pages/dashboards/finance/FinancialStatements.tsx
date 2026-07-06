@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Download, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
+import { TrendingUp, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
