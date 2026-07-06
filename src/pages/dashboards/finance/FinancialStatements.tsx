@@ -4,6 +4,23 @@ import { getPLReport, getBalanceSheetReport } from '../../../services/reportingS
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
 
+const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getPastDateString = (monthsAgo: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - monthsAgo);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const FinancialStatements = () => {
     const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
     const [loading, setLoading] = useState(false);
@@ -14,8 +31,8 @@ const FinancialStatements = () => {
 
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: '',
-        endDate: ''
+        startDate: getPastDateString(1),
+        endDate: getTodayString()
     });
 
 

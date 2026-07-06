@@ -139,6 +139,14 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatusText, setUploadStatusText] = useState('');
     const [autoDownloadFailed, setAutoDownloadFailed] = useState(true);
+    const [runningStats, setRunningStats] = useState({
+        total: 0,
+        processed: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0
+    });
     
     const [availableCustomerNames, setAvailableCustomerNames] = useState<Set<string>>(new Set());
     const [availableCustomerIds, setAvailableCustomerIds] = useState<Set<string>>(new Set());
@@ -490,40 +498,112 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
     };
 
     const handleSubmit = async () => {
+        // Group rows by Payment Number to keep all line items of the same payment together
+        const paymentGroupsMap = new Map<string, any[]>();
+        rawRows.forEach(row => {
+            const payNo = getMappedRowValue(row, 'paymentNumber');
+            const key = (payNo || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
+            if (!paymentGroupsMap.has(key)) {
+                paymentGroupsMap.set(key, []);
+            }
+            paymentGroupsMap.get(key)!.push(row);
+        });
+
+        const groupsArray = Array.from(paymentGroupsMap.values());
+        const totalPayments = groupsArray.length;
+
         setUploading(true);
-        setUploadProgress(20);
-        setUploadStatusText('Uploading payments...');
+        setUploadProgress(0);
+        setUploadStatusText(`Uploading payments (0 / ${totalPayments})...`);
+
+        const stats = {
+            total: totalPayments,
+            processed: 0,
+            created: 0,
+            updated: 0,
+            skipped: 0,
+            failed: 0
+        };
+        setRunningStats(stats);
+
+        const CHUNK_PAYMENT_SIZE = 50; // process 50 payments at a time
+        const chunks: any[][] = [];
+        for (let i = 0; i < groupsArray.length; i += CHUNK_PAYMENT_SIZE) {
+            const groupBatch = groupsArray.slice(i, i + CHUNK_PAYMENT_SIZE);
+            const rowBatch = groupBatch.flat();
+            chunks.push(rowBatch);
+        }
+
+        const finalResult = {
+            successCount: 0,
+            errorCount: 0,
+            skippedCount: 0,
+            errors: [] as string[],
+            skipped: [] as string[]
+        };
 
         try {
-            const payload = {
-                rows: rawRows,
-                fieldMap: columnMapping
-            };
+            let processedGroups = 0;
+            for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+                const rowBatch = chunks[chunkIdx];
+                
+                // Calculate how many unique payments are in this batch
+                const batchGroupsMap = new Map<string, any[]>();
+                rowBatch.forEach(row => {
+                    const payNo = getMappedRowValue(row, 'paymentNumber');
+                    const key = (payNo || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
+                    if (!batchGroupsMap.has(key)) {
+                        batchGroupsMap.set(key, []);
+                    }
+                    batchGroupsMap.get(key)!.push(row);
+                });
+                const batchGroupCount = batchGroupsMap.size;
 
-            setUploadProgress(50);
-            setUploadStatusText('Reconciling invoice ledger...');
-            
-            const response = await bulkUploadPayments(payload);
-            setUploadProgress(100);
-            setResult(response);
+                const response = await bulkUploadPayments({
+                    rows: rowBatch,
+                    fieldMap: columnMapping
+                });
+
+                finalResult.successCount += response.successCount || 0;
+                finalResult.errorCount += response.errorCount || 0;
+                finalResult.skippedCount += response.skippedCount || 0;
+                if (response.errors) finalResult.errors.push(...response.errors);
+                if (response.skipped) finalResult.skipped.push(...response.skipped);
+
+                processedGroups += batchGroupCount;
+                
+                // Update stats
+                stats.processed = processedGroups;
+                stats.created += response.summary?.createdCount || response.successCount || 0;
+                stats.updated += response.summary?.updatedCount || 0;
+                stats.skipped += response.skippedCount || 0;
+                stats.failed += response.errorCount || 0;
+                
+                setRunningStats({ ...stats });
+                setUploadProgress(Math.round((processedGroups / totalPayments) * 100));
+                setUploadStatusText(`Uploading payments (${processedGroups} / ${totalPayments})...`);
+            }
+
+            setResult(finalResult);
             setStep('result');
-            
-            if (response.successCount > 0) {
-                toast.success(`Import complete! Reconciled ${response.successCount} payments.`);
-            } else if (response.skippedCount > 0) {
-                toast.success(`Import finished! ${response.skippedCount} duplicate payments skipped.`);
+
+            if (finalResult.successCount > 0) {
+                toast.success(`Import complete! Reconciled ${finalResult.successCount} payments.`);
+            } else if (finalResult.skippedCount > 0) {
+                toast.success(`Import finished! ${finalResult.skippedCount} duplicate payments skipped.`);
             } else {
                 toast.error('Import failed or skipped due to duplicates.');
             }
 
             if (autoDownloadFailed) {
-                downloadFailedRowsExcel(response);
+                downloadFailedRowsExcel(finalResult);
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || err?.message || 'Reconciliation failed.');
         } finally {
             setUploading(false);
             setUploadProgress(100);
+            setUploadStatusText('');
         }
     };
 
@@ -571,7 +651,7 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
                 {/* Main Content Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {uploading ? (
-                        <div className="flex flex-col items-center justify-center py-20 px-4 space-y-6 text-center animate-fade-in min-h-[350px]">
+                        <div className="flex flex-col items-center justify-center py-10 px-4 space-y-6 text-center animate-fade-in min-h-[350px]">
                             <div className="relative flex items-center justify-center">
                                 {/* Outer spinning ring */}
                                 <div className="w-28 h-28 rounded-full border-4 border-dashed animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
@@ -590,6 +670,26 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
                                     className="h-full rounded-full transition-all duration-300"
                                     style={{ backgroundColor: 'var(--brand-lime)', width: `${uploadProgress}%` }}
                                 />
+                            </div>
+
+                            {/* Running Statistics Breakdown */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-lg mt-4 p-4 rounded-xl border bg-card text-left" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="p-3 rounded-lg bg-input/20 border" style={{ borderColor: 'var(--border-main)' }}>
+                                    <span className="block text-lg font-black text-main">{runningStats.processed} / {runningStats.total}</span>
+                                    <span className="text-[9px] uppercase font-black text-dim tracking-wider">Payments Group</span>
+                                </div>
+                                <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                    <span className="block text-lg font-black text-emerald-500">{runningStats.created}</span>
+                                    <span className="text-[9px] uppercase font-black text-emerald-500/80 tracking-wider">Newly Saved</span>
+                                </div>
+                                <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                                    <span className="block text-lg font-black text-blue-500">{runningStats.skipped}</span>
+                                    <span className="text-[9px] uppercase font-black text-blue-500/80 tracking-wider">Skipped Dupes</span>
+                                </div>
+                                <div className="p-3 rounded-lg bg-rose-500/5 border border-rose-500/10">
+                                    <span className="block text-lg font-black text-rose-500">{runningStats.failed}</span>
+                                    <span className="text-[9px] uppercase font-black text-rose-500/80 tracking-wider">Failed Rows</span>
+                                </div>
                             </div>
                         </div>
                     ) : (

@@ -112,6 +112,14 @@ const FinanceDashboard = () => {
         });
     };
 
+    const formatChartYAxis = (value: number) => {
+        return getCurrencySymbol() + '\u00A0' + value.toLocaleString('en-US', {
+            notation: 'compact',
+            compactDisplay: 'short',
+            maximumFractionDigits: 1
+        });
+    };
+
     const fetchDashboardData = async (showLoadingSpinner = true, customStart?: string, customEnd?: string) => {
         if (showLoadingSpinner) setLoading(true);
         setError(null);
