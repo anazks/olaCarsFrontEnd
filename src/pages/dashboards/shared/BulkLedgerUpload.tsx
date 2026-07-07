@@ -12,6 +12,7 @@ interface BulkLedgerUploadProps {
 }
 
 interface ParsedTransaction {
+    [key: string]: any;
     Date: string;
     Description: string;
     "Transaction Details": string;
@@ -472,7 +473,15 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             for (let i = 0; i < totalBatches; i++) {
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
-                const batchTransactions = validRows.slice(start, end).map(({ _rowErrors, ...rest }) => rest);
+                const batchTransactions = validRows.slice(start, end).map((row) => {
+                    const rest: any = {};
+                    for (const key in row) {
+                        if (key !== '_rowErrors') {
+                            rest[key] = row[key];
+                        }
+                    }
+                    return rest;
+                });
 
                 // Only clear existing on the first batch
                 const batchClearExisting = i === 0 ? clearExisting : false;

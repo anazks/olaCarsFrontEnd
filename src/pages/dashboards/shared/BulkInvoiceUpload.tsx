@@ -507,8 +507,12 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         if (failedRows.length === 0) return;
 
         const exportData = failedRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 
@@ -549,7 +553,15 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         const chunks: any[][] = [];
         for (let i = 0; i < groupsArray.length; i += CHUNK_INVOICE_SIZE) {
             const groupBatch = groupsArray.slice(i, i + CHUNK_INVOICE_SIZE);
-            const rowBatch = groupBatch.flat().map(({ _rowErrors, ...rest }) => rest);
+            const rowBatch = groupBatch.flat().map((row) => {
+                const rest: any = {};
+                for (const key in row) {
+                    if (key !== '_rowErrors') {
+                        rest[key] = row[key];
+                    }
+                }
+                return rest;
+            });
             chunks.push(rowBatch);
         }
 

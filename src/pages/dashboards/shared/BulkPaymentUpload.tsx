@@ -9,6 +9,7 @@ import { getInvoices } from '../../../services/invoiceService';
 
 interface ParsedPaymentRow {
     [key: string]: any;
+    _rowErrors: string[];
 }
 
 interface BulkPaymentUploadProps {
@@ -453,8 +454,12 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         }
 
         const exportData = targetRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 
@@ -485,8 +490,12 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         }
 
         const exportData = failedRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 
@@ -530,7 +539,15 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         const chunks: any[][] = [];
         for (let i = 0; i < groupsArray.length; i += CHUNK_PAYMENT_SIZE) {
             const groupBatch = groupsArray.slice(i, i + CHUNK_PAYMENT_SIZE);
-            const rowBatch = groupBatch.flat();
+            const rowBatch = groupBatch.flat().map((row) => {
+                const rest: any = {};
+                for (const key in row) {
+                    if (key !== '_rowErrors') {
+                        rest[key] = row[key];
+                    }
+                }
+                return rest;
+            });
             chunks.push(rowBatch);
         }
 

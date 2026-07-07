@@ -498,7 +498,7 @@ const CreditNoteDetail = () => {
                             <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b pb-10" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="space-y-2">
                                     <h3 className="text-2xl font-black text-brand-lime px-4 py-1.5 rounded-xl inline-block select-none" style={{ background: 'var(--bg-input)' }}>OLA CARS</h3>
-                                    <p className="text-xs font-bold tracking-tight" style={{ color: 'var(--text-dim)' }}>Logistics Finance Division</p>
+
                                 </div>
                                 <div className="text-right">
                                     <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Credit Note</h2>
