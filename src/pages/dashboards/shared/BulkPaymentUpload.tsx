@@ -9,7 +9,7 @@ import { getInvoices } from '../../../services/invoiceService';
 
 interface ParsedPaymentRow {
     [key: string]: any;
-    _rowErrors?: string[];
+    _rowErrors: string[];
 }
 
 interface BulkPaymentUploadProps {
@@ -531,7 +531,19 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         const chunks: any[][] = [];
         for (let i = 0; i < groupsArray.length; i += CHUNK_PAYMENT_SIZE) {
             const groupBatch = groupsArray.slice(i, i + CHUNK_PAYMENT_SIZE);
+<<<<<<< HEAD
+            const rowBatch = groupBatch.flat().map((row) => {
+                const rest: any = {};
+                for (const key in row) {
+                    if (key !== '_rowErrors') {
+                        rest[key] = row[key];
+                    }
+                }
+                return rest;
+            });
+=======
             const rowBatch = groupBatch.flat();
+>>>>>>> f0ea6adb112955a0bf196d4cc8bf8c113c8f1e7b
             chunks.push(rowBatch);
         }
 
