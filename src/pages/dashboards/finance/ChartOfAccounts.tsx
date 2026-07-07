@@ -19,7 +19,7 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
 const CATEGORIES: AccountingCategory[] = ['INCOME', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
 
 const ACCOUNT_TYPES = [
-    'Income', 'Expense', 'Other Expense', 'Cash', 'Bank', 'Accounts Receivable', 'Fixed Asset',
+    'Income', 'Expense', 'Cost of Goods Sold', 'Other Expense', 'Cash', 'Bank', 'Accounts Receivable', 'Fixed Asset',
     'Other Current Asset', 'Other Asset',
     'Accounts Payable', 'Other Current Liability', 'Other Liability',
     'Non Current Liability', 'Output Tax', 'Input Tax',

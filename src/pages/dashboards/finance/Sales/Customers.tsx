@@ -399,10 +399,7 @@ const Customers = () => {
         return () => clearTimeout(t);
     }, [searchQuery]);
 
-    // Reset page on filter change
-    useEffect(() => {
-        setPage(1);
-    }, [debouncedSearch, statusFilter, branchFilter, sortBy, sortOrder, startDate, endDate]);
+
 
     useEffect(() => {
         const fetchBranchesData = async () => {
@@ -444,23 +441,30 @@ const Customers = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, statusFilter, branchFilter, startDate, endDate, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, limit, debouncedSearch, statusFilter, branchFilter, sortBy, sortOrder, startDate, endDate]);
 
+    // Single authoritative effect — reruns any time any dep changes
     useEffect(() => {
-        const cacheAge = Date.now() - (customersState.lastFetched || 0);
-        const isCacheFresh = customersState.isLoaded && cacheAge < 5 * 60 * 1000;
-
-        if (isFirstMount.current && isCacheFresh) {
+        // First mount: serve Redux cache if still fresh
+        if (isFirstMount.current) {
             isFirstMount.current = false;
-            setCustomers(customersState.list);
-            setPagination(customersState.pagination);
-            return;
+            const cacheAge = Date.now() - (customersState.lastFetched || 0);
+            if (customersState.isLoaded && cacheAge < 5 * 60 * 1000) {
+                setCustomers(customersState.list);
+                setPagination(customersState.pagination);
+                return;
+            }
         }
+        fetchData(true);
+    }, [fetchData]); // fetchData identity changes whenever any dep changes
 
-        const shouldShowLoader = !customersState.isLoaded || !isFirstMount.current;
-        fetchData(shouldShowLoader);
-        isFirstMount.current = false;
-    }, [fetchData]);
+    // When non-page filters change, reset to page 1 first
+    useEffect(() => {
+        setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, statusFilter, branchFilter, sortBy, sortOrder, startDate, endDate]);
+
 
     const handleSort = (field: string) => {
         if (sortBy === field) {
@@ -588,8 +592,8 @@ const Customers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                            <span className="text-[10px] font-black uppercase text-dim opacity-60">From</span>
+                        <div className="flex items-center gap-2 rounded-2xl px-3 py-1.5 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--brand-lime)' }}>Joined From</span>
                             <input
                                 type="date"
                                 value={startDate}
@@ -602,8 +606,8 @@ const Customers = () => {
                                 style={{ color: 'var(--text-main)' }}
                             />
                         </div>
-                        <div className="flex items-center gap-2 bg-black/5 rounded-2xl px-3 py-1.5 border" style={{ borderColor: 'var(--border-main)' }}>
-                            <span className="text-[10px] font-black uppercase text-dim opacity-60">To</span>
+                        <div className="flex items-center gap-2 rounded-2xl px-3 py-1.5 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--brand-lime)' }}>Joined To</span>
                             <input
                                 type="date"
                                 value={endDate}
@@ -613,6 +617,15 @@ const Customers = () => {
                                 style={{ color: 'var(--text-main)' }}
                             />
                         </div>
+                        {(startDate || endDate) && (
+                            <button
+                                onClick={() => { setStartDate(''); setEndDate(''); }}
+                                className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border transition-colors hover:bg-red-500/10"
+                                style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
+                            >
+                                ✕ Clear Dates
+                            </button>
+                        )}
                     </div>
                 </div>
 
