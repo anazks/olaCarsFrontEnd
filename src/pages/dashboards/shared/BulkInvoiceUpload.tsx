@@ -209,6 +209,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [verifiedInvoices, setVerifiedInvoices] = useState<Map<string, { exists: boolean, lineItems?: string[] }>>(new Map());
     const [verifyingInvoices, setVerifyingInvoices] = useState(false);
     const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+    const [autoDownloadFailed, setAutoDownloadFailed] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
@@ -480,6 +481,44 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         URL.revokeObjectURL(url);
     };
 
+    const downloadFailedRowsExcel = (finalResult: any) => {
+        if (!finalResult) return;
+
+        const failedRows = parsedRows.filter(row => {
+            // 1. Local validation errors
+            if (row._rowErrors && row._rowErrors.length > 0) return true;
+
+            // 2. Backend errors
+            const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
+            const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
+            const key = (invNo || invId || '').toString().trim();
+            if (key) {
+                const isBackendError = finalResult.errors && finalResult.errors.some((err: string) =>
+                    err.toLowerCase().includes(`invoice group "${key.toLowerCase()}"`) ||
+                    err.toLowerCase().includes(`invoice number "${key.toLowerCase()}"`) ||
+                    err.toLowerCase().includes(`key "${key.toLowerCase()}"`) ||
+                    err.toLowerCase().includes(key.toLowerCase())
+                );
+                if (isBackendError) return true;
+            }
+            return false;
+        });
+
+        if (failedRows.length === 0) return;
+
+        const exportData = failedRows.map(row => {
+            const cleanRow = { ...row };
+            delete cleanRow._rowErrors;
+            return cleanRow;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: CSV_COLUMNS });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Failed Invoices");
+        XLSX.writeFile(workbook, `failed_invoice_rows_${Date.now()}.xlsx`);
+        toast.success(`Automatically downloaded ${failedRows.length} failed rows.`);
+    };
+
     const handleSubmit = async () => {
         const validRows = parsedRows.filter(r => r._rowErrors.length === 0);
         if (validRows.length === 0) {
@@ -551,12 +590,15 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
 
             setResult(finalResult);
 
+            if (autoDownloadFailed) {
+                downloadFailedRowsExcel(finalResult);
+            }
+
             if (finalResult.successCount > 0) {
                 toast.success(`${finalResult.successCount} invoices created successfully.`);
                 if (finalResult.skippedCount > 0) {
                     toast(`${finalResult.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
                 }
-                onSuccess();
             } else if (finalResult.skippedCount > 0) {
                 toast(`All ${finalResult.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
             } else if (finalResult.errorCount > 0) {
@@ -581,6 +623,16 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         setVerifyingInvoices(false);
         setRowFilter('all');
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleClose = () => {
+        const hasResult = !!result;
+        handleReset();
+        if (hasResult) {
+            onSuccess();
+        } else {
+            onClose();
+        }
     };
 
     const handleRemoveRow = (index: number) => {
@@ -645,7 +697,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                             <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Upload CSV or XLSX to generate multiple invoices</p>
                         </div>
                     </div>
-                    <button onClick={() => { handleReset(); onClose(); }} className="p-2 rounded-lg transition-all hover:scale-110" style={{ color: 'var(--text-dim)' }}>
+                    <button onClick={handleClose} className="p-2 rounded-lg transition-all hover:scale-110" style={{ color: 'var(--text-dim)' }}>
                         <X size={20} />
                     </button>
                 </div>
@@ -739,7 +791,16 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         <option value="valid">Valid Rows ({validCount})</option>
                                         <option value="invalid">Invalid Rows ({errorCount})</option>
                                     </select>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 items-center">
+                                        <label className="flex items-center gap-1.5 text-xs text-main font-bold cursor-pointer select-none mr-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={autoDownloadFailed}
+                                                onChange={(e) => setAutoDownloadFailed(e.target.checked)}
+                                                className="rounded border-gray-300 text-lime-500 focus:ring-lime-500 cursor-pointer accent-lime-500"
+                                            />
+                                            <span>Auto-download Failed Rows</span>
+                                        </label>
                                         {errorCount > 0 && !uploading && (
                                             <>
                                                 <button 
@@ -888,8 +949,8 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                 </div>
                             )}
 
-                            <div className="pt-6">
-                                <button onClick={() => { handleReset(); onClose(); }} className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all border-none" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
+                             <div className="pt-6">
+                                <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all border-none" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
                                     Done
                                 </button>
                             </div>

@@ -4,10 +4,10 @@ import OlaLoader from '../../../components/common/OlaLoader';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setFinanceDashboardData } from '../../../store/dashboardSlice';
-import { 
-    Activity, RefreshCw, 
-    List, Plus, Calendar, 
-    TrendingUp, ShieldAlert, ChevronDown, 
+import {
+    Activity, RefreshCw,
+    List, Plus, Calendar,
+    TrendingUp, ShieldAlert, ChevronDown,
     Percent, Layers, PieChart as PieIcon, Coins,
     Building2, FileText, Eye, CheckCircle
 } from 'lucide-react';
@@ -20,8 +20,8 @@ import type { Bill } from '../../../services/billService';
 import { getAllExpenses } from '../../../services/expenseService';
 import type { Expense } from '../../../services/expenseService';
 import { useNavigate } from 'react-router-dom';
-import { 
-    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
+import {
+    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts';
 import { getTasks, updateTaskStatus } from '../../../services/taskService';
@@ -106,9 +106,17 @@ const FinanceDashboard = () => {
     const getCurrencySymbol = () => '$';
 
     const formatCurrency = (value: number) => {
-        return getCurrencySymbol() + ' ' + value.toLocaleString('en-US', {
+        return getCurrencySymbol() + '\u00A0' + value.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
+        });
+    };
+
+    const formatChartYAxis = (value: number) => {
+        return getCurrencySymbol() + '\u00A0' + value.toLocaleString('en-US', {
+            notation: 'compact',
+            compactDisplay: 'short',
+            maximumFractionDigits: 1
         });
     };
 
@@ -140,7 +148,7 @@ const FinanceDashboard = () => {
             const resolvedLedger = Array.isArray(ledgerRes) ? ledgerRes : (ledgerRes && 'data' in ledgerRes && Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
             const resolvedTasks = Array.isArray(taskRes) ? taskRes : (taskRes && 'data' in taskRes && Array.isArray(taskRes.data) ? taskRes.data : []);
             const resolvedInvoices = (invoiceRes && Array.isArray(invoiceRes.data)) ? invoiceRes.data : [];
-            
+
             // Extract Bills from response which has standard { success: true, data: Bill[] }
             let resolvedBills: Bill[] = [];
             if (billRes && 'data' in billRes && Array.isArray(billRes.data)) {
@@ -215,7 +223,7 @@ const FinanceDashboard = () => {
     useEffect(() => {
         const cacheAge = Date.now() - (financeState.lastFetched || 0);
         const isCacheFresh = financeState.isLoaded && cacheAge < 5 * 60 * 1000; // 5 minutes fresh
-        
+
         if (!isCacheFresh) {
             fetchDashboardData(!financeState.isLoaded);
         }
@@ -353,7 +361,7 @@ const FinanceDashboard = () => {
             const unpaid = inv.balance !== undefined ? inv.balance : (inv.totalAmountDue - inv.amountPaid);
             const paid = inv.amountPaid || 0;
             recTotal += paid; // Net Settled
-            
+
             if (unpaid > 0) {
                 const isOverdue = inv.status === 'OVERDUE' || new Date(inv.dueDate) < now;
                 if (isOverdue) recOverdue += unpaid;
@@ -880,7 +888,7 @@ const FinanceDashboard = () => {
 
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
                     {/* Custom Date Range Filter */}
-                    <div 
+                    <div
                         className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all w-full sm:w-auto overflow-x-auto"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
@@ -1012,7 +1020,7 @@ const FinanceDashboard = () => {
                                             <Cell fill="#10B981" />
                                             <Cell fill="#F97316" />
                                         </Pie>
-                                        <Tooltip 
+                                        <Tooltip
                                             formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
                                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
                                         />
@@ -1030,7 +1038,7 @@ const FinanceDashboard = () => {
                             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-widest text-dim">Total Payables</h3>
                         </div>
-                        <button 
+                        <button
                             onClick={() => navigate('../purchase-bills')}
                             className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-brand-lime bg-white/5 border border-white/5 px-2.5 py-1 rounded-lg hover:bg-brand-lime hover:text-black transition-all"
                         >
@@ -1087,7 +1095,7 @@ const FinanceDashboard = () => {
                                             <Cell fill="#3B82F6" />
                                             <Cell fill="#F43F5E" />
                                         </Pie>
-                                        <Tooltip 
+                                        <Tooltip
                                             formatter={(val: any) => formatCurrency(Number(val) === 0.001 ? 0 : Number(val))}
                                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '8px' }}
                                         />
@@ -1117,7 +1125,7 @@ const FinanceDashboard = () => {
                         <div className="flex flex-wrap items-center gap-3">
                             {/* Year selector */}
                             <div className="relative">
-                                <select 
+                                <select
                                     value={fiscalYearRange}
                                     onChange={(e) => setFiscalYearRange(e.target.value)}
                                     className="pl-3 pr-8 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer appearance-none"
@@ -1179,11 +1187,11 @@ const FinanceDashboard = () => {
                     {/* Bar Chart */}
                     <div style={{ width: '100%', height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={currentMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={currentMonthlyData} margin={{ top: 10, right: 10, left: 5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(Number(value))} />
-                                <Tooltip 
+                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} width={65} tickFormatter={(value) => formatChartYAxis(Number(value))} />
+                                <Tooltip
                                     cursor={{ fill: 'rgba(255,255,255,0.01)' }}
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                     formatter={(value: any) => formatCurrency(Number(value))}
@@ -1210,7 +1218,7 @@ const FinanceDashboard = () => {
                             <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Top Expenses</h3>
                         </div>
                         <div className="relative">
-                            <select 
+                            <select
                                 className="pl-3 pr-8 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider outline-none cursor-pointer appearance-none"
                                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
@@ -1250,7 +1258,7 @@ const FinanceDashboard = () => {
                         <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Cash Flow</h3>
                     </div>
                     <div className="relative">
-                        <select 
+                        <select
                             className="pl-3 pr-8 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider outline-none cursor-pointer appearance-none"
                             style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         >
@@ -1264,11 +1272,11 @@ const FinanceDashboard = () => {
                     {/* Bar Chart */}
                     <div className="xl:col-span-3" style={{ width: '100%', height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={currentDataset.cashFlow.monthly} margin={{ top: 10, right: 10, left: 5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(Number(value))} />
-                                <Tooltip 
+                                <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} width={65} tickFormatter={(value) => formatChartYAxis(Number(value))} />
+                                <Tooltip
                                     cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
                                     itemStyle={{ color: 'rgb(212, 241, 46)', fontWeight: 'bold' }}
@@ -1352,9 +1360,9 @@ const FinanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => `${value}%`} 
+                                        formatter={(value: any) => `${value}%`}
                                     />
                                     <Line type="linear" dataKey="margin" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 3, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 5 }} />
                                 </LineChart>
@@ -1380,9 +1388,9 @@ const FinanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="range" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                        formatter={(value: any) => formatCurrency(Number(value))}
                                     />
                                     <Bar dataKey="amount" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                 </BarChart>
@@ -1391,7 +1399,7 @@ const FinanceDashboard = () => {
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
                             <span className="text-dim font-bold">Heaviest Overdue Tier</span>
                             <span className="font-black text-red-400">
-                                {[...currentDataset.aging].sort((a,b) => b.amount - a.amount)[0]?.range || 'None'}
+                                {[...currentDataset.aging].sort((a, b) => b.amount - a.amount)[0]?.range || 'None'}
                             </span>
                         </div>
                     </div>
@@ -1408,9 +1416,9 @@ const FinanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                        formatter={(value: any) => formatCurrency(Number(value))}
                                     />
                                     <Bar dataKey="output" fill="rgb(212, 241, 46)" name="Output Tax" radius={[4, 4, 0, 0]} maxBarSize={20} />
                                     <Bar dataKey="input" fill="#0EA5E9" name="Input Tax" radius={[4, 4, 0, 0]} maxBarSize={20} />
@@ -1437,9 +1445,9 @@ const FinanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="month" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                        formatter={(value: any) => formatCurrency(Number(value))}
                                     />
                                     <Line type="linear" dataKey="projected" stroke="rgb(212, 241, 46)" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)' }} activeDot={{ r: 6 }} />
                                 </LineChart>
@@ -1464,9 +1472,9 @@ const FinanceDashboard = () => {
                                 <BarChart data={currentDataset.revenueStreams} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                        formatter={(value: any) => formatCurrency(Number(value))}
                                     />
                                     <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                 </BarChart>
@@ -1475,7 +1483,7 @@ const FinanceDashboard = () => {
                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
                             <span className="text-dim font-bold">Primary Revenue</span>
                             <span className="font-black text-brand-lime">
-                                {[...currentDataset.revenueStreams].sort((a,b) => b.value - a.value)[0]?.name || 'None'}
+                                {[...currentDataset.revenueStreams].sort((a, b) => b.value - a.value)[0]?.name || 'None'}
                             </span>
                         </div>
                     </div>
@@ -1492,9 +1500,9 @@ const FinanceDashboard = () => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
                                     <YAxis stroke="var(--text-dim)" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Tooltip 
+                                    <Tooltip
                                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '12px', fontSize: 11 }}
-                                        formatter={(value: any) => formatCurrency(Number(value))} 
+                                        formatter={(value: any) => formatCurrency(Number(value))}
                                     />
                                     <Bar dataKey="value" fill="rgb(212, 241, 46)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                 </BarChart>
@@ -1517,7 +1525,7 @@ const FinanceDashboard = () => {
             {/* Quick Navigation Shortcuts */}
             {userRole !== 'admin' && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div 
+                    <div
                         onClick={() => navigate('../invoices')}
                         className="p-4 rounded-xl border cursor-pointer hover:border-brand-lime/30 transition-all group relative overflow-hidden"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
@@ -1601,14 +1609,14 @@ const FinanceDashboard = () => {
                             <div className="w-1.5 h-6 bg-brand-lime rounded-full" />
                             <h3 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-main)' }}>Global Transaction Ledger</h3>
                         </div>
-                        <button 
-                            onClick={() => navigate('../ledger')} 
+                        <button
+                            onClick={() => navigate('../ledger')}
                             className="text-[9px] font-black uppercase tracking-widest text-brand-lime hover:opacity-75 transition-all px-3 py-1.5 bg-brand-lime/5 rounded-lg border border-brand-lime/10"
                         >
                             Ledger Book →
                         </button>
                     </div>
-                    
+
                     <div className="overflow-x-auto flex-grow">
                         {loading ? (
                             <div className="py-20 flex justify-center">
@@ -1640,8 +1648,8 @@ const FinanceDashboard = () => {
                                             const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
                                             return (
-                                                <tr 
-                                                    key={entry._id} 
+                                                <tr
+                                                    key={entry._id}
                                                     className="hover:bg-white/[0.05] transition-colors cursor-pointer"
                                                     onClick={() => navigate(`../ledger/${entry._id}`)}
                                                 >
@@ -1671,61 +1679,61 @@ const FinanceDashboard = () => {
                 </div>
 
                 {/* Assigned Operational Missions */}
-                    <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
-                                <Activity size={14} /> Assigned Tasks
-                            </h4>
-                            <span className="text-[9px] font-bold opacity-45 px-2 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
-                                {tasks.length} Active
-                            </span>
-                        </div>
+                <div className="rounded-2xl border p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime flex items-center gap-2">
+                            <Activity size={14} /> Assigned Tasks
+                        </h4>
+                        <span className="text-[9px] font-bold opacity-45 px-2 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                            {tasks.length} Active
+                        </span>
+                    </div>
 
-                        <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar max-h-[300px]">
-                            {tasks.length === 0 ? (
-                                <div className="py-16 text-center opacity-20 flex flex-col items-center gap-3">
-                                    <List size={32} strokeWidth={1} />
-                                    <p className="text-[10px] font-black uppercase tracking-widest">No Active Task Directives</p>
-                                </div>
-                            ) : (
-                                tasks.map((task) => (
-                                    <div key={task._id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] group hover:border-brand-lime/30 transition-all">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <p className="text-xs font-black group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>{task.title}</p>
-                                            <button 
-                                                onClick={() => handleTaskUpdate(task._id!, 'COMPLETED')}
-                                                className="w-5 h-5 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-black text-[10px] transition-all"
-                                                title="Mark as completed"
-                                            >
-                                                ✓
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-dim font-medium line-clamp-2 mb-3">{task.description}</p>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 border border-white/10 text-dim">
-                                                {task.status}
-                                            </span>
-                                            <span className="text-[8px] font-bold opacity-30">
-                                                Due: {new Date(task.dueDate).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-white/5">
-                            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-xs">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Institutional Sync</p>
-                                </div>
-                                <p className="text-[10px] leading-relaxed text-dim italic">
-                                    "Real-time task tracking synchronized. Directives from financial central systems are mapped instantly."
-                                </p>
+                    <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar max-h-[300px]">
+                        {tasks.length === 0 ? (
+                            <div className="py-16 text-center opacity-20 flex flex-col items-center gap-3">
+                                <List size={32} strokeWidth={1} />
+                                <p className="text-[10px] font-black uppercase tracking-widest">No Active Task Directives</p>
                             </div>
+                        ) : (
+                            tasks.map((task) => (
+                                <div key={task._id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] group hover:border-brand-lime/30 transition-all">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-xs font-black group-hover:text-brand-lime transition-colors" style={{ color: 'var(--text-main)' }}>{task.title}</p>
+                                        <button
+                                            onClick={() => handleTaskUpdate(task._id!, 'COMPLETED')}
+                                            className="w-5 h-5 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-black text-[10px] transition-all"
+                                            title="Mark as completed"
+                                        >
+                                            ✓
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-dim font-medium line-clamp-2 mb-3">{task.description}</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 border border-white/10 text-dim">
+                                            {task.status}
+                                        </span>
+                                        <span className="text-[8px] font-bold opacity-30">
+                                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-white/5">
+                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-xs">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Institutional Sync</p>
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-dim italic">
+                                "Real-time task tracking synchronized. Directives from financial central systems are mapped instantly."
+                            </p>
                         </div>
                     </div>
+                </div>
             </div>
 
             {/* Real-time System Diagnostics Console */}

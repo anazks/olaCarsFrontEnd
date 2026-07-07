@@ -333,7 +333,7 @@ export interface VehicleFilters {
     fuelType?: FuelType;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
-    tempDriver?: string;
+    tempDriver?: 'exists' | string;
 }
 
 // GET all vehicles
