@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
     CreditCard, Plus, Search, Filter, RefreshCw, 
     ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import * as expenseService from '../../../../services/expenseService';
 import type { Expense } from '../../../../services/expenseService';
@@ -20,11 +20,24 @@ const Expenses = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const getDefaultStartDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    };
+
     // Filters
     const [search, setSearch] = useState('');
     const [branchFilter, setBranchFilter] = useState('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getDefaultStartDate());
+    const [endDate, setEndDate] = useState(getDefaultEndDate());
     
     // Pagination
     const [page, setPage] = useState(1);
@@ -254,12 +267,18 @@ const Expenses = () => {
                                 style={{ color: 'var(--text-main)' }}
                             />
                         </div>
-                        {(startDate || endDate) && (
+                        {(search || branchFilter !== 'ALL' || startDate !== getDefaultStartDate() || endDate !== getDefaultEndDate()) && (
                             <button
-                                onClick={() => { setStartDate(''); setEndDate(''); }}
-                                className="text-[9px] font-black uppercase tracking-widest text-brand-lime hover:underline cursor-pointer"
+                                onClick={() => {
+                                    setSearch('');
+                                    setBranchFilter('ALL');
+                                    setStartDate(getDefaultStartDate());
+                                    setEndDate(getDefaultEndDate());
+                                }}
+                                className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
+                                title="Reset Constraints"
                             >
-                                Clear Custom Dates
+                                <X size={12} />
                             </button>
                         )}
                     </div>
