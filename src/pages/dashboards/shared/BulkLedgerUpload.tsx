@@ -21,7 +21,7 @@ interface ParsedTransaction {
     "Transaction Type": "DEBIT" | "CREDIT";
     Amount: number;
     transactionId?: string;
-    _rowErrors?: string[];
+    _rowErrors: string[];
 }
 
 const TEMPLATE_HEADERS = [
@@ -472,7 +472,15 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             for (let i = 0; i < totalBatches; i++) {
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
-                const batchTransactions = validRows.slice(start, end).map(({ _rowErrors, ...rest }) => rest);
+                const batchTransactions = validRows.slice(start, end).map((row) => {
+                    const rest: any = {};
+                    for (const key in row) {
+                        if (key !== '_rowErrors') {
+                            rest[key] = row[key];
+                        }
+                    }
+                    return rest;
+                });
 
                 // Only clear existing on the first batch
                 const batchClearExisting = i === 0 ? clearExisting : false;
