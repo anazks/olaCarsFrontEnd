@@ -24,12 +24,25 @@ const CreditNotes = () => {
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     
+    const getDefaultStartDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    };
+
     // Filters
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
+    const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
 
     // Server-Side Pagination
     const [page, setPage] = useState<number>(1);
@@ -420,6 +433,20 @@ const CreditNotes = () => {
                                     style={{ color: 'var(--text-main)' }}
                                 />
                             </div>
+                            {(searchQuery || statusFilter !== 'ALL' || startDate !== getDefaultStartDate() || endDate !== getDefaultEndDate()) && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setStatusFilter('ALL');
+                                        setStartDate(getDefaultStartDate());
+                                        setEndDate(getDefaultEndDate());
+                                    }}
+                                    className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
+                                    title="Reset Constraints"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
