@@ -9,6 +9,7 @@ import { getInvoices } from '../../../services/invoiceService';
 
 interface ParsedPaymentRow {
     [key: string]: any;
+    _rowErrors?: string[];
 }
 
 interface BulkPaymentUploadProps {

@@ -21,7 +21,7 @@ interface ParsedTransaction {
     "Transaction Type": "DEBIT" | "CREDIT";
     Amount: number;
     transactionId?: string;
-    _rowErrors: string[];
+    _rowErrors?: string[];
 }
 
 const TEMPLATE_HEADERS = [

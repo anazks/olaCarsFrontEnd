@@ -8,7 +8,7 @@ import { getAllCustomers } from '../../../services/customerService';
 
 interface ParsedInvoiceRow {
     [key: string]: any;
-    _rowErrors: string[];
+    _rowErrors?: string[];
 }
 
 interface BulkInvoiceUploadProps {
