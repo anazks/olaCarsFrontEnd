@@ -12,6 +12,7 @@ interface BulkLedgerUploadProps {
 }
 
 interface ParsedTransaction {
+    [key: string]: any;
     Date: string;
     Description: string;
     "Transaction Details": string;

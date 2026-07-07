@@ -454,8 +454,12 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         }
 
         const exportData = targetRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 
@@ -486,8 +490,12 @@ const BulkPaymentUpload = ({ isOpen, onClose, onSuccess }: BulkPaymentUploadProp
         }
 
         const exportData = failedRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 

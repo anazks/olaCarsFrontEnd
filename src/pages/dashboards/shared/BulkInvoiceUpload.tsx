@@ -507,8 +507,12 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         if (failedRows.length === 0) return;
 
         const exportData = failedRows.map(row => {
-            const cleanRow = { ...row };
-            delete cleanRow._rowErrors;
+            const cleanRow: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
             return cleanRow;
         });
 
