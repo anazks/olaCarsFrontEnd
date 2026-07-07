@@ -492,7 +492,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 if (i === totalBatches - 1) {
                     setResult(res.data || res);
                     toast.success(res.message || 'Transactions uploaded successfully!');
-                    onSuccess();
 
                     const failedRows = rows.filter(r => r._rowErrors && r._rowErrors.length > 0);
                     if (failedRows.length > 0) {
@@ -526,8 +525,13 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     };
 
     const handleClose = () => {
+        const hasResult = !!result;
         handleReset();
-        onClose();
+        if (hasResult) {
+            onSuccess();
+        } else {
+            onClose();
+        }
     };
 
     if (!isOpen) return null;
