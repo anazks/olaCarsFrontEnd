@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TrendingUp, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
@@ -258,7 +259,7 @@ const FinancialStatements = () => {
                             ) : (
                                 <div className="space-y-8">
                                     {activeTab === 'PL' ? (
-                                        <PLView data={reportData} />
+                                        <PLView data={reportData} filters={filters} />
                                     ) : (
                                         <BSView data={reportData} />
                                     )}
@@ -308,7 +309,22 @@ const FinancialStatements = () => {
     );
 };
 
-const PLView = ({ data }: { data: any }) => {
+const PLView = ({ data, filters }: { data: any; filters: any }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleCodeClick = (accountId: string) => {
+        if (!accountId) return;
+        const basePath = location.pathname.replace(/\/financial-statements$/, '');
+        const targetPath = `${basePath}/chart-of-accounts/${accountId}`;
+        
+        const params = new URLSearchParams();
+        if (filters?.startDate) params.set('startDate', filters.startDate);
+        if (filters?.endDate) params.set('endDate', filters.endDate);
+        
+        navigate(`${targetPath}?${params.toString()}`);
+    };
+
     const income = data?.income || [];
     const expenses = data?.expenses || [];
 
@@ -354,8 +370,22 @@ const PLView = ({ data }: { data: any }) => {
                 <div className="space-y-3">
                     {income.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                         <div key={i} className="flex justify-between items-center group cursor-default">
-                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
-                                {item.code ? `${item.code} - ` : ''}{item.name}
+                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
+                                {item.code ? (
+                                    <button
+                                        onClick={() => handleCodeClick(item.id)}
+                                        className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
+                                        style={{
+                                            backgroundColor: 'rgba(200, 230, 0, 0.1)',
+                                            color: 'var(--brand-lime)',
+                                            borderColor: 'rgba(200, 230, 0, 0.2)'
+                                        }}
+                                        title={`View Transaction Details for ${item.code}`}
+                                    >
+                                        {item.code}
+                                    </button>
+                                ) : null}
+                                {item.name}
                             </span>
                             <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                             <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -379,8 +409,22 @@ const PLView = ({ data }: { data: any }) => {
                     <div className="space-y-3">
                         {cogsItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center group cursor-default">
-                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
-                                    {item.code ? `${item.code} - ` : ''}{item.name}
+                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
+                                    {item.code ? (
+                                        <button
+                                            onClick={() => handleCodeClick(item.id)}
+                                            className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
+                                            style={{
+                                                backgroundColor: 'rgba(200, 230, 0, 0.1)',
+                                                color: 'var(--brand-lime)',
+                                                borderColor: 'rgba(200, 230, 0, 0.2)'
+                                            }}
+                                            title={`View Transaction Details for ${item.code}`}
+                                        >
+                                            {item.code}
+                                        </button>
+                                    ) : null}
+                                    {item.name}
                                 </span>
                                 <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                                 <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -417,8 +461,22 @@ const PLView = ({ data }: { data: any }) => {
                 <div className="space-y-3">
                     {opexItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                         <div key={i} className="flex justify-between items-center group cursor-default">
-                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
-                                {item.code ? `${item.code} - ` : ''}{item.name}
+                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
+                                {item.code ? (
+                                    <button
+                                        onClick={() => handleCodeClick(item.id)}
+                                        className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
+                                        style={{
+                                            backgroundColor: 'rgba(200, 230, 0, 0.1)',
+                                            color: 'var(--brand-lime)',
+                                            borderColor: 'rgba(200, 230, 0, 0.2)'
+                                        }}
+                                        title={`View Transaction Details for ${item.code}`}
+                                    >
+                                        {item.code}
+                                    </button>
+                                ) : null}
+                                {item.name}
                             </span>
                             <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                             <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -464,8 +522,22 @@ const PLView = ({ data }: { data: any }) => {
                     <div className="space-y-3">
                         {otherExpenseItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
                             <div key={i} className="flex justify-between items-center group cursor-default">
-                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors">
-                                    {item.code ? `${item.code} - ` : ''}{item.name}
+                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
+                                    {item.code ? (
+                                        <button
+                                            onClick={() => handleCodeClick(item.id)}
+                                            className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
+                                            style={{
+                                                backgroundColor: 'rgba(200, 230, 0, 0.1)',
+                                                color: 'var(--brand-lime)',
+                                                borderColor: 'rgba(200, 230, 0, 0.2)'
+                                            }}
+                                            title={`View Transaction Details for ${item.code}`}
+                                        >
+                                            {item.code}
+                                        </button>
+                                    ) : null}
+                                    {item.name}
                                 </span>
                                 <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                                 <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -1038,16 +1110,16 @@ const BSView = ({ data }: { data: any }) => {
 const getMockData = (type: 'PL' | 'BS') => {
     if (type === 'PL') return {
         income: [
-            { name: 'Vehicle Rental Income', amount: 85000 },
-            { name: 'Workshop Service Fees', amount: 12400 },
-            { name: 'Late Payment Penalties', amount: 1200 }
+            { id: '6a280dab4f5923cd64ec316d', code: '4000', name: 'Vehicle Rental Income', amount: 85000 },
+            { id: '6a280dab4f5923cd64ec316d', code: '4100', name: 'Workshop Service Fees', amount: 12400 },
+            { id: '6a280dab4f5923cd64ec316d', code: '4200', name: 'Late Payment Penalties', amount: 1200 }
         ],
         expenses: [
-            { name: 'Staff Salaries', amount: 25000 },
-            { name: 'Vehicle Maintenance', amount: 8400 },
-            { name: 'Fuel Expense', amount: 4200 },
-            { name: 'Insurance Premium', amount: 6000 },
-            { name: 'Depreciation (Vehicles)', amount: 12000 }
+            { id: '6a280dab4f5923cd64ec316d', code: '5000', name: 'Staff Salaries', amount: 25000 },
+            { id: '6a280dab4f5923cd64ec316d', code: '5100', name: 'Vehicle Maintenance', amount: 8400 },
+            { id: '6a280dab4f5923cd64ec316d', code: '5200', name: 'Fuel Expense', amount: 4200 },
+            { id: '6a280dab4f5923cd64ec316d', code: '5300', name: 'Insurance Premium', amount: 6000 },
+            { id: '6a280dab4f5923cd64ec316d', code: '5400', name: 'Depreciation (Vehicles)', amount: 12000 }
         ],
         netProfit: 42000
     };
