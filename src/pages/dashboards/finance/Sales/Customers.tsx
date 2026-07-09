@@ -354,13 +354,26 @@ const Customers = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const isFirstMount = useRef(true);
 
+    const getDefaultStartDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const getDefaultEndDate = () => {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    };
+
     // Filters & Search
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [branchFilter, setBranchFilter] = useState('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getDefaultStartDate());
+    const [endDate, setEndDate] = useState(getDefaultEndDate());
 
     // Sorting State
     const [sortBy, setSortBy] = useState<string>('createdAt');

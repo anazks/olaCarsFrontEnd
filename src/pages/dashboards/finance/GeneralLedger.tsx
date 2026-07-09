@@ -90,6 +90,12 @@ const GeneralLedger = () => {
     }, [startDate, endDate]);
 
     const fetchData = useCallback(async () => {
+        const params = new URLSearchParams(location.search);
+        const codeParam = params.get('code');
+        if (codeParam && selectedCode === 'ALL') {
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -104,10 +110,7 @@ const GeneralLedger = () => {
             filters.page = page;
             filters.limit = limit;
 
-            const [ledgerResponse, codesData] = await Promise.all([
-                getLedgerEntries(filters),
-                getAllAccountingCodes().catch(() => []) // Fallback to empty if codes fail
-            ]);
+            const ledgerResponse = await getLedgerEntries(filters);
 
             setEntries(Array.isArray(ledgerResponse.data) ? ledgerResponse.data : []);
             if (ledgerResponse.pagination) {
@@ -118,13 +121,12 @@ const GeneralLedger = () => {
             } else {
                 setSummaryStats({ totalDebit: 0, totalCredit: 0 });
             }
-            setAccountingCodes(Array.isArray(codesData) ? codesData : []);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to fetch ledger entries');
         } finally {
             setLoading(false);
         }
-    }, [startDate, endDate, selectedCode, debouncedSearch, page, limit]);
+    }, [startDate, endDate, selectedCode, debouncedSearch, page, limit, location.search]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -143,6 +145,63 @@ const GeneralLedger = () => {
             navigate(location.pathname, { replace: true });
         }
     }, [location.search, canCreateEntry, navigate, location.pathname]);
+
+    // Fetch accounting codes once on mount
+    useEffect(() => {
+        const fetchCodes = async () => {
+            try {
+                const codesData = await getAllAccountingCodes();
+                setAccountingCodes(Array.isArray(codesData) ? codesData : []);
+            } catch (err) {
+                console.error("Failed to load accounting codes:", err);
+            }
+        };
+        fetchCodes();
+    }, []);
+
+    // Handle URL parameters mapping (maps string code like IN0002 to _id)
+    useEffect(() => {
+        if (accountingCodes.length === 0) return;
+
+        const params = new URLSearchParams(location.search);
+        const codeParam = params.get('code');
+        const startParam = params.get('startDate');
+        const endParam = params.get('endDate');
+
+        let changed = false;
+        if (codeParam) {
+            const matchedCode = accountingCodes.find(c => c.code === codeParam);
+            if (matchedCode && matchedCode._id !== selectedCode) {
+                setSelectedCode(matchedCode._id);
+                changed = true;
+            }
+        }
+        if (startParam && startParam !== startDate) {
+            setStartDate(startParam);
+            changed = true;
+        }
+        if (endParam && endParam !== endDate) {
+            setEndDate(endParam);
+            changed = true;
+        }
+
+        if (changed) {
+            // Clean up parameters from address bar to keep URL clean
+            const cleanParams = new URLSearchParams(location.search);
+            cleanParams.delete('code');
+            cleanParams.delete('startDate');
+            cleanParams.delete('endDate');
+            const newSearch = cleanParams.toString();
+            navigate(
+                {
+                    pathname: location.pathname,
+                    search: newSearch ? `?${newSearch}` : ''
+                },
+                { replace: true }
+            );
+        }
+    }, [location.search, navigate, location.pathname, accountingCodes, selectedCode, startDate, endDate]);
+
 
     // Derived statistics
     const totalDebit = summaryStats.totalDebit;
