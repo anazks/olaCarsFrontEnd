@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { TrendingUp, RefreshCw, ChevronRight, PieChart, Loader2, Search, FileText } from 'lucide-react';
+import { TrendingUp, RefreshCw, ChevronRight, ChevronDown, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
@@ -313,6 +313,15 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
+
+    const toggleExpand = (accountId: string) => {
+        setExpandedAccounts(prev => ({
+            ...prev,
+            [accountId]: prev[accountId] === false ? true : false
+        }));
+    };
+
     const handleCodeClick = (accountId: string) => {
         if (!accountId) return;
         const basePath = location.pathname.replace(/\/financial-statements$/, '');
@@ -327,6 +336,128 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
 
     const income = data?.income || [];
     const expenses = data?.expenses || [];
+
+    interface AccountNode {
+        id: string;
+        code: string;
+        name: string;
+        amount: number;
+        parentAccount: any;
+        children: AccountNode[];
+        rolledUpAmount: number;
+        isVisible: boolean;
+    }
+
+    const buildTree = (items: any[]): AccountNode[] => {
+        const map: Record<string, AccountNode> = {};
+        items.forEach(item => {
+            map[item.id] = {
+                id: item.id,
+                code: item.code,
+                name: item.name,
+                amount: item.amount || 0,
+                parentAccount: item.parentAccount,
+                children: [],
+                rolledUpAmount: item.amount || 0,
+                isVisible: item.amount !== 0
+            };
+        });
+
+        const roots: AccountNode[] = [];
+        items.forEach(item => {
+            const node = map[item.id];
+            if (!node) return;
+            const parentId = item.parentAccount
+                ? (typeof item.parentAccount === 'object' ? item.parentAccount._id : item.parentAccount)
+                : null;
+
+            if (parentId && map[parentId]) {
+                map[parentId].children.push(node);
+            } else {
+                roots.push(node);
+            }
+        });
+
+        return roots;
+    };
+
+    const processTree = (nodes: AccountNode[]): AccountNode[] => {
+        return nodes.map(node => {
+            const processedChildren = processTree(node.children);
+            const childrenSum = processedChildren.reduce((sum, child) => sum + child.rolledUpAmount, 0);
+            const rolledUpAmount = node.amount + childrenSum;
+            const hasVisibleChildren = processedChildren.some(child => child.isVisible);
+            const isVisible = node.amount !== 0 || hasVisibleChildren;
+
+            return {
+                ...node,
+                children: processedChildren,
+                rolledUpAmount,
+                isVisible
+            };
+        });
+    };
+
+    const getProcessedTree = (items: any[]) => {
+        const tree = buildTree(items);
+        return processTree(tree);
+    };
+
+
+
+    const renderNode = (node: AccountNode, depth: number = 0) => {
+        if (!node.isVisible) return null;
+
+        const isExpanded = expandedAccounts[node.id] !== false;
+        const ToggleIcon = isExpanded ? ChevronDown : ChevronRight;
+
+        return (
+            <div key={node.id} className="space-y-2">
+                <div className="flex justify-between items-center group cursor-default">
+                    <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center" style={{ paddingLeft: `${depth * 20}px` }}>
+                        {depth > 0 && <span className="opacity-45 text-[11px] font-mono select-none mr-1.5" style={{ color: 'var(--text-dim)' }}>↳</span>}
+                        {node.children.length > 0 ? (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }} 
+                                className="mr-1.5 p-0.5 rounded hover:bg-[var(--border-main)] transition-colors inline-flex items-center text-dim hover:text-[var(--text-main)] cursor-pointer"
+                                title={isExpanded ? "Collapse Account" : "Expand Account"}
+                            >
+                                <ToggleIcon size={14} />
+                            </button>
+                        ) : (
+                            <div className="w-5" />
+                        )}
+                        {node.code ? (
+                            <button
+                                onClick={() => handleCodeClick(node.id)}
+                                className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
+                                style={{
+                                    backgroundColor: 'rgba(200, 230, 0, 0.1)',
+                                    color: 'var(--brand-lime)',
+                                    borderColor: 'rgba(200, 230, 0, 0.2)'
+                                }}
+                                title={`View Transaction Details for ${node.code}`}
+                            >
+                                {node.code}
+                            </button>
+                        ) : null}
+                        <span className={node.children.length > 0 ? "font-bold text-[var(--text-main)]" : ""}>
+                            {node.name}
+                        </span>
+                    </span>
+                    <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
+                    <span className={`text-sm font-mono text-[var(--text-main)] ${node.children.length > 0 ? "font-bold" : ""}`}>
+                        ${(node.rolledUpAmount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </span>
+                </div>
+                {node.children.length > 0 && isExpanded && (
+                    <div className="space-y-2">
+                        {node.children.map(child => renderNode(child, depth + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const isCOGS = (item: any) => {
         const name = (item.name || '').toLowerCase();
@@ -349,6 +480,11 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
     const opexItems = expenses.filter((e: any) => !isCOGS(e) && !isOtherExpense(e));
     const otherExpenseItems = expenses.filter((e: any) => isOtherExpense(e));
 
+    const incomeTree = getProcessedTree(income);
+    const cogsTree = getProcessedTree(cogsItems);
+    const opexTree = getProcessedTree(opexItems);
+    const otherExpensesTree = getProcessedTree(otherExpenseItems);
+
     const totalIncome = income.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
     const totalCOGS = cogsItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
     const totalOPEX = opexItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
@@ -368,29 +504,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     <ChevronRight size={14} /> Operating Income
                 </h4>
                 <div className="space-y-3">
-                    {income.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center group cursor-default">
-                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
-                                {item.code ? (
-                                    <button
-                                        onClick={() => handleCodeClick(item.id)}
-                                        className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
-                                        style={{
-                                            backgroundColor: 'rgba(200, 230, 0, 0.1)',
-                                            color: 'var(--brand-lime)',
-                                            borderColor: 'rgba(200, 230, 0, 0.2)'
-                                        }}
-                                        title={`View Transaction Details for ${item.code}`}
-                                    >
-                                        {item.code}
-                                    </button>
-                                ) : null}
-                                {item.name}
-                            </span>
-                            <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                    ))}
+                    {incomeTree.map(node => renderNode(node))}
                     <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                         <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Income</span>
                         <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4 font-black">
@@ -407,29 +521,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                         <ChevronRight size={14} /> Cost of Goods Sold
                     </h4>
                     <div className="space-y-3">
-                        {cogsItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center group cursor-default">
-                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
-                                    {item.code ? (
-                                        <button
-                                            onClick={() => handleCodeClick(item.id)}
-                                            className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
-                                            style={{
-                                                backgroundColor: 'rgba(200, 230, 0, 0.1)',
-                                                color: 'var(--brand-lime)',
-                                                borderColor: 'rgba(200, 230, 0, 0.2)'
-                                            }}
-                                            title={`View Transaction Details for ${item.code}`}
-                                        >
-                                            {item.code}
-                                        </button>
-                                    ) : null}
-                                    {item.name}
-                                </span>
-                                <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                            </div>
-                        ))}
+                        {cogsTree.map(node => renderNode(node))}
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Cost of Goods Sold</span>
                             <span className="text-sm font-mono font-bold text-[var(--text-main)]">
@@ -459,29 +551,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     <ChevronRight size={14} /> Operating Expenses
                 </h4>
                 <div className="space-y-3">
-                    {opexItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center group cursor-default">
-                            <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
-                                {item.code ? (
-                                    <button
-                                        onClick={() => handleCodeClick(item.id)}
-                                        className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
-                                        style={{
-                                            backgroundColor: 'rgba(200, 230, 0, 0.1)',
-                                            color: 'var(--brand-lime)',
-                                            borderColor: 'rgba(200, 230, 0, 0.2)'
-                                        }}
-                                        title={`View Transaction Details for ${item.code}`}
-                                    >
-                                        {item.code}
-                                    </button>
-                                ) : null}
-                                {item.name}
-                            </span>
-                            <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                            <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                    ))}
+                    {opexTree.map(node => renderNode(node))}
                     <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                         <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Expenses</span>
                         <span className="text-sm font-mono font-bold text-[var(--text-main)]">
@@ -520,29 +590,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                         <ChevronRight size={14} /> Extraordinary expenses
                     </h4>
                     <div className="space-y-3">
-                        {otherExpenseItems.filter((item: any) => item.amount !== 0).map((item: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center group cursor-default">
-                                <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center">
-                                    {item.code ? (
-                                        <button
-                                            onClick={() => handleCodeClick(item.id)}
-                                            className="mr-2 px-2 py-0.5 rounded font-mono text-[11px] font-black uppercase tracking-wide border cursor-pointer hover:bg-brand-lime hover:text-[#0A0A0A] hover:border-brand-lime transition-all duration-200"
-                                            style={{
-                                                backgroundColor: 'rgba(200, 230, 0, 0.1)',
-                                                color: 'var(--brand-lime)',
-                                                borderColor: 'rgba(200, 230, 0, 0.2)'
-                                            }}
-                                            title={`View Transaction Details for ${item.code}`}
-                                        >
-                                            {item.code}
-                                        </button>
-                                    ) : null}
-                                    {item.name}
-                                </span>
-                                <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
-                                <span className="text-sm font-mono text-[var(--text-main)]">${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                            </div>
-                        ))}
+                        {otherExpensesTree.map(node => renderNode(node))}
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Extraordinary Expenses</span>
                             <span className="text-sm font-mono font-bold text-[var(--text-main)]">
@@ -1110,16 +1158,20 @@ const BSView = ({ data }: { data: any }) => {
 const getMockData = (type: 'PL' | 'BS') => {
     if (type === 'PL') return {
         income: [
-            { id: '6a280dab4f5923cd64ec316d', code: '4000', name: 'Vehicle Rental Income', amount: 85000 },
-            { id: '6a280dab4f5923cd64ec316d', code: '4100', name: 'Workshop Service Fees', amount: 12400 },
-            { id: '6a280dab4f5923cd64ec316d', code: '4200', name: 'Late Payment Penalties', amount: 1200 }
+            { id: '6a280dab4f5923cd64ec316d', code: '4000', name: 'Vehicle Rental Income', amount: 0, parentAccount: null },
+            { id: 'mock-child-1', code: '4001', name: 'Car Rentals', amount: 60000, parentAccount: '6a280dab4f5923cd64ec316d' },
+            { id: 'mock-child-2', code: '4002', name: 'Truck Rentals', amount: 25000, parentAccount: '6a280dab4f5923cd64ec316d' },
+            { id: '6a280dab4f5923cd64ec316e', code: '4100', name: 'Workshop Service Fees', amount: 12400, parentAccount: null },
+            { id: '6a280dab4f5923cd64ec316f', code: '4200', name: 'Late Payment Penalties', amount: 1200, parentAccount: null }
         ],
         expenses: [
-            { id: '6a280dab4f5923cd64ec316d', code: '5000', name: 'Staff Salaries', amount: 25000 },
-            { id: '6a280dab4f5923cd64ec316d', code: '5100', name: 'Vehicle Maintenance', amount: 8400 },
-            { id: '6a280dab4f5923cd64ec316d', code: '5200', name: 'Fuel Expense', amount: 4200 },
-            { id: '6a280dab4f5923cd64ec316d', code: '5300', name: 'Insurance Premium', amount: 6000 },
-            { id: '6a280dab4f5923cd64ec316d', code: '5400', name: 'Depreciation (Vehicles)', amount: 12000 }
+            { id: '6a280dab4f5923cd64ec316g', code: '5000', name: 'Staff Salaries', amount: 0, parentAccount: null },
+            { id: 'mock-exp-child-1', code: '5001', name: 'Executive Salaries', amount: 15000, parentAccount: '6a280dab4f5923cd64ec316g' },
+            { id: 'mock-exp-child-2', code: '5002', name: 'Operations Salaries', amount: 10000, parentAccount: '6a280dab4f5923cd64ec316g' },
+            { id: '6a280dab4f5923cd64ec316h', code: '5100', name: 'Vehicle Maintenance', amount: 8400, parentAccount: null },
+            { id: '6a280dab4f5923cd64ec316i', code: '5200', name: 'Fuel Expense', amount: 4200, parentAccount: null },
+            { id: '6a280dab4f5923cd64ec316j', code: '5300', name: 'Insurance Premium', amount: 6000, parentAccount: null },
+            { id: '6a280dab4f5923cd64ec316k', code: '5400', name: 'Depreciation (Vehicles)', amount: 12000, parentAccount: null }
         ],
         netProfit: 42000
     };
