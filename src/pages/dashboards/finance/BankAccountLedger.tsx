@@ -659,14 +659,6 @@ const BankAccountLedger = () => {
                     <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    <button 
-                        onClick={handleDeleteAllTransactions}
-                        disabled={deletingAll}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Trash2 size={14} strokeWidth={3} />
-                        {deletingAll ? 'Deleting...' : 'Delete Bank Entries'}
-                    </button>
                     <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
