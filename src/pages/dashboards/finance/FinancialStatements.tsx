@@ -101,8 +101,9 @@ const FinancialStatements = () => {
             if (filters.endDate) query.endDate = filters.endDate;
 
             const token = localStorage.getItem('token');
+            const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['\"]/g, '').replace(/\/$/, '');
             const response = await fetch(
-                `http://localhost:3000/api/reporting/export/pdf?${new URLSearchParams(query).toString()}`,
+                `${apiBase}/api/reporting/export/pdf?${new URLSearchParams(query).toString()}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             if (!response.ok) throw new Error(`Server error: ${response.status}`);
