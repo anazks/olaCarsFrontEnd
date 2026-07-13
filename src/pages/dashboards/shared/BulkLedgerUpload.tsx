@@ -109,7 +109,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState('');
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState('');
     const [clearExisting] = useState(false);
 
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
@@ -172,9 +171,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                         setSelectedAccountId(accountsList[0]._id);
                     }
 
-                    if (branchesList.length > 0) {
-                        setSelectedBranchId(branchesList[0]._id);
-                    }
+                    // Branches will be automatically auto-assigned per transaction row
                 } catch (err) {
                     console.error("Failed to fetch bulk upload pre-requisites", err);
                     toast.error("Failed to load active bank accounts or branches");
@@ -302,8 +299,34 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             errors.push('Row cannot have both Receipt and Payment');
         }
 
+        const branchVal = getRowVal(row, ['branch', 'Branch', 'BRANCH']);
+        if (!branchVal) {
+            errors.push('Missing Branch');
+        } else if (branches.length > 0) {
+            const excelBranch = String(branchVal).trim().toLowerCase();
+            // 1. Try exact name match
+            let match = branches.find(b => b.name.trim().toLowerCase() === excelBranch);
+            // 2. Try partial name match
+            if (!match) {
+                match = branches.find(b => {
+                    const dbName = b.name.trim().toLowerCase();
+                    return dbName.includes(excelBranch) || excelBranch.includes(dbName);
+                });
+            }
+            // 3. Try type fallback
+            if (!match) {
+                const isWorkshopType = excelBranch.includes("workshop") || excelBranch.includes("taller");
+                const targetType = isWorkshopType ? "WORKSHOP" : "BRANCH";
+                match = branches.find(b => b.type === targetType);
+            }
+
+            if (!match) {
+                errors.push(`Branch "${branchVal}" cannot be matched to any system branch`);
+            }
+        }
+
         return errors;
-    }, [selectedAccount]);
+    }, [selectedAccount, branches]);
 
     const revalidateAndRecalculateRows = useCallback((currentRows: ParsedTransaction[], targetAccount: BankAccount | undefined) => {
         if (!currentRows || currentRows.length === 0) return [];
@@ -499,9 +522,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
                 const batchTransactions = validRows.slice(start, end).map((row) => {
-                    const rest: any = {};
+                    const rest: any = { ...row._rawRow };
                     for (const key in row) {
-                        if (key !== '_rowErrors') {
+                        if (key !== '_rowErrors' && key !== '_rawRow') {
                             rest[key] = row[key];
                         }
                     }
@@ -512,7 +535,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const batchClearExisting = i === 0 ? clearExisting : false;
 
                 const payload = {
-                    branchId: selectedBranchId || undefined,
                     clearExisting: batchClearExisting,
                     transactions: batchTransactions
                 };
@@ -709,31 +731,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                 )}
                             </div>
 
-                            {/* Branch Selection */}
-                            <div className="space-y-1.5">
-                                <label className="block text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Assign to Branch</label>
-                                {loadingData ? (
-                                    <div className="flex items-center gap-2 py-2.5">
-                                        <Loader2 size={14} className="animate-spin" />
-                                        <span className="text-xs text-dim">Loading branches...</span>
-                                    </div>
-                                ) : (
-                                    <div className="relative">
-                                        <select
-                                            value={selectedBranchId}
-                                            onChange={(e) => setSelectedBranchId(e.target.value)}
-                                            className="w-full px-4 py-2.5 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
-                                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        >
-                                            <option value="">— Select Branch —</option>
-                                            {branches.map(b => (
-                                                <option key={b._id} value={b._id}>{b.name}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                    </div>
-                                )}
-                            </div>
+                            {/* Branch auto-resolution is applied per transaction row */}
 
                             {/* Clear existing is removed to avoid accidental deletion */}
                         </div>
