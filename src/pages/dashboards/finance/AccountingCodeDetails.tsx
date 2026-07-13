@@ -69,10 +69,19 @@ const AccountingCodeDetails = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
-    const [startDate, setStartDate] = useState(initialDates.startISO);
-    const [endDate, setEndDate] = useState(initialDates.endISO);
-    const [tempStartDate, setTempStartDate] = useState(initialDates.startISO);
-    const [tempEndDate, setTempEndDate] = useState(initialDates.endISO);
+    const getUrlDates = () => {
+        const params = new URLSearchParams(location.search);
+        return {
+            start: params.get('startDate'),
+            end: params.get('endDate')
+        };
+    };
+    const urlDates = getUrlDates();
+
+    const [startDate, setStartDate] = useState(urlDates.start || initialDates.startISO);
+    const [endDate, setEndDate] = useState(urlDates.end || initialDates.endISO);
+    const [tempStartDate, setTempStartDate] = useState(urlDates.start || initialDates.startISO);
+    const [tempEndDate, setTempEndDate] = useState(urlDates.end || initialDates.endISO);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [summary, setSummary] = useState({
         totalDebit: 0,

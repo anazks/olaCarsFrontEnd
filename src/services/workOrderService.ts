@@ -46,7 +46,7 @@ export interface StatusHistoryEntry {
 export interface WorkOrder {
     _id: string;
     workOrderNumber: string;
-    workOrderType: 'PREVENTIVE' | 'CORRECTIVE' | 'PRE_ENTRY' | 'ACCIDENT' | 'RETURN_INSPECTION' | 'RECALL' | 'SAFETY_PREP' | 'WEAR_ITEM';
+    workOrderType: 'PREVENTIVE' | 'CORRECTIVE' | 'PRE_ENTRY' | 'ACCIDENT' | 'RETURN_INSPECTION' | 'RECALL' | 'SAFETY_PREP' | 'WEAR_ITEM' | 'OTHER';
     status: string;
     vehicleId: any;
     branchId: any;

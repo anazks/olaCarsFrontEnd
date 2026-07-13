@@ -14,11 +14,10 @@ import {
     Building2,
     Plus,
     ArrowUpDown,
-    Search,
-    Trash2
+    Search
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, deleteAllTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -53,7 +52,6 @@ const BankAccountLedger = () => {
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
-    const [deletingAll, setDeletingAll] = useState(false);
 
     // Dynamic bank statement import preview & branch selection
     const [branches, setBranches] = useState<any[]>([]);
@@ -215,29 +213,6 @@ const BankAccountLedger = () => {
         fetchData();
     }, [fetchData]);
 
-    const handleDeleteAllTransactions = async () => {
-        if (!id) return;
-        const confirmDelete = window.confirm(
-            `Are you sure you want to delete ALL statement transactions for this bank account (${account?.accountName || account?.bankName || 'this bank account'})?\n\nThis will permanently delete all records and cannot be undone.`
-        );
-        if (!confirmDelete) return;
-
-        setDeletingAll(true);
-        try {
-            const res = await deleteAllTransactions(id);
-            if (res.success) {
-                toast.success(res.message || 'Successfully cleared all transactions.');
-                setPage(1);
-                fetchData();
-            } else {
-                toast.error(res.message || 'Failed to clear transactions.');
-            }
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || err.message || 'Error clearing transactions');
-        } finally {
-            setDeletingAll(false);
-        }
-    };
 
     const normalizeHeader = (header: string): string => {
         return header.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -659,14 +634,6 @@ const BankAccountLedger = () => {
                     <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    <button 
-                        onClick={handleDeleteAllTransactions}
-                        disabled={deletingAll}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Trash2 size={14} strokeWidth={3} />
-                        {deletingAll ? 'Deleting...' : 'Delete Bank Entries'}
-                    </button>
                     <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"

@@ -1457,7 +1457,7 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(reportData || []).map((row: any, idx: number) => {
+                                                {getReportList(reportData).map((row: any, idx: number) => {
                                                     const net = (row.income || 0) - (row.expenses || 0);
                                                     return (
                                                         <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
@@ -1468,7 +1468,7 @@ export const ReportsPage = () => {
                                                         </tr>
                                                     );
                                                 })}
-                                                {(reportData || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={4} className="p-8 text-center text-xs text-dim font-bold">No Daily Financial Logs Found.</td>
                                                     </tr>
@@ -1709,7 +1709,7 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(reportData || []).map((row: any, idx: number) => (
+                                                {getReportList(reportData).map((row: any, idx: number) => (
                                                     <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-semibold">{row.name}</td>
                                                         <td className="p-4 text-center font-bold">
@@ -1726,7 +1726,7 @@ export const ReportsPage = () => {
                                                         <td className="p-4 text-right text-rose-400 font-bold font-mono">{formatCurrency(row.rentBalance)}</td>
                                                     </tr>
                                                 ))}
-                                                {(reportData || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Driver Performance Metrics Found.</td>
                                                     </tr>
@@ -1749,7 +1749,7 @@ export const ReportsPage = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(reportData || []).map((row: any, idx: number) => (
+                                                {getReportList(reportData).map((row: any, idx: number) => (
                                                     <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-semibold">{row.name}</td>
                                                         <td className="p-4 font-bold uppercase tracking-wider text-[9px] text-dim">{row.role}</td>
@@ -1763,7 +1763,7 @@ export const ReportsPage = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {(reportData || []).length === 0 && (
+                                                {getReportList(reportData).length === 0 && (
                                                     <tr>
                                                         <td colSpan={6} className="p-8 text-center text-xs text-dim font-bold">No Staff Onboarding Performance Metrics Found.</td>
                                                     </tr>
