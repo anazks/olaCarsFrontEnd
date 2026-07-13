@@ -211,12 +211,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const part2 = parseInt(parts[1], 10);
                 const part3 = parseInt(parts[2], 10);
                 const year = part3 < 100 ? 2000 + part3 : part3;
-                let day = part1;
-                let month = part2;
-                if (month > 12 && day <= 12) {
-                    day = part2;
-                    month = part1;
-                }
+                const day = part1;
+                const month = part2;
                 const date = new Date(Date.UTC(year, month - 1, day));
                 if (!isNaN(date.getTime())) return date;
             }
@@ -233,6 +229,16 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         const str = String(val).replace(/[^\d.-]/g, '');
         const parsed = parseFloat(str);
         return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const formatDateDMY = (dateStr: string): string => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const year = d.getUTCFullYear();
+        return `${day}-${month}-${year}`;
     };
 
     const validateRow = useCallback((row: any, targetAccount?: BankAccount): string[] => {
@@ -833,7 +839,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {rows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
-                                                    <td className="py-3 px-4 font-mono">{row.Date || '-'}</td>
+                                                    <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
                                                     <td className="py-3 px-4 max-w-[150px] truncate" title={row["Transaction Details"]}>{row["Transaction Details"] || '-'}</td>
                                                     <td className="py-3 px-4 font-mono text-emerald-500 font-semibold">{row.Debit > 0 ? `$${row.Debit.toFixed(2)}` : '-'}</td>
