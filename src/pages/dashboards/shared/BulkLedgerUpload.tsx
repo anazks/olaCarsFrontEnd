@@ -127,7 +127,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [selectedAccountId, setSelectedAccountId] = useState('');
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState('');
-    const [clearExisting, setClearExisting] = useState(true);
+    const [clearExisting] = useState(false);
 
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
     const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
@@ -710,24 +710,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                 )}
                             </div>
 
-                            {/* Reset / Clear Toggle */}
-                            <div className="md:col-span-2 flex items-center gap-3 p-3 rounded-xl border mt-2" style={{ borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.03)' }}>
-                                <input
-                                    id="clear-existing-checkbox"
-                                    type="checkbox"
-                                    checked={clearExisting}
-                                    onChange={(e) => setClearExisting(e.target.checked)}
-                                    className="w-4.5 h-4.5 rounded border-gray-300 text-red-600 focus:ring-red-500 accent-red-500 cursor-pointer"
-                                />
-                                <div className="cursor-pointer" onClick={() => setClearExisting(!clearExisting)}>
-                                    <label htmlFor="clear-existing-checkbox" className="block text-xs font-black uppercase tracking-wider text-rose-400 cursor-pointer">
-                                        Clear existing transaction history before uploading
-                                    </label>
-                                    <p className="text-[11px] text-white/50 mt-0.5">
-                                        Check this to purge all ledger entries associated with this bank account and reset the balance. Required for a clean bank re-entry.
-                                    </p>
-                                </div>
-                            </div>
+                            {/* Clear existing is removed to avoid accidental deletion */}
                         </div>
                     )}
 
