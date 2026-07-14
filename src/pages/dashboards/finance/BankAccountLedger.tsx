@@ -14,7 +14,9 @@ import {
     Building2,
     Plus,
     ArrowUpDown,
-    Search
+    Search,
+    ArrowDownRight,
+    ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
@@ -36,6 +38,9 @@ const BankAccountLedger = () => {
     const [entries, setEntries] = useState<LedgerEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [totalDeposits, setTotalDeposits] = useState(0);
+    const [totalWithdrawals, setTotalWithdrawals] = useState(0);
+    const [openingBalance, setOpeningBalance] = useState(0);
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -193,8 +198,11 @@ const BankAccountLedger = () => {
                 search: search || undefined,
                 balance: balance || undefined
             };
-            const txRes = await getBankAccountTransactions(id, filters);
+             const txRes = await getBankAccountTransactions(id, filters);
             setEntries(Array.isArray(txRes.data) ? txRes.data : []);
+            setTotalDeposits(txRes.totalDeposits || 0);
+            setTotalWithdrawals(txRes.totalWithdrawals || 0);
+            setOpeningBalance(txRes.openingBalance || 0);
             if (txRes.pagination) {
                 setPagination({
                     total: txRes.pagination.total || 0,
@@ -653,6 +661,85 @@ const BankAccountLedger = () => {
                     >
                         <Upload size={14} strokeWidth={3} /> Import Statement
                     </button>
+                </div>
+            </div>
+
+            {/* KPI Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Opening Balance Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-amber-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                <Coins className="text-amber-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">Start Balance</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Opening Balance</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-amber-400 text-lg mr-1">$</span>
+                                {(openingBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Deposits Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-green-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                                <ArrowDownRight className="text-green-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md">Incoming</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Total Deposits</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-green-400 text-lg mr-1">$</span>
+                                {totalDeposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Withdrawals Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-rose-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                                <ArrowUpRight className="text-rose-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">Outgoing</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Total Withdrawals</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-rose-400 text-lg mr-1">$</span>
+                                {totalWithdrawals.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Current Balance Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-lime/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <Building2 className="text-blue-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">Live Balance</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Current Balance</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-blue-400 text-lg mr-1">$</span>
+                                {(account.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
                 </div>
             </div>
 
