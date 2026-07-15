@@ -256,9 +256,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         const bankNameVal = getRowVal(row, ['bank name', 'bank_name', 'Bank Name', 'BANK NAME']);
         const rawReceipt = getRowVal(row, ['receipt', 'Receipt', 'RECEIPT']);
         const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
-        const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
-        const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
-
         const receiptVal = cleanNumber(rawReceipt);
         const paymentVal = cleanNumber(rawPayment);
 

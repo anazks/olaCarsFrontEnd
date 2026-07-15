@@ -87,8 +87,8 @@ const BankAccountLedger = () => {
                     setAllAccountingCodes(codesList);
 
                     const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
-                        const targetBankId = e.bankAccountId || id;
-                        const bank = bankList.find(b => b._id === targetBankId);
+                        const targetBankId = (e as any).bankAccountId || id;
+                        const bank = bankList.find((b: any) => b._id === targetBankId);
                         return {
                             id: e._id,
                             entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
