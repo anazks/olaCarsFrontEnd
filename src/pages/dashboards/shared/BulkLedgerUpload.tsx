@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 
 interface BulkLedgerUploadProps {
     isOpen: boolean;
@@ -143,6 +144,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [uploadProgress, setUploadProgress] = useState(0);
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
 
     // Load bank accounts and branches on mount
     useEffect(() => {
@@ -150,16 +152,19 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             const fetchData = async () => {
                 setLoadingData(true);
                 try {
-                    const [accountsRes, branchesRes] = await Promise.all([
+                    const [accountsRes, branchesRes, codesRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
-                        getAllBranches({ limit: 100 })
+                        getAllBranches({ limit: 100 }),
+                        getAllAccountingCodes({ limit: 1000 })
                     ]);
 
                     const accountsList = accountsRes.data || accountsRes || [];
                     const branchesList = branchesRes.data || branchesRes || [];
+                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
 
                     setAccounts(accountsList.filter((a: BankAccount) => a.status === 'ACTIVE'));
                     setBranches(branchesList.filter((b: Branch) => b.status === 'ACTIVE'));
+                    setAllAccountingCodes(codesList);
 
                     // Auto-select "Banco General AH 1601" or first account
                     const bg1601 = accountsList.find((a: BankAccount) =>
