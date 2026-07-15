@@ -906,7 +906,7 @@ const BankAccountLedger = () => {
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                                 <datalist id={`accounts-list-${idx}`}>
-                                                    {allAccountingCodes.map(c => (
+                                                    {allAccountingCodes.filter(c => c.parentAccount).map(c => (
                                                         <option key={c._id} value={c.name}>
                                                             {c.code} - {c.category}
                                                         </option>
