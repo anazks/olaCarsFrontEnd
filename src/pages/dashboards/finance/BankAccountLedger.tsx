@@ -73,38 +73,40 @@ const BankAccountLedger = () => {
 
     useEffect(() => {
         if (isBulkEditing) {
-            const fetchAllBanksForEdit = async () => {
+            const loadDataAndInitialize = async () => {
                 try {
-                    const res = await getAllBankAccounts({ limit: 100 });
-                    setAllBankAccountsList(res.data || []);
-                } catch (err) {
-                    console.error('Failed to fetch bank accounts for bulk edit', err);
-                }
-            };
-            fetchAllBanksForEdit();
+                    const [banksRes, codesRes] = await Promise.all([
+                        getAllBankAccounts({ limit: 100 }),
+                        getAllAccountingCodes()
+                    ]);
 
-            const fetchAccountingCodes = async () => {
-                try {
-                    const codes = await getAllAccountingCodes();
-                    const codesList = Array.isArray(codes) ? codes : ((codes as any).data || []);
+                    const bankList = banksRes.data || [];
+                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
+
+                    setAllBankAccountsList(bankList);
                     setAllAccountingCodes(codesList);
+
+                    const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
+                        const bank = bankList.find(b => b._id === id);
+                        return {
+                            id: e._id,
+                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                            description: e.description || '',
+                            type: e.type || 'DEBIT',
+                            amount: e.amount || 0,
+                            accountsName: (e as any).accountsName || '',
+                            parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                            bankAccountId: id,
+                            tempBankName: bank ? (bank.accountName || bank.bankName) : '',
+                            tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
+                        };
+                    });
+                    setEditEntries(selected);
                 } catch (err) {
-                    console.error('Failed to fetch accounting codes', err);
+                    console.error('Failed to load bulk edit dependencies', err);
                 }
             };
-            fetchAccountingCodes();
-
-            const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => ({
-                id: e._id,
-                entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-                description: e.description || '',
-                type: e.type || 'DEBIT',
-                amount: e.amount || 0,
-                accountsName: (e as any).accountsName || '',
-                parentAccount: (e as any).parentAccount || 'Accounts Receivable',
-                bankAccountId: id
-            }));
-            setEditEntries(selected);
+            loadDataAndInitialize();
         } else {
             setEditEntries([]);
         }
@@ -817,46 +819,65 @@ const BankAccountLedger = () => {
                                                 />
                                             </td>
                                             <td className="px-6 py-4">
-                                                <select
-                                                    value={entry.bankAccountId}
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search Bank Name..."
+                                                    value={entry.tempBankName || ''}
+                                                    list={`bank-list-${idx}`}
                                                     onChange={e => {
+                                                        const val = e.target.value;
                                                         const updated = [...editEntries];
-                                                        updated[idx].bankAccountId = e.target.value;
+                                                        updated[idx].tempBankName = val;
+                                                        
+                                                        // Look up matching bank ID
+                                                        const match = allBankAccountsList.find(b =>
+                                                            (b.accountName || '').toLowerCase().trim() === val.toLowerCase().trim() ||
+                                                            (b.bankName || '').toLowerCase().trim() === val.toLowerCase().trim()
+                                                        );
+                                                        if (match) {
+                                                            updated[idx].bankAccountId = match._id;
+                                                        }
                                                         setEditEntries(updated);
                                                     }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                     required
-                                                >
+                                                />
+                                                <datalist id={`bank-list-${idx}`}>
                                                     {allBankAccountsList.map(bankAcc => (
-                                                        <option key={bankAcc._id} value={bankAcc._id} className="bg-[var(--bg-card)]">
-                                                            {bankAcc.accountName || bankAcc.bankName}
+                                                        <option key={bankAcc._id} value={bankAcc.accountName || bankAcc.bankName}>
+                                                            {bankAcc.accountNumber}
                                                         </option>
                                                     ))}
-                                                </select>
+                                                </datalist>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <select
-                                                    value={entry.parentAccount}
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search Parent Account..."
+                                                    value={entry.tempParentAccountName || entry.parentAccount || ''}
+                                                    list={`parent-list-${idx}`}
                                                     onChange={e => {
+                                                        const val = e.target.value;
                                                         const updated = [...editEntries];
-                                                        updated[idx].parentAccount = e.target.value;
+                                                        updated[idx].tempParentAccountName = val;
+                                                        updated[idx].parentAccount = val;
                                                         setEditEntries(updated);
                                                     }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                     required
-                                                >
-                                                    <option value="" className="bg-[var(--bg-card)]">Select Parent Account</option>
+                                                />
+                                                <datalist id={`parent-list-${idx}`}>
                                                     {(allAccountingCodes.filter(c => !c.parentAccount).length > 0
                                                         ? allAccountingCodes.filter(c => !c.parentAccount)
                                                         : allAccountingCodes
                                                     ).map(p => (
-                                                        <option key={p._id} value={p.name} className="bg-[var(--bg-card)]">
-                                                            {p.code} - {p.name}
+                                                        <option key={p._id} value={p.name}>
+                                                            {p.code}
                                                         </option>
                                                     ))}
-                                                </select>
+                                                </datalist>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <input
@@ -878,6 +899,7 @@ const BankAccountLedger = () => {
                                                                 : (allAccountingCodes.find(p => p._id === match.parentAccount)?.name || '');
                                                             if (parentName) {
                                                                 updated[idx].parentAccount = parentName;
+                                                                updated[idx].tempParentAccountName = parentName;
                                                             }
                                                         }
                                                         setEditEntries(updated);
