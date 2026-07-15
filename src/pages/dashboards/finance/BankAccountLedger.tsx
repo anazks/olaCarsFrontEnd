@@ -73,40 +73,38 @@ const BankAccountLedger = () => {
 
     useEffect(() => {
         if (isBulkEditing) {
-            const loadDataAndInitialize = async () => {
+            const fetchAllBanksForEdit = async () => {
                 try {
-                    const [banksRes, codesRes] = await Promise.all([
-                        getAllBankAccounts({ limit: 100 }),
-                        getAllAccountingCodes()
-                    ]);
-
-                    const bankList = banksRes.data || [];
-                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
-
-                    setAllBankAccountsList(bankList);
-                    setAllAccountingCodes(codesList);
-
-                    const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
-                        const bank = bankList.find(b => b._id === id);
-                        return {
-                            id: e._id,
-                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-                            description: e.description || '',
-                            type: e.type || 'DEBIT',
-                            amount: e.amount || 0,
-                            accountsName: (e as any).accountsName || '',
-                            parentAccount: (e as any).parentAccount || 'Accounts Receivable',
-                            bankAccountId: id,
-                            tempBankName: bank ? (bank.accountName || bank.bankName) : '',
-                            tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
-                        };
-                    });
-                    setEditEntries(selected);
+                    const res = await getAllBankAccounts({ limit: 100 });
+                    setAllBankAccountsList(res.data || []);
                 } catch (err) {
-                    console.error('Failed to load bulk edit dependencies', err);
+                    console.error('Failed to fetch bank accounts for bulk edit', err);
                 }
             };
-            loadDataAndInitialize();
+            fetchAllBanksForEdit();
+
+            const fetchAccountingCodes = async () => {
+                try {
+                    const codes = await getAllAccountingCodes();
+                    const codesList = Array.isArray(codes) ? codes : ((codes as any).data || []);
+                    setAllAccountingCodes(codesList);
+                } catch (err) {
+                    console.error('Failed to fetch accounting codes', err);
+                }
+            };
+            fetchAccountingCodes();
+
+            const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => ({
+                id: e._id,
+                entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                description: e.description || '',
+                type: e.type || 'DEBIT',
+                amount: e.amount || 0,
+                accountsName: (e as any).accountsName || '',
+                parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                bankAccountId: id
+            }));
+            setEditEntries(selected);
         } else {
             setEditEntries([]);
         }
@@ -1843,11 +1841,11 @@ const BankAccountLedger = () => {
             {/* FLOATING ACTION BAR FOR SELECTED ITEMS */}
             {selectedIds.length > 0 && !isBulkEditing && (
                 <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-between gap-6 px-6 py-4 rounded-2xl border shadow-2xl animate-in fade-in slide-in-from-bottom duration-300 backdrop-blur-md"
-                     style={{
-                         background: 'rgba(20, 20, 20, 0.85)',
-                         borderColor: 'var(--border-main)',
-                         boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-                     }}>
+                    style={{
+                        background: 'rgba(20, 20, 20, 0.85)',
+                        borderColor: 'var(--border-main)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                    }}>
                     <span className="text-xs font-bold text-white">
                         {selectedIds.length} transaction{selectedIds.length > 1 ? 's' : ''} selected
                     </span>
