@@ -779,8 +779,8 @@ const BankAccountLedger = () => {
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Bank Name</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Accounts Name</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Parent Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Sub Account</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36">Type</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36 text-right">Amount ($)</th>
                                     </tr>
@@ -834,7 +834,31 @@ const BankAccountLedger = () => {
                                                         </option>
                                                     ))}
                                                 </select>
-                                            </td>                                             <td className="px-6 py-4">
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <select
+                                                    value={entry.parentAccount}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].parentAccount = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                >
+                                                    <option value="" className="bg-[var(--bg-card)]">Select Parent Account</option>
+                                                    {(allAccountingCodes.filter(c => !c.parentAccount).length > 0
+                                                        ? allAccountingCodes.filter(c => !c.parentAccount)
+                                                        : allAccountingCodes
+                                                    ).map(p => (
+                                                        <option key={p._id} value={p.name} className="bg-[var(--bg-card)]">
+                                                            {p.code} - {p.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="px-6 py-4">
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. JESSICA SOTO"
@@ -868,20 +892,6 @@ const BankAccountLedger = () => {
                                                         </option>
                                                     ))}
                                                 </datalist>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Accounts Receivable"
-                                                    value={entry.parentAccount}
-                                                    onChange={e => {
-                                                        const updated = [...editEntries];
-                                                        updated[idx].parentAccount = e.target.value;
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                />
                                             </td>
                                             <td className="px-6 py-4">
                                                 <select
