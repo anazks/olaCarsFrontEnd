@@ -19,7 +19,7 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -41,6 +41,10 @@ const BankAccountLedger = () => {
     const [totalDeposits, setTotalDeposits] = useState(0);
     const [totalWithdrawals, setTotalWithdrawals] = useState(0);
     const [openingBalance, setOpeningBalance] = useState(0);
+    const [downloading, setDownloading] = useState(false);
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+    const [dlFrom, setDlFrom] = useState('');
+    const [dlTo, setDlTo] = useState('');
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -599,6 +603,39 @@ const BankAccountLedger = () => {
         }
     };
 
+    const handleDownloadPdf = async () => {
+        if (!id) return;
+        setShowDownloadModal(false);
+        setDownloading(true);
+        const toastId = toast.loading('Generating ledger PDF...');
+        try {
+            const params: any = {
+                startDate: dlFrom || undefined,
+                endDate: dlTo || undefined,
+                search: search || undefined,
+                sort: sortDirection
+            };
+            const data = await downloadBankAccountLedgerPdf(id, params);
+            const blob = new Blob([data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            const safeName = ((account?.accountName || account?.bankName || 'ledger') as string).replace(/\s+/g, '_');
+            link.setAttribute('download', `${safeName}_ledger_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Ledger PDF downloaded!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to download ledger PDF:', err);
+            toast.error(err?.response?.data?.message || err.message || 'Failed to generate ledger PDF', { id: toastId });
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     const handleBulkDeleteSubmit = async () => {
         if (!id) return;
         setDeleting(true);
@@ -856,6 +893,17 @@ const BankAccountLedger = () => {
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <Plus size={14} strokeWidth={3} /> Record Payment
+                    </button>
+                    <button
+                        onClick={() => {
+                            setDlFrom(startDate);
+                            setDlTo(endDate);
+                            setShowDownloadModal(true);
+                        }}
+                        disabled={downloading}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FileText size={14} strokeWidth={3} /> {downloading ? 'Downloading...' : 'Download PDF'}
                     </button>
                     <button
                         onClick={() => setIsBulkUploadOpen(true)}
@@ -1732,6 +1780,78 @@ const BankAccountLedger = () => {
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                     ) : (
                                         <>Delete Now</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Download PDF Modal */}
+            {showDownloadModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDownloadModal(false)} />
+                    <div className="relative border rounded-[2rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center gap-3">
+                                <FileText className="text-brand-lime" size={24} style={{ color: 'var(--brand-lime)' }} />
+                                <div>
+                                    <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Export PDF Statement</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Define Report Criteria</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDownloadModal(false)} className="text-dim hover:text-white transition-all text-lg font-bold cursor-pointer" style={{ color: 'var(--text-dim)' }}>&times;</button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                Choose a custom date range to filter the ledger report. Leave the dates blank to export the entire history.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={dlFrom}
+                                        onChange={e => setDlFrom(e.target.value)}
+                                        className="w-full bg-transparent border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-lime transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>End Date</label>
+                                    <input
+                                        type="date"
+                                        value={dlTo}
+                                        min={dlFrom}
+                                        onChange={e => setDlTo(e.target.value)}
+                                        className="w-full bg-transparent border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-lime transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDownloadModal(false)}
+                                    className="flex-1 py-3.5 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadPdf}
+                                    disabled={downloading}
+                                    className="flex-1 py-3.5 bg-brand-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30"
+                                    style={{ backgroundColor: 'var(--brand-lime)' }}
+                                >
+                                    {downloading ? (
+                                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>Download PDF</>
                                     )}
                                 </button>
                             </div>

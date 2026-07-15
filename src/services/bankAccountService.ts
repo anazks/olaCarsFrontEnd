@@ -91,4 +91,12 @@ export const bulkEditBankAccountTransactions = async (id: string, updates: any[]
     return response.data;
 };
 
+export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
+    const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
+        params,
+        responseType: 'blob'
+    });
+    return response.data;
+};
+
 
