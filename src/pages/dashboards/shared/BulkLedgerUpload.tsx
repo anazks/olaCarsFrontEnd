@@ -269,8 +269,16 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         if (prefixVal === undefined || prefixVal === null || String(prefixVal).trim() === '') {
             errors.push('Missing Prefix');
         }
+
         if (numberVal === undefined || numberVal === null || String(numberVal).trim() === '') {
             errors.push('Missing Number');
+        }
+
+        const accountsNameVal = getRowVal(row, ['accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+        const parentAccountVal = getRowVal(row, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']);
+
+        if (accountsNameVal && (!parentAccountVal || String(parentAccountVal).trim() === '')) {
+            errors.push('Parent Account is required when Accounts Name is specified');
         }
 
         const activeAccount = targetAccount || selectedAccount;
@@ -292,10 +300,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             }
         }
 
-        const finalDesc = String(descVal).trim() || String(remarksVal).trim();
-        if (!finalDesc) {
-            errors.push('Missing Description');
-        }
+
 
         if (receiptVal < 0) errors.push('Receipt cannot be negative');
         if (paymentVal < 0) errors.push('Payment cannot be negative');
@@ -465,7 +470,15 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
 
                 return {
                     Date: isoDate || String(dateVal || ''),
-                    Description: descVal.trim() || remarksVal.trim() || '',
+                    Description: (() => {
+                        const rawDesc = descVal.trim() || remarksVal.trim();
+                        if (rawDesc) return rawDesc;
+                        const typeStr = resolvedType === 'DEBIT' ? 'Deposit' : 'Withdrawal';
+                        const accountsNameVal = getRowVal(row, ['accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+                        const partyStr = accountsNameVal ? ` for ${accountsNameVal}` : '';
+                        const refStr = (prefixVal && numberVal) ? ` (Ref: ${prefixVal}-${numberVal})` : '';
+                        return `${typeStr} of ${amountVal}${partyStr}${refStr}`.trim();
+                    })(),
                     "Transaction Details": remarksVal.trim(),
                     Debit: receiptVal,
                     Credit: paymentVal,
