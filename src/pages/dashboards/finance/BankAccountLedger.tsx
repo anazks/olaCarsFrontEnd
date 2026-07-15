@@ -73,38 +73,41 @@ const BankAccountLedger = () => {
 
     useEffect(() => {
         if (isBulkEditing) {
-            const fetchAllBanksForEdit = async () => {
+            const loadDataAndInitialize = async () => {
                 try {
-                    const res = await getAllBankAccounts({ limit: 100 });
-                    setAllBankAccountsList(res.data || []);
-                } catch (err) {
-                    console.error('Failed to fetch bank accounts for bulk edit', err);
-                }
-            };
-            fetchAllBanksForEdit();
+                    const [banksRes, codesRes] = await Promise.all([
+                        getAllBankAccounts({ limit: 100 }),
+                        getAllAccountingCodes()
+                    ]);
 
-            const fetchAccountingCodes = async () => {
-                try {
-                    const codes = await getAllAccountingCodes();
-                    const codesList = Array.isArray(codes) ? codes : ((codes as any).data || []);
+                    const bankList = banksRes.data || [];
+                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
+
+                    setAllBankAccountsList(bankList);
                     setAllAccountingCodes(codesList);
+
+                    const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
+                        const targetBankId = e.bankAccountId || id;
+                        const bank = bankList.find(b => b._id === targetBankId);
+                        return {
+                            id: e._id,
+                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                            description: e.description || '',
+                            type: e.type || 'DEBIT',
+                            amount: e.amount || 0,
+                            accountsName: (e as any).accountsName || '',
+                            parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                            bankAccountId: targetBankId,
+                            tempBankName: bank ? (bank.accountName || bank.bankName) : '',
+                            tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
+                        };
+                    });
+                    setEditEntries(selected);
                 } catch (err) {
-                    console.error('Failed to fetch accounting codes', err);
+                    console.error('Failed to load bulk edit dependencies', err);
                 }
             };
-            fetchAccountingCodes();
-
-            const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => ({
-                id: e._id,
-                entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-                description: e.description || '',
-                type: e.type || 'DEBIT',
-                amount: e.amount || 0,
-                accountsName: (e as any).accountsName || '',
-                parentAccount: (e as any).parentAccount || 'Accounts Receivable',
-                bankAccountId: id
-            }));
-            setEditEntries(selected);
+            loadDataAndInitialize();
         } else {
             setEditEntries([]);
         }
