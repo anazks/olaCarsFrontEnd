@@ -86,7 +86,7 @@ const BankAccountLedger = () => {
             const fetchAccountingCodes = async () => {
                 try {
                     const codes = await getAllAccountingCodes();
-                    const codesList = Array.isArray(codes) ? codes : (codes.data || []);
+                    const codesList = Array.isArray(codes) ? codes : ((codes as any).data || []);
                     setAllAccountingCodes(codesList);
                 } catch (err) {
                     console.error('Failed to fetch accounting codes', err);
