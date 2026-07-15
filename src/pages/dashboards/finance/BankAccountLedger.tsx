@@ -98,6 +98,7 @@ const BankAccountLedger = () => {
                             accountsName: (e as any).accountsName || '',
                             parentAccount: (e as any).parentAccount || 'Accounts Receivable',
                             bankAccountId: targetBankId,
+                            bankName: bank ? (bank.accountName || bank.bankName) : '',
                             tempBankName: bank ? (bank.accountName || bank.bankName) : '',
                             tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
                         };
@@ -829,6 +830,7 @@ const BankAccountLedger = () => {
                                                         const val = e.target.value;
                                                         const updated = [...editEntries];
                                                         updated[idx].tempBankName = val;
+                                                        updated[idx].bankName = val;
                                                         
                                                         // Look up matching bank ID
                                                         const match = allBankAccountsList.find(b =>
