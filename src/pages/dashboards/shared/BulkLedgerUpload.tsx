@@ -27,7 +27,7 @@ interface ParsedTransaction {
 }
 
 const TEMPLATE_HEADERS = [
-    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH'
+    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'PARENT ACCOUNT', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH'
 ];
 
 const SAMPLE_ROWS = [
@@ -37,6 +37,7 @@ const SAMPLE_ROWS = [
         NUMBER: '0000001',
         'BANK NAME': 'Banco General AH 1601',
         'ACCOUNTS NAME': 'JESSICA SOTO EU8783',
+        'PARENT ACCOUNT': 'Accounts Receivable',
         RECEIPT: 100.00,
         PAYMENT: 0.00,
         DESCRIPTION: 'ACH - JESSICA VALERIA SOTO CASTRO',
@@ -59,7 +60,7 @@ const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
             const matchCount = row.filter(cell => {
                 if (cell === undefined || cell === null) return false;
                 const cleanCell = String(cell).trim().toLowerCase();
-                return ['date', 'prefix', 'number', 'bank name', 'accounts name', 'receipt', 'payment', 'description', 'remarks', 'branch'].some(k => cleanCell.includes(k) || k.includes(cleanCell));
+                return ['date', 'prefix', 'number', 'bank name', 'accounts name', 'parent account', 'receipt', 'payment', 'description', 'remarks', 'branch'].some(k => cleanCell.includes(k) || k.includes(cleanCell));
             }).length;
             if (matchCount >= 2) {
                 headerIdx = i;
@@ -379,7 +380,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
         if (!failed || failed.length === 0) return;
 
-        const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "ACCOUNTS NAME", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "Errors"];
+        const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "ACCOUNTS NAME", "PARENT ACCOUNT", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "Errors"];
         const csvRows = failed.map(r => {
             const raw = r._rawRow || {};
             return [
@@ -388,6 +389,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 `"${String(getRowVal(raw, ['number', 'Number', 'NUMBER']) || '').replace(/"/g, '""')}"`,
                 `"${String(getRowVal(raw, ['bank name', 'bank_name', 'Bank Name', 'BANK NAME']) || '').replace(/"/g, '""')}"`,
                 `"${String(getRowVal(raw, ['accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']) || '').replace(/"/g, '""')}"`,
                 String(cleanNumber(getRowVal(raw, ['receipt', 'Receipt', 'RECEIPT']))),
                 String(cleanNumber(getRowVal(raw, ['payment', 'Payment', 'PAYMENT']))),
                 `"${String(getRowVal(raw, ['description', 'Description', 'DESCRIPTION']) || '').replace(/"/g, '""')}"`,

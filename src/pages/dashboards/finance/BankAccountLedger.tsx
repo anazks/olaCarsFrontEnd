@@ -24,6 +24,7 @@ import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getInvoicesByCustomer, type Invoice } from '../../../services/invoiceService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -60,6 +61,8 @@ const BankAccountLedger = () => {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isBulkEditing, setIsBulkEditing] = useState(false);
     const [editEntries, setEditEntries] = useState<any[]>([]);
+    const [allBankAccountsList, setAllBankAccountsList] = useState<BankAccount[]>([]);
+    const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -70,18 +73,42 @@ const BankAccountLedger = () => {
 
     useEffect(() => {
         if (isBulkEditing) {
+            const fetchAllBanksForEdit = async () => {
+                try {
+                    const res = await getAllBankAccounts({ limit: 100 });
+                    setAllBankAccountsList(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch bank accounts for bulk edit', err);
+                }
+            };
+            fetchAllBanksForEdit();
+
+            const fetchAccountingCodes = async () => {
+                try {
+                    const codes = await getAllAccountingCodes();
+                    const codesList = Array.isArray(codes) ? codes : (codes.data || []);
+                    setAllAccountingCodes(codesList);
+                } catch (err) {
+                    console.error('Failed to fetch accounting codes', err);
+                }
+            };
+            fetchAccountingCodes();
+
             const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => ({
                 id: e._id,
                 entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
                 description: e.description || '',
                 type: e.type || 'DEBIT',
-                amount: e.amount || 0
+                amount: e.amount || 0,
+                accountsName: (e as any).accountsName || '',
+                parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                bankAccountId: id
             }));
             setEditEntries(selected);
         } else {
             setEditEntries([]);
         }
-    }, [isBulkEditing, selectedIds, entries]);
+    }, [isBulkEditing, selectedIds, entries, id]);
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -751,8 +778,11 @@ const BankAccountLedger = () => {
                                     <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Type</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44 text-right">Amount ($)</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Bank Name</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Accounts Name</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Parent Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36">Type</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36 text-right">Amount ($)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -784,6 +814,73 @@ const BankAccountLedger = () => {
                                                     className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
                                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                     required
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <select
+                                                    value={entry.bankAccountId}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].bankAccountId = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                >
+                                                    {allBankAccountsList.map(bankAcc => (
+                                                        <option key={bankAcc._id} value={bankAcc._id} className="bg-[var(--bg-card)]">
+                                                            {bankAcc.accountName || bankAcc.bankName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>                                             <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. JESSICA SOTO"
+                                                    value={entry.accountsName}
+                                                    list={`accounts-list-${idx}`}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const updated = [...editEntries];
+                                                        updated[idx].accountsName = val;
+                                                        
+                                                        // Auto-fill parent account if it matches an existing accounting code
+                                                        const match = allAccountingCodes.find(c => c.name.toLowerCase().trim() === val.toLowerCase().trim());
+                                                        if (match) {
+                                                            const parentObj = typeof match.parentAccount === 'object' && match.parentAccount ? match.parentAccount : null;
+                                                            const parentName = parentObj
+                                                                ? parentObj.name
+                                                                : (allAccountingCodes.find(p => p._id === match.parentAccount)?.name || '');
+                                                            if (parentName) {
+                                                                updated[idx].parentAccount = parentName;
+                                                            }
+                                                        }
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <datalist id={`accounts-list-${idx}`}>
+                                                    {allAccountingCodes.map(c => (
+                                                        <option key={c._id} value={c.name}>
+                                                            {c.code} - {c.category}
+                                                        </option>
+                                                    ))}
+                                                </datalist>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Accounts Receivable"
+                                                    value={entry.parentAccount}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].parentAccount = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                                 />
                                             </td>
                                             <td className="px-6 py-4">
