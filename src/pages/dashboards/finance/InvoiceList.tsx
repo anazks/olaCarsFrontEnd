@@ -8,6 +8,7 @@ import {
 import { getInvoicesRegistry, deleteAllInvoices, getInvoicesTotalCount, getInvoicesDateWise } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
@@ -50,6 +51,7 @@ const InvoiceList = () => {
     };
 
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [typeFilter, setTypeFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -74,7 +76,7 @@ const InvoiceList = () => {
     useEffect(() => {
         setShowFullCount(false);
         setRealTotalCount(null);
-    }, [debouncedSearch, startDate, endDate, statusFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
 
 
 
@@ -112,7 +114,7 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
 
     const handlePageChange = (pageNum: number) => {
         setPage(pageNum);
@@ -186,6 +188,7 @@ const InvoiceList = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (typeFilter !== 'ALL') filters.invoiceType = typeFilter;
             if (filterMonth) filters.month = filterMonth;
             if (filterYear) filters.year = filterYear;
 
@@ -214,7 +217,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
 
     useEffect(() => {
         fetchData();
@@ -234,6 +237,95 @@ const InvoiceList = () => {
             fetchData();
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to delete all invoices');
+        }
+    };
+
+    const handleExportExcel = () => {
+        if (invoices.length === 0) {
+            toast.error("No invoices available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = invoices.map((inv, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Invoice Number": inv.invoiceNumber,
+                "Invoice ID": inv._id,
+                "Type": inv.invoiceType || "RENTAL",
+                "Description": (inv as any).description || inv.notes || (inv.invoiceType === 'RENTAL' ? `Rent ${inv.weekLabel || ''}` : 'Manual Entry'),
+                "Customer ID": (inv.customer as any)?.customerId || inv.driver?.driverId || 'N/A',
+                "Customer Name": (inv.customer as any)?.name || inv.driver?.personalInfo?.fullName || 'System Pool',
+                "Status": inv.status,
+                "Gross Billed": inv.totalAmountDue || 0,
+                "Net Settled": inv.amountPaid || 0,
+                "Current Balance": inv.balance || 0,
+                "Invoice Date": inv.generatedAt ? new Date(inv.generatedAt).toLocaleDateString() : (inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : 'N/A'),
+                "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+            
+            // Auto fit column widths
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `invoices_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (invoices.length === 0) {
+            toast.error("No invoices available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = invoices.map((inv, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Invoice Number": inv.invoiceNumber,
+                "Invoice ID": inv._id,
+                "Type": inv.invoiceType || "RENTAL",
+                "Description": (inv as any).description || inv.notes || (inv.invoiceType === 'RENTAL' ? `Rent ${inv.weekLabel || ''}` : 'Manual Entry'),
+                "Customer ID": (inv.customer as any)?.customerId || inv.driver?.driverId || 'N/A',
+                "Customer Name": (inv.customer as any)?.name || inv.driver?.personalInfo?.fullName || 'System Pool',
+                "Status": inv.status,
+                "Gross Billed": inv.totalAmountDue || 0,
+                "Net Settled": inv.amountPaid || 0,
+                "Current Balance": inv.balance || 0,
+                "Invoice Date": inv.generatedAt ? new Date(inv.generatedAt).toLocaleDateString() : (inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : 'N/A'),
+                "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `invoices_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
         }
     };
 
@@ -349,6 +441,24 @@ const InvoiceList = () => {
                         </button>
 
                         <button
+                            onClick={handleExportExcel}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-emerald-500" />
+                            Export Excel
+                        </button>
+
+                        <button
+                            onClick={handleExportCsv}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-blue-400" />
+                            Export CSV
+                        </button>
+
+                        <button
                             onClick={() => navigate('./create')}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
@@ -399,6 +509,7 @@ const InvoiceList = () => {
                                     setStartDate(getDefaultStartDate());
                                     setEndDate(getDefaultEndDate());
                                     setStatusFilter('ALL');
+                                    setTypeFilter('ALL');
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--brand-lime)' }}
@@ -407,7 +518,7 @@ const InvoiceList = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                             {/* Month Selector */}
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
@@ -487,6 +598,23 @@ const InvoiceList = () => {
                                     <option value="PARTIAL">PARTIAL</option>
                                     <option value="PAID">PAID</option>
                                     <option value="OVERDUE">OVERDUE</option>
+                                </select>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Type</label>
+                                <select
+                                    value={typeFilter}
+                                    onChange={(e) => setTypeFilter(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="ALL">ALL TYPES</option>
+                                    <option value="RENTAL">RENTAL</option>
+                                    <option value="WORKSHOP">WORKSHOP</option>
+                                    <option value="MANUAL">MANUAL</option>
+                                    <option value="DEPOSIT">DEPOSIT</option>
                                 </select>
                             </div>
 

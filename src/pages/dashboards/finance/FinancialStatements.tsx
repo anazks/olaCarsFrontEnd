@@ -4,6 +4,7 @@ import { TrendingUp, RefreshCw, ChevronRight, ChevronDown, PieChart, Loader2, Se
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 const getTodayString = () => {
     const d = new Date();
@@ -20,6 +21,212 @@ const getPastDateString = (monthsAgo: number) => {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+const buildPLExportRows = (data: any) => {
+    const rows: any[] = [];
+    if (!data) return rows;
+
+    const income = data.income || [];
+    const expenses = data.expenses || [];
+
+    const isCOGS = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        return name.includes('cost of goods sold') || name.includes('cogs') || name.includes('costo de ventas');
+    };
+
+    const isOtherExpense = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        const type = (item.accountType || '').toLowerCase();
+        const cat = (item.category || '').toLowerCase();
+        return (
+            name.includes('other expense') ||
+            type.includes('other expense') ||
+            cat.includes('other expense') ||
+            name.includes('extraordinary')
+        );
+    };
+
+    const cogsItems = expenses.filter((e: any) => isCOGS(e));
+    const opexItems = expenses.filter((e: any) => !isCOGS(e) && !isOtherExpense(e));
+    const otherExpenseItems = expenses.filter((e: any) => isOtherExpense(e));
+
+    const totalIncome = income.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalCOGS = cogsItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalOPEX = opexItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+    const totalOtherExpenses = otherExpenseItems.reduce((acc: number, val: any) => acc + val.amount, 0) || 0;
+
+    const grossProfit = totalIncome - totalCOGS;
+    const operatingExpenses = totalOPEX;
+    const operatingProfit = grossProfit - operatingExpenses;
+    const netProfit = operatingProfit - totalOtherExpenses;
+
+    const addAccountTree = (items: any[], typeLabel: string) => {
+        items.forEach(item => {
+            rows.push({
+                "Account Code": item.code || "",
+                "Account Name": item.name,
+                "Type": typeLabel,
+                "Amount": item.amount || 0
+            });
+        });
+    };
+
+    rows.push({ "Account Code": "---", "Account Name": "OPERATING INCOME", "Type": "Section Header", "Amount": "" });
+    addAccountTree(income, "Operating Income");
+    rows.push({ "Account Code": "", "Account Name": "Total Operating Income", "Type": "Section Summary", "Amount": totalIncome });
+
+    if (cogsItems.length > 0) {
+        rows.push({ "Account Code": "---", "Account Name": "COST OF GOODS SOLD", "Type": "Section Header", "Amount": "" });
+        addAccountTree(cogsItems, "Cost of Goods Sold");
+        rows.push({ "Account Code": "", "Account Name": "Total Cost of Goods Sold", "Type": "Section Summary", "Amount": totalCOGS });
+    }
+
+    rows.push({ "Account Code": "", "Account Name": "Gross Profit", "Type": "Report Summary", "Amount": grossProfit });
+
+    rows.push({ "Account Code": "---", "Account Name": "OPERATING EXPENSES", "Type": "Section Header", "Amount": "" });
+    addAccountTree(opexItems, "Operating Expenses");
+    rows.push({ "Account Code": "", "Account Name": "Total Operating Expenses", "Type": "Section Summary", "Amount": totalOPEX });
+
+    rows.push({ "Account Code": "", "Account Name": "Operating Profit", "Type": "Report Summary", "Amount": operatingProfit });
+
+    if (otherExpenseItems.length > 0) {
+        rows.push({ "Account Code": "---", "Account Name": "EXTRAORDINARY EXPENSES", "Type": "Section Header", "Amount": "" });
+        addAccountTree(otherExpenseItems, "Extraordinary Expenses");
+        rows.push({ "Account Code": "", "Account Name": "Total Extraordinary Expenses", "Type": "Section Summary", "Amount": totalOtherExpenses });
+    }
+
+    rows.push({ "Account Code": "", "Account Name": "Net Profit / Loss", "Type": "Grand Summary", "Amount": netProfit });
+
+    return rows;
+};
+
+const buildBSExportRows = (data: any) => {
+    const rows: any[] = [];
+    if (!data) return rows;
+
+    const classifyAsset = (a: any) => {
+        const type = (a.accountType || "").toLowerCase().trim();
+        const cat = (a.category || "").toLowerCase().trim();
+        const name = (a.name || "").toLowerCase();
+        if (type === 'cash' || cat === 'cash' || name.includes('cash') || name.includes('caja') || name.includes('petty')) return 'cash';
+        if (type === 'bank' || cat === 'bank') return 'bank';
+        if (type === 'accounts receivable' || cat === 'accounts receivable') return 'ar';
+        if (type === 'other asset' || cat === 'other asset') return 'other_asset';
+        if (type === 'fixed asset' || cat === 'fixed asset') return 'fixed';
+        return 'other';
+    };
+
+    const assets = data.assets || [];
+    const cashAccounts = assets.filter((a: any) => classifyAsset(a) === 'cash');
+    const bankAccounts = assets.filter((a: any) => classifyAsset(a) === 'bank');
+    const cashTotal = cashAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const bankTotal = bankAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const cashAndEquivalentsTotal = cashTotal + bankTotal;
+
+    const arAccounts = assets.filter((a: any) => classifyAsset(a) === 'ar');
+    const arTotal = arAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
+
+    const EXCLUDE_FROM_BALANCE_SHEET = new Set([
+        'income', 'expense', 'other income', 'other expense', 'cost of goods sold',
+        'revenue', 'sales', 'input tax', 'non current liability', 'other current liability'
+    ]);
+    const isExcluded = (a: any) => {
+        const t = (a.accountType || '').toLowerCase().trim();
+        const c = (a.category || '').toLowerCase().trim();
+        return EXCLUDE_FROM_BALANCE_SHEET.has(t) || EXCLUDE_FROM_BALANCE_SHEET.has(c);
+    };
+
+    const liabilities = data.liabilities || [];
+    const isLongTermLiability = (l: any) => {
+        const t = (l.accountType || '').toLowerCase().trim();
+        const c = (l.category || '').toLowerCase().trim();
+        return t === 'non current liability' || c === 'non current liability';
+    };
+    const isOtherLiability = (l: any) => {
+        const t = (l.accountType || '').toLowerCase().trim();
+        const c = (l.category || '').toLowerCase().trim();
+        return t === 'other liability' || c === 'other liability';
+    };
+
+    const currentLiabilities = liabilities.filter((l: any) => !isLongTermLiability(l) && !isOtherLiability(l));
+    const longTermLiabilities = liabilities.filter((l: any) => isLongTermLiability(l));
+    const otherLiabilities = liabilities.filter((l: any) => isOtherLiability(l));
+
+    const currentLiabilitiesTotal = currentLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const longTermLiabilitiesTotal = longTermLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const otherLiabilitiesTotal = otherLiabilities.reduce((sum: number, l: any) => sum + l.amount, 0);
+    const totalLiabilities = currentLiabilitiesTotal + longTermLiabilitiesTotal + otherLiabilitiesTotal;
+
+    const otherCurrentAssets = assets.filter((a: any) => classifyAsset(a) === 'other').filter((a: any) => !isExcluded(a));
+    const otherCurrentAssetsTotal = otherCurrentAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const currentAssetsTotal = cashAndEquivalentsTotal + arTotal + otherCurrentAssetsTotal;
+
+    const fixedAssets = assets.filter((a: any) => classifyAsset(a) === 'fixed');
+    const fixedAssetsTotal = fixedAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const otherAssets = assets.filter((a: any) => classifyAsset(a) === 'other_asset');
+    const otherAssetsTotal = otherAssets.reduce((sum: number, a: any) => sum + a.amount, 0);
+    const nonCurrentAssetsTotal = fixedAssetsTotal + otherAssetsTotal;
+    const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
+
+    const equity = data.equity || [];
+    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period"));
+    const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
+    const databaseEquity = equity.filter((e: any) => 
+        e.code !== "RE-CURRENT" && 
+        !e.name.includes("Current Period") && 
+        !e.name.toLowerCase().includes("retained earnings") && 
+        !e.name.toLowerCase().includes("utilidades retenidas")
+    );
+    const databaseEquityTotal = databaseEquity.reduce((sum: number, e: any) => sum + e.amount, 0);
+    const staticRetainedEarnings = 258789.00;
+    const totalCapital = databaseEquityTotal + staticRetainedEarnings + resultsOfTheExercise;
+    const grandTotalLiabilitiesAndEquity = totalLiabilities + totalCapital;
+
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Current Assets", "Type": "Header", "Amount": "" });
+    cashAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Cash", "Amount": a.amount }));
+    bankAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Bank", "Amount": a.amount }));
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Cash and Cash Equivalents", "Type": "Subtotal", "Amount": cashAndEquivalentsTotal });
+
+    arAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Accounts Receivable", "Amount": a.amount }));
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Accounts Receivable", "Type": "Subtotal", "Amount": arTotal });
+
+    otherCurrentAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Current Asset", "Amount": a.amount }));
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Other Current Assets", "Type": "Subtotal", "Amount": otherCurrentAssetsTotal });
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Current Assets", "Type": "Section Total", "Amount": currentAssetsTotal });
+
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Non Current Assets", "Type": "Header", "Amount": "" });
+    fixedAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Fixed Asset", "Amount": a.amount }));
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Fixed Assets", "Type": "Subtotal", "Amount": fixedAssetsTotal });
+
+    otherAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Asset", "Amount": a.amount }));
+    if (otherAssets.length > 0) {
+        rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Other Assets", "Type": "Subtotal", "Amount": otherAssetsTotal });
+    }
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Non Current Assets", "Type": "Section Total", "Amount": nonCurrentAssetsTotal });
+    rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total Assets", "Type": "Grand Total", "Amount": totalAssets });
+
+    rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Current Liabilities", "Type": "Header", "Amount": "" });
+    currentLiabilities.forEach(l => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Current Liability", "Amount": l.amount }));
+    rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total for Current Liabilities", "Type": "Section Total", "Amount": currentLiabilitiesTotal });
+
+    if (longTermLiabilities.length > 0) {
+        rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Long-Term Liabilities", "Type": "Header", "Amount": "" });
+        longTermLiabilities.forEach(l => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Long-Term Liability", "Amount": l.amount }));
+        rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total for Long-Term Liabilities", "Type": "Section Total", "Amount": longTermLiabilitiesTotal });
+    }
+
+    rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total Liabilities", "Type": "Grand Total", "Amount": totalLiabilities });
+
+    rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Equity Capital", "Type": "Header", "Amount": "" });
+    databaseEquity.forEach(e => rows.push({ "Category": "EQUITY", "Account Code": e.code || "", "Account Name": e.name, "Type": "Equity", "Amount": e.amount }));
+    rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Retained Earnings / Utilidades Retenidas", "Type": "Equity Static", "Amount": staticRetainedEarnings });
+    rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Results of the exercise / Resultado del ejercicio", "Type": "Equity Current Result", "Amount": resultsOfTheExercise });
+    rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Total for Capital", "Type": "Section Total", "Amount": totalCapital });
+
+    rows.push({ "Category": "LIABILITIES & EQUITY", "Account Code": "", "Account Name": "Total for Liabilities and Equity", "Type": "Grand Total", "Amount": grandTotalLiabilitiesAndEquity });
+
+    return rows;
 };
 
 const FinancialStatements = () => {
@@ -125,6 +332,89 @@ const FinancialStatements = () => {
         }
     };
 
+    const handleExportExcel = () => {
+        if (!reportData) {
+            toast.error("No report data available to export.");
+            return;
+        }
+        setExporting(true);
+        const toastId = toast.loading("Generating Excel statement...");
+        try {
+            const exportRows = activeTab === 'PL' 
+                ? buildPLExportRows(reportData) 
+                : buildBSExportRows(reportData);
+
+            if (exportRows.length === 0) {
+                toast.error("No report data available to export.", { id: toastId });
+                setExporting(false);
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, activeTab === 'PL' ? "P&L Statement" : "Balance Sheet");
+
+            // Auto fit column widths
+            const keys = Object.keys(exportRows[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportRows.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `${activeTab === 'PL' ? 'Profit_Loss_Statement' : 'Balance_Sheet'}_${dateStr}.xlsx`);
+            toast.success("Excel report downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to generate Excel report.", { id: toastId });
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (!reportData) {
+            toast.error("No report data available to export.");
+            return;
+        }
+        setExporting(true);
+        const toastId = toast.loading("Generating CSV statement...");
+        try {
+            const exportRows = activeTab === 'PL' 
+                ? buildPLExportRows(reportData) 
+                : buildBSExportRows(reportData);
+
+            if (exportRows.length === 0) {
+                toast.error("No report data available to export.", { id: toastId });
+                setExporting(false);
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `${activeTab === 'PL' ? 'Profit_Loss_Statement' : 'Balance_Sheet'}_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV report downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to generate CSV report.", { id: toastId });
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div className="container-responsive space-y-6">
             {/* Header section with tab switcher */}
@@ -181,6 +471,32 @@ const FinancialStatements = () => {
                             <><FileText size={14} /> Export PDF</>
                         )}
                     </button>
+
+                    <button 
+                        disabled={exporting || loading || !reportData}
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:scale-105 active:scale-95"
+                        style={{
+                            background: 'var(--bg-input)',
+                            color: 'var(--text-main)',
+                            border: '1px solid var(--border-main)',
+                        }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Export Excel
+                    </button>
+
+                    <button 
+                        disabled={exporting || loading || !reportData}
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:scale-105 active:scale-95"
+                        style={{
+                            background: 'var(--bg-input)',
+                            color: 'var(--text-main)',
+                            border: '1px solid var(--border-main)',
+                        }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -234,9 +550,9 @@ const FinancialStatements = () => {
 
 
             {/* Main Report View */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
                 {/* Summary Card */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="space-y-6">
                     <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl overflow-hidden">
                         <div className="p-6 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
                             <h3 className="font-bold text-[var(--text-main)] flex items-center gap-2">
@@ -751,7 +1067,7 @@ const BSView = ({ data }: { data: any }) => {
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="space-y-12">
                 {/* Assets Column */}
                 <section className="space-y-6">
                     <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">

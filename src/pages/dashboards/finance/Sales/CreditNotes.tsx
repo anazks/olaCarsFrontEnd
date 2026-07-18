@@ -66,6 +66,7 @@ const CreditNotes = () => {
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [reason, setReason] = useState<string>('');
+    const [customReason, setCustomReason] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
     const [creditNoteDate, setCreditNoteDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [submitting, setSubmitting] = useState<boolean>(false);
@@ -267,7 +268,8 @@ const CreditNotes = () => {
 
     const handleCreateCreditNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCustomerId || !amount || !reason) {
+        const finalReason = reason === 'Custom' ? customReason.trim() : reason;
+        if (!selectedCustomerId || !amount || !finalReason) {
             toast.error("Fill mandatory fields.");
             return;
         }
@@ -281,7 +283,7 @@ const CreditNotes = () => {
             const payload: any = {
                 customerId: selectedCustomerId,
                 amount: Number(amount),
-                reason,
+                reason: finalReason,
                 notes,
                 creditNoteDate,
                 supportingDocument: supportingDocFile || undefined
@@ -317,6 +319,7 @@ const CreditNotes = () => {
         setSelectedInvoiceId('');
         setAmount('');
         setReason('');
+        setCustomReason('');
         setNotes('');
         setCreditNoteDate(new Date().toISOString().split('T')[0]);
         setSupportingDocFile(null);
@@ -690,8 +693,24 @@ const CreditNotes = () => {
                                     <option value="Goodwill / Rental Discount" style={{background: 'var(--bg-card)'}}>Goodwill / Rental Discount</option>
                                     <option value="Damages Dispute Refund" style={{background: 'var(--bg-card)'}}>Damages Dispute Refund</option>
                                     <option value="Administrative Correction" style={{background: 'var(--bg-card)'}}>Administrative Correction</option>
+                                    <option value="Custom" style={{background: 'var(--bg-card)'}}>Custom Reason...</option>
                                 </select>
                             </div>
+
+                            {reason === 'Custom' && (
+                                <div className="space-y-1.5 animate-in slide-in-from-top-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Specify Custom Reason *</label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={customReason} 
+                                        onChange={e => setCustomReason(e.target.value)} 
+                                        placeholder="Enter custom reason..." 
+                                        className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold outline-none" 
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-1.5"><label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>6. Notes</label><textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border rounded-xl text-xs resize-none outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
 

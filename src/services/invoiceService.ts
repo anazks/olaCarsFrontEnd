@@ -80,6 +80,7 @@ export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Inv
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
     if (filters.status) params.append('status', filters.status);
+    if (filters.invoiceType && filters.invoiceType !== 'ALL') params.append('invoiceType', filters.invoiceType);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
     if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
@@ -214,6 +215,7 @@ export const getInvoicesDateWise = async (filters: any = {}): Promise<{data: Inv
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
     if (filters.status) params.append('status', filters.status);
+    if (filters.invoiceType && filters.invoiceType !== 'ALL') params.append('invoiceType', filters.invoiceType);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
     if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
