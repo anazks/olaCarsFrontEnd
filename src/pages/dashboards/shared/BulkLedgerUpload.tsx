@@ -1,15 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, Search } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, Search, AlertCircle, Zap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
+import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getInvoices, type Invoice } from '../../../services/invoiceService';
+
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface BulkLedgerUploadProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
+    isOpen?: boolean;
+    onClose?: () => void;
+    onSuccess?: () => void;
 }
 
 interface ParsedTransaction {
@@ -23,12 +28,17 @@ interface ParsedTransaction {
     "Transaction Type": "DEBIT" | "CREDIT";
     Amount: number;
     transactionId?: string;
+    customer?: Customer;
+    customerName?: string;
+
+    accountsName?: string;
+    matchedAccount?: AccountingCode;
     _rowErrors: string[];
     _rawRow?: any;
 }
 
 const TEMPLATE_HEADERS = [
-    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'SUB ACCOUNT', 'PARENT ACCOUNT', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH'
+    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH', 'CUSTOMER NAME'
 ];
 
 const SAMPLE_ROWS = [
@@ -37,13 +47,13 @@ const SAMPLE_ROWS = [
         PREFIX: '2026',
         NUMBER: '0000001',
         'BANK NAME': 'Banco General AH 1601',
-        'SUB ACCOUNT': 'JESSICA SOTO EU8783',
-        'PARENT ACCOUNT': 'Accounts Receivable',
+        'ACCOUNTS NAME': 'JESSICA SOTO EU8783',
         RECEIPT: 100.00,
         PAYMENT: 0.00,
         DESCRIPTION: 'ACH - JESSICA VALERIA SOTO CASTRO',
         REMARKS: 'JESSICA SOTO EU8783',
-        BRANCH: 'HEAD OFFICE'
+        BRANCH: 'HEAD OFFICE',
+        'CUSTOMER NAME': 'Jessica Soto'
     }
 ];
 
@@ -92,6 +102,39 @@ const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
     return XLSX.utils.sheet_to_json(ws);
 };
 
+const findAccountingCode = (queryStr: string, codes: AccountingCode[]): AccountingCode | undefined => {
+    if (!queryStr) return undefined;
+    const cleanQuery = queryStr.trim().toLowerCase();
+    
+    // 1. Exact match on code
+    let match = codes.find(c => c.code === queryStr.trim());
+    if (match) return match;
+    
+    // 2. Exact match on name
+    match = codes.find(c => c.name.toLowerCase().trim() === cleanQuery);
+    if (match) return match;
+    
+    // 3. Partial match: if queryStr is a substring of the account name
+    match = codes.find(c => c.name.toLowerCase().includes(cleanQuery));
+    if (match) return match;
+    
+    // 4. Partial match: if the account name is a substring of queryStr
+    match = codes.find(c => cleanQuery.includes(c.name.toLowerCase().trim()));
+    if (match) return match;
+
+    // 5. Intelligent translation/keyword match for common heads
+    if (cleanQuery.includes("receivable") || cleanQuery.includes("cobrar")) {
+        match = codes.find(c => c.code === "1.1.03");
+        if (match) return match;
+    }
+    if (cleanQuery.includes("payable") || cleanQuery.includes("pagar")) {
+        match = codes.find(c => c.code === "2.1.01");
+        if (match) return match;
+    }
+    
+    return undefined;
+};
+
 const getRowVal = (r: any, keys: string[]): any => {
     if (!r) return undefined;
     for (const key of keys) {
@@ -106,7 +149,12 @@ const getRowVal = (r: any, keys: string[]): any => {
     return undefined;
 };
 
-const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps) => {
+const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps = {}) => {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const isAsPage = isOpen === undefined;
+    const queryAccountId = searchParams.get('accountId');
+
     const fileRef = useRef<HTMLInputElement>(null);
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState('');
@@ -145,49 +193,127 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
     const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
+    const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+    const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
 
-    // Load bank accounts and branches on mount
+    // Load bank accounts, branches, customers and open invoices on mount
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen || isAsPage) {
             const fetchData = async () => {
                 setLoadingData(true);
                 try {
-                    const [accountsRes, branchesRes, codesRes] = await Promise.all([
+                    const [accountsRes, branchesRes, codesRes, customersRes, invoicesRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
                         getAllBranches({ limit: 100 }),
-                        getAllAccountingCodes({ limit: 1000 })
+                        getAllAccountingCodes({ limit: 1000 }),
+                        getAllCustomers({ limit: 1000 }),
+                        getInvoices({ limit: 1000, ignoreDefaultDates: true })
                     ]);
 
                     const accountsList = accountsRes.data || accountsRes || [];
                     const branchesList = branchesRes.data || branchesRes || [];
                     const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
+                    const customersList = customersRes.data || customersRes || [];
+                    const invoiceList = invoicesRes.data || (invoicesRes as any).invoices || [];
 
-                    setAccounts(accountsList.filter((a: BankAccount) => a.status === 'ACTIVE'));
+                    const activeAccounts = accountsList.filter((a: BankAccount) => a.status === 'ACTIVE');
+                    setAccounts(activeAccounts);
                     setBranches(branchesList.filter((b: Branch) => b.status === 'ACTIVE'));
                     setAllAccountingCodes(codesList);
+                    setAllCustomers(customersList);
+                    setAllInvoices(invoiceList);
 
-                    // Auto-select "Banco General AH 1601" or first account
-                    const bg1601 = accountsList.find((a: BankAccount) =>
-                        a.accountName?.toLowerCase().includes('banco general') &&
-                        a.accountName?.toLowerCase().includes('1601')
-                    );
-                    if (bg1601) {
-                        setSelectedAccountId(bg1601._id);
-                    } else if (accountsList.length > 0) {
-                        setSelectedAccountId(accountsList[0]._id);
+                    // Auto-select query accountId if present, otherwise Banco General AH 1601 or first account
+                    if (queryAccountId && activeAccounts.some((a: BankAccount) => a._id === queryAccountId)) {
+                        setSelectedAccountId(queryAccountId);
+                    } else {
+                        const bg1601 = activeAccounts.find((a: BankAccount) =>
+                            a.accountName?.toLowerCase().includes('banco general') &&
+                            a.accountName?.toLowerCase().includes('1601')
+                        );
+                        if (bg1601) {
+                            setSelectedAccountId(bg1601._id);
+                        } else if (activeAccounts.length > 0) {
+                            setSelectedAccountId(activeAccounts[0]._id);
+                        }
                     }
-
-                    // Branches will be automatically auto-assigned per transaction row
                 } catch (err) {
                     console.error("Failed to fetch bulk upload pre-requisites", err);
-                    toast.error("Failed to load active bank accounts or branches");
+                    toast.error("Failed to load active bank accounts, branches or customers");
                 } finally {
                     setLoadingData(false);
                 }
             };
             fetchData();
         }
-    }, [isOpen]);
+    }, [isOpen, isAsPage, queryAccountId]);
+
+    const getRowSetOffPreview = useCallback((row: ParsedTransaction) => {
+        if (!row.customer || row["Transaction Type"] !== 'DEBIT') return null;
+        const customerId = row.customer._id;
+        const amount = row.Amount || 0;
+
+        // Filter open invoices for this customer
+        const openInvoices = allInvoices.filter(inv => {
+            const invCustId = typeof inv.customer === 'object' ? inv.customer?._id : inv.customer;
+            return String(invCustId) === String(customerId) &&
+                (inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE');
+        });
+
+        const partialInvoices = openInvoices
+            .filter(inv => inv.status === 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const otherInvoices = openInvoices
+            .filter(inv => inv.status !== 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sortedInvoices = [...partialInvoices, ...otherInvoices];
+
+        let remaining = amount;
+        const setOffDetails: Array<{
+            invoiceNumber: string;
+            amountApplied: number;
+            dueBalance: number;
+            newBalance: number;
+            newStatus: string;
+            dueDate?: string;
+        }> = [];
+
+        let totalSetOff = 0;
+
+        for (const inv of sortedInvoices) {
+            if (remaining <= 0.01) break;
+            const invBalance = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
+            if (invBalance <= 0) continue;
+
+            const amountToApply = Math.min(remaining, invBalance);
+            const newBal = Math.max(0, invBalance - amountToApply);
+            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+
+            setOffDetails.push({
+                invoiceNumber: inv.invoiceNumber,
+                amountApplied: amountToApply,
+                dueBalance: invBalance,
+                newBalance: newBal,
+                newStatus,
+                dueDate: inv.dueDate
+            });
+
+            totalSetOff += amountToApply;
+            remaining -= amountToApply;
+        }
+
+        const excessAmount = Math.max(0, amount - totalSetOff);
+
+        return {
+            customerName: row.customer.name,
+            receiptAmount: amount,
+            totalSetOff,
+            excessAmount,
+            setOffDetails
+        };
+    }, [allInvoices]);
 
     const parseDateFlexible = (val: any): Date | null => {
         if (val === undefined || val === null) return null;
@@ -276,23 +402,23 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             errors.push('Missing Number');
         }
 
-        const subAccountVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
         const parentAccountVal = getRowVal(row, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']);
-
-        const subAccountStr = String(subAccountVal || '').trim();
         const parentAccountStr = String(parentAccountVal || '').trim();
 
-        if (subAccountStr && !parentAccountStr) {
-            errors.push('Parent Account is required when Sub Account is specified');
+        if (parentAccountStr) {
+            const parentCode = findAccountingCode(parentAccountStr, allAccountingCodes);
+            if (!parentCode) {
+                errors.push(`Parent Account "${parentAccountStr}" not found in Chart of Accounts`);
+            }
         }
 
-        if (parentAccountStr) {
-            const parentExists = allAccountingCodes.some(c =>
-                c.code === parentAccountStr ||
-                c.name.toLowerCase().trim() === parentAccountStr.toLowerCase()
-            );
-            if (!parentExists) {
-                errors.push(`Parent Account "${parentAccountStr}" not found in Chart of Accounts`);
+        const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+        const accountsNameStr = String(accountsNameVal || '').trim();
+
+        if (accountsNameStr) {
+            const offsetCode = findAccountingCode(accountsNameStr, allAccountingCodes);
+            if (!offsetCode) {
+                errors.push(`Accounts Name "${accountsNameStr}" not found in Chart of Accounts`);
             }
         }
 
@@ -382,13 +508,19 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 balanceAccum = isCreditCard ? (balanceAccum + amountVal) : (balanceAccum - amountVal);
             }
 
+            const accountsNameVal = getRowVal(raw, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+            const accountsNameStr = String(accountsNameVal || '').trim();
+            const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
+
             return {
                 ...row,
                 "Running Balance": balanceAccum,
+                accountsName: accountsNameStr || undefined,
+                matchedAccount,
                 _rowErrors: errors
             };
         });
-    }, [validateRow]);
+    }, [validateRow, allAccountingCodes]);
 
     useEffect(() => {
         if (rows.length > 0 && selectedAccountId) {
@@ -456,6 +588,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
                 const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
                 const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
+                const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
 
                 const receiptVal = cleanNumber(rawReceipt);
                 const paymentVal = cleanNumber(rawPayment);
@@ -483,14 +616,23 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
                     : '';
 
+                let matchedCustomer: Customer | undefined = undefined;
+                if (customerNameVal && String(customerNameVal).trim()) {
+                    const cleanName = String(customerNameVal).trim().toLowerCase();
+                    matchedCustomer = allCustomers.find(c => c.name?.toLowerCase().trim() === cleanName);
+                }
+
+                const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+                const accountsNameStr = String(accountsNameVal || '').trim();
+                const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
+
                 return {
                     Date: isoDate || String(dateVal || ''),
                     Description: (() => {
                         const rawDesc = descVal.trim() || remarksVal.trim();
                         if (rawDesc) return rawDesc;
                         const typeStr = resolvedType === 'DEBIT' ? 'Deposit' : 'Withdrawal';
-                        const subAccountVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
-                        const partyStr = subAccountVal ? ` for ${subAccountVal}` : '';
+                        const partyStr = accountsNameStr ? ` for ${accountsNameStr}` : '';
                         const refStr = (prefixVal && numberVal) ? ` (Ref: ${prefixVal}-${numberVal})` : '';
                         return `${typeStr} of ${amountVal}${partyStr}${refStr}`.trim();
                     })(),
@@ -501,6 +643,11 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                     "Transaction Type": resolvedType,
                     Amount: amountVal,
                     transactionId: combinedTxId || undefined,
+                    customer: matchedCustomer,
+                    customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
+
+                    accountsName: accountsNameStr || undefined,
+                    matchedAccount: matchedAccount,
                     _rowErrors: rowErrors,
                     _rawRow: row
                 } as ParsedTransaction;
@@ -564,6 +711,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                             rest[key] = row[key];
                         }
                     }
+                    if (row.customer?._id) {
+                        rest.customerId = row.customer._id;
+                    }
                     return rest;
                 });
 
@@ -607,6 +757,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         toast.success('Template downloaded!');
     };
 
+
+
     const handleReset = () => {
         setRows([]);
         setFileName('');
@@ -620,38 +772,21 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         const hasResult = !!result;
         handleReset();
         if (hasResult) {
-            onSuccess();
+            if (onSuccess) onSuccess();
+            else navigate(-1);
         } else {
-            onClose();
+            if (onClose) onClose();
+            else navigate(-1);
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen && !isAsPage) return null;
 
     const validCount = rows.filter(r => r._rowErrors.length === 0).length;
     const errorCount = rows.filter(r => r._rowErrors.length > 0).length;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-            <div className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden animate-fade-in" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.1)' }}>
-                            <Upload size={20} style={{ color: 'var(--brand-lime)' }} />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Bulk Bank Transactions Upload</h2>
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Reset and re-import ledger transactions via Excel/CSV for specific bank accounts</p>
-                        </div>
-                    </div>
-                    <button onClick={handleClose} className="p-2 rounded-lg transition-all hover:scale-110" style={{ color: 'var(--text-dim)' }}>
-                        <X size={20} />
-                    </button>
-                </div>
-
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+    const renderMainBody = () => (
+        <div className="space-y-5">
                     {/* Percentage Loader */}
                     {uploading && (
                         <div className="p-8 border rounded-2xl flex flex-col items-center justify-center space-y-6 shadow-[0_0_40px_rgba(200,230,0,0.06)]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
@@ -855,6 +990,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                             <tr>
                                                 <th className="py-3 px-4">Date</th>
                                                 <th className="py-3 px-4">Description</th>
+                                                <th className="py-3 px-4">Account Name</th>
                                                 <th className="py-3 px-4">Details</th>
                                                 <th className="py-3 px-4">Debit</th>
                                                 <th className="py-3 px-4">Credit</th>
@@ -871,6 +1007,120 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex flex-col gap-1 min-w-[140px]">
+                                                            {/* Account Name display */}
+                                                            {row.matchedAccount ? (
+                                                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-main" title={`${row.matchedAccount.code} - ${row.matchedAccount.name}`}>
+                                                                    <span className="text-emerald-400">📂</span>
+                                                                    <span className="truncate max-w-[150px]">{row.matchedAccount.name}</span>
+                                                                </div>
+                                                            ) : row.accountsName ? (
+                                                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-400" title={`Account "${row.accountsName}" not found in Chart of Accounts`}>
+                                                                    <AlertCircle size={12} className="text-rose-400" />
+                                                                    <span className="truncate max-w-[150px]">{row.accountsName}</span>
+                                                                </div>
+                                                            ) : row.customer ? (
+                                                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-main/80">
+                                                                    <span className="text-emerald-400">📂</span>
+                                                                    <span className="truncate max-w-[150px]">{allAccountingCodes.find(c => c.code === "1.1.03")?.name || 'Accounts Receivable'}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-white/30 text-xs px-2">—</span>
+                                                            )}
+
+                                                            {/* Customer / Invoice context sub-info */}
+                                                            {row.customer ? (
+                                                                <div className="flex flex-col gap-0.5 mt-0.5 border-t border-white/5 pt-0.5">
+                                                                    <div className="flex items-center gap-1 text-[10px] text-dim">
+                                                                        <span>👤</span>
+                                                                        <span className="truncate max-w-[120px]">{row.customer.name}</span>
+                                                                    </div>
+                                                                    {row["Transaction Type"] === 'DEBIT' && (
+                                                                        <div className="mt-0.5 flex items-center gap-1">
+                                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                                                                                <Zap size={8} /> Auto Set-Off
+                                                                            </span>
+                                                                            {(() => {
+                                                                                const preview = getRowSetOffPreview(row);
+                                                                                if (!preview) return null;
+                                                                                return (
+                                                                                    <div className="relative group/info inline-block">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="w-4 h-4 rounded-full bg-violet-500/20 hover:bg-violet-500/40 text-violet-300 border border-violet-500/30 flex items-center justify-center text-[9px] font-black cursor-pointer transition-colors shadow-sm"
+                                                                                            title="Auto Set-Off Preview"
+                                                                                        >
+                                                                                            i
+                                                                                        </button>
+
+                                                                                        {/* Hover Popover Tooltip */}
+                                                                                        <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover/info:block z-50 w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all animate-fade-in">
+                                                                                            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                                                                                                <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 flex items-center gap-1">
+                                                                                                    <Zap size={10} /> Set-Off Invoice Preview
+                                                                                                </span>
+                                                                                                <span className="text-[10px] font-mono font-bold text-emerald-400">
+                                                                                                    Receipt: ${preview.receiptAmount.toFixed(2)}
+                                                                                                </span>
+                                                                                            </div>
+
+                                                                                            {preview.setOffDetails.length > 0 ? (
+                                                                                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                                                                                                    <div className="text-[9px] uppercase tracking-wider font-bold text-white/50">
+                                                                                                        Invoices to be set off ({preview.setOffDetails.length}):
+                                                                                                    </div>
+                                                                                                    {preview.setOffDetails.map((detail, dIdx) => (
+                                                                                                        <div key={dIdx} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] space-y-0.5">
+                                                                                                            <div className="flex justify-between items-center font-bold">
+                                                                                                                <span className="text-[#C8E600]">{detail.invoiceNumber}</span>
+                                                                                                                <span className={`px-1 py-0.5 rounded text-[8px] uppercase font-black ${
+                                                                                                                    detail.newStatus === 'PAID' 
+                                                                                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                                                }`}>
+                                                                                                                    {detail.newStatus}
+                                                                                                                </span>
+                                                                                                            </div>
+                                                                                                            <div className="flex justify-between text-[9px] text-white/70">
+                                                                                                                <span>Due: ${detail.dueBalance.toFixed(2)}</span>
+                                                                                                                <span className="font-bold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="text-[10px] text-amber-300/90 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                                                                                                    No open invoices found for {preview.customerName}. Full amount will be recorded as advance.
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {preview.excessAmount > 0.01 && (
+                                                                                                <div className="p-1.5 rounded-lg bg-[#C8E600]/10 border border-[#C8E600]/30 text-[10px] space-y-0.5">
+                                                                                                    <div className="flex justify-between font-bold text-[#C8E600]">
+                                                                                                        <span>Advance (2.1.02)</span>
+                                                                                                        <span>${preview.excessAmount.toFixed(2)}</span>
+                                                                                                    </div>
+                                                                                                    <div className="text-[9px] text-white/60">
+                                                                                                        Routed to Advance Received From Customer
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : row.customerName ? (
+                                                                <div className="flex items-center gap-1 text-[9px] text-rose-400/80 mt-0.5">
+                                                                    <AlertCircle size={10} />
+                                                                    <span className="truncate max-w-[120px]" title={`Customer "${row.customerName}" not found`}>{row.customerName}</span>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    </td>
                                                     <td className="py-3 px-4 max-w-[150px] truncate" title={row["Transaction Details"]}>{row["Transaction Details"] || '-'}</td>
                                                     <td className="py-3 px-4 font-mono text-emerald-500 font-semibold">{row.Debit > 0 ? `$${row.Debit.toFixed(2)}` : '-'}</td>
                                                     <td className="py-3 px-4 font-mono text-rose-500 font-semibold">{row.Credit > 0 ? `$${row.Credit.toFixed(2)}` : '-'}</td>
@@ -893,9 +1143,11 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                                         )}
                                                     </td>
                                                     <td className="py-3 px-4 text-right">
-                                                        <button onClick={() => setRows(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/40 hover:text-rose-500 transition-colors border-none cursor-pointer" title="Remove Row">
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button onClick={() => setRows(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/40 hover:text-rose-500 transition-colors border-none cursor-pointer" title="Remove Row">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -922,6 +1174,46 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                 </p>
                             </div>
 
+                            {/* Auto Set-Off Summary */}
+                            {result.setOffResults && result.setOffResults.length > 0 && (
+                                <div className="mx-auto max-w-lg text-left mt-4">
+                                    <h4 className="text-[10px] uppercase tracking-widest font-black text-violet-400 mb-2 flex items-center gap-1.5">
+                                        <Zap size={12} /> Auto Set-Off Summary
+                                    </h4>
+                                    <div className="border rounded-xl overflow-hidden divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                        {result.setOffResults.map((so: any, idx: number) => (
+                                            <div key={idx} className="p-3 space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-bold text-main">👤 {so.customerName}</span>
+                                                    <span className="text-xs font-mono font-bold text-emerald-400">${so.amount?.toFixed(2)}</span>
+                                                </div>
+                                                {so.invoicesSetOff?.length > 0 ? (
+                                                    <div className="space-y-1">
+                                                        {so.invoicesSetOff.map((inv: any, invIdx: number) => (
+                                                            <div key={invIdx} className="flex justify-between items-center text-[10px] pl-4">
+                                                                <span className="text-violet-300 font-bold">{inv.invoiceNumber}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-mono text-white/60">${inv.amountApplied?.toFixed(2)}</span>
+                                                                    <span className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${inv.newStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                                                        {inv.newStatus}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-white/40 pl-4">No unpaid invoices to set off</p>
+                                                )}
+                                                {so.excessAmount > 0.01 && (
+                                                    <p className="text-[10px] text-amber-400 pl-4">⚠️ Excess amount: ${so.excessAmount.toFixed(2)} (no more unpaid invoices)</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-[9px] text-white/30 mt-2 text-center">PaymentReceived records and ledger entries were created automatically</p>
+                                </div>
+                            )}
+
                             <div className="pt-6">
                                 <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all border-none hover:scale-105 active:scale-95 shadow-md" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
                                     Done
@@ -929,8 +1221,62 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                             </div>
                         </div>
                     )}
+        </div>
+    );
+
+    return (
+        <div className={isAsPage ? "space-y-6" : "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"}>
+            {isAsPage ? (
+                <div className="space-y-6 w-full animate-fade-in">
+                    {/* Breadcrumbs & Title */}
+                    <div className="flex flex-col gap-1">
+                        <Breadcrumbs items={[
+                            { label: 'Bulk Uploads Hub', path: '../bulk-uploads' },
+                            { label: 'Bank Transactions Upload' }
+                        ]} />
+                        <div className="flex justify-between items-center mt-2">
+                            <div>
+                                <h1 className="text-xl font-bold text-main" style={{ color: 'var(--text-main)' }}>Bulk Bank Transactions Upload</h1>
+                                <p className="text-xs text-dim mt-1" style={{ color: 'var(--text-dim)' }}>
+                                    Reset and re-import ledger transactions via Excel/CSV for specific bank accounts
+                                </p>
+                            </div>
+                            <button onClick={handleClose} className="px-4 py-2 rounded-xl text-xs font-bold transition-all border hover:bg-white/5 cursor-pointer bg-transparent" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
+                                Back
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Card */}
+                    <div className="rounded-2xl border p-6 shadow-md flex flex-col" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        {renderMainBody()}
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden animate-scale-in" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.1)' }}>
+                                <Upload size={20} style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Bulk Bank Transactions Upload</h2>
+                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Reset and re-import ledger transactions via Excel/CSV for specific bank accounts</p>
+                            </div>
+                        </div>
+                        <button onClick={handleClose} className="p-2 rounded-lg transition-all hover:scale-110 border-none bg-transparent cursor-pointer" style={{ color: 'var(--text-dim)' }}>
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                        {renderMainBody()}
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 };

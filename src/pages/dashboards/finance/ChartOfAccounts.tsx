@@ -48,6 +48,45 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<AccountingCategory | 'ALL'>('ALL');
     const [activeAccountTypeFilter, setActiveAccountTypeFilter] = useState<string>('');
 
+    // Collapse / Expand state
+    const [collapsedAccountIds, setCollapsedAccountIds] = useState<Record<string, boolean>>({});
+
+    const toggleCollapse = (id: string) => {
+        setCollapsedAccountIds(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
+    // Auto-collapse parents by default when codes load
+    useEffect(() => {
+        if (codes.length > 0) {
+            const parentIds = new Set<string>();
+            codes.forEach(c => {
+                const parentId = c.parentAccount
+                    ? (typeof c.parentAccount === 'object'
+                        ? (c.parentAccount._id || (c.parentAccount as any).id)
+                        : String(c.parentAccount))
+                    : null;
+                if (parentId) {
+                    parentIds.add(parentId);
+                }
+            });
+
+            setCollapsedAccountIds(prev => {
+                const next = { ...prev };
+                let updated = false;
+                parentIds.forEach(id => {
+                    if (next[id] === undefined) {
+                        next[id] = true; // default to collapsed
+                        updated = true;
+                    }
+                });
+                return updated ? next : prev;
+            });
+        }
+    }, [codes]);
+
     // Pagination, Sorting & Search States
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'code' | 'name' | 'category' | 'createdAt'>('code');
@@ -305,7 +344,8 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         const traverse = (node: AccountingCode, depth: number) => {
             result.push({ ...node, depth });
             const nodeId = node._id || (node as any).id;
-            if (nodeId && idToChildren[nodeId]) {
+            // Only traverse children if parent is expanded
+            if (nodeId && idToChildren[nodeId] && !collapsedAccountIds[nodeId]) {
                 const children = idToChildren[nodeId];
                 children.sort((a, b) => a.code.localeCompare(b.code));
                 children.forEach(child => {
@@ -320,6 +360,18 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
         return result;
     };
+
+    const parentIdsWithChildren = new Set<string>();
+    codes.forEach(c => {
+        const parentId = c.parentAccount
+            ? (typeof c.parentAccount === 'object'
+                ? (c.parentAccount._id || (c.parentAccount as any).id)
+                : String(c.parentAccount))
+            : null;
+        if (parentId) {
+            parentIdsWithChildren.add(parentId);
+        }
+    });
 
     const hierarchicalCodes = getHierarchicalCodes(codes);
     const filteredCodes = hierarchicalCodes.filter(c => {
@@ -346,9 +398,33 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                         onClick={fetchCodes}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        title="Refresh Chart"
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
+                    {parentIdsWithChildren.size > 0 && (
+                        <button
+                            onClick={() => {
+                                const anyExpanded = Array.from(parentIdsWithChildren).some(id => !collapsedAccountIds[id]);
+                                if (anyExpanded) {
+                                    // Collapse All: set all parent IDs to true
+                                    const nextCollapsed: Record<string, boolean> = {};
+                                    parentIdsWithChildren.forEach(id => {
+                                        nextCollapsed[id] = true;
+                                    });
+                                    setCollapsedAccountIds(nextCollapsed);
+                                } else {
+                                    // Expand All: clear collapsed status
+                                    setCollapsedAccountIds({});
+                                }
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-black uppercase tracking-wide transition-all hover:bg-white/5 cursor-pointer hover:scale-105 active:scale-95 shadow-md"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            title={Array.from(parentIdsWithChildren).some(id => !collapsedAccountIds[id]) ? "Collapse All" : "Expand All"}
+                        >
+                            {Array.from(parentIdsWithChildren).some(id => !collapsedAccountIds[id]) ? "Collapse All" : "Expand All"}
+                        </button>
+                    )}
                     {canManageCodes && !isAddRouteActive && (
                         <>
                             <button
@@ -912,15 +988,34 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                             ? `${c.parentAccount.code} - ${c.parentAccount.name}`
                                             : String(c.parentAccount))
                                         : '—';
+                                    const hasChildren = parentIdsWithChildren.has(codeId);
+                                    const isCollapsed = !!collapsedAccountIds[codeId];
+
                                     return (
                                         <tr key={codeId} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4">
                                                 <div className="font-mono text-sm font-bold" style={{ color: 'var(--text-main)' }}>{c.code}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="font-medium text-sm flex items-center gap-1.5" style={{ color: 'var(--text-main)', paddingLeft: `${c.depth * 20}px` }}>
-                                                    {c.depth > 0 && <span className="opacity-45 text-[11px] font-mono select-none" style={{ color: 'var(--text-dim)' }}>↳</span>}
-                                                    {c.name}
+                                                <div className="font-medium text-sm flex items-center gap-2" style={{ color: 'var(--text-main)', paddingLeft: `${c.depth * 20}px` }}>
+                                                    {hasChildren ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleCollapse(codeId);
+                                                            }}
+                                                            className="p-1 rounded-lg hover:bg-white/10 text-brand-lime transition-all duration-200 cursor-pointer flex items-center justify-center"
+                                                            style={{ color: 'var(--brand-lime)' }}
+                                                            title={isCollapsed ? "Expand" : "Collapse"}
+                                                        >
+                                                            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                                                        </button>
+                                                    ) : (
+                                                        <div className="w-6 h-6 flex items-center justify-center">
+                                                            {c.depth > 0 && <span className="opacity-30 text-[10px] font-mono select-none" style={{ color: 'var(--text-dim)' }}>↳</span>}
+                                                        </div>
+                                                    )}
+                                                    <span>{c.name}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-main)' }}>

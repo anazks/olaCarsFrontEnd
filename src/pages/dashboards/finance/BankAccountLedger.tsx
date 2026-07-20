@@ -23,7 +23,7 @@ import { getBankAccountById, type BankAccount, uploadBankStatement, recordManual
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
-import { getInvoicesByCustomer, type Invoice } from '../../../services/invoiceService';
+import { getInvoicesByCustomer, getInvoices, type Invoice } from '../../../services/invoiceService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
@@ -63,9 +63,20 @@ const BankAccountLedger = () => {
     const [editEntries, setEditEntries] = useState<any[]>([]);
     const [allBankAccountsList, setAllBankAccountsList] = useState<BankAccount[]>([]);
     const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
+    const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    // Change Invoice Sidebar States
+    const [invoiceSidebarOpen, setInvoiceSidebarOpen] = useState(false);
+    const [invoiceSidebarEntryIdx, setInvoiceSidebarEntryIdx] = useState<number | null>(null);
+    const [sidebarCustomers, setSidebarCustomers] = useState<Customer[]>([]);
+    const [sidebarCustomerSearch, setSidebarCustomerSearch] = useState('');
+    const [sidebarSelectedCustomer, setSidebarSelectedCustomer] = useState<Customer | null>(null);
+    const [sidebarInvoices, setSidebarInvoices] = useState<Invoice[]>([]);
+    const [sidebarLoadingInvoices, setSidebarLoadingInvoices] = useState(false);
+    const [sidebarLoadingCustomers, setSidebarLoadingCustomers] = useState(false);
 
     useEffect(() => {
         setSelectedIds([]);
@@ -75,32 +86,75 @@ const BankAccountLedger = () => {
         if (isBulkEditing) {
             const loadDataAndInitialize = async () => {
                 try {
-                    const [banksRes, codesRes] = await Promise.all([
+                    const [banksRes, codesRes, invoicesRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
-                        getAllAccountingCodes()
+                        getAllAccountingCodes(),
+                        getInvoices({ limit: 1000, ignoreDefaultDates: true })
                     ]);
 
                     const bankList = banksRes.data || [];
                     const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
+                    const invoiceList = invoicesRes.data || (invoicesRes as any).invoices || [];
 
                     setAllBankAccountsList(bankList);
                     setAllAccountingCodes(codesList);
+                    setAllInvoices(invoiceList);
 
                     const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
                         const targetBankId = (e as any).bankAccountId || id;
-                        const bank = bankList.find((b: any) => b._id === targetBankId);
+                        const bank = bankList.find((b: any) => String(b._id) === String(targetBankId));
+
+                        // Find the appropriate accounting code/offset account from the entry's partner leg or accountingCode
+                        const targetCodeId = (e as any).accountingCode || '';
+                        const matchedCode = codesList.find((c: any) =>
+                            String(c._id) === String(targetCodeId) ||
+                            (c.code || '').toLowerCase().trim() === String(targetCodeId).toLowerCase().trim() ||
+                            (c.name || '').toLowerCase().trim() === String(targetCodeId).toLowerCase().trim()
+                        );
+
+                        // Find the linked invoice if any
+                        let targetInvoiceId = (e as any).invoice || '';
+                        if (!targetInvoiceId && e.description) {
+                            const entityMatch = e.description.match(/entity_number:\s*([^\s|\]]+)/i);
+                            if (entityMatch) {
+                                targetInvoiceId = entityMatch[1];
+                            } else {
+                                const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+                                const matchInvoice = e.description.match(invoiceRegex);
+                                if (matchInvoice) {
+                                    targetInvoiceId = matchInvoice[0];
+                                }
+                            }
+                        }
+
+                        const matchedInvoice = invoiceList.find((inv: any) =>
+                            String(inv._id) === String(targetInvoiceId) ||
+                            (inv.invoiceNumber || '').toLowerCase().trim() === String(targetInvoiceId).toLowerCase().trim()
+                        );
+
+                        // Resolve customer if invoice has one
+                        let resolvedCustomerId = (e as any).customer || '';
+                        if (matchedInvoice) {
+                            const custId = typeof matchedInvoice.customer === 'object' && matchedInvoice.customer
+                                ? matchedInvoice.customer._id
+                                : matchedInvoice.customer;
+                            if (custId) resolvedCustomerId = custId;
+                        }
+
                         return {
                             id: e._id,
                             entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
                             description: e.description || '',
                             type: e.type || 'DEBIT',
                             amount: e.amount || 0,
-                            accountsName: (e as any).accountsName || '',
-                            parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                            accountingCode: matchedCode ? matchedCode._id : '',
+                            tempAccountingCodeName: matchedCode ? `${matchedCode.code} - ${matchedCode.name}` : (targetCodeId || ''),
                             bankAccountId: targetBankId,
                             bankName: bank ? (bank.accountName || bank.bankName) : '',
                             tempBankName: bank ? (bank.accountName || bank.bankName) : '',
-                            tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
+                            invoice: matchedInvoice ? matchedInvoice._id : '',
+                            originalInvoice: matchedInvoice ? matchedInvoice._id : '',
+                            customer: resolvedCustomerId
                         };
                     });
                     setEditEntries(selected);
@@ -603,11 +657,183 @@ const BankAccountLedger = () => {
         return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
     };
 
+    // === Change / Link Customer Sidebar Handlers (Auto Set-off) ===
+    const openInvoiceSidebar = async (entryIdx: number) => {
+        setInvoiceSidebarEntryIdx(entryIdx);
+        setInvoiceSidebarOpen(true);
+        setSidebarCustomerSearch('');
+        setSidebarSelectedCustomer(null);
+        setSidebarInvoices([]);
+        setSidebarLoadingCustomers(true);
+        try {
+            const res = await getAllCustomers({ status: 'ACTIVE', limit: 500 });
+            setSidebarCustomers(res.data || (res as any).customers || []);
+        } catch (err) {
+            console.error('Failed to fetch customers for sidebar', err);
+            toast.error('Failed to load customers');
+        } finally {
+            setSidebarLoadingCustomers(false);
+        }
+    };
+
+    const closeInvoiceSidebar = () => {
+        setInvoiceSidebarOpen(false);
+        setInvoiceSidebarEntryIdx(null);
+        setSidebarCustomerSearch('');
+        setSidebarSelectedCustomer(null);
+        setSidebarInvoices([]);
+    };
+
+    const handleCustomerClickForPreview = async (customer: Customer) => {
+        setSidebarSelectedCustomer(customer);
+        setSidebarLoadingInvoices(true);
+        try {
+            const invs = await getInvoicesByCustomer(customer._id);
+            const openInvs = invs.filter(inv => inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE');
+            setSidebarInvoices(openInvs);
+        } catch (err) {
+            console.error('Failed to fetch customer invoices for set-off preview', err);
+            setSidebarInvoices([]);
+        } finally {
+            setSidebarLoadingInvoices(false);
+        }
+    };
+
+    const calculateSetOffSimulation = () => {
+        if (invoiceSidebarEntryIdx === null || !sidebarSelectedCustomer) return null;
+        const entry = editEntries[invoiceSidebarEntryIdx];
+        const amount = entry?.amount || 0;
+
+        const partialInvoices = sidebarInvoices
+            .filter(inv => inv.status === 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const otherInvoices = sidebarInvoices
+            .filter(inv => inv.status !== 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sortedInvoices = [...partialInvoices, ...otherInvoices];
+
+        let remaining = amount;
+        const setOffDetails: Array<{
+            invoice: Invoice;
+            amountApplied: number;
+            newBalance: number;
+            newStatus: string;
+        }> = [];
+
+        let totalSetOff = 0;
+
+        for (const inv of sortedInvoices) {
+            if (remaining <= 0.01) break;
+            const invBalance = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
+            if (invBalance <= 0) continue;
+
+            const amountToApply = Math.min(remaining, invBalance);
+            const newBal = Math.max(0, invBalance - amountToApply);
+            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+
+            setOffDetails.push({
+                invoice: inv,
+                amountApplied: amountToApply,
+                newBalance: newBal,
+                newStatus
+            });
+
+            totalSetOff += amountToApply;
+            remaining -= amountToApply;
+        }
+
+        const excessAmount = Math.max(0, amount - totalSetOff);
+
+        return {
+            amount,
+            totalSetOff,
+            excessAmount,
+            setOffDetails,
+            customer: sidebarSelectedCustomer
+        };
+    };
+
+    const handleSidebarCustomerSelect = (customer: Customer) => {
+        if (invoiceSidebarEntryIdx === null) return;
+
+        const updated = [...editEntries];
+        const entry = updated[invoiceSidebarEntryIdx];
+
+        // Assign Customer for Auto Set-off
+        entry.customer = customer._id;
+        entry.customerName = customer.name;
+        entry.invoice = undefined; // backend will auto-assign set-off invoices
+
+        const simulation = calculateSetOffSimulation();
+        if (simulation) {
+            (entry as any).setOffSummary = {
+                totalSetOff: simulation.totalSetOff,
+                invoiceCount: simulation.setOffDetails.length,
+                excessAmount: simulation.excessAmount,
+                invoices: simulation.setOffDetails.map(d => ({
+                    invoiceNumber: d.invoice.invoiceNumber,
+                    amountApplied: d.amountApplied
+                }))
+            };
+        }
+
+        // Auto-resolve offset account to Accounts Receivable (code 1.1.03)
+        const arCode = allAccountingCodes.find((c: any) => {
+            const code = String(c.code || '').trim();
+            const name = String(c.name || '').toLowerCase();
+            const type = String(c.type || c.accountType || '').toLowerCase();
+            return code === '1.1.03' || type.includes('receivable') || name.includes('accounts receivable');
+        });
+        if (arCode) {
+            entry.accountingCode = arCode._id;
+            entry.tempAccountingCodeName = `${arCode.code} - ${arCode.name}`;
+        }
+
+        setEditEntries(updated);
+        toast.success(`Assigned ${customer.name} for automatic invoice set-off`);
+        closeInvoiceSidebar();
+    };
+
+    const handleUnlinkInvoice = (entryIdx: number) => {
+        const updated = [...editEntries];
+        updated[entryIdx].invoice = undefined;
+        updated[entryIdx].customer = undefined;
+        updated[entryIdx].customerName = undefined;
+        (updated[entryIdx] as any).setOffSummary = undefined;
+
+        // Clear the auto-set AR code so user can pick an offset account
+        updated[entryIdx].accountingCode = '';
+        updated[entryIdx].tempAccountingCodeName = '';
+
+        // Remove invoice number from description text if present
+        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+        const matchInvoice = updated[entryIdx].description.match(invoiceRegex);
+        if (matchInvoice) {
+            updated[entryIdx].description = updated[entryIdx].description.replace(matchInvoice[0], '').trim();
+            updated[entryIdx].description = updated[entryIdx].description
+                .replace(/\s*-\s*$/, '')
+                .replace(/^\s*-\s*/, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+        }
+
+        setEditEntries(updated);
+        toast.success('Customer unlinked from transaction');
+    };
+
+    const filteredSidebarCustomers = sidebarCustomers.filter(c =>
+        c.name?.toLowerCase().includes(sidebarCustomerSearch.toLowerCase()) ||
+        c.customerId?.toLowerCase().includes(sidebarCustomerSearch.toLowerCase())
+    );
+
     const handleBulkEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!id) return;
 
-        for (const entry of editEntries) {
+        for (let i = 0; i < editEntries.length; i++) {
+            const entry = editEntries[i];
             if (!entry.description) {
                 toast.error('All descriptions must be filled');
                 return;
@@ -616,12 +842,48 @@ const BankAccountLedger = () => {
                 toast.error('All amounts must be greater than zero');
                 return;
             }
+
+            // Skip offset account validation for invoice-connected entries (they show "Null")
+            if (!entry.invoice) {
+                const hasMatchedCode = allAccountingCodes.some(c =>
+                    String(c._id) === String(entry.accountingCode) ||
+                    (c.name || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
+                    (c.code || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
+                    `${c.code} - ${c.name}`.toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim()
+                );
+                if (!hasMatchedCode) {
+                    toast.error(`Row ${i + 1}: Offset Account "${entry.accountingCode || 'N/A'}" is not found in Chart of Accounts.`);
+                    return;
+                }
+            }
         }
 
         try {
             setSaving(true);
             const { bulkEditBankAccountTransactions } = await import('../../../services/bankAccountService');
-            await bulkEditBankAccountTransactions(id, editEntries);
+
+             const updatesPayload = editEntries.map(entry => {
+                const resolvedCodeObj = allAccountingCodes.find(c =>
+                    String(c._id) === String(entry.accountingCode) ||
+                    (c.name || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
+                    (c.code || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
+                    `${c.code} - ${c.name}`.toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim()
+                );
+
+                return {
+                    id: entry.id,
+                    entryDate: entry.entryDate,
+                    description: entry.description,
+                    type: entry.type,
+                    amount: entry.amount,
+                    bankAccountId: entry.bankAccountId,
+                    accountingCode: resolvedCodeObj ? resolvedCodeObj._id : entry.accountingCode,
+                    customer: entry.customer || undefined,
+                    invoice: entry.invoice || undefined
+                };
+            });
+
+            await bulkEditBankAccountTransactions(id, updatesPayload);
             toast.success('Transactions updated and running balances recalculated successfully.');
             setIsBulkEditing(false);
             setSelectedIds([]);
@@ -782,9 +1044,9 @@ const BankAccountLedger = () => {
                                     <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Bank Name</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Parent Account</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Sub Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-40">Connected Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-52">Offset Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64">Customer Set-off</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36">Type</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36 text-right">Amount ($)</th>
                                     </tr>
@@ -823,7 +1085,7 @@ const BankAccountLedger = () => {
                                             <td className="px-6 py-4">
                                                 <input
                                                     type="text"
-                                                    placeholder="Search Bank Name..."
+                                                    placeholder="Search Connected Account..."
                                                     value={entry.tempBankName || ''}
                                                     list={`bank-list-${idx}`}
                                                     onChange={e => {
@@ -831,7 +1093,7 @@ const BankAccountLedger = () => {
                                                         const updated = [...editEntries];
                                                         updated[idx].tempBankName = val;
                                                         updated[idx].bankName = val;
-                                                        
+
                                                         // Look up matching bank ID
                                                         const match = allBankAccountsList.find(b =>
                                                             (b.accountName || '').toLowerCase().trim() === val.toLowerCase().trim() ||
@@ -854,69 +1116,99 @@ const BankAccountLedger = () => {
                                                     ))}
                                                 </datalist>
                                             </td>
+                                            {/* Offset Account: show "Null" for customer set-off, editable for others */}
                                             <td className="px-6 py-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search Parent Account..."
-                                                    value={entry.tempParentAccountName || entry.parentAccount || ''}
-                                                    list={`parent-list-${idx}`}
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        const updated = [...editEntries];
-                                                        updated[idx].tempParentAccountName = val;
-                                                        updated[idx].parentAccount = val;
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    required
-                                                />
-                                                <datalist id={`parent-list-${idx}`}>
-                                                    {(allAccountingCodes.filter(c => !c.parentAccount).length > 0
-                                                        ? allAccountingCodes.filter(c => !c.parentAccount)
-                                                        : allAccountingCodes
-                                                    ).map(p => (
-                                                        <option key={p._id} value={p.name}>
-                                                            {p.code}
-                                                        </option>
-                                                    ))}
-                                                </datalist>
+                                                {entry.customer || entry.invoice ? (
+                                                    <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold italic opacity-50" style={{ color: 'var(--text-dim)' }}>
+                                                        Null
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search Offset Account..."
+                                                            value={entry.tempAccountingCodeName || ''}
+                                                            list={`accounting-name-list-${idx}`}
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                const updated = [...editEntries];
+                                                                updated[idx].tempAccountingCodeName = val;
+                                                                updated[idx].accountingCode = val;
+
+                                                                const match = allAccountingCodes.find(c =>
+                                                                    (c.name || '').toLowerCase().trim() === val.toLowerCase().trim() ||
+                                                                    (c.code || '').toLowerCase().trim() === val.toLowerCase().trim() ||
+                                                                    `${c.code} - ${c.name}`.toLowerCase().trim() === val.toLowerCase().trim()
+                                                                );
+                                                                if (match) {
+                                                                    updated[idx].accountingCode = match._id;
+                                                                    updated[idx].tempAccountingCodeName = `${match.code} - ${match.name}`;
+                                                                }
+                                                                setEditEntries(updated);
+                                                            }}
+                                                            className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                            required
+                                                        />
+                                                        <datalist id={`accounting-name-list-${idx}`}>
+                                                            {allAccountingCodes.map(c => (
+                                                                <option key={c._id} value={`${c.code} - ${c.name}`}>
+                                                                    {c.category}
+                                                                </option>
+                                                            ))}
+                                                        </datalist>
+                                                    </>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. JESSICA SOTO"
-                                                    value={entry.accountsName}
-                                                    list={`accounts-list-${idx}`}
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        const updated = [...editEntries];
-                                                        updated[idx].accountsName = val;
-                                                        
-                                                        // Auto-fill parent account if it matches an existing accounting code
-                                                        const match = allAccountingCodes.find(c => c.name.toLowerCase().trim() === val.toLowerCase().trim());
-                                                        if (match) {
-                                                            const parentObj = typeof match.parentAccount === 'object' && match.parentAccount ? match.parentAccount : null;
-                                                            const parentName = parentObj
-                                                                ? parentObj.name
-                                                                : (allAccountingCodes.find(p => p._id === match.parentAccount)?.name || '');
-                                                            if (parentName) {
-                                                                updated[idx].parentAccount = parentName;
-                                                                updated[idx].tempParentAccountName = parentName;
-                                                            }
-                                                        }
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                />
-                                                <datalist id={`accounts-list-${idx}`}>
-                                                    {allAccountingCodes.filter(c => c.parentAccount).map(c => (
-                                                        <option key={c._id} value={c.name}>
-                                                            {c.code} - {c.category}
-                                                        </option>
-                                                    ))}
-                                                </datalist>
+                                                <div className="flex flex-col gap-2">
+                                                    {entry.customer || entry.customerName || entry.invoice ? (
+                                                        <>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 self-start">
+                                                                    Auto Set-off: {entry.customerName || 'Customer Assigned'}
+                                                                </span>
+                                                                {(entry as any).setOffSummary && (
+                                                                    <div className="text-[10px] space-y-0.5 opacity-90 pl-1">
+                                                                        {(entry as any).setOffSummary.invoices?.map((inv: any, iIdx: number) => (
+                                                                            <div key={iIdx} className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                                                                ⚡ Set off: {inv.invoiceNumber} (${inv.amountApplied?.toFixed(2)})
+                                                                            </div>
+                                                                        ))}
+                                                                        {(entry as any).setOffSummary.excessAmount > 0 && (
+                                                                            <div className="text-[#C8E600] font-bold">
+                                                                                ⚡ Advance (2.1.02): ${(entry as any).setOffSummary.excessAmount?.toFixed(2)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openInvoiceSidebar(idx)}
+                                                                    className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-black/10 dark:bg-white/5 hover:bg-black/20 dark:hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
+                                                                    style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
+                                                                >
+                                                                    Change Customer
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold italic opacity-50" style={{ color: 'var(--text-dim)' }}>
+                                                                Null
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openInvoiceSidebar(idx)}
+                                                                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/25 text-[#C8E600] border border-[#C8E600]/20 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                Link Customer
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <select
@@ -981,6 +1273,236 @@ const BankAccountLedger = () => {
                         </button>
                     </div>
                 </form>
+
+                {/* Change/Link Customer Sidebar */}
+                {invoiceSidebarOpen && (
+                    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+                        {/* Backdrop */}
+                        <div 
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                            onClick={closeInvoiceSidebar}
+                        />
+
+                        {/* Sidebar content */}
+                        <div 
+                            className="relative w-full max-w-md bg-card border-l h-full shadow-2xl flex flex-col z-10 animate-slide-in-right"
+                            style={{ 
+                                background: 'var(--bg-card)', 
+                                borderColor: 'var(--border-main)',
+                                animation: 'slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                            }}
+                        >
+                            {/* Keyframes for animation */}
+                            <style>{`
+                                @keyframes slideIn {
+                                    from { transform: translateX(100%); }
+                                    to { transform: translateX(0); }
+                                }
+                            `}</style>
+
+                            {/* Header */}
+                            <div className="p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
+                                        Link Customer (Auto Set-off)
+                                    </h3>
+                                    <button 
+                                        type="button"
+                                        onClick={closeInvoiceSidebar}
+                                        className="text-xs font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                                        style={{ color: 'var(--text-dim)' }}
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                                {invoiceSidebarEntryIdx !== null && (() => {
+                                    const entry = editEntries[invoiceSidebarEntryIdx];
+                                    return (
+                                        <div className="mt-4 p-3 bg-black/10 dark:bg-white/5 rounded-xl border border-white/5 space-y-2 text-xs">
+                                            <div>
+                                                <span className="opacity-60">Transaction: </span>
+                                                <strong style={{ color: 'var(--text-main)' }}>{entry?.description}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="opacity-60">Amount: </span>
+                                                <strong style={{ color: 'var(--text-main)' }}>${entry?.amount}</strong>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Main Body */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {sidebarSelectedCustomer ? (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between p-3 rounded-xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div>
+                                                <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{sidebarSelectedCustomer.name}</div>
+                                                <div className="text-[10px] opacity-60 mt-0.5">{sidebarSelectedCustomer.customerId || 'No ID'}</div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSidebarSelectedCustomer(null)}
+                                                className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600] hover:underline"
+                                            >
+                                                Change Customer
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center text-xs font-bold">
+                                                <span className="uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                                    Automated Set-Off Simulation
+                                                </span>
+                                                {invoiceSidebarEntryIdx !== null && (
+                                                    <span className="text-[#C8E600] font-black">
+                                                        Receipt: ${editEntries[invoiceSidebarEntryIdx]?.amount?.toFixed(2)}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {sidebarLoadingInvoices ? (
+                                                <div className="text-xs font-bold py-6 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                    Loading customer invoices & calculating set-off...
+                                                </div>
+                                            ) : (() => {
+                                                const sim = calculateSetOffSimulation();
+                                                if (!sim) return null;
+
+                                                return (
+                                                    <div className="space-y-3">
+                                                        {sim.setOffDetails.length > 0 ? (
+                                                            <div className="border rounded-xl p-3 space-y-2.5 bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                                                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex justify-between">
+                                                                    <span>Invoices to be Set Off ({sim.setOffDetails.length})</span>
+                                                                    <span>Applied: ${sim.totalSetOff.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                                                    {sim.setOffDetails.map((detail, dIdx) => (
+                                                                        <div key={dIdx} className="p-2.5 rounded-lg border bg-black/10 dark:bg-white/5 border-white/10 text-xs space-y-1">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="font-bold text-[#C8E600]">{detail.invoice.invoiceNumber}</span>
+                                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                                                                    detail.newStatus === 'PAID' 
+                                                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                }`}>
+                                                                                    {detail.newStatus}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex justify-between text-[11px] opacity-70">
+                                                                                <span>Due: ${detail.invoice.balance ?? (detail.invoice.totalAmountDue - (detail.invoice.amountPaid || 0))}</span>
+                                                                                <span className="font-semibold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
+                                                                            </div>
+                                                                            {detail.newBalance > 0 && (
+                                                                                <div className="text-[10px] opacity-50 text-right">
+                                                                                    New Balance: ${detail.newBalance.toFixed(2)}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs text-amber-300 space-y-1">
+                                                                <div className="font-bold flex items-center gap-1.5">
+                                                                    <Info size={14} /> No Open Invoices Found
+                                                                </div>
+                                                                <p className="text-[11px] opacity-80">
+                                                                    Customer has no open invoices. The full amount will be registered as an advance.
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {sim.excessAmount > 0 && (
+                                                            <div className="p-3 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 text-xs space-y-1">
+                                                                <div className="font-bold flex justify-between items-center text-[#C8E600]">
+                                                                    <span>Advance Received (2.1.02)</span>
+                                                                    <span className="text-sm font-black">${sim.excessAmount.toFixed(2)}</span>
+                                                                </div>
+                                                                <p className="text-[10px] opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                                    Will be routed to Account 2.1.02 Advance Received From Customer
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="pt-2 flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSidebarCustomerSelect(sidebarSelectedCustomer)}
+                                                                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-[#C8E600] text-black hover:bg-[#b5cf00] transition-colors cursor-pointer text-center"
+                                                            >
+                                                                Confirm & Apply Customer Set-off
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSidebarSelectedCustomer(null)}
+                                                                className="py-2.5 px-3 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                                                                style={{ color: 'var(--text-main)' }}
+                                                            >
+                                                                Back
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                            Select Customer for Automated Set-off Preview
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="text"
+                                                placeholder="Search customer by name or ID..."
+                                                value={sidebarCustomerSearch}
+                                                onChange={(e) => setSidebarCustomerSearch(e.target.value)}
+                                                className="w-full bg-transparent border rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-[#C8E600]"
+                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                            <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
+                                        </div>
+
+                                        {sidebarLoadingCustomers ? (
+                                            <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                Loading customers...
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                                                {filteredSidebarCustomers.length === 0 ? (
+                                                    <div className="text-xs py-4 text-center text-amber-500 font-medium">
+                                                        No active customers found
+                                                    </div>
+                                                ) : (
+                                                    filteredSidebarCustomers.map(cust => (
+                                                        <button
+                                                            key={cust._id}
+                                                            type="button"
+                                                            onClick={() => handleCustomerClickForPreview(cust)}
+                                                            className="w-full text-left p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex justify-between items-center cursor-pointer group"
+                                                            style={{ borderColor: 'var(--border-main)' }}
+                                                        >
+                                                            <div>
+                                                                <div className="text-xs font-bold group-hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-main)' }}>{cust.name}</div>
+                                                                <div className="text-[10px] opacity-60 mt-0.5">{cust.customerId || 'No ID'}</div>
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-[#C8E600] opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                                Preview Set-off <ArrowDownRight size={13} />
+                                                            </span>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

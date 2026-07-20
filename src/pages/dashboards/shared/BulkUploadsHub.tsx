@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -18,12 +19,12 @@ import BulkPurchaseOrderUpload from './BulkPurchaseOrderUpload';
 import BulkBillUpload from './BulkBillUpload';
 import BulkVendorPaymentUpload from './BulkVendorPaymentUpload';
 import BulkExpenseUpload from './BulkExpenseUpload';
-import BulkLedgerUpload from './BulkLedgerUpload';
 import BulkRentUpdateUpload from './BulkRentUpdateUpload';
 
 type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | 'vehicle-rent' | null;
 
 const BulkUploadsHub = () => {
+    const navigate = useNavigate();
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
@@ -1126,7 +1127,7 @@ const BulkUploadsHub = () => {
                                 <button onClick={() => handleDownloadTemplate('ledger', 'csv')} className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer">CSV</button>
                             </div>
                         </div>
-                        <button onClick={() => setActiveModal('ledger')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
+                        <button onClick={() => navigate('../bulk-bank-upload')} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>Launch Importer <ArrowRight size={14} /></button>
                     </div>
                 </div>
 
@@ -1277,12 +1278,6 @@ const BulkUploadsHub = () => {
                 isOpen={activeModal === 'expense'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => { setActiveModal(null); }}
-            />
-
-            <BulkLedgerUpload
-                isOpen={activeModal === 'ledger'}
-                onClose={() => setActiveModal(null)}
-                onSuccess={() => setActiveModal(null)}
             />
 
             <BulkRentUpdateUpload

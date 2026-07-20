@@ -128,16 +128,35 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
     const str = dateStr.toString().trim();
     if (!str) return null;
 
+    // 1. Check YYYY-MM-DD or YYYY/MM/DD
+    const ymdRegex = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
+    let match = str.match(ymdRegex);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day);
+    }
+
+    // 2. Check DD-MM-YYYY or DD/MM/YYYY
     const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
-    const match = str.match(dmyRegex);
+    match = str.match(dmyRegex);
     if (match) {
         const day = parseInt(match[1], 10);
         const month = parseInt(match[2], 10) - 1;
         const year = parseInt(match[3], 10);
-        const date = new Date(year, month, day);
-        if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
-            return date;
-        }
+        return new Date(year, month, day);
+    }
+
+    // 3. Check DD-MM-YY or DD/MM/YY
+    const dmyShortRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{2})$/;
+    match = str.match(dmyShortRegex);
+    if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        let year = parseInt(match[3], 10);
+        year = year < 50 ? 2000 + year : 1900 + year;
+        return new Date(year, month, day);
     }
 
     const parsedDate = new Date(str);
@@ -166,8 +185,12 @@ const getRowVal = (r: any, possibleKeys: string[]): any => {
 const normalizeRowDates = (row: any): any => {
     const updated = { ...row };
     
-    const dueDateVal = getRowVal(row, ['Due Date', 'dueDate']);
-    const dueDateKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'due date') || 'Due Date';
+    const dueDateVal = getRowVal(row, ['Due Date', 'dueDate', 'due_date']);
+    const dueDateKey = Object.keys(row).find(k => {
+        const clean = k.trim().toLowerCase();
+        return clean === 'due date' || clean === 'duedate' || clean === 'due_date';
+    }) || 'Due Date';
+    
     if (dueDateVal) {
         const parsed = parseFlexibleDate(dueDateVal);
         if (parsed) {
@@ -175,11 +198,18 @@ const normalizeRowDates = (row: any): any => {
             const mm = String(parsed.getMonth() + 1).padStart(2, '0');
             const dd = String(parsed.getDate()).padStart(2, '0');
             updated[dueDateKey] = `${yyyy}-${mm}-${dd}`;
+            if (dueDateKey !== 'Due Date') {
+                updated['Due Date'] = `${yyyy}-${mm}-${dd}`;
+            }
         }
     }
     
-    const invoiceDateVal = getRowVal(row, ['Invoice Date', 'invoiceDate']);
-    const invoiceDateKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'invoice date') || 'Invoice Date';
+    const invoiceDateVal = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date']);
+    const invoiceDateKey = Object.keys(row).find(k => {
+        const clean = k.trim().toLowerCase();
+        return clean === 'invoice date' || clean === 'invoicedate' || clean === 'invoice_date' || clean === 'date';
+    }) || 'Invoice Date';
+    
     if (invoiceDateVal) {
         const parsed = parseFlexibleDate(invoiceDateVal);
         if (parsed) {
@@ -187,6 +217,9 @@ const normalizeRowDates = (row: any): any => {
             const mm = String(parsed.getMonth() + 1).padStart(2, '0');
             const dd = String(parsed.getDate()).padStart(2, '0');
             updated[invoiceDateKey] = `${yyyy}-${mm}-${dd}`;
+            if (invoiceDateKey !== 'Invoice Date') {
+                updated['Invoice Date'] = `${yyyy}-${mm}-${dd}`;
+            }
         }
     }
     
@@ -363,11 +396,19 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             errors.push('Invalid SubTotal/amount');
         }
 
-        const dueDate = getRowVal(row, ['Due Date', 'dueDate']);
+        const dueDate = getRowVal(row, ['Due Date', 'dueDate', 'due_date']);
         if (dueDate) {
             const parsed = parseFlexibleDate(dueDate);
             if (!parsed) {
-                errors.push('Invalid Due Date (expected DD-MM-YYYY or YYYY-MM-DD)');
+                errors.push('Invalid Due Date (expected YYYY-MM-DD or DD-MM-YYYY)');
+            }
+        }
+
+        const invoiceDate = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date']);
+        if (invoiceDate) {
+            const parsed = parseFlexibleDate(invoiceDate);
+            if (!parsed) {
+                errors.push('Invalid Invoice Date (expected YYYY-MM-DD or DD-MM-YYYY)');
             }
         }
 

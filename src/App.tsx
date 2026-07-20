@@ -128,6 +128,7 @@ import ChartOfAccounts from "./pages/dashboards/finance/ChartOfAccounts";
 import AccountingCodeDetails from "./pages/dashboards/finance/AccountingCodeDetails";
 import GeneralLedger from "./pages/dashboards/finance/GeneralLedger";
 import BulkLedgerUploadPage from "./pages/dashboards/finance/BulkLedgerUploadPage";
+import BulkLedgerUpload from "./pages/dashboards/shared/BulkLedgerUpload";
 import LedgerEntryDetailPage from "./pages/dashboards/finance/LedgerEntryDetailPage";
 import BankTransactionDetailPage from "./pages/dashboards/finance/BankTransactionDetailPage";
 import FinanceDashboard from "./pages/dashboards/finance/FinanceDashboard";
@@ -442,6 +443,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -708,6 +710,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -987,6 +990,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -1207,6 +1211,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -1410,6 +1415,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -1524,6 +1530,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
@@ -1630,6 +1637,7 @@ function App() {
                 element={<DashboardSettings />}
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
+              <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
                 element={<Navigate to="dashboard-settings" replace />}
