@@ -64,6 +64,7 @@ const BankAccountLedger = () => {
     const [allBankAccountsList, setAllBankAccountsList] = useState<BankAccount[]>([]);
     const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
+    void allInvoices;
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -815,6 +816,7 @@ const BankAccountLedger = () => {
     };
 
     const handleUnlinkInvoice = (entryIdx: number) => {
+        void handleUnlinkInvoice;
         const updated = [...editEntries];
         updated[entryIdx].invoice = undefined;
         updated[entryIdx].customer = undefined;
