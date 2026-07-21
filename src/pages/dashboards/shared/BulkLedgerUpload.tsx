@@ -1004,7 +1004,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {rows.map((row, idx) => (
-                                                <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+                                                <tr key={idx} className="relative hover:z-20" style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
                                                     <td className="py-3 px-4">
@@ -1045,7 +1045,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                                                                 const preview = getRowSetOffPreview(row);
                                                                                 if (!preview) return null;
                                                                                 return (
-                                                                                    <div className="relative group/info inline-block">
+                                                                                    <div className="relative group/info inline-block group-hover/info:z-50">
                                                                                         <button
                                                                                             type="button"
                                                                                             className="w-4 h-4 rounded-full bg-violet-500/20 hover:bg-violet-500/40 text-violet-300 border border-violet-500/30 flex items-center justify-center text-[9px] font-black cursor-pointer transition-colors shadow-sm"
@@ -1055,7 +1055,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                                                                         </button>
 
                                                                                         {/* Hover Popover Tooltip */}
-                                                                                        <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover/info:block z-50 w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all animate-fade-in">
+                                                                                        <div className={`absolute left-0 ${idx < 2 ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} hidden group-hover/info:block z-50 w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all`}>
                                                                                             <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
                                                                                                 <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 flex items-center gap-1">
                                                                                                     <Zap size={10} /> Set-Off Invoice Preview

@@ -613,43 +613,61 @@ const BankAccountLedger = () => {
         }
     };
 
-    const renderDescriptionWithLinks = (description: string) => {
+    const renderDescriptionWithLinks = (description: string, entry?: any) => {
         if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
 
-        const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/i;
-        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
+        const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/gi;
+        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/gi;
 
-        const matchBill = description.match(billRegex);
-        const matchInvoice = description.match(invoiceRegex);
+        const matchedBills = Array.from(new Set(description.match(billRegex) || []));
 
-        if (matchBill) {
-            const billNum = matchBill[0];
-            return (
-                <div className="flex flex-col gap-1.5">
-                    <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleBillClick(billNum); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start"
-                    >
-                        <Receipt size={11} strokeWidth={2.5} />
-                        View Bill ({billNum})
-                    </button>
-                </div>
-            );
+        // Collect invoices from description regex match
+        const matchedInvoicesFromDesc = description.match(invoiceRegex) || [];
+
+        // Collect invoices from entry setOffSummary or invoices array if present
+        const invoicesFromEntry: string[] = [];
+        if (entry) {
+            if (Array.isArray(entry.invoices)) {
+                entry.invoices.forEach((inv: any) => {
+                    const num = typeof inv === 'string' ? inv : inv?.invoiceNumber;
+                    if (num) invoicesFromEntry.push(num);
+                });
+            }
+            if (entry.setOffSummary && Array.isArray(entry.setOffSummary.invoices)) {
+                entry.setOffSummary.invoices.forEach((inv: any) => {
+                    if (inv?.invoiceNumber) invoicesFromEntry.push(inv.invoiceNumber);
+                });
+            }
         }
 
-        if (matchInvoice) {
-            const invNum = matchInvoice[0];
+        const matchedInvoices = Array.from(new Set([...matchedInvoicesFromDesc, ...invoicesFromEntry]));
+
+        if (matchedBills.length > 0 || matchedInvoices.length > 0) {
             return (
                 <div className="flex flex-col gap-1.5">
                     <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleInvoiceClick(invNum); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start"
-                    >
-                        <FileText size={11} strokeWidth={2.5} />
-                        View Invoice ({invNum})
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {matchedBills.map((billNum) => (
+                            <button
+                                key={billNum}
+                                onClick={(e) => { e.stopPropagation(); handleBillClick(billNum); }}
+                                className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start cursor-pointer"
+                            >
+                                <Receipt size={11} strokeWidth={2.5} />
+                                View Bill ({billNum})
+                            </button>
+                        ))}
+                        {matchedInvoices.map((invNum) => (
+                            <button
+                                key={invNum}
+                                onClick={(e) => { e.stopPropagation(); handleInvoiceClick(invNum); }}
+                                className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 dark:text-lime dark:bg-lime/10 dark:border-lime/20 px-2.5 py-1 rounded-lg transition-all hover:scale-105 active:scale-95 hover:underline self-start cursor-pointer"
+                            >
+                                <FileText size={11} strokeWidth={2.5} />
+                                View Invoice ({invNum})
+                            </button>
+                        ))}
+                    </div>
                 </div>
             );
         }
@@ -1844,7 +1862,7 @@ const BankAccountLedger = () => {
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {renderDescriptionWithLinks(entry.description)}
+                                                {renderDescriptionWithLinks(entry.description, entry)}
                                                 {entry.referenceId && (
                                                     <div className="text-[10px] font-mono mt-1 opacity-60">Ref: {entry.referenceId}</div>
                                                 )}
