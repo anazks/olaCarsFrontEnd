@@ -723,15 +723,28 @@ const BankAccountLedger = () => {
         const entry = editEntries[invoiceSidebarEntryIdx];
         const amount = entry?.amount || 0;
 
-        const partialInvoices = sidebarInvoices
-            .filter(inv => inv.status === 'PARTIAL')
+        const isOverdue = (inv: any) => {
+            const st = String(inv.status || '').toUpperCase();
+            if (st === 'OVERDUE') return true;
+            if (inv.dueDate) {
+                return new Date(inv.dueDate).getTime() < Date.now();
+            }
+            return false;
+        };
+
+        const overdueInvoices = sidebarInvoices
+            .filter(inv => isOverdue(inv))
             .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        const otherInvoices = sidebarInvoices
-            .filter(inv => inv.status !== 'PARTIAL')
+        const nonOverduePartialInvoices = sidebarInvoices
+            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() === 'PARTIAL')
             .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        const sortedInvoices = [...partialInvoices, ...otherInvoices];
+        const nonOverduePendingInvoices = sidebarInvoices
+            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() !== 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
 
         let remaining = amount;
         const setOffDetails: Array<{
@@ -750,7 +763,8 @@ const BankAccountLedger = () => {
 
             const amountToApply = Math.min(remaining, invBalance);
             const newBal = Math.max(0, invBalance - amountToApply);
-            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+            const isInvOverdue = isOverdue(inv);
+            const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
 
             setOffDetails.push({
                 invoice: inv,

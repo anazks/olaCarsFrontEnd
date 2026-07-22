@@ -167,6 +167,7 @@ const PaymentsReceived = () => {
             if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
             if (startDate) params.startDate = startDate;
             if (endDate) params.endDate = endDate;
+            if (!startDate && !endDate) params.allTime = 'true';
 
             const res = await api.get('/api/payments-received', {
                 params,
@@ -255,135 +256,55 @@ const PaymentsReceived = () => {
                 </div>
             </div>
 
-            {/* Monthly Dashboard Metrics */}
+            {/* Dashboard Metrics */}
             {metrics && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Coins size={16} className="text-brand-lime animate-pulse" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
+                    <div className="border shadow-md rounded-2xl p-5 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-1">
+                            <Coins size={16} className="text-brand-lime" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                Total Amount Received (Filtered Date)
+                                Total Amount Received (Filtered Range)
                             </span>
                         </div>
-                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                        <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
                             ${metrics.totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h2>
-                        <p className="text-[10px] mt-2 text-dim">
-                            Total payments received within the selected date range
+                        <p className="text-[10px] mt-1 text-dim">
+                            Sum of all completed payments matching current filters
                         </p>
                     </div>
 
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
+                    <div className="border shadow-md rounded-2xl p-5 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-1">
                             <Calendar size={16} className="text-emerald-400" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                Monthly Dashboard (MTD)
+                                Total Payment Records
                             </span>
                         </div>
-                        <h2 className="text-2xl font-black mt-2 text-emerald-400">
-                            ${metrics.mtdTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <h2 className="text-2xl font-black mt-1 text-emerald-400">
+                            {pagination.total.toLocaleString()}
                         </h2>
-                        <p className="text-[10px] mt-2 text-dim">
-                            Total payments received during current month
+                        <p className="text-[10px] mt-1 text-dim">
+                            Total count of matching payments in record system
                         </p>
-                    </div>
-
-                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <DollarSign size={16} className="text-amber-400" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                Surplus / Credit balance
-                            </span>
-                        </div>
-                        <h2 className="text-2xl font-black mt-2 text-amber-400">
-                            ${metrics.totalSurplus.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h2>
-                        <p className="text-[10px] mt-2 text-dim">
-                            Prepayment credits not allocated to specific invoices
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Monthly Trend & Breakdown Dashboard Segment */}
-            {metrics && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-500">
-                    {/* Method Breakdown */}
-                    <div className="border shadow-md rounded-[2rem] p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <h3 className="text-xs font-black uppercase tracking-widest mb-4" style={{ color: 'var(--text-main)' }}>
-                            Payments by Method
-                        </h3>
-                        <div className="space-y-3">
-                            {Object.entries(metrics.methodBreakdown).length === 0 ? (
-                                <p className="text-xs text-dim italic">No method data recorded</p>
-                            ) : (
-                                Object.entries(metrics.methodBreakdown).map(([method, total]) => {
-                                    const percentage = metrics.totalReceived > 0 ? (total / metrics.totalReceived) * 100 : 0;
-                                    return (
-                                        <div key={method} className="space-y-1">
-                                            <div className="flex justify-between text-xs font-semibold">
-                                                <span style={{ color: 'var(--text-main)' }}>{method}</span>
-                                                <span className="text-brand-lime font-black">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({percentage.toFixed(1)}%)</span>
-                                            </div>
-                                            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-brand-lime" 
-                                                    style={{ width: `${percentage}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Monthly Trends */}
-                    <div className="border shadow-md rounded-[2rem] p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <h3 className="text-xs font-black uppercase tracking-widest mb-4" style={{ color: 'var(--text-main)' }}>
-                            Monthly Received Trends (Last 6 Months)
-                        </h3>
-                        <div className="space-y-3">
-                            {metrics.monthlyTrends.map(({ month, year, total }) => {
-                                const maxVal = Math.max(...metrics.monthlyTrends.map(t => t.total)) || 1;
-                                const barWidth = (total / maxVal) * 100;
-                                return (
-                                    <div key={`${month}-${year}`} className="flex items-center gap-4 text-xs font-semibold">
-                                        <span className="w-16 text-dim text-[10px] font-black uppercase">{month}</span>
-                                        <div className="flex-1 h-3 rounded bg-white/5 overflow-hidden">
-                                            <div 
-                                                className="h-full bg-brand-lime opacity-80 rounded" 
-                                                style={{ width: `${Math.max(3, barWidth)}%` }}
-                                            />
-                                        </div>
-                                        <span className="w-20 text-right font-black" style={{ color: 'var(--text-main)' }}>
-                                            ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
                     </div>
                 </div>
             )}
 
             {/* Dynamic Unified Filter Bar */}
-            <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-2xl border shadow-sm w-fit" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-2xl border shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Search Wrapper */}
-                <div className="relative min-w-[240px]">
+                <div className="relative min-w-[220px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={14} />
                     <input 
                         type="text" 
-                        placeholder="Search PR #, customer or ref..."
+                        placeholder="Search PR #, customer, ref or invoice #..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-4 py-1.5 border rounded-xl outline-none text-xs font-medium focus:border-brand-lime/30 transition-all duration-200"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
-
-                {/* Vertical Separator */}
-                <div className="h-6 w-px hidden sm:block" style={{ background: 'var(--border-main)' }}></div>
 
                 {/* Method Selector */}
                 <div className="relative flex items-center gap-2 px-3 py-1.5 border rounded-xl transition-all hover:border-white/10 focus-within:border-brand-lime/30" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
@@ -402,6 +323,40 @@ const PaymentsReceived = () => {
                         <option value="Other" style={{ background: 'var(--bg-card)' }}>Other</option>
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim text-[8px]">▼</div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStartDate('');
+                            setEndDate('');
+                        }}
+                        className={`text-[9px] font-black uppercase px-2.5 py-1.5 rounded-xl border transition-all ${!startDate && !endDate ? 'border-brand-lime bg-brand-lime/10 text-brand-lime' : 'border-white/10 text-dim hover:text-white'}`}
+                    >
+                        All Time
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStartDate('2026-06-16');
+                            setEndDate('');
+                        }}
+                        className={`text-[9px] font-black uppercase px-2.5 py-1.5 rounded-xl border transition-all ${startDate === '2026-06-16' && !endDate ? 'border-brand-lime bg-brand-lime/10 text-brand-lime' : 'border-white/10 text-dim hover:text-white'}`}
+                    >
+                        Since 16/06/2026
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStartDate(getDefaultStartDate());
+                            setEndDate(getDefaultEndDate());
+                        }}
+                        className={`text-[9px] font-black uppercase px-2.5 py-1.5 rounded-xl border transition-all ${startDate === getDefaultStartDate() && endDate === getDefaultEndDate() ? 'border-brand-lime bg-brand-lime/10 text-brand-lime' : 'border-white/10 text-dim hover:text-white'}`}
+                    >
+                        Last 30 Days
+                    </button>
                 </div>
 
                 {/* Date range filters */}
@@ -428,13 +383,13 @@ const PaymentsReceived = () => {
                 </div>
 
                 {/* Clear Filter Button */}
-                {(searchQuery || methodFilter !== 'ALL' || startDate !== getDefaultStartDate() || endDate !== getDefaultEndDate()) && (
+                {(searchQuery || methodFilter !== 'ALL' || startDate || endDate) && (
                     <button
                         onClick={() => {
                             setSearchQuery('');
                             setMethodFilter('ALL');
-                            setStartDate(getDefaultStartDate());
-                            setEndDate(getDefaultEndDate());
+                            setStartDate('');
+                            setEndDate('');
                         }}
                         className="p-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer"
                         title="Reset Constraints"
@@ -477,10 +432,10 @@ const PaymentsReceived = () => {
                                      </div>
                                  </th>
                                 <th className="py-4 px-6 text-center w-[10%] group cursor-pointer select-none" onClick={() => handleSort('status')}>
-                                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                        Status <SortIcon field="status" />
-                                    </div>
-                                </th>
+                                     <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                         Status <SortIcon field="status" />
+                                     </div>
+                                 </th>
                                 <th className="py-4 px-6 text-center w-[5%] text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Actions</th>
                             </tr>
                         </thead>
@@ -507,7 +462,22 @@ const PaymentsReceived = () => {
                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                     >
-                                        <td className="p-6 font-black text-sm">{pmt.paymentNumber}</td>
+                                        <td className="p-6 font-black text-sm">
+                                            <div className="flex flex-col">
+                                                <span>{pmt.paymentNumber}</span>
+                                                {pmt.invoices && pmt.invoices.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {pmt.invoices.map((inv, idx) => (
+                                                            inv.invoiceNumber ? (
+                                                                <span key={idx} className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-brand-lime/30 bg-brand-lime/10 text-brand-lime">
+                                                                    {inv.invoiceNumber}
+                                                                </span>
+                                                            ) : null
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="p-6 font-bold text-xs">
                                             {typeof pmt.customerId === 'object' && pmt.customerId ? (
                                                 <div className="flex flex-col">
@@ -551,7 +521,12 @@ const PaymentsReceived = () => {
                 {!loading && payments.length > 0 && pagination && pagination.pages >= 1 && (
                     <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                            Showing {payments.length} of {pagination.total} payments
+                            Showing {payments.length} of <span className="text-brand-lime font-black">{pagination.total.toLocaleString()}</span> total payments
+                            {(startDate || endDate) && (
+                                <span className="text-dim font-normal ml-1">
+                                    ({startDate ? `From ${startDate}` : ''} {endDate ? `To ${endDate}` : ''})
+                                </span>
+                            )}
                         </p>
                         <div className="flex items-center gap-2">
                             <button

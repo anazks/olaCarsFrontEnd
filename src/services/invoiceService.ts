@@ -36,6 +36,7 @@ export interface Invoice {
     paidAt?: string;
     payments: InvoicePayment[];
     generatedAt: string;
+    invoiceDate?: string;
     pdfS3Key?: string;
     createdAt?: string;
     updatedAt?: string;

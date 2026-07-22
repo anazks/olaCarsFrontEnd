@@ -207,7 +207,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                         getAllBranches({ limit: 100 }),
                         getAllAccountingCodes({ limit: 1000 }),
                         getAllCustomers({ limit: 1000 }),
-                        getInvoices({ limit: 1000, ignoreDefaultDates: true })
+                        getInvoices({ limit: 10000, status: 'PENDING,PARTIAL,OVERDUE', ignoreDefaultDates: true })
                     ]);
 
                     const accountsList = accountsRes.data || accountsRes || [];
@@ -260,15 +260,28 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                 (inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE');
         });
 
-        const partialInvoices = openInvoices
-            .filter(inv => inv.status === 'PARTIAL')
+        const isOverdue = (inv: any) => {
+            const st = String(inv.status || '').toUpperCase();
+            if (st === 'OVERDUE') return true;
+            if (inv.dueDate) {
+                return new Date(inv.dueDate).getTime() < Date.now();
+            }
+            return false;
+        };
+
+        const overdueInvoices = openInvoices
+            .filter(inv => isOverdue(inv))
             .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        const otherInvoices = openInvoices
-            .filter(inv => inv.status !== 'PARTIAL')
+        const nonOverduePartialInvoices = openInvoices
+            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() === 'PARTIAL')
             .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        const sortedInvoices = [...partialInvoices, ...otherInvoices];
+        const nonOverduePendingInvoices = openInvoices
+            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() !== 'PARTIAL')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
 
         let remaining = amount;
         const setOffDetails: Array<{
@@ -289,7 +302,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
 
             const amountToApply = Math.min(remaining, invBalance);
             const newBal = Math.max(0, invBalance - amountToApply);
-            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+            const isInvOverdue = isOverdue(inv);
+            const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
 
             setOffDetails.push({
                 invoiceNumber: inv.invoiceNumber,

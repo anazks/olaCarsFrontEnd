@@ -5,7 +5,7 @@ import {
     Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
 } from 'lucide-react';
-import { getInvoicesRegistry, deleteAllInvoices, getInvoicesTotalCount, getInvoicesDateWise } from '../../../services/invoiceService';
+import { getInvoicesRegistry, deleteAllInvoices, getInvoicesDateWise } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -40,41 +40,16 @@ const InvoiceList = () => {
     const [startDate, setStartDate] = useState(getDefaultStartDate());
     const [endDate, setEndDate] = useState(getDefaultEndDate());
 
-    const [tempStartDate, setTempStartDate] = useState(getDefaultStartDate());
-    const [tempEndDate, setTempEndDate] = useState(getDefaultEndDate());
-
     const handleApplyFilters = () => {
-        setStartDate(tempStartDate);
-        setEndDate(tempEndDate);
-        setPage(1);
+        fetchData();
     };
 
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-    const [showFullCount, setShowFullCount] = useState(false);
-    const [realTotalCount, setRealTotalCount] = useState<number | null>(null);
-    const [loadingCount, setLoadingCount] = useState(false);
 
-    const handleViewTotalCount = async () => {
-        setLoadingCount(true);
-        try {
-            const count = await getInvoicesTotalCount();
-            setRealTotalCount(count);
-            setShowFullCount(true);
-        } catch (e) {
-            toast.error('Failed to retrieve database count');
-        } finally {
-            setLoadingCount(false);
-        }
-    };
 
-    // Reset realTotalCount and showFullCount if any filter gets updated
-    useEffect(() => {
-        setShowFullCount(false);
-        setRealTotalCount(null);
-    }, [debouncedSearch, startDate, endDate, statusFilter, filterMonth, filterYear]);
 
 
 
@@ -185,6 +160,7 @@ const InvoiceList = () => {
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
+            if (!startDate && !endDate && !filterMonth && !filterYear) filters.allTime = 'true';
             if (statusFilter !== 'ALL') filters.status = statusFilter;
             if (filterMonth) filters.month = filterMonth;
             if (filterYear) filters.year = filterYear;
@@ -387,23 +363,23 @@ const InvoiceList = () => {
                 {/* Collapsible Filter Panel */}
                 {isFilterPanelOpen && (
                     <div className="border rounded-[2rem] p-6 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Invoices</h3>
+                        <div className="flex flex-wrap justify-between items-center border-b border-white/5 pb-3 gap-2">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Invoices</h3>
+                            </div>
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setFilterMonth('');
                                     setFilterYear('');
-                                    setTempStartDate(getDefaultStartDate());
-                                    setTempEndDate(getDefaultEndDate());
-                                    setStartDate(getDefaultStartDate());
-                                    setEndDate(getDefaultEndDate());
+                                    setStartDate('');
+                                    setEndDate('');
                                     setStatusFilter('ALL');
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--brand-lime)' }}
                             >
-                                Reset Filters
+                                Clear All Filters
                             </button>
                         </div>
 
@@ -454,8 +430,8 @@ const InvoiceList = () => {
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
                                 <input
                                     type="date"
-                                    value={tempStartDate}
-                                    onChange={(e) => setTempStartDate(e.target.value)}
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
                                     className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
@@ -466,8 +442,8 @@ const InvoiceList = () => {
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
                                 <input
                                     type="date"
-                                    value={tempEndDate}
-                                    onChange={(e) => setTempEndDate(e.target.value)}
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
                                     className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 />
@@ -652,7 +628,7 @@ const InvoiceList = () => {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
-                                                {invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : (invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A')}
+                                                {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : (invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : (invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'))}
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
@@ -667,25 +643,16 @@ const InvoiceList = () => {
                     {/* Modern Numbered Pagination */}
                     {!loading && invoices.length > 0 && pagination && pagination.pages >= 1 && (
                         <div className="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.01)' }}>
-                            {showFullCount && realTotalCount !== null ? (
-                                <p className="text-xs font-bold animate-in fade-in duration-300" style={{ color: 'var(--text-dim)' }}>
-                                    Showing {invoices.length} of {realTotalCount} statements in database
+                            <div className="flex items-center gap-3">
+                                <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                    Showing {invoices.length} of <span className="text-brand-lime font-black">{pagination.total.toLocaleString()}</span> total statements
+                                    {(startDate || endDate) && (
+                                        <span className="text-dim font-normal ml-1">
+                                            ({startDate ? `From ${startDate}` : ''} {endDate ? `To ${endDate}` : ''})
+                                        </span>
+                                    )}
                                 </p>
-                            ) : (
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
-                                        Showing {invoices.length} statements
-                                    </span>
-                                    <button
-                                        onClick={handleViewTotalCount}
-                                        disabled={loadingCount}
-                                        className="flex items-center gap-1.5 px-2 py-0.5 border border-brand-lime/30 hover:border-brand-lime text-[9px] font-black uppercase text-brand-lime rounded bg-brand-lime/5 transition-all cursor-pointer hover:bg-brand-lime/10 disabled:opacity-50"
-                                    >
-                                        {loadingCount && <RefreshCw size={8} className="animate-spin text-brand-lime" />}
-                                        <span>View Total Count</span>
-                                    </button>
-                                </div>
-                            )}
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => handlePageChange(page - 1)}
