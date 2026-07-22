@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, Search, AlertCircle, Zap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -248,19 +248,32 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
         }
     }, [isOpen, isAsPage, queryAccountId]);
 
-    const getRowSetOffPreview = useCallback((row: ParsedTransaction) => {
-        if (!row.customer || row["Transaction Type"] !== 'DEBIT') return null;
-        const customerId = row.customer._id;
-        const amount = row.Amount || 0;
+interface SetOffDetail {
+    invoiceNumber: string;
+    amountApplied: number;
+    dueBalance: number;
+    newBalance: number;
+    newStatus: string;
+    dueDate?: string;
+}
 
-        // Filter open invoices for this customer
-        const openInvoices = allInvoices.filter(inv => {
-            const invCustId = typeof inv.customer === 'object' ? inv.customer?._id : inv.customer;
-            return String(invCustId) === String(customerId) &&
-                (inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE');
-        });
+interface SetOffPreview {
+    customerName: string;
+    receiptAmount: number;
+    totalSetOff: number;
+    excessAmount: number;
+    setOffDetails: SetOffDetail[];
+}
 
-        const isOverdue = (inv: any) => {
+    const cumulativeSetOffPreviews = useMemo<Map<number, SetOffPreview | null>>(() => {
+        if (!rows || rows.length === 0 || allInvoices.length === 0) {
+            return new Map<number, SetOffPreview | null>();
+        }
+
+        const runningBalanceMap: Record<string, number> = {};
+        const isOverdueMap: Record<string, boolean> = {};
+
+        const checkOverdue = (inv: any) => {
             const st = String(inv.status || '').toUpperCase();
             if (st === 'OVERDUE') return true;
             if (inv.dueDate) {
@@ -269,65 +282,98 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
             return false;
         };
 
-        const overdueInvoices = openInvoices
-            .filter(inv => isOverdue(inv))
-            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+        allInvoices.forEach(inv => {
+            const bal = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
+            runningBalanceMap[inv._id] = bal;
+            isOverdueMap[inv._id] = checkOverdue(inv);
+        });
 
-        const nonOverduePartialInvoices = openInvoices
-            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() === 'PARTIAL')
-            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+        const previewsMap = new Map<number, SetOffPreview | null>();
 
-        const nonOverduePendingInvoices = openInvoices
-            .filter(inv => !isOverdue(inv) && String(inv.status).toUpperCase() !== 'PARTIAL')
-            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+        rows.forEach((row, rowIndex) => {
+            if (!row.customer || row["Transaction Type"] !== 'DEBIT') {
+                previewsMap.set(rowIndex, null);
+                return;
+            }
 
-        const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
+            const customerId = row.customer._id;
+            const amount = row.Amount || 0;
 
-        let remaining = amount;
-        const setOffDetails: Array<{
-            invoiceNumber: string;
-            amountApplied: number;
-            dueBalance: number;
-            newBalance: number;
-            newStatus: string;
-            dueDate?: string;
-        }> = [];
-
-        let totalSetOff = 0;
-
-        for (const inv of sortedInvoices) {
-            if (remaining <= 0.01) break;
-            const invBalance = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
-            if (invBalance <= 0) continue;
-
-            const amountToApply = Math.min(remaining, invBalance);
-            const newBal = Math.max(0, invBalance - amountToApply);
-            const isInvOverdue = isOverdue(inv);
-            const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
-
-            setOffDetails.push({
-                invoiceNumber: inv.invoiceNumber,
-                amountApplied: amountToApply,
-                dueBalance: invBalance,
-                newBalance: newBal,
-                newStatus,
-                dueDate: inv.dueDate
+            // Filter open invoices for this customer that still have a running balance > 0
+            const openInvoices = allInvoices.filter(inv => {
+                const invCustId = typeof inv.customer === 'object' ? inv.customer?._id : inv.customer;
+                const currentBal = runningBalanceMap[inv._id] ?? 0;
+                return String(invCustId) === String(customerId) &&
+                    (inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE') &&
+                    currentBal > 0;
             });
 
-            totalSetOff += amountToApply;
-            remaining -= amountToApply;
-        }
+            const overdueInvoices = openInvoices
+                .filter(inv => isOverdueMap[inv._id])
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        const excessAmount = Math.max(0, amount - totalSetOff);
+            const nonOverduePartialInvoices = openInvoices
+                .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() === 'PARTIAL')
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
 
-        return {
-            customerName: row.customer.name,
-            receiptAmount: amount,
-            totalSetOff,
-            excessAmount,
-            setOffDetails
-        };
-    }, [allInvoices]);
+            const nonOverduePendingInvoices = openInvoices
+                .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() !== 'PARTIAL')
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+            const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
+
+            let remaining = amount;
+            const setOffDetails: Array<{
+                invoiceNumber: string;
+                amountApplied: number;
+                dueBalance: number;
+                newBalance: number;
+                newStatus: string;
+                dueDate?: string;
+            }> = [];
+
+            let totalSetOff = 0;
+
+            for (const inv of sortedInvoices) {
+                if (remaining <= 0.01) break;
+                const currentInvBal = runningBalanceMap[inv._id] ?? 0;
+                if (currentInvBal <= 0) continue;
+
+                const amountToApply = Math.min(remaining, currentInvBal);
+                const newBal = Math.max(0, currentInvBal - amountToApply);
+
+                // Update running balance for this invoice so subsequent rows see the reduced balance
+                runningBalanceMap[inv._id] = newBal;
+
+                const isInvOverdue = isOverdueMap[inv._id];
+                const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
+
+                setOffDetails.push({
+                    invoiceNumber: inv.invoiceNumber,
+                    amountApplied: amountToApply,
+                    dueBalance: currentInvBal,
+                    newBalance: newBal,
+                    newStatus,
+                    dueDate: inv.dueDate
+                });
+
+                totalSetOff += amountToApply;
+                remaining -= amountToApply;
+            }
+
+            const excessAmount = Math.max(0, amount - totalSetOff);
+
+            previewsMap.set(rowIndex, {
+                customerName: row.customer.name,
+                receiptAmount: amount,
+                totalSetOff,
+                excessAmount,
+                setOffDetails
+            });
+        });
+
+        return previewsMap;
+    }, [rows, allInvoices]);
 
     const parseDateFlexible = (val: any): Date | null => {
         if (val === undefined || val === null) return null;
@@ -1056,7 +1102,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                                                                 <Zap size={8} /> Auto Set-Off
                                                                             </span>
                                                                             {(() => {
-                                                                                const preview = getRowSetOffPreview(row);
+                                                                                const preview = cumulativeSetOffPreviews.get(idx);
                                                                                 if (!preview) return null;
                                                                                 return (
                                                                                     <div className="relative group/info inline-block group-hover/info:z-50">
@@ -1084,7 +1130,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                                                                                     <div className="text-[9px] uppercase tracking-wider font-bold text-white/50">
                                                                                                         Invoices to be set off ({preview.setOffDetails.length}):
                                                                                                     </div>
-                                                                                                    {preview.setOffDetails.map((detail, dIdx) => (
+                                                                                                    {preview.setOffDetails.map((detail: SetOffDetail, dIdx: number) => (
                                                                                                         <div key={dIdx} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] space-y-0.5">
                                                                                                             <div className="flex justify-between items-center font-bold">
                                                                                                                 <span className="text-[#C8E600]">{detail.invoiceNumber}</span>
@@ -1099,6 +1145,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                                                                                                             <div className="flex justify-between text-[9px] text-white/70">
                                                                                                                 <span>Due: ${detail.dueBalance.toFixed(2)}</span>
                                                                                                                 <span className="font-bold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                                                <span>Rem: ${detail.newBalance.toFixed(2)}</span>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     ))}
