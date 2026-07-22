@@ -191,6 +191,8 @@ const BankAccountLedger = () => {
     const [paymentMode, setPaymentMode] = useState('Bank Transfer');
     const [paymentCurrency, setPaymentCurrency] = useState('USD');
     const [fromAccountId, setFromAccountId] = useState('');
+    const [toAccountSearch, setToAccountSearch] = useState('');
+    const [showToAccountList, setShowToAccountList] = useState(false);
     const [paymentDescription, setPaymentDescription] = useState('');
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
@@ -205,6 +207,17 @@ const BankAccountLedger = () => {
 
     const selectedFromAccountObj = otherAccounts.find(acc => acc._id === fromAccountId);
     const isRentalIncomeSelected = selectedFromAccountObj?.accountCode === '500031';
+
+    const filteredToAccounts = React.useMemo(() => {
+        if (!toAccountSearch.trim()) return otherAccounts;
+        const query = toAccountSearch.toLowerCase().trim();
+        return otherAccounts.filter(acc => {
+            const name = (acc.accountName || acc.bankName || '').toLowerCase();
+            const num = (acc.accountNumber || '').toLowerCase();
+            const code = (acc.accountCode || '').toLowerCase();
+            return name.includes(query) || num.includes(query) || code.includes(query);
+        });
+    }, [otherAccounts, toAccountSearch]);
 
     const filteredCustomers = customers.filter(c =>
         c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
@@ -525,7 +538,7 @@ const BankAccountLedger = () => {
             return;
         }
         if (!fromAccountId) {
-            toast.error('Please select the source account (From Account)');
+            toast.error('Please select the destination account (To Account)');
             return;
         }
 
@@ -543,6 +556,7 @@ const BankAccountLedger = () => {
             formData.append('depositDate', depositDate);
             formData.append('paymentMode', paymentMode);
             formData.append('currency', paymentCurrency);
+            formData.append('toAccountId', fromAccountId);
             formData.append('fromAccountId', fromAccountId);
             formData.append('description', paymentDescription);
             if (supportingDocFile) {
@@ -2184,27 +2198,62 @@ const BankAccountLedger = () => {
                                     </select>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>From Account</label>
+                                <div className="space-y-1 relative">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>To Account *</label>
                                     {loadingAccounts ? (
                                         <div className="w-full border rounded-2xl px-4 py-3 text-xs text-dim bg-transparent" style={{ borderColor: 'var(--border-main)' }}>
-                                            Loading other accounts...
+                                            Loading accounts...
                                         </div>
                                     ) : (
-                                        <select
-                                            value={fromAccountId}
-                                            onChange={e => setFromAccountId(e.target.value)}
-                                            className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
-                                            style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                            required
-                                        >
-                                            <option value="" disabled style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Account</option>
-                                            {otherAccounts.map(acc => (
-                                                <option key={acc._id} value={acc._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                                                    {acc.accountName || acc.bankName} ({acc.currency || 'USD'} {acc.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search account by name, number, or code..."
+                                                value={selectedFromAccountObj ? `${selectedFromAccountObj.accountName || selectedFromAccountObj.bankName} (${selectedFromAccountObj.currency || 'USD'} ${selectedFromAccountObj.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : toAccountSearch}
+                                                onChange={e => { setToAccountSearch(e.target.value); setFromAccountId(''); setShowToAccountList(true); }}
+                                                onFocus={() => setShowToAccountList(true)}
+                                                onBlur={() => setTimeout(() => setShowToAccountList(false), 200)}
+                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                                required
+                                            />
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim">
+                                                <Search size={16} />
+                                            </div>
+
+                                            {showToAccountList && filteredToAccounts.length > 0 && !selectedFromAccountObj && (
+                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-56 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    {filteredToAccounts.map(acc => (
+                                                        <button
+                                                            type="button"
+                                                            key={acc._id}
+                                                            onMouseDown={() => { setFromAccountId(acc._id); setToAccountSearch(''); setShowToAccountList(false); }}
+                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors cursor-pointer border-b border-white/5 last:border-none"
+                                                        >
+                                                            <div>
+                                                                <p className="text-xs font-black text-main" style={{ color: 'var(--text-main)' }}>{acc.accountName || acc.bankName}</p>
+                                                                <p className="text-[10px] text-dim font-mono" style={{ color: 'var(--text-dim)' }}>{acc.accountNumber ? `Acc #${acc.accountNumber}` : acc.accountCode ? `Code: ${acc.accountCode}` : ''}</p>
+                                                            </div>
+                                                            <span className="text-xs font-mono font-bold text-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                                {acc.currency || 'USD'} ${acc.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {showToAccountList && filteredToAccounts.length === 0 && !selectedFromAccountObj && (
+                                                <div className="absolute z-50 w-full mt-1 p-3 border rounded-2xl shadow-2xl text-xs text-dim text-center animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    No accounts found matching "{toAccountSearch}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedFromAccountObj && (
+                                        <div className="flex items-center justify-between mt-1 text-xs">
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected To Account: {selectedFromAccountObj.accountName || selectedFromAccountObj.bankName}</span>
+                                            <button type="button" onClick={() => { setFromAccountId(''); setToAccountSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
+                                        </div>
                                     )}
                                 </div>
                             </div>

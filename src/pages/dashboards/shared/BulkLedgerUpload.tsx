@@ -755,7 +755,7 @@ interface SetOffPreview {
         }
 
         setUploading(true);
-        setUploadProgress(0);
+        setUploadProgress(5);
 
         const batchSize = 50;
         const totalBatches = Math.ceil(totalRows / batchSize);
@@ -777,6 +777,20 @@ interface SetOffPreview {
                     return rest;
                 });
 
+                const startPct = Math.round((i / totalBatches) * 100);
+                const targetPct = Math.round(((i + 1) / totalBatches) * 100);
+
+                // Smooth ticker interval incrementing up to 92% of current batch target while API is in-flight
+                let currentSimulatedPct = Math.max(startPct, 5);
+                const stepMax = Math.max(targetPct - 5, currentSimulatedPct);
+
+                const progressInterval = setInterval(() => {
+                    if (currentSimulatedPct < stepMax) {
+                        currentSimulatedPct = Math.min(currentSimulatedPct + Math.floor(Math.random() * 5) + 3, stepMax);
+                        setUploadProgress(currentSimulatedPct);
+                    }
+                }, 100);
+
                 // Only clear existing on the first batch
                 const batchClearExisting = i === 0 ? clearExisting : false;
 
@@ -785,13 +799,21 @@ interface SetOffPreview {
                     transactions: batchTransactions
                 };
 
-                const res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
+                let res: any;
+                try {
+                    res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
+                } finally {
+                    clearInterval(progressInterval);
+                }
 
-                // Update percentage
-                const progressPct = Math.round(((i + 1) / totalBatches) * 100);
-                setUploadProgress(progressPct);
+                // Lock at exact batch completion percentage
+                setUploadProgress(targetPct);
 
                 if (i === totalBatches - 1) {
+                    setUploadProgress(100);
+                    // Brief delay so user sees 100% completion before switching screens
+                    await new Promise(resolve => setTimeout(resolve, 350));
+
                     setResult(res.data || res);
                     toast.success(res.message || 'Transactions uploaded successfully!');
 
@@ -855,10 +877,15 @@ interface SetOffPreview {
                             </div>
                             <div className="text-center w-full max-w-md">
                                 <h4 className="text-md font-black uppercase tracking-wider text-main" style={{ color: 'var(--text-main)' }}>Uploading Ledger Entries</h4>
-                                <p className="text-xs mt-1.5 text-dim" style={{ color: 'var(--text-dim)' }}>Please wait while your statement records are parsed and saved...</p>
+                                <p className="text-xs mt-1.5 text-dim" style={{ color: 'var(--text-dim)' }}>
+                                    {uploadProgress < 25 && "Validating statement records and branch assignments..."}
+                                    {uploadProgress >= 25 && uploadProgress < 65 && "Matching customers & auto setting-off invoices..."}
+                                    {uploadProgress >= 65 && uploadProgress < 95 && "Writing ledger entries & updating running balances..."}
+                                    {uploadProgress >= 95 && "Finalizing bank account transaction records..."}
+                                </p>
 
                                 <div className="mt-8 flex justify-between text-xs font-bold text-dim mb-2">
-                                    <span className="uppercase tracking-widest text-[10px]">Processing Batches</span>
+                                    <span className="uppercase tracking-widest text-[10px]">Processing {validCount} Transaction(s)</span>
                                     <span className="text-lime font-black text-sm" style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
                                 </div>
                                 <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden border" style={{ borderColor: 'var(--border-main)' }}>
